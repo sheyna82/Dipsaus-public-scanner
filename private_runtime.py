@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import urllib.request
+import urllib.error
 
 CONFIG_NAMES = {
     'manual_recovery_triggers.json', 'manual_recovery_triggers_supplemental.json',
@@ -67,6 +68,9 @@ class PrivateStore:
         try:
             with urllib.request.urlopen(req, timeout=30) as res:
                 return json.load(res)
+        except urllib.error.HTTPError as exc:
+            stage = 'METADATA' if not suffix else ('SAVE' if data is not None else 'READ')
+            raise RuntimeError(f'PRIVATE_STATE_REQUEST_FAILED_{stage}_HTTP_{exc.code}') from None
         except Exception:
             # Never echo authenticated URLs, payloads or provider exception strings.
             raise RuntimeError('PRIVATE_STATE_REQUEST_FAILED') from None
