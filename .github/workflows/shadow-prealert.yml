@@ -1,5 +1,8 @@
 name: DIPSAUS fast PRE-ALERT
 on:
+  push:
+    paths:
+      - prealert_cadence.py
   workflow_dispatch:
     inputs:
       live_notifications:
@@ -8,7 +11,7 @@ on:
         default: false
         required: true
   schedule:
-    - cron: '*/5 7-21 * * 1-5'
+    - cron: '2-57/5 7-21 * * 1-5'
 permissions:
   contents: read
 concurrency:
@@ -18,7 +21,7 @@ jobs:
   scanner:
     if: github.repository == 'sheyna82/Dipsaus-public-scanner' && github.event.repository.private == false
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -44,5 +47,5 @@ jobs:
           EODHD_API_TOKEN: ${{ secrets.EODHD_API_TOKEN }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           SCANNER_NOTIFICATIONS_ENABLED: ${{ (github.event_name != 'workflow_dispatch' || inputs.live_notifications) && 'true' || 'false' }}
-        run: python safe_runner.py prealert ${{ (github.event_name != 'workflow_dispatch' || inputs.live_notifications) && '--live' || '' }}
+        run: python prealert_cadence.py ${{ (github.event_name != 'workflow_dispatch' || inputs.live_notifications) && '--live' || '' }}
       # No report summaries, artifacts, caches, git commits or personal stdout.
