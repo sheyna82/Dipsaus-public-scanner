@@ -1,12 +1,11 @@
 name: DIPSAUS Europe recovery (shadow by default)
 on:
   workflow_dispatch:
-  # Schedule parked until live shadow runs and cost controls are verified.
-  # schedule:
-  #   - cron: '*/10 7-16 * * 1-5'
-  #     timezone: Europe/Amsterdam
-  #   - cron: '35 20 * * 1-5'
-  #     timezone: Europe/Amsterdam
+  schedule:
+    - cron: '*/10 7-16 * * 1-5'
+      timezone: Europe/Amsterdam
+    - cron: '35 20 * * 1-5'
+      timezone: Europe/Amsterdam
 permissions:
   contents: read
 concurrency:

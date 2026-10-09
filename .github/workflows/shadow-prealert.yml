@@ -1,5 +1,7 @@
 name: DIPSAUS fast PRE-ALERT (shadow by default)
 on:
+  push:
+    paths: ['.github/workflows/shadow-prealert.yml']
   workflow_dispatch:
     inputs:
       live_notifications:
@@ -7,9 +9,8 @@ on:
         type: boolean
         default: false
         required: true
-  # Schedule parked until live shadow runs and cost controls are verified.
-  # schedule:
-  #   - cron: '*/5 7-21 * * 1-5'
+  schedule:
+    - cron: '*/5 7-21 * * 1-5'
 permissions:
   contents: read
 concurrency:
@@ -44,6 +45,6 @@ jobs:
           SEC_CONTACT_EMAIL: ${{ secrets.SEC_CONTACT_EMAIL }}
           EODHD_API_TOKEN: ${{ secrets.EODHD_API_TOKEN }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-          SCANNER_NOTIFICATIONS_ENABLED: ${{ inputs.live_notifications && 'true' || 'false' }}
-        run: python safe_runner.py prealert ${{ inputs.live_notifications && '--live' || '' }}
+          SCANNER_NOTIFICATIONS_ENABLED: ${{ (github.event_name != 'workflow_dispatch' || inputs.live_notifications) && 'true' || 'false' }}
+        run: python safe_runner.py prealert ${{ (github.event_name != 'workflow_dispatch' || inputs.live_notifications) && '--live' || '' }}
       # No report summaries, artifacts, caches, git commits or personal stdout.

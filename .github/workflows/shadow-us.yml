@@ -1,9 +1,8 @@
 name: DIPSAUS US recovery (shadow by default)
 on:
   workflow_dispatch:
-  # Schedule parked until live shadow runs and cost controls are verified.
-  # schedule:
-  #   - cron: '35 13,14,15,16,18,20 * * 1-5'
+  schedule:
+    - cron: '35 13,14,15,16,18,20 * * 1-5'
 permissions:
   contents: read
 concurrency:
