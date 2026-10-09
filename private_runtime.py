@@ -48,8 +48,8 @@ def hydrate(raw=None):
 class PrivateStore:
     def __init__(self, mode="prealert"):
         if mode not in ("prealert", "eu", "us"): raise RuntimeError("STATE_MODE_INVALID")
-        self.repo = os.environ.get('SCANNER_STATE_REPOSITORY', '')
-        self.token = os.environ.get('SCANNER_STATE_TOKEN', '')
+        self.repo = os.environ.get('SCANNER_STATE_REPOSITORY', '').strip()
+        self.token = os.environ.get('SCANNER_STATE_TOKEN', '').strip()
         if not self.repo or not self.token:
             raise RuntimeError('PRIVATE_STATE_NOT_CONFIGURED')
         self.sha = None
