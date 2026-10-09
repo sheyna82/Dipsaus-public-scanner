@@ -10,7 +10,7 @@ CONFIG_NAMES = {
     'manual_recovery_triggers.json', 'manual_recovery_triggers_supplemental.json',
     'portfolio_reentry_watch.json', 'profit_exit_watch.json',
     'notification_quality_gate.json', 'us_live_trigger_routes.json',
-    'prealert_notification_state.json', 'fcx_2026-10-05_broker_handoff.json',
+    'prealert_notification_state.json',
 }
 
 
