@@ -1,6 +1,12 @@
 name: DIPSAUS fast PRE-ALERT (shadow by default)
 on:
   workflow_dispatch:
+    inputs:
+      live_notifications:
+        description: 'Enable only after exclusive notification handover'
+        type: boolean
+        default: false
+        required: true
   # Schedule parked until live shadow runs and cost controls are verified.
   # schedule:
   #   - cron: '*/5 7-21 * * 1-5'
@@ -38,6 +44,6 @@ jobs:
           SEC_CONTACT_EMAIL: ${{ secrets.SEC_CONTACT_EMAIL }}
           EODHD_API_TOKEN: ${{ secrets.EODHD_API_TOKEN }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-          SCANNER_NOTIFICATIONS_ENABLED: 'false'
-        run: python safe_runner.py prealert
+          SCANNER_NOTIFICATIONS_ENABLED: ${{ inputs.live_notifications && 'true' || 'false' }}
+        run: python safe_runner.py prealert ${{ inputs.live_notifications && '--live' || '' }}
       # No report summaries, artifacts, caches, git commits or personal stdout.
