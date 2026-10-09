@@ -63,12 +63,12 @@ class PrivateStore:
         if self.metadata.get('private') is not True:
             raise RuntimeError('STATE_REPOSITORY_MUST_BE_PRIVATE')
 
-    def request(self, suffix, data=None):
+    def request(self, suffix, data=None, accept='application/vnd.github+json'):
         req = urllib.request.Request('https://api.github.com/repos/' + self.repo + suffix,
             data=json.dumps(data).encode() if data is not None else None,
             method='PUT' if data is not None else 'GET',
             headers={'Authorization': 'Bearer ' + self.token,
-                     'Accept': 'application/vnd.github+json',
+                     'Accept': accept,
                      'X-GitHub-Api-Version': '2022-11-28'})
         try:
             with urllib.request.urlopen(req, timeout=30) as res:
@@ -85,7 +85,10 @@ class PrivateStore:
         record = self.request('/contents/' + self.path)
         self.sha = record['sha']
         try:
-            state = json.loads(base64.b64decode(record['content']))
+            if record.get('encoding') == 'none':
+                state = self.request('/contents/' + self.path, accept='application/vnd.github.raw+json')
+            else:
+                state = json.loads(base64.b64decode(record['content']))
         except (ValueError, TypeError):
             raise RuntimeError('PRIVATE_STATE_INVALID_JSON') from None
         if not isinstance(state.get('signals'), dict):
