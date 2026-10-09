@@ -24,7 +24,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('mode', choices=['prealert', 'eu', 'us'])
     parser.add_argument('--live', action='store_true')
+    parser.add_argument('--read-only', action='store_true')
     args = parser.parse_args()
+    if args.read_only and (args.live or args.mode != 'prealert'):
+        raise RuntimeError('READ_ONLY_MODE_INVALID')
     hydrate()
     store = PrivateStore(args.mode); state = store.load()
     if args.live:
@@ -41,7 +44,8 @@ def main():
         entries = json.loads(Path('reports/manual_recovery_trigger_report.json').read_text())
         exits = json.loads(Path('reports/profit_exit_watch_report.json').read_text())
         state['latest_watch_reports'] = {'entries': entries, 'exits': exits}
-        store.save(state)
+        if not args.read_only:
+            store.save(state)
         if args.live: notify(store, state, entries['rows'], exits['rows'])
     elif args.mode == 'eu':
         # Original EU refresh can fail its quality gate while still saving an audited database.
@@ -68,7 +72,7 @@ def main():
         state['us_routes'] = json.loads(Path('reports/us_live_trigger_routes.json').read_text())
         state['latest_us_reports'] = {p.name: json.loads(p.read_text()) for p in Path('reports/us_batch_runs').glob('*.json')}
         store.save(state)
-    print('Scanner completed. Runtime details saved privately; notifications ' + ('enabled.' if args.live else 'disabled (shadow mode).'))
+    print('Scanner completed. ' + ('Read-only test; ' if args.read_only else 'Runtime details saved privately; ') + 'notifications ' + ('enabled.' if args.live else 'disabled (shadow mode).'))
 
 
 if __name__ == '__main__':

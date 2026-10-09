@@ -12,7 +12,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: dipsaus-prealert-runtime
+  group: ${{ github.event_name == 'workflow_dispatch' && !inputs.live_notifications && format('dipsaus-prealert-test-{0}', github.run_id) || 'dipsaus-prealert-runtime' }}
   cancel-in-progress: false
 jobs:
   scanner:
@@ -44,5 +44,5 @@ jobs:
           EODHD_API_TOKEN: ${{ secrets.EODHD_API_TOKEN }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           SCANNER_NOTIFICATIONS_ENABLED: ${{ (github.event_name != 'workflow_dispatch' || inputs.live_notifications) && 'true' || 'false' }}
-        run: python prealert_cadence.py ${{ (github.event_name != 'workflow_dispatch' || inputs.live_notifications) && '--live' || '' }}
+        run: python prealert_cadence.py ${{ (github.event_name != 'workflow_dispatch' || inputs.live_notifications) && '--live' || '--read-only' }}
       # No report summaries, artifacts, caches, git commits or personal stdout.
