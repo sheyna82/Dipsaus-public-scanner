@@ -4,7 +4,7 @@ Clean source-only migration of EU and US recovery research and fast PRE-ALERT mo
 No private Git history, holdings, acquisition prices, personal watchlists, notification identifiers or runtime reports are included.
 
 **Migration status: active public production scanner.**
-The approved handover completed on 2026-10-09. EU, US and market-hours PRE-ALERT shadow runs passed, followed by an exclusive live PRE-ALERT run. All original private workflows are disabled and their last notification ledger was synchronized privately. PRE-ALERT schedule requests occur every five minutes, offset from the hour. Each scheduled job performs six serial checks at five-minute start intervals (about 25 minutes of coverage) to bridge scheduler delays. Workflow concurrency and the private notification ledger prevent overlapping senders and duplicate delivery. Manual dispatch runs only one check. GitHub does not guarantee start times, so gaps between jobs remain possible; EU and US discovery retain their schedules. Standard public GitHub-hosted runners are required. Personal configuration and runtime reports remain private. Manual PRE-ALERT dispatch defaults to notifications off; scheduled runs use the exclusive sender guard.
+The approved handover completed on 2026-10-09. EU, US and market-hours PRE-ALERT shadow runs passed, followed by an exclusive live PRE-ALERT run. All original private workflows are disabled and their last notification ledger was synchronized privately. PRE-ALERT is started through workflow_dispatch by an external scheduler. The built-in PRE-ALERT cron trigger has been removed to prevent competing pending runs. Each dispatch performs one check. Live workflow concurrency and the private notification ledger prevent overlapping senders and duplicate delivery. Read-only tests use independent concurrency and neither save runtime state nor send notifications. External dispatch does not guarantee immediate GitHub runner availability; EU and US discovery retain their schedules. Standard public GitHub-hosted runners are required. Personal configuration and runtime reports remain private. Manual PRE-ALERT dispatch defaults to notifications off; live dispatch uses the exclusive sender guard.
 
 ## Validation
 
@@ -15,7 +15,7 @@ python -m pip install --require-hashes -r requirements.lock
 python -m unittest discover -p 'test*.py'
 ```
 
-47 regression and migration safety tests passed in GitHub Actions, including inherited recovery/execution tests, fresh/stale provider handling, private-state visibility, notification deduplication and suppression of personal subprocess output.
+49 regression and migration safety tests passed in GitHub Actions, including inherited recovery/execution tests, fresh/stale provider handling, private-state visibility, notification deduplication and suppression of personal subprocess output.
 Pinned Python dependencies were checked with pip-audit: no known vulnerabilities reported at preparation time. This is not a guarantee against unknown vulnerabilities.
 
 ## Trading behavior

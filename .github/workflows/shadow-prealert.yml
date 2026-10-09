@@ -7,8 +7,6 @@ on:
         type: boolean
         default: false
         required: true
-  schedule:
-    - cron: '2-57/5 7-21 * * 1-5'
 permissions:
   contents: read
 concurrency:
