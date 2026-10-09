@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -74,5 +75,8 @@ if __name__ == '__main__':
     try: main()
     except Exception as exc:
         # Only exception class is public. Neither payloads nor authenticated URLs escape.
-        print('SCANNER_BLOCKED: ' + type(exc).__name__, file=sys.stderr)
+        reason = str(exc) if isinstance(exc, RuntimeError) else ''
+        if not re.fullmatch(r'(?:PRIVATE_(?:CONFIG|STATE)_[A-Z_]+|STATE_[A-Z_]+|LIVE_NOTIFICATIONS_NOT_ENABLED|SCANNER_STEP_FAILED: [a-z_]+\.py)', reason):
+            reason = type(exc).__name__
+        print('SCANNER_BLOCKED: ' + reason, file=sys.stderr)
         sys.exit(1)
