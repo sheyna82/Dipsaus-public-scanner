@@ -1,0 +1,12 @@
+# Private data and credentials must never be committed
+.env
+.env.*
+!.env.example
+config/
+reports/
+*.key
+*.pem
+*credentials*.json
+*secret*.json
+__pycache__/
+*.pyc
