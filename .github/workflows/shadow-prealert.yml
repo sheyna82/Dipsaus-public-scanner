@@ -1,8 +1,5 @@
 name: DIPSAUS fast PRE-ALERT
 on:
-  push:
-    paths:
-      - prealert_cadence.py
   workflow_dispatch:
     inputs:
       live_notifications:
