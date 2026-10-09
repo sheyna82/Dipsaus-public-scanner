@@ -60,6 +60,18 @@ class SafetyTests(unittest.TestCase):
         row = self.entry(); row['breakout_observed'] = False
         notify(Store(), {'signals': {}}, [row], [], lambda *a: self.fail('bottom sent'))
 
+    def test_split_secret_hydration_preserves_config(self):
+        from private_runtime import SECRET_CONFIG
+        bundle = {key: json.dumps({'test_marker': key}) for key in SECRET_CONFIG}
+        previous = Path.cwd()
+        with tempfile.TemporaryDirectory() as tmp:
+            try:
+                os.chdir(tmp)
+                with patch.dict(os.environ, bundle, clear=True): hydrate()
+                for key, filename in SECRET_CONFIG.items():
+                    self.assertEqual(json.loads((Path('config')/filename).read_text())['test_marker'], key)
+            finally: os.chdir(previous)
+
     def test_secret_path_traversal_rejected(self):
         with self.assertRaises(RuntimeError): hydrate('{"../exposed.json":{}}')
 

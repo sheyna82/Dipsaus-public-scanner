@@ -13,11 +13,24 @@ CONFIG_NAMES = {
 }
 
 
+SECRET_CONFIG = {
+    'SCANNER_MANUAL_TRIGGERS': 'manual_recovery_triggers.json',
+    'SCANNER_SUPPLEMENTAL_TRIGGERS': 'manual_recovery_triggers_supplemental.json',
+    'SCANNER_PORTFOLIO_WATCH': 'portfolio_reentry_watch.json',
+    'SCANNER_PROFIT_WATCH': 'profit_exit_watch.json',
+    'SCANNER_NOTIFICATION_GATE': 'notification_quality_gate.json',
+}
+
+
 def hydrate(raw=None):
-    raw = raw if raw is not None else os.environ.get('SCANNER_PRIVATE_CONFIG', '')
-    if not raw:
+    # Split Secrets stay below GitHub's per-Secret size limit.
+    if raw is not None:
+        bundle = json.loads(raw)
+    else:
+        bundle = {name: json.loads(os.environ[key]) for key, name in SECRET_CONFIG.items()
+                  if os.environ.get(key)}
+    if not bundle:
         raise RuntimeError('PRIVATE_CONFIG_NOT_CONFIGURED')
-    bundle = json.loads(raw)
     if not isinstance(bundle, dict) or set(bundle) - CONFIG_NAMES:
         raise RuntimeError('PRIVATE_CONFIG_INVALID')
     required = {'manual_recovery_triggers.json', 'profit_exit_watch.json',

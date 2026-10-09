@@ -30,7 +30,11 @@ jobs:
         run: python -m unittest discover -p 'test*.py'
       - name: Run scanner with private runtime data
         env:
-          SCANNER_PRIVATE_CONFIG: ${{ secrets.SCANNER_PRIVATE_CONFIG }}
+          SCANNER_MANUAL_TRIGGERS: ${{ secrets.SCANNER_MANUAL_TRIGGERS }}
+          SCANNER_SUPPLEMENTAL_TRIGGERS: ${{ secrets.SCANNER_SUPPLEMENTAL_TRIGGERS }}
+          SCANNER_PORTFOLIO_WATCH: ${{ secrets.SCANNER_PORTFOLIO_WATCH }}
+          SCANNER_PROFIT_WATCH: ${{ secrets.SCANNER_PROFIT_WATCH }}
+          SCANNER_NOTIFICATION_GATE: ${{ secrets.SCANNER_NOTIFICATION_GATE }}
           SCANNER_STATE_REPOSITORY: ${{ secrets.SCANNER_STATE_REPOSITORY }}
           SCANNER_STATE_TOKEN: ${{ secrets.SCANNER_STATE_TOKEN }}
           FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}

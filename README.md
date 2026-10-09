@@ -5,7 +5,7 @@ No private Git history, holdings, acquisition prices, personal watchlists, notif
 
 **Migration status: staged; not yet activated or validated in GitHub Actions.**
 The original private scanner remains the notification owner until authenticated shadow runs and billing controls are verified.
-Workflow templates are parked in `migration/workflows`, outside `.github/workflows`; they cannot run automatically.
+Production workflow templates are parked in `migration/workflows`, outside `.github/workflows`; they cannot run automatically. A manual-only validation workflow tests sanitized source without Secrets, notifications or schedules.
 
 ## Validation
 
@@ -16,7 +16,7 @@ python -m pip install --require-hashes -r requirements.lock
 python -m unittest discover -p 'test*.py'
 ```
 
-41 tests passed locally, including inherited recovery/execution tests, fresh/stale provider handling, private-state visibility, notification deduplication and suppression of personal subprocess output.
+42 tests passed locally, including inherited recovery/execution tests, fresh/stale provider handling, private-state visibility, notification deduplication and suppression of personal subprocess output.
 Pinned Python dependencies were checked with pip-audit: no known vulnerabilities reported at preparation time. This is not a guarantee against unknown vulnerabilities.
 
 ## Trading behavior
