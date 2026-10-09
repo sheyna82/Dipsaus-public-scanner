@@ -118,4 +118,10 @@ class SafetyTests(unittest.TestCase):
             with self.assertRaises(RuntimeError): eu.restore()
 
 
+class InheritedUsPhaseTests(unittest.TestCase):
+    def test_us_text_retest_and_reclaim_keep_inherited_phase(self):
+        from private_notifications import phase
+        self.assertEqual(phase({'market': 'US', 'status': 'BREAKOUT RETEST TURN'}), 'BREAKOUT-HOLD-RETEST')
+        self.assertEqual(phase({'market': 'US', 'breakout_observed': True, 'reclaim_observed': True}), 'BREAKOUT-HOLD-RETEST')
+
 if __name__ == '__main__': unittest.main()

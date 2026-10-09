@@ -13,6 +13,8 @@ def phase(row):
     yes = lambda *keys: any(bool(row.get(k)) for k in keys)
     breakout = yes('breakout_observed', 'breakout_seen', 'breakout_confirmed') or 'BREAKOUT' in text
     hold = yes('breakout_hold_observed', 'retest_hold_observed', 'hold_observed', 'higher_low_observed', 'recent_reclaim_observed')
+    if row.get('market') == 'US':
+        hold = hold or yes('reclaim_observed') or ('RETEST' in text and ('HOLD' in text or 'TURN' in text))
     execution = yes('execution_near', 'buy_ready', 'execution_qualified') or any(x in text for x in ('BUY-READY', 'KOOPKLAAR', 'EXECUTION-NEAR', 'VERY-NEAR-BUY-READY'))
     if execution: return 'EXECUTION-NEAR'
     if breakout and hold: return 'BREAKOUT-HOLD-RETEST'
