@@ -1,6 +1,6 @@
 # Controlled activation
 
-Current state: local validation passed; only a manual validation workflow (no Secrets/notifications) installed in `.github/workflows`, no production schedules activated and no live notification handover performed.
+Current state: 42 tests and GitHub source validation passed. Three manual-only shadow workflows are installed, with notifications disabled. Configuration Secrets and private runtime seed files are present. Private-state authentication currently fails with HTTP 401; scanner validation is incomplete. No production schedules or notification handover are activated. The account Actions budget was observed at $0 with Stop usage enabled.
 
 1. Set public repository Secrets: `SCANNER_MANUAL_TRIGGERS`, `SCANNER_SUPPLEMENTAL_TRIGGERS`, `SCANNER_PORTFOLIO_WATCH`, `SCANNER_PROFIT_WATCH`, `SCANNER_NOTIFICATION_GATE` (one complete JSON config per Secret; no oversized bundle), `SCANNER_STATE_REPOSITORY`, `SCANNER_STATE_TOKEN`, `NTFY_TOPIC`, and existing provider/contact Secrets `FINNHUB_API_KEY`, `SEC_CONTACT_EMAIL`, `EODHD_API_TOKEN` if used. Never copy secret values into a public file, issue, log or chat. GitHub does not expose existing Secret values for copying; unavailable provider Secrets must be entered securely again.
 2. Initialize state files in the private state repository: `migration_runtime/public_scanner_prealert_state.json`, `public_scanner_us_state.json`, `public_scanner_eu_state.json`. Each needs `signals: {}`; seed PRE-ALERT signals from the latest existing private notification-state file and seed the US state `us_routes` from the current private route file. Never silently create an empty PRE-ALERT ledger during cutover.
@@ -12,4 +12,4 @@ Current state: local validation passed; only a manual validation workflow (no Se
 
 All old workflows were reviewed for migration. They are not copied verbatim: they included literal notification routing, personal report publication and public-incompatible Git persistence. Diagnostic scripts remain available as source; only the three required scanner workflows have sanitized activation templates.
 
-Outstanding before completion: authenticated Secrets setup, state initialization, zero-spend budget verification, three successful GitHub shadow runs, exclusive notification handover, and verification of scheduled production runs.
+Outstanding before completion: resolve private-state HTTP 401, enter provider Secrets where required, complete three successful GitHub shadow runs and inspect private coverage/freshness, then controlled exclusive handover and verification of production schedules.

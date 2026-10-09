@@ -3,9 +3,8 @@
 Clean source-only migration of EU and US recovery research and fast PRE-ALERT monitoring.
 No private Git history, holdings, acquisition prices, personal watchlists, notification identifiers or runtime reports are included.
 
-**Migration status: staged; not yet activated or validated in GitHub Actions.**
-The original private scanner remains the notification owner until authenticated shadow runs and billing controls are verified.
-Production workflow templates are parked in `migration/workflows`, outside `.github/workflows`; they cannot run automatically. A manual-only validation workflow tests sanitized source without Secrets, notifications or schedules.
+**Migration status: staged; production schedules and notifications remain disabled.**
+The source validation workflow passed in GitHub Actions. Three manual-only shadow workflows are installed; authenticated shadow runs are currently blocked by a private-state credential HTTP 401. The original private scanner remains the notification owner. Runtime state is initialized privately; no live handover has occurred.
 
 ## Validation
 
