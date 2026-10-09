@@ -28,8 +28,13 @@ def hydrate(raw=None):
     if raw is not None:
         bundle = json.loads(raw)
     else:
-        bundle = {name: json.loads(os.environ[key]) for key, name in SECRET_CONFIG.items()
-                  if os.environ.get(key)}
+        bundle = {}
+        for key, name in SECRET_CONFIG.items():
+            if os.environ.get(key):
+                try:
+                    bundle[name] = json.loads(os.environ[key])
+                except (json.JSONDecodeError, TypeError):
+                    raise RuntimeError('PRIVATE_CONFIG_INVALID_JSON_' + key) from None
     if not bundle:
         raise RuntimeError('PRIVATE_CONFIG_NOT_CONFIGURED')
     if not isinstance(bundle, dict) or set(bundle) - CONFIG_NAMES:
@@ -79,7 +84,10 @@ class PrivateStore:
         # A missing state must be initialized explicitly; never silently reset deduplication.
         record = self.request('/contents/' + self.path)
         self.sha = record['sha']
-        state = json.loads(base64.b64decode(record['content']))
+        try:
+            state = json.loads(base64.b64decode(record['content']))
+        except (ValueError, TypeError):
+            raise RuntimeError('PRIVATE_STATE_INVALID_JSON') from None
         if not isinstance(state.get('signals'), dict):
             raise RuntimeError('PRIVATE_STATE_INVALID')
         return state
