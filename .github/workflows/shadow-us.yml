@@ -1,0 +1,43 @@
+name: DIPSAUS US recovery (shadow by default)
+on:
+  workflow_dispatch:
+  # Schedule parked until live shadow runs and cost controls are verified.
+  # schedule:
+  #   - cron: '35 13,14,15,16,18,20 * * 1-5'
+permissions:
+  contents: read
+concurrency:
+  group: dipsaus-us-runtime
+  cancel-in-progress: false
+jobs:
+  scanner:
+    if: github.repository == 'sheyna82/Dipsaus-public-scanner' && github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Install tested pinned dependencies
+        run: python -m pip install --require-hashes -r requirements.lock
+      - name: Run regression and migration safety tests
+        run: python -m unittest discover -p 'test*.py'
+      - name: Run scanner with private runtime data
+        env:
+          SCANNER_MANUAL_TRIGGERS: ${{ secrets.SCANNER_MANUAL_TRIGGERS }}
+          SCANNER_SUPPLEMENTAL_TRIGGERS: ${{ secrets.SCANNER_SUPPLEMENTAL_TRIGGERS }}
+          SCANNER_PORTFOLIO_WATCH: ${{ secrets.SCANNER_PORTFOLIO_WATCH }}
+          SCANNER_PROFIT_WATCH: ${{ secrets.SCANNER_PROFIT_WATCH }}
+          SCANNER_NOTIFICATION_GATE: ${{ secrets.SCANNER_NOTIFICATION_GATE }}
+          SCANNER_STATE_REPOSITORY: ${{ secrets.SCANNER_STATE_REPOSITORY }}
+          SCANNER_STATE_TOKEN: ${{ secrets.SCANNER_STATE_TOKEN }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          SEC_CONTACT_EMAIL: ${{ secrets.SEC_CONTACT_EMAIL }}
+          EODHD_API_TOKEN: ${{ secrets.EODHD_API_TOKEN }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python safe_runner.py us
+      # No report summaries, artifacts, caches, git commits or personal stdout.
