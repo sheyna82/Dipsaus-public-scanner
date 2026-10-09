@@ -1,4 +1,4 @@
-name: DIPSAUS Europe recovery (shadow by default)
+name: DIPSAUS Europe recovery
 on:
   workflow_dispatch:
   schedule:

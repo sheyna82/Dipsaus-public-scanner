@@ -3,8 +3,8 @@
 Clean source-only migration of EU and US recovery research and fast PRE-ALERT monitoring.
 No private Git history, holdings, acquisition prices, personal watchlists, notification identifiers or runtime reports are included.
 
-**Migration status: staged; production schedules and notifications remain disabled.**
-The source validation workflow passed in GitHub Actions. Three manual-only shadow workflows are installed; the PRE-ALERT shadow run now completed successfully with private report persistence. EU/US validation remains in progress. The original private scanner remains the notification owner. Runtime state is initialized privately; no live handover has occurred.
+**Migration status: active public production scanner.**
+The approved handover completed on 2026-10-09. EU, US and market-hours PRE-ALERT shadow runs passed, followed by an exclusive live PRE-ALERT run. All original private workflows are disabled and their last notification ledger was synchronized privately. PRE-ALERT is scheduled every five minutes; EU and US discovery retain their schedules. Standard public GitHub-hosted runners are required. Personal configuration and runtime reports remain private. Manual PRE-ALERT dispatch defaults to notifications off; scheduled runs use the exclusive sender guard.
 
 ## Validation
 
@@ -15,7 +15,7 @@ python -m pip install --require-hashes -r requirements.lock
 python -m unittest discover -p 'test*.py'
 ```
 
-42 tests passed locally, including inherited recovery/execution tests, fresh/stale provider handling, private-state visibility, notification deduplication and suppression of personal subprocess output.
+43 regression and migration safety tests passed in GitHub Actions, including inherited recovery/execution tests, fresh/stale provider handling, private-state visibility, notification deduplication and suppression of personal subprocess output.
 Pinned Python dependencies were checked with pip-audit: no known vulnerabilities reported at preparation time. This is not a guarantee against unknown vulnerabilities.
 
 ## Trading behavior

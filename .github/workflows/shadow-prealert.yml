@@ -1,7 +1,5 @@
-name: DIPSAUS fast PRE-ALERT (shadow by default)
+name: DIPSAUS fast PRE-ALERT
 on:
-  push:
-    paths: ['.github/workflows/shadow-prealert.yml']
   workflow_dispatch:
     inputs:
       live_notifications:
