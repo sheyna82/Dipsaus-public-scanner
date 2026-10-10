@@ -15,18 +15,20 @@ python -m pip install --require-hashes -r requirements.lock
 python -m unittest discover -p 'test*.py'
 ```
 
-49 regression and migration safety tests passed in GitHub Actions, including inherited recovery/execution tests, fresh/stale provider handling, private-state visibility, notification deduplication and suppression of personal subprocess output.
+66 regression and migration safety tests passed in GitHub Actions, including inherited recovery/execution tests, fresh/stale provider handling, private-state visibility, notification deduplication and suppression of personal subprocess output.
 Pinned Python dependencies were checked with pip-audit: no known vulnerabilities reported at preparation time. This is not a guarantee against unknown vulnerabilities.
 
 ## Trading behavior
 
 Keep recovery discovery separate from execution. Preserve early turns, fresh provider checks, EU research, market-wide US momentum discovery and seven rotating deep batches per US sweep. A full 21-batch rotation spans three sweeps. Fast PRE-ALERT checks remain separate from expensive discovery scans. Missing/stale data stays DATA-BLOCKED, never a negative setup conclusion.
 
-No automatic orders. Entry still requires independent broker bid/ask/spread, current recovery-leg invalidation, confirmed bottom, day/week review, first friction, meaningful resistance and realistic further recovery zone, R/R >=2, meaningful gross EUR profit, risk budget, news/events, FX and portfolio fit. An add requires a new standalone setup; never average down merely to lower cost. Profit/exit and fast-crash monitoring retain their existing signal logic.
+No automatic orders. Entry still requires independent broker bid/ask/spread, current recovery-leg invalidation, confirmed bottom, day/week review, first friction, meaningful resistance and realistic further recovery zone, R/R >=2, meaningful gross EUR profit, risk budget, news/events, FX and portfolio fit. An add requires a new standalone setup; never average down merely to lower cost. Profit/exit monitoring supports currency-matched EUR/USD zones and retains the existing fast-crash override. Confirmed 1h higher lows ratchet the private recovery reference upward, with a confirmed daily anchor when no hourly anchor exists. Two completed hourly closes below the reference, a lower-high/lower-low sequence and volume or daily-context corroboration are required for a normal structure-review alert. Isolated minute-bar support breaks and ordinary retests do not qualify. Every alert remains a broker review, never an order.
+
+Chart-based profit maps are explicitly provisional: confirmed historical pivots support candidate friction/resistance zones, but do not predict the remaining upside or verify company/event risk. Missing overhead evidence is reported rather than extrapolated. EUR profit estimates require verified position size, average cost and fresh FX where applicable. Missing inputs remain visible in private reports. Stale quotes/history suppress structure alerts. Market-hours freshness and execution checks remain necessary before relying on an alert.
 
 ## Private runtime
 
-Sensitive settings come only from GitHub Secrets. Scanner stdout/stderr are suppressed. No personal summary, artifact, cache or public Git commit is produced by the replacement workflow templates. Runtime reports and cooldown state are stored via the GitHub contents API in a verified **private** state repository. These API writes do not run private Actions workflows; all private workflows must be disabled before public notifications can be enabled.
+Sensitive settings come only from GitHub Secrets. Scanner stdout/stderr are suppressed. No personal summary, artifact, cache or public Git commit is produced by the replacement workflow templates. Runtime reports, hourly/daily history caches, ratcheted recovery references and cooldown state are stored via the GitHub contents API in a verified **private** state repository. These API writes do not run private Actions workflows; all private workflows must be disabled before public notifications can be enabled.
 
 The state token needs contents read/write and Actions read on the selected private repository. Do not put it into code. A missing or invalid state blocks the scan rather than resetting cooldowns. Notification delivery is reserved before sending: uncertain delivery is not automatically retried and requires private inspection, preventing duplicate pushes.
 
