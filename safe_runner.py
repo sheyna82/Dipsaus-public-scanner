@@ -38,11 +38,14 @@ def main():
     if routes is not None:
         Path('config/us_live_trigger_routes.json').write_text(json.dumps(routes))
     if args.mode == 'prealert':
+        Path('config').mkdir(exist_ok=True)
+        Path('config/profit_watch_state.json').write_text(json.dumps(state.get('profit_watch_state', {})))
         run('manual_recovery_trigger_watch.py'); run('profit_exit_watch.py')
         # Retain the existing recheck while avoiding a public summary or artifacts.
         run('manual_recovery_trigger_watch.py')
         entries = json.loads(Path('reports/manual_recovery_trigger_report.json').read_text())
         exits = json.loads(Path('reports/profit_exit_watch_report.json').read_text())
+        state['profit_watch_state'] = exits.pop('dynamic_state', state.get('profit_watch_state', {}))
         state['latest_watch_reports'] = {'entries': entries, 'exits': exits}
         if not args.read_only:
             store.save(state)
@@ -84,3 +87,4 @@ if __name__ == '__main__':
             reason = type(exc).__name__
         print('SCANNER_BLOCKED: ' + reason, file=sys.stderr)
         sys.exit(1)
+

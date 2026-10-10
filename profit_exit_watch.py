@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 import yfinance as yf
 from profit_map_validation import zone as profit_zone, assess as assess_profit_map
+from dynamic_profit_watch import evaluate as evaluate_structure
 
 CFG=Path('config/profit_exit_watch.json')
 OUT=Path('reports/profit_exit_watch_report.json')
@@ -11,6 +12,18 @@ MAX_AGE=120
 cfg=json.loads(CFG.read_text())
 now=datetime.now(timezone.utc)
 rows=[]
+previous_state=json.loads(Path('config/profit_watch_state.json').read_text()) if Path('config/profit_watch_state.json').exists() else {}
+dynamic_state={}
+fx=None
+if any(item.get('currency') == 'USD' and (item.get('average_cost_usd') or item.get('average_cost_eur')) for item in cfg.get('positions',{}).values()):
+    try:
+        fx_history=yf.Ticker('EURUSD=X').history(period='5d',interval='1m',prepost=True)
+        if not fx_history.empty:
+            fx_index=fx_history.index[-1]
+            if getattr(fx_index,'tzinfo',None) is not None:
+                fx={'eurusd':float(fx_history['Close'].iloc[-1]),'time':fx_index.tz_convert('UTC').to_pydatetime().isoformat()}
+    except Exception:
+        fx=None
 for symbol,item in cfg.get('positions',{}).items():
     if item.get('status') == 'CLOSED-SWING':
         rows.append({'symbol':symbol,'status':'CLOSED-SWING','profit_alert':False,'automatic_sell':False})
@@ -18,7 +31,8 @@ for symbol,item in cfg.get('positions',{}).items():
     provider_symbol=item.get('provider_symbol',symbol)
     provider_currency=item.get('provider_currency',item.get('currency',item.get('broker_currency')))
     try:
-        h=yf.Ticker(provider_symbol).history(period='5d',interval='1m',prepost=False)
+        ticker=yf.Ticker(provider_symbol)
+        h=ticker.history(period='5d',interval='1m',prepost=False)
         if h.empty:
             rows.append({'symbol':symbol,'status':'DATA-BLOCKED','profit_alert':False}); continue
         idx=h.index[-1]
@@ -85,15 +99,26 @@ for symbol,item in cfg.get('positions',{}).items():
                     reason='EXIT-REBOUND-BROKER-CHECK'; severity='DEGIRO-CHECK-NOW'
         if fast_crash:
             reason='FAST-CRASH-OVERRIDE'; severity='HIGH-URGENCY-DEGIRO-CHECK'
+        structure_report={'status':'DISABLED','structure_alert':False}
+        candidate_map={'status':'NOT-REQUESTED'}
+        if item.get('dynamic_structure_protection') or item.get('profit_map_required'):
+            # Quote/provider identity travels with private state, never with public logs.
+            dynamic_item=dict(item,provider_symbol=provider_symbol)
+            structure_report,new_state,candidate_map=evaluate_structure(ticker,dynamic_item,price,ts.isoformat(),provider_currency,now,previous_state.get(symbol),fx)
+            dynamic_state[symbol]=new_state
+            if item.get('dynamic_structure_protection') and structure_report.get('structure_alert') and not fast_crash:
+                reason='CONFIRMED-RECOVERY-STRUCTURE-DETERIORATION'; severity='DEGIRO-STRUCTURE-REVIEW'
         alert=bool(fresh and reason)
-        rows.append({'symbol':symbol,'shares':item.get('shares'),'provider_symbol':provider_symbol,'provider_currency':provider_currency,'broker_currency':item.get('broker_currency'),'provider_quote':price,'provider_quote_utc':ts.isoformat(),'fresh':fresh,'profit_alert':alert,'fast_crash':fast_crash,'fast_crash_metrics':fast_metrics,'exit_prealert':exit_prealert,'exit_prealert_level_usd':exit_prealert_level,'alert_reason':reason,'decision':severity,'status':'FAST-CRASH-DEGIRO-CHECK' if fast_crash else ('WINSTCHECK-NU' if alert else 'PROFIT-WATCH'),'automatic_sell':False})
+        rows.append({'symbol':symbol,'shares':item.get('shares'),'provider_symbol':provider_symbol,'provider_currency':provider_currency,'broker_currency':item.get('broker_currency'),'provider_quote':price,'provider_quote_utc':ts.isoformat(),'fresh':fresh,'profit_alert':alert,'fast_crash':fast_crash,'fast_crash_metrics':fast_metrics,'exit_prealert':exit_prealert,'exit_prealert_level_usd':exit_prealert_level,'alert_reason':reason,'decision':severity,'status':'FAST-CRASH-DEGIRO-CHECK' if fast_crash else ('WINSTCHECK-NU' if alert else 'PROFIT-WATCH'),'automatic_sell':False,'dynamic_structure':structure_report,'chart_profit_map':candidate_map})
     except Exception as e:
         rows.append({'symbol':symbol,'status':'DATA-BLOCKED','profit_alert':False,'error':type(e).__name__})
 OUT.parent.mkdir(exist_ok=True)
 for row in rows:
     item=cfg.get('positions',{}).get(row['symbol'],{})
     row['profit_map_validation']=assess_profit_map(item, row.get('provider_currency',item.get('currency')))
-    row['dynamic_structure_monitoring']='NOT-IMPLEMENTED'
-OUT.write_text(json.dumps({'generated_utc':now.isoformat(),'rows':rows},indent=2)+'\n')
+    row['dynamic_structure_monitoring']=row.get('dynamic_structure',{}).get('status','DATA-BLOCKED')
+    if row['symbol'] not in dynamic_state and row['symbol'] in previous_state and item.get('status') != 'CLOSED-SWING':
+        dynamic_state[row['symbol']]=previous_state[row['symbol']]
+OUT.write_text(json.dumps({'generated_utc':now.isoformat(),'rows':rows,'dynamic_state':dynamic_state},indent=2)+'\n')
 print(OUT.read_text())
 
