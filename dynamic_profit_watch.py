@@ -57,7 +57,15 @@ def structure(hourly, daily, quote, quote_time, now, previous=None):
     for prior, candidate in list(zip(lows, lows[1:]))[-1:]:
         rebound = max(r['close'] for r in h[candidate['index']+1:candidate['index']+3]) > h[candidate['index']]['high']
         if candidate['price'] > prior['price'] and rebound and (not reference or candidate['price'] > reference['price']) and (not reference or timestamp(candidate['time']) > timestamp(reference['time'])):
-            reference = {k: candidate[k] for k in ('price', 'time', 'confirmed_at')}
+            reference = dict({k: candidate[k] for k in ('price', 'time', 'confirmed_at')},timeframe='1h')
+    # A confirmed daily higher low can anchor a slower recovery when no hourly
+    # reference exists. An isolated minute-bar pivot is never promoted here.
+    if not reference:
+        daily_lows=pivots(d,'low')
+        for prior,candidate in list(zip(daily_lows,daily_lows[1:]))[-1:]:
+            rebound=max(r['close'] for r in d[candidate['index']+1:candidate['index']+3]) > d[candidate['index']]['high']
+            if candidate['price'] > prior['price'] and rebound:
+                reference=dict({k:candidate[k] for k in ('price','time','confirmed_at')},timeframe='1d')
     if reference:
         state['reference'] = reference
     result['reference'] = reference

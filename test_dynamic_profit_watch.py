@@ -40,6 +40,15 @@ class DynamicTests(unittest.TestCase):
         r,s=structure(self.h,self.d,107,now.isoformat(),now)
         self.assertNotIn('reference',s)
 
+    def test_confirmed_daily_reference_when_hourly_has_no_pivots(self):
+        h=rows(list(range(110,122)))
+        d=rows([102,101,98,101,102,104,103,100,103,104,105,106],daily=True)
+        for i,r in enumerate(d):r['time']=(BASE-timedelta(days=12-i)).isoformat()
+        r,s=structure(h,d,123,self.now.isoformat(),self.now)
+        self.assertEqual(s['reference']['price'],100)
+        self.assertEqual(s['reference']['timeframe'],'1d')
+        self.assertFalse(r['structure_alert'])
+
     def test_normal_support_retest_stays_quiet(self):
         h=self.h[:-2]+rows([100,102])
         h[-2]['time']=self.h[-2]['time'];h[-1]['time']=self.h[-1]['time']
