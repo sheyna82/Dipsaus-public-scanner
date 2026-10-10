@@ -3,6 +3,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 import yfinance as yf
+from profit_map_validation import zone as profit_zone, assess as assess_profit_map
 
 CFG=Path('config/profit_exit_watch.json')
 OUT=Path('reports/profit_exit_watch_report.json')
@@ -26,12 +27,14 @@ for symbol,item in cfg.get('positions',{}).items():
         price=float(h['Close'].iloc[-1])
         reason=None; severity=None
         profit_map=item.get('profit_map') or {}
-        zone=item.get('first_decision_zone_usd') or profit_map.get('first_friction_usd')
+        zone=profit_zone(item, provider_currency, 'first_friction', 'first_decision_zone')
         if zone and price>=zone[0]: reason='FIRST-DECISION-ZONE'; severity='DECISION'
-        meaningful=item.get('first_meaningful_resistance_usd') or profit_map.get('first_meaningful_resistance_usd')
+        meaningful=profit_zone(item, provider_currency, 'first_meaningful_resistance')
         if meaningful and price>=meaningful[0]: reason='MEANINGFUL-RESISTANCE'; severity='PARTIAL-PROFIT-CANDIDATE'
-        friction=item.get('first_friction_usd')
-        warning=item.get('warning_below_usd'); giveback=item.get('material_giveback_usd')
+        friction=profit_zone(item, provider_currency, 'first_friction')
+        suffix=str(provider_currency or '').lower()
+        warning=item.get('warning_below_'+suffix) if suffix in ('eur','usd') else None
+        giveback=item.get('material_giveback_'+suffix) if suffix in ('eur','usd') else None
         if friction:
             today=h[h.index.date==h.index[-1].date()]
             recent=today.tail(90) if not today.empty else h.tail(90)
@@ -87,6 +90,10 @@ for symbol,item in cfg.get('positions',{}).items():
     except Exception as e:
         rows.append({'symbol':symbol,'status':'DATA-BLOCKED','profit_alert':False,'error':type(e).__name__})
 OUT.parent.mkdir(exist_ok=True)
+for row in rows:
+    item=cfg.get('positions',{}).get(row['symbol'],{})
+    row['profit_map_validation']=assess_profit_map(item, row.get('provider_currency',item.get('currency')))
+    row['dynamic_structure_monitoring']='NOT-IMPLEMENTED'
 OUT.write_text(json.dumps({'generated_utc':now.isoformat(),'rows':rows},indent=2)+'\n')
 print(OUT.read_text())
 
