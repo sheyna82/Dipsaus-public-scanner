@@ -17,6 +17,8 @@ def phase(row):
         hold = hold or yes('reclaim_observed') or ('RETEST' in text and ('HOLD' in text or 'TURN' in text))
     execution = yes('execution_near', 'buy_ready', 'execution_qualified') or any(x in text for x in ('BUY-READY', 'KOOPKLAAR', 'EXECUTION-NEAR', 'VERY-NEAR-BUY-READY'))
     if execution: return 'EXECUTION-NEAR'
+    if row.get('watch_type') == 'AUTO-US-DISCOVERY' and row.get('intraday_hold_confirmed'):
+        return 'BREAKOUT-HOLD-RETEST' if breakout else 'BOTTOM-RECOVERY'
     if breakout and hold: return 'BREAKOUT-HOLD-RETEST'
     if breakout: return 'BREAKOUT-SEEN'
     return 'BOTTOM-RECOVERY'
