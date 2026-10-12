@@ -55,7 +55,7 @@ def main():
             eu_report = PrivateStore('eu').load().get('latest_eu_report', {})
             profit_cfg = json.loads(Path('config/profit_exit_watch.json').read_text())
             holdings = set()
-            for symbol, item in profit_cfg.get('candidates', {}).items():
+            for symbol, item in profit_cfg.get('positions', {}).items():
                 if isinstance(item, dict) and item.get('shares', 0) > 0:
                     holdings.add(item.get('provider_symbol') or symbol)
             notify_eu_research(store, state, eu_report, holdings)
