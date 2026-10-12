@@ -52,6 +52,11 @@ def notify(store, state, entries, exits, sender=None):
         market = row.get('market', 'EU')
         if market == 'US' and not row.get('watch_type'): continue
         route = row.get('triggered_route') or row.get('trigger_route') or 'PRE-ALERT'
+        # Portfolio re-entry triggers are early research observations, not independently
+        # money-qualified trades. EU holdings use the unified EU research gate below;
+        # US holdings remain internally watched until an equivalent quality gate exists.
+        if row.get('watch_type') == 'PORTFOLIO-REENTRY':
+            continue
         if row.get('watch_type') == 'PORTFOLIO-REENTRY' and route not in (
             'ACTIVE-HOLDING-DIP-TURN', 'ACTIVE-HOLDING-BASE-TEST', 'ACTIVE-HOLDING-MULTIDAY-RECOVERY'):
             continue
