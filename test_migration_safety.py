@@ -48,12 +48,21 @@ class SafetyTests(unittest.TestCase):
         with self.assertRaises(TimeoutError): notify(store, state, [self.entry()], [], fail)
         notify(store, state, [self.entry()], [], lambda *a: self.fail('duplicate'))
 
-    def test_profit_rearms_only_when_condition_clears(self):
+    def test_profit_deduplicates_same_day_after_brief_clear(self):
         state = {'signals': {}}; store = Store(); sent = []
         row = {'symbol': 'TEST', 'profit_alert': True, 'alert_reason': 'RESISTANCE', 'decision': 'CHECK'}
         send = lambda *a: sent.append(a)
         notify(store, state, [], [row, row], send)
         notify(store, state, [], [{'symbol': 'TEST', 'profit_alert': False}, row], send)
+        self.assertEqual(len(sent), 1)
+
+    def test_profit_new_material_reason_still_notifies(self):
+        state = {'signals': {}}; store = Store(); sent = []
+        row = {'symbol': 'TEST', 'profit_alert': True, 'alert_reason': 'RESISTANCE', 'decision': 'CHECK'}
+        send = lambda *a: sent.append(a)
+        notify(store, state, [], [row], send)
+        changed = dict(row, alert_reason='STRUCTURE-DAMAGE')
+        notify(store, state, [], [changed], send)
         self.assertEqual(len(sent), 2)
 
     def test_unconfirmed_bottom_silent(self):
