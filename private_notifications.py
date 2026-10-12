@@ -90,27 +90,41 @@ def notify_eu_research(store, state, report, holdings, sender=None):
         return
     if generated.tzinfo is None or not timedelta(0) <= now - generated <= timedelta(minutes=25):
         return
+    # Prioritize existing holdings and the clearest recovery evidence; avoid alert storms.
+    eligible = []
     for row in report.get("candidates", []):
-        if not row.get("broker_verify_now") or row.get("trade_ready") or not row.get("broker_check_candidate"):
-            continue
         symbol = row.get("symbol")
-        if not isinstance(symbol, str) or not symbol or not row.get("provider_delayed_but_usable_for_attention") and not row.get("provider_freshness_pass"):
+        if not isinstance(symbol, str) or not symbol:
             continue
-        # Historical calculations are research inputs, not verified executable R/R.
-        scenarios = row.get("historical_3500_eur_scenarios") or {}
-        if (scenarios.get("rr_to_meaningful") or 0) < 2 or (scenarios.get("meaningful_resistance_gross_eur") or 0) < 150:
+        if not row.get("broker_verify_now") or not row.get("broker_check_candidate") or row.get("trade_ready"):
             continue
-        kind = "BIJKOOPCHECK" if symbol in holdings else "INSTAPCHECK"
+        if not (row.get("provider_freshness_pass") or row.get("provider_delayed_but_usable_for_attention")):
+            continue
+        score = row.get("early_recovery_score") or 0
+        owned = symbol in holdings
+        if score < (2 if owned else 3):
+            continue
+        if not owned and "BOTTOM-EVIDENCE-INSUFFICIENT" in row.get("historical_flags", []):
+            continue
+        scenario = row.get("historical_3500_eur_scenarios") or {}
+        if (scenario.get("rr_to_meaningful") or 0) < 2 or (scenario.get("meaningful_resistance_gross_eur") or 0) < 150:
+            continue
+        kind = "BIJKOOPCHECK" if owned else "INSTAPCHECK"
         key = f"EU-RESEARCH|{symbol}|{kind}"
-        previous = state.setdefault("signals", {}).get(key, {})
-        # Alert at most once per symbol per trading day, not on every five-minute check.
-        if previous.get("day") == generated.date().isoformat():
+        if state.setdefault("signals", {}).get(key, {}).get("day") == generated.date().isoformat():
             continue
-        record = {"day": generated.date().isoformat(), "notification_schema_version": 10,
+        eligible.append((owned, score, symbol, kind, key))
+    eligible.sort(key=lambda x: (-int(x[0]), -x[1], x[2]))
+    # A maximum of three new entry/buy-more checks per scan, five per day.
+    day = generated.date().isoformat()
+    already = sum(1 for k, v in state["signals"].items()
+                  if k.startswith("EU-RESEARCH|") and v.get("day") == day)
+    for owned, score, symbol, kind, key in eligible[:max(0, min(3, 5 - already))]:
+        record = {"day": day, "notification_schema_version": 11,
                   "notified_utc": now.isoformat()}
-        body = (f"{symbol}: {kind} - vroege herstelkandidaat, GEEN koopbevestiging.\\n"
-                "Providerdata kan vertraagd zijn. Controleer actuele DEGIRO bied/laat, "
-                "zelfstandige herstelstructuur, eerste betekenisvolle weerstand, R/R >=2, "
-                "brutowinst >= EUR150 bij standaardtranche, nieuws/earnings en portefeuillerisico. "
-                "Geen automatische order.")
+        body = (f"{symbol}: {kind} - herstelonderzoek (score {score}), GEEN koopbevestiging.\\n"
+                "Providerkoers kan vertraagd zijn. Check actuele DEGIRO bied/laat, "
+                "nieuwe zelfstandige herstelsetup, weerstand, R/R >=2 en "
+                "realistische brutowinst >= EUR150 voor standaardtranche; "
+                "controleer nieuws, earnings en portefeuillerisico. Geen automatische order.")
         reserve_send(store, state, key, record, symbol, body, sender)
