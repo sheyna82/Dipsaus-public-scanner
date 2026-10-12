@@ -94,12 +94,20 @@ def notify(store, state, entries, exits, sender=None):
         prev = state['signals'].get(key, {})
         if not row.get('profit_alert'):
             if prev.get('active'):
-                state['signals'][key] = {'active': False}; store.save(state)
+                # Preserve the last sent state across brief quote/zone fluctuations.
+                state['signals'][key] = dict(prev, active=False); store.save(state)
             continue
         reason = row.get('alert_reason') or 'DECISION-ZONE'; decision = row.get('decision') or 'WINSTCHECK'
         sid = f'{reason}|{decision}'
-        if prev.get('active') and prev.get('state_id') == sid: continue
-        record = {'active': True, 'state_id': sid, 'notification_schema_version': 9,
+        today = datetime.now(timezone.utc).date().isoformat()
+        # One ordinary decision-zone push per symbol/state/day even if the alert
+        # temporarily clears. A materially different reason remains actionable.
+        if prev.get('state_id') == sid and (
+                prev.get('active') or prev.get('day') == today or
+                str(prev.get('notified_utc', ''))[:10] == today):
+            continue
+        record = {'active': True, 'state_id': sid, 'day': today,
+                  'notification_schema_version': 13,
                   'notified_utc': datetime.now(timezone.utc).isoformat()}
         body = f'{symbol}: WINSTCHECK NU\nReason: {reason}\nProvider quote: {row.get("provider_quote")}\nNo automatic sale. Verify current DEGIRO bid/ask, recovery structure and momentum.'
         reserve_send(store, state, key, record, symbol, body, sender)
