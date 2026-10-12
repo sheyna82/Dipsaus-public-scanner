@@ -87,9 +87,9 @@ def main():
         store.save(state)
     else:
         run('us_momentum_recovery_discovery.py')
-        now = datetime.now(timezone.utc)
-        slots = {13: 0, 14: 1, 15: 2, 16: 3, 18: 4, 20: 5}
-        start = (int(now.timestamp()) // 86400 + slots.get(now.hour, 0) * 7) % 21
+        # Advance by completed sweeps, not UTC day/hour. This guarantees that
+        # three successful US sweeps cover all 21 batches, even if jobs run late.
+        start = int(state.get('us_next_batch', 0)) % 21
         Path('reports/us_batch_runs').mkdir(parents=True, exist_ok=True)
         for i in range(7):
             batch = (start + i) % 21
@@ -98,6 +98,8 @@ def main():
         run('us_auto_prealert_handoff.py'); run('us_live_trigger_routes.py')
         state['us_routes'] = json.loads(Path('reports/us_live_trigger_routes.json').read_text())
         state['latest_us_reports'] = {p.name: json.loads(p.read_text()) for p in Path('reports/us_batch_runs').glob('*.json')}
+        state['us_last_completed_batches'] = [(start + i) % 21 for i in range(7)]
+        state['us_next_batch'] = (start + 7) % 21
         store.save(state)
     print('Scanner completed. ' + ('Read-only test; ' if args.read_only else 'Runtime details saved privately; ') + 'notifications ' + ('enabled.' if args.live else 'disabled (shadow mode).'))
 
