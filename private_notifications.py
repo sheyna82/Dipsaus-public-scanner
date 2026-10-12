@@ -79,3 +79,38 @@ def notify(store, state, entries, exits, sender=None):
                   'notified_utc': datetime.now(timezone.utc).isoformat()}
         body = f'{symbol}: WINSTCHECK NU\nReason: {reason}\nProvider quote: {row.get("provider_quote")}\nNo automatic sale. Verify current DEGIRO bid/ask, recovery structure and momentum.'
         reserve_send(store, state, key, record, symbol, body, sender)
+
+def notify_eu_research(store, state, report, holdings, sender=None):
+    """One broker-verification prompt per new EU setup; never a buy instruction."""
+    from datetime import timedelta
+    now = datetime.now(timezone.utc)
+    try:
+        generated = datetime.fromisoformat(report["generated_utc"].replace("Z", "+00:00"))
+    except (KeyError, ValueError, TypeError):
+        return
+    if generated.tzinfo is None or not timedelta(0) <= now - generated <= timedelta(minutes=25):
+        return
+    for row in report.get("candidates", []):
+        if not row.get("broker_verify_now") or row.get("trade_ready") or not row.get("broker_check_candidate"):
+            continue
+        symbol = row.get("symbol")
+        if not isinstance(symbol, str) or not symbol or not row.get("provider_delayed_but_usable_for_attention") and not row.get("provider_freshness_pass"):
+            continue
+        # Historical calculations are research inputs, not verified executable R/R.
+        scenarios = row.get("historical_3500_eur_scenarios") or {}
+        if (scenarios.get("rr_to_meaningful") or 0) < 2 or (scenarios.get("meaningful_resistance_gross_eur") or 0) < 150:
+            continue
+        kind = "BIJKOOPCHECK" if symbol in holdings else "INSTAPCHECK"
+        key = f"EU-RESEARCH|{symbol}|{kind}"
+        previous = state.setdefault("signals", {}).get(key, {})
+        # Alert at most once per symbol per trading day, not on every five-minute check.
+        if previous.get("day") == generated.date().isoformat():
+            continue
+        record = {"day": generated.date().isoformat(), "notification_schema_version": 10,
+                  "notified_utc": now.isoformat()}
+        body = (f"{symbol}: {kind} - vroege herstelkandidaat, GEEN koopbevestiging.\\n"
+                "Providerdata kan vertraagd zijn. Controleer actuele DEGIRO bied/laat, "
+                "zelfstandige herstelstructuur, eerste betekenisvolle weerstand, R/R >=2, "
+                "brutowinst >= EUR150 bij standaardtranche, nieuws/earnings en portefeuillerisico. "
+                "Geen automatische order.")
+        reserve_send(store, state, key, record, symbol, body, sender)
