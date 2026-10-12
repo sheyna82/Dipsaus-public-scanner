@@ -48,6 +48,31 @@ def reserve_send(store, state, key, record, symbol, body, sender=None):
 def notify(store, state, entries, exits, sender=None):
     store.require_exclusive_sender()
     for row in entries:
+        # Selective early US recovery heads-up: not a money-qualified buy alert.
+        # Daily per-symbol dedupe and global cap avoid notification storms.
+        if (row.get('watch_type') == 'AUTO-US-DISCOVERY'
+                and row.get('status') == 'EARLY-RECOVERY-WATCH'
+                and row.get('provider_freshness_pass')
+                and row.get('phone_notification_eligible')
+                and row.get('early_turn_observed')
+                and row.get('structure_available')):
+            symbol = row.get('symbol')
+            day = datetime.now(timezone.utc).date().isoformat()
+            key = f'US-EARLY|{symbol}|{day}'
+            already = sum(1 for k in state.setdefault('signals', {})
+                          if k.startswith('US-EARLY|') and k.endswith('|' + day))
+            if symbol and key not in state['signals'] and already < 3:
+                record = {'day': day, 'notification_schema_version': 14,
+                          'notified_utc': datetime.now(timezone.utc).isoformat()}
+                body = (f'{symbol}: VROEGE HERSTELKANS (onderzoeksseintje, GEEN koopbevestiging).\\n'
+                        f'Providerkoers: {row.get("provider_quote")}; '
+                        f'dagbodem: {row.get("day_low")}; '
+                        f'opleving vanaf bodem: {row.get("rebound_from_day_low_pct")}%.' 
+                        ' Controleer NU DEGIRO bied/laat/spread, zelfstandige bodemstructuur, '
+                        'actuele invalidatie, eerste echte weerstand en verdere herstelzone, '
+                        'R/R >=2 en realistische bruto EUR-winst >=150 bij EUR3500; '
+                        'nieuws, earnings en portefeuillerisico. Geen automatische order.')
+                reserve_send(store, state, key, record, symbol, body, sender)
         if not row.get('prealert_trigger_observed'): continue
         market = row.get('market', 'EU')
         if market == 'US' and not row.get('watch_type'): continue
