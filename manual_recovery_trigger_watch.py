@@ -106,8 +106,27 @@ if US_ROUTES.exists():
       except Exception as exc:
         rows.append({"symbol":symbol,"market":"US","status":"DATA-BLOCKED","error":type(exc).__name__,"execution_ready":False})
         continue
-      age=(now-ts).total_seconds() if ts else None; fresh=bool(age is not None and -30<=age<=MAX_AGE_SECONDS); level=item.get("break_above_usd"); z=item.get("hold_zone_usd") or [None,None]; breakout=bool(price is not None and level is not None and price>level); hold=bool(price is not None and z[0] is not None and z[0]<=price<=z[1]); trig=fresh and bool(item.get("phone_notification_eligible")) and (breakout or hold)
-      rows.append({"symbol":symbol,"market":"US","watch_type":"AUTO-US-DISCOVERY","phone_notification_eligible":bool(item.get("phone_notification_eligible")),"provider_quote":price,"provider_quote_utc":ts.isoformat() if ts else None,"provider_quote_age_seconds":age,"provider_freshness_pass":fresh,"route_2_break_above":level,"route_2_hold_zone":z,"breakout_observed":breakout,"hold_observed":hold,"prealert_trigger_observed":trig,"status":"DEGIRO-VERIFY-NOW" if trig else "WATCH","execution_ready":False})
+      age=(now-ts).total_seconds() if ts else None; fresh=bool(age is not None and -30<=age<=MAX_AGE_SECONDS)
+      level=item.get("break_above_usd"); z=item.get("hold_zone_usd") or [None,None]
+      breakout=bool(price is not None and level is not None and price>level)
+      hold=bool(price is not None and z[0] is not None and z[0]<=price<=z[1])
+      # A historical pivot touch alone is not a breakout/hold confirmation.
+      # Keep early turns visible without presenting them as buy-ready.
+      h=yf.Ticker(symbol).history(period="1d",interval="1m",prepost=False)
+      structure_available=bool(len(h)>=12 and not h[["Close","Low"]].tail(12).isna().any().any())
+      early_turn=False; confirmed=False; day_low=None; rebound_pct=None
+      if structure_available and price is not None:
+        recent=h.tail(12); earlier=recent.iloc[:6]; later=recent.iloc[6:]
+        day_low=float(h["Low"].min())
+        rebound_pct=100*(price/day_low-1) if day_low>0 else None
+        higher_low=float(later["Low"].min())>float(earlier["Low"].min())
+        recent_reclaim=price>float(recent["Close"].iloc[:-1].median())
+        early_turn=bool(higher_low and recent_reclaim and rebound_pct is not None and rebound_pct>=0.35)
+        confirmed=bool(early_turn and (breakout or hold))
+      eligible=bool(item.get("phone_notification_eligible"))
+      trig=bool(fresh and eligible and confirmed)
+      status="DEGIRO-VERIFY-NOW" if trig else "EARLY-RECOVERY-WATCH" if fresh and eligible and early_turn else "STRUCTURE-UNVERIFIED" if fresh and eligible and (breakout or hold) else "WATCH"
+      rows.append({"symbol":symbol,"market":"US","watch_type":"AUTO-US-DISCOVERY","phone_notification_eligible":eligible,"provider_quote":price,"provider_quote_utc":ts.isoformat() if ts else None,"provider_quote_age_seconds":age,"provider_freshness_pass":fresh,"route_2_break_above":level,"route_2_hold_zone":z,"breakout_observed":breakout,"hold_observed":hold,"structure_available":structure_available,"early_turn_observed":early_turn,"intraday_hold_confirmed":confirmed,"day_low":day_low,"rebound_from_day_low_pct":round(rebound_pct,3) if rebound_pct is not None else None,"prealert_trigger_observed":trig,"status":status,"execution_ready":False,"execution_blocks":["BROKER-BID-ASK-NOT-VERIFIED","STRUCTURAL-INVALIDATION-AND-MONEY-RR-NOT-VERIFIED","NEWS-EVENT-PORTFOLIO-FIT-PENDING"]})
   except Exception as exc: rows.append({"symbol":"US-ROUTES","status":"DATA-BLOCKED","error":type(exc).__name__,"execution_ready":False})
 report={"generated_utc":now.isoformat(),"scope":"Europe/US recovery trigger watch; monitoring only; never automatic buy.","rows":rows}
 OUT.parent.mkdir(parents=True,exist_ok=True); OUT.write_text(json.dumps(report,indent=2)); print(json.dumps(report,indent=2))
