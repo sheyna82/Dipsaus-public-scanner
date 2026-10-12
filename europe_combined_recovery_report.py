@@ -22,7 +22,11 @@ def main():
         # Keep passage-validation cases visible for research, not urgent broker alerts.
         money_review=(passage_review and rr_further is not None and rr_further>=2 and gross_further is not None and gross_further>=150)
         stale="STALE-DATA" in flags;meaningful_unresolved="MEANINGFUL-RESISTANCE-UNRESOLVED" in flags
-        early_watch=bool(structure and not stale and h.get("discovery_eligible",True));broker_candidate=bool(early_watch and not meaningful_unresolved and money_pass)
+        # Detect early recovery clues before full confirmation; do not relax execution gates.
+        early_clue=bool(item.get("higher_last_low") is True or item.get("above_prior_bar_high") is True or item.get("reclaim_recent_range") is True)
+        data_ok=item.get("data_status")=="INTRADAY-RESEARCH-ONLY"
+        early_watch=bool(data_ok and early_clue and not stale and h.get("discovery_eligible",True))
+        broker_candidate=bool(structure and early_watch and not meaningful_unresolved and money_pass)
         further_zone_research_only=bool(early_watch and not money_pass and money_review)
         # Key distinction: delayed EU data must not silently bury a good setup. It may
         # request an immediate DEGIRO look, but ONLY the broker quote can validate entry.
