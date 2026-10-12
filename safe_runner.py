@@ -40,18 +40,21 @@ def main():
     if args.mode == 'prealert':
         Path('config').mkdir(exist_ok=True)
         Path('config/profit_watch_state.json').write_text(json.dumps(state.get('profit_watch_state', {})))
-        # Align portfolio re-entry universe with actual private holdings before scanning.
-        profit_cfg = json.loads(Path('config/profit_exit_watch.json').read_text())
-        holdings = {item.get('provider_symbol') or symbol
-                    for symbol, item in profit_cfg.get('positions', {}).items()
-                    if isinstance(item, dict) and item.get('shares', 0) > 0}
+        # Private configuration is present after hydrate in live runs, but not
+        # in isolated regression tests. Reconcile only when both exist.
+        profit_path = Path('config/profit_exit_watch.json')
         portfolio_path = Path('config/portfolio_reentry_watch.json')
-        portfolio_cfg = json.loads(portfolio_path.read_text())
-        portfolio_cfg['candidates'] = {
-            symbol: item for symbol, item in portfolio_cfg.get('candidates', {}).items()
-            if symbol in holdings
-        }
-        portfolio_path.write_text(json.dumps(portfolio_cfg))
+        if profit_path.exists() and portfolio_path.exists():
+            profit_cfg = json.loads(profit_path.read_text())
+            holdings = {item.get('provider_symbol') or symbol
+                        for symbol, item in profit_cfg.get('positions', {}).items()
+                        if isinstance(item, dict) and item.get('shares', 0) > 0}
+            portfolio_cfg = json.loads(portfolio_path.read_text())
+            portfolio_cfg['candidates'] = {
+                symbol: item for symbol, item in portfolio_cfg.get('candidates', {}).items()
+                if symbol in holdings
+            }
+            portfolio_path.write_text(json.dumps(portfolio_cfg))
         run('manual_recovery_trigger_watch.py'); run('profit_exit_watch.py')
         # Retain the existing recheck while avoiding a public summary or artifacts.
         run('manual_recovery_trigger_watch.py')
