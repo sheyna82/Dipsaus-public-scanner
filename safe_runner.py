@@ -8,7 +8,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from private_runtime import hydrate, PrivateStore
-from private_notifications import notify
+from private_notifications import notify, notify_eu_research
 
 
 def run(script, **extra):
@@ -49,7 +49,16 @@ def main():
         state['latest_watch_reports'] = {'entries': entries, 'exits': exits}
         if not args.read_only:
             store.save(state)
-        if args.live: notify(store, state, entries['rows'], exits['rows'])
+        if args.live:
+            notify(store, state, entries['rows'], exits['rows'])
+            # Private EU discovery feeds broker-verification alerts, never trade-ready claims.
+            eu_report = PrivateStore('eu').load().get('latest_eu_report', {})
+            profit_cfg = json.loads(Path('config/profit_exit_watch.json').read_text())
+            holdings = set()
+            for symbol, item in profit_cfg.get('candidates', {}).items():
+                if isinstance(item, dict) and item.get('shares', 0) > 0:
+                    holdings.add(item.get('provider_symbol') or symbol)
+            notify_eu_research(store, state, eu_report, holdings)
     elif args.mode == 'eu':
         # Original EU refresh can fail its quality gate while still saving an audited database.
         try: run('europe_ohlcv_pilot.py')
