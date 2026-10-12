@@ -56,6 +56,25 @@ def notify(store, state, entries, exits, sender=None):
         # money-qualified trades. EU holdings use the unified EU research gate below;
         # US holdings remain internally watched until an equivalent quality gate exists.
         if row.get('watch_type') == 'PORTFOLIO-REENTRY':
+            # RENK-specific early research: require a fresh quote plus independent
+            # multi-day recovery evidence. This is NOT a money-qualified add.
+            if (row.get('symbol') == 'R3NK.DE'
+                    and row.get('provider_freshness_pass')
+                    and row.get('higher_low_observed')
+                    and row.get('recent_reclaim_observed')
+                    and (row.get('recent_volume_ratio') or 0) >= 1.5
+                    and (row.get('rebound_from_5d_low_pct') or 0) >= 1.5):
+                day = datetime.now(timezone.utc).date().isoformat()
+                key = 'RESEARCH|R3NK.DE|RECOVERY'
+                if state['signals'].get(key, {}).get('day') != day:
+                    record = {'day': day, 'notification_schema_version': 12,
+                              'notified_utc': datetime.now(timezone.utc).isoformat()}
+                    body = ('RENK: VROEGE HERSTELWATCH - hogere bodem, reclaim en volume; '
+                            'GEEN bijkoopbevestiging. Check actuele DEGIRO bied/laat, '
+                            'nieuwe zelfstandige setup, invalidatie, eerste echte weerstand, '
+                            'R/R >=2, realistische EUR-winst >=150, nieuws en earnings. '
+                            'Geen automatische order.')
+                    reserve_send(store, state, key, record, 'R3NK.DE', body, sender)
             continue
         if row.get('watch_type') == 'PORTFOLIO-REENTRY' and route not in (
             'ACTIVE-HOLDING-DIP-TURN', 'ACTIVE-HOLDING-BASE-TEST', 'ACTIVE-HOLDING-MULTIDAY-RECOVERY'):
