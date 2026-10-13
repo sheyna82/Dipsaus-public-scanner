@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-10-13T09:34:00+02:00",
+  "purpose": "Public non-executable watch handoff; DEGIRO snapshots are historical, not live quotes.",
+  "execution_ready": false,
+  "requires_private_reconciliation": true,
+  "candidates": [
+    {
+      "symbol": "AIXA.DE",
+      "broker_symbol": "AIXA",
+      "market": "XETRA",
+      "snapshot_eur": 34.49,
+      "snapshot_time_local": "2026-10-13 09:33",
+      "intraday_low_eur": 33.75,
+      "mode": "RECOVERY-WATCH",
+      "note": "Intraday bounce within weak 3-month trend; validate independent structure."
+    },
+    {
+      "symbol": "NEM.DE",
+      "broker_symbol": "NEM",
+      "market": "XETRA",
+      "snapshot_eur": 70.1,
+      "snapshot_time_local": "2026-10-13 09:33",
+      "mode": "NO-CHASE-WATCH",
+      "note": "Multiweek recovery but intraday pullback; no breakout assumed."
+    },
+    {
+      "symbol": "EDPR.LS",
+      "broker_symbol": "EDPR",
+      "market": "EURONEXT-LISBON",
+      "snapshot_eur": 12.53,
+      "snapshot_time_local": "2026-10-13 09:34",
+      "intraday_low_eur": 12.38,
+      "intraday_high_eur": 12.58,
+      "mode": "RECOVERY-WATCH",
+      "note": "Early intraday turn in larger downtrend; no confirmed buy."
+    },
+    {
+      "symbol": "BESI.AS",
+      "broker_symbol": "BESI",
+      "market": "EURONEXT-AMSTERDAM",
+      "snapshot_eur": 171,
+      "snapshot_time_local": "2026-10-13 09:34",
+      "mode": "EXISTING-POSITION-PROTECTION",
+      "note": "Private holdings, GAK and orders must remain in private configuration; no averaging down."
+    }
+  ],
+  "gates": {
+    "fresh_provider_quote_required": true,
+    "degiro_bid_ask_spread_required": true,
+    "structural_invalidation_required": true,
+    "min_rr": 2,
+    "meaningful_gross_eur_profit_required": true,
+    "friction_resistance_further_zone_required": true,
+    "news_events_portfolio_fit_required": true,
+    "no_chase": true,
+    "no_automatic_orders": true,
+    "market_hours_time_gate": true,
+    "deduplicate_alerts": true,
+    "broker_check_candidate_if_stale": true
+  }
+}
