@@ -65,6 +65,8 @@ def main():
         if not args.read_only:
             store.save(state)
         if args.live:
+            before_sent = sum(1 for value in state.get('signals', {}).values()
+                              if isinstance(value, dict) and value.get('delivery') == 'sent')
             notify(store, state, entries['rows'], exits['rows'])
             # Private EU discovery feeds broker-verification alerts, never trade-ready claims.
             eu_report = PrivateStore('eu').load().get('latest_eu_report', {})
@@ -74,6 +76,11 @@ def main():
                 if isinstance(item, dict) and item.get('shares', 0) > 0:
                     holdings.add(item.get('provider_symbol') or symbol)
             notify_eu_research(store, state, eu_report, holdings)
+            after_sent = sum(1 for value in state.get('signals', {}).values()
+                             if isinstance(value, dict) and value.get('delivery') == 'sent')
+            print('NOTIFICATION_AUDIT: live=true new_confirmed_sends='
+                  + str(max(0, after_sent - before_sent))
+                  + ' (zero means no new qualifying alerts or deduplicated signals).', flush=True)
     elif args.mode == 'eu':
         # Original EU refresh can fail its quality gate while still saving an audited database.
         try: run('europe_ohlcv_pilot.py')
