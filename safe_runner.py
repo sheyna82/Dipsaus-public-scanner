@@ -46,6 +46,11 @@ def main():
         if 'EXE' not in current.get('positions', {}):
             raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID')
         current['positions']['EXE'] = source_exe
+        # Canonical private holdings are authoritative for exit alerts.
+        # Never retain sold positions from a lagging runtime secret.
+        for symbol in list(current['positions']):
+            if symbol not in (source.get('positions') or {}):
+                del current['positions'][symbol]
         target.write_text(json.dumps(current))
 
     if args.live:
@@ -85,7 +90,8 @@ def main():
         if args.live:
             before_sent = sum(1 for value in state.get('signals', {}).values()
                               if isinstance(value, dict) and value.get('delivery') == 'sent')
-            notify(store, state, entries['rows'], exits['rows'])
+            active_exit_symbols = set(json.loads(Path('config/profit_exit_watch.json').read_text()).get('positions', {}))
+            notify(store, state, entries['rows'], [row for row in exits['rows'] if row.get('symbol') in active_exit_symbols])
             # Private EU discovery feeds broker-verification alerts, never trade-ready claims.
             eu_report = PrivateStore('eu').load().get('latest_eu_report', {})
             profit_cfg = json.loads(Path('config/profit_exit_watch.json').read_text())
