@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import urllib.request
 import urllib.error
+import time
 
 CONFIG_NAMES = {
     'manual_recovery_triggers.json', 'manual_recovery_triggers_supplemental.json',
@@ -70,15 +71,21 @@ class PrivateStore:
             headers={'Authorization': 'Bearer ' + self.token,
                      'Accept': accept,
                      'X-GitHub-Api-Version': '2022-11-28'})
-        try:
-            with urllib.request.urlopen(req, timeout=30) as res:
-                return json.load(res)
-        except urllib.error.HTTPError as exc:
-            stage = 'METADATA' if not suffix else ('SAVE' if data is not None else 'READ')
-            raise RuntimeError(f'PRIVATE_STATE_REQUEST_FAILED_{stage}_HTTP_{exc.code}') from None
-        except Exception:
-            # Never echo authenticated URLs, payloads or provider exception strings.
-            raise RuntimeError('PRIVATE_STATE_REQUEST_FAILED') from None
+        stage = 'METADATA' if not suffix else ('SAVE' if data is not None else 'READ')
+        # Retry only idempotent reads on transient GitHub errors. Never retry
+        # writes: an ambiguous PUT result could duplicate or overwrite state.
+        for attempt in range(4 if data is None else 1):
+            try:
+                with urllib.request.urlopen(req, timeout=30) as res:
+                    return json.load(res)
+            except urllib.error.HTTPError as exc:
+                if data is None and exc.code in (429, 500, 502, 503, 504) and attempt < 3:
+                    time.sleep(2 ** attempt)
+                    continue
+                raise RuntimeError(f'PRIVATE_STATE_REQUEST_FAILED_{stage}_HTTP_{exc.code}') from None
+            except Exception:
+                # Never echo authenticated URLs, payloads or provider exceptions.
+                raise RuntimeError('PRIVATE_STATE_REQUEST_FAILED') from None
 
     def load(self):
         # A missing state must be initialized explicitly; never silently reset deduplication.
