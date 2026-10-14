@@ -30,7 +30,7 @@ def main():
         raise RuntimeError('READ_ONLY_MODE_INVALID')
     hydrate()
     store = PrivateStore(args.mode); state = store.load()
-    if args.mode == 'prealert':
+    if args.mode == 'prealert' and args.live:
         # The live secret can lag behind the private canonical profit-watch file.
         # Synchronize EXE only, in memory, without exposing holdings to public logs.
         import base64
