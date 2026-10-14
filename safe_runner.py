@@ -30,6 +30,24 @@ def main():
         raise RuntimeError('READ_ONLY_MODE_INVALID')
     hydrate()
     store = PrivateStore(args.mode); state = store.load()
+    if args.mode == 'prealert':
+        # The live secret can lag behind the private canonical profit-watch file.
+        # Synchronize EXE only, in memory, without exposing holdings to public logs.
+        import base64
+        record = store.request('/contents/config/profit_exit_watch.json')
+        if record.get('encoding') != 'base64':
+            raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID')
+        source = json.loads(base64.b64decode(record['content']))
+        source_exe = (source.get('positions') or {}).get('EXE')
+        target = Path('config/profit_exit_watch.json')
+        current = json.loads(target.read_text())
+        if not isinstance(source_exe, dict) or source_exe.get('shares') != 114 or source_exe.get('currency') != 'USD':
+            raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID')
+        if 'EXE' not in current.get('positions', {}):
+            raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID')
+        current['positions']['EXE'] = source_exe
+        target.write_text(json.dumps(current))
+
     if args.live:
         if args.mode != 'prealert' or os.environ.get('SCANNER_NOTIFICATIONS_ENABLED') != 'true':
             raise RuntimeError('LIVE_NOTIFICATIONS_NOT_ENABLED')
