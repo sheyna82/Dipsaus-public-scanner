@@ -198,7 +198,8 @@ def notify_eu_research(store, state, report, holdings, sender=None):
     for owned, score, symbol, kind, key in eligible[:max(0, min(3, 5 - already))]:
         record = {"day": day, "notification_schema_version": 11,
                   "notified_utc": now.isoformat()}
-        body = (f"{symbol}: {kind} - herstelonderzoek (score {score}), GEEN koopbevestiging.\n"\n                + broker_search_hint(symbol)
+        body = (f"{symbol}: {kind} - herstelonderzoek (score {score}), GEEN koopbevestiging.\n"
+                + broker_search_hint(symbol)
                 + "Providerkoers kan vertraagd zijn. Check actuele DEGIRO bied/laat, "
                 "nieuwe zelfstandige herstelsetup, weerstand, R/R >=2 en "
                 "realistische brutowinst >= EUR150 voor standaardtranche; "
