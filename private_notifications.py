@@ -151,7 +151,22 @@ def notify(store, state, entries, exits, sender=None):
         record = {'active': True, 'state_id': sid, 'day': today,
                   'notification_schema_version': 13,
                   'notified_utc': datetime.now(timezone.utc).isoformat()}
-        body = f'{symbol}: WINSTCHECK NU\nReason: {reason}\nProvider quote: {row.get("provider_quote")}\nNo automatic sale. Verify current DEGIRO bid/ask, recovery structure and momentum.'
+        # A decision-zone touch does not establish profit versus cost basis.
+        # Keep deterioration/crash warnings urgent even when below purchase price.
+        protective = reason in (
+            'FAST-CRASH-OVERRIDE', 'CONFIRMED-RECOVERY-STRUCTURE-DETERIORATION',
+            'MATERIAL-BREAKOUT-GIVEBACK', 'FIRST-FRICTION-REJECTION',
+        )
+        if protective:
+            headline = 'BESCHERMINGSCHECK NU'
+        elif reason in ('FIRST-DECISION-ZONE', 'EXIT-REBOUND-BROKER-CHECK'):
+            headline = 'KOERSZONECHECK - GEEN WINSTBEVESTIGING'
+        else:
+            headline = 'WEERSTANDSCHECK - WINST NIET BEVESTIGD'
+        body = (f'{symbol}: {headline}\nReason: {reason}\n'
+                f'Provider quote: {row.get("provider_quote")}\n'
+                'Geen automatische verkoop. Controleer actuele DEGIRO bied/laat, '
+                'GAK, herstelstructuur en momentum; providerkoers is geen uitvoeringskoers.')
         reserve_send(store, state, key, record, symbol, body, sender)
 
 def notify_eu_research(store, state, report, holdings, sender=None):
