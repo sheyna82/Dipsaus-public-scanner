@@ -66,7 +66,7 @@ def notify(store, state, entries, exits, sender=None):
             if symbol and key not in state['signals'] and already < 3:
                 record = {'day': day, 'notification_schema_version': 14,
                           'notified_utc': datetime.now(timezone.utc).isoformat()}
-                body = (f'{symbol}: VROEGE HERSTELKANS (onderzoeksseintje, GEEN koopbevestiging).\\n'
+                body = (f'{symbol}: VROEGE HERSTELKANS (onderzoeksseintje, GEEN koopbevestiging).\n'
                         f'Providerkoers: {row.get("provider_quote")}; '
                         f'dagbodem: {row.get("day_low")}; '
                         f'opleving vanaf bodem: {row.get("rebound_from_day_low_pct")}%.' 
@@ -181,7 +181,7 @@ def notify_eu_research(store, state, report, holdings, sender=None):
     for owned, score, symbol, kind, key in eligible[:max(0, min(3, 5 - already))]:
         record = {"day": day, "notification_schema_version": 11,
                   "notified_utc": now.isoformat()}
-        body = (f"{symbol}: {kind} - herstelonderzoek (score {score}), GEEN koopbevestiging.\\n"
+        body = (f"{symbol}: {kind} - herstelonderzoek (score {score}), GEEN koopbevestiging.\n"
                 "Providerkoers kan vertraagd zijn. Check actuele DEGIRO bied/laat, "
                 "nieuwe zelfstandige herstelsetup, weerstand, R/R >=2 en "
                 "realistische brutowinst >= EUR150 voor standaardtranche; "
