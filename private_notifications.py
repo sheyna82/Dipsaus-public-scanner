@@ -5,6 +5,21 @@ from pathlib import Path
 from datetime import datetime, timezone
 import urllib.request
 
+# Provider symbols are not always searchable verbatim in DEGIRO.
+# Display verified issuer names and ISINs; never change quote-feed symbols.
+BROKER_IDENTIFIERS = {
+    'MC.PA': ('LVMH Moet Hennessy Louis Vuitton', 'FR0000121014'),
+    'STLAM.MI': ('Stellantis N.V.', 'NL00150001Q9'),
+    'KER.PA': ('Kering SA', 'FR0000121485'),
+    'FER.MC': ('Ferrovial SE', 'NL0015001FS8'),
+}
+
+def broker_search_hint(symbol):
+    item = BROKER_IDENTIFIERS.get(symbol)
+    if not item:
+        return ''
+    return 'DEGIRO zoeken: ' + item[0] + ' | ISIN ' + item[1] + '\\n'
+
 RANK = {'BOTTOM-RECOVERY': 1, 'BREAKOUT-SEEN': 2, 'BREAKOUT-HOLD-RETEST': 3, 'EXECUTION-NEAR': 4}
 
 
@@ -183,7 +198,7 @@ def notify_eu_research(store, state, report, holdings, sender=None):
     for owned, score, symbol, kind, key in eligible[:max(0, min(3, 5 - already))]:
         record = {"day": day, "notification_schema_version": 11,
                   "notified_utc": now.isoformat()}
-        body = (f"{symbol}: {kind} - herstelonderzoek (score {score}), GEEN koopbevestiging.\n"
+        body = (f"{symbol}: {kind} - herstelonderzoek (score {score}), GEEN koopbevestiging.\n"\n                + broker_search_hint(symbol)
                 "Providerkoers kan vertraagd zijn. Check actuele DEGIRO bied/laat, "
                 "nieuwe zelfstandige herstelsetup, weerstand, R/R >=2 en "
                 "realistische brutowinst >= EUR150 voor standaardtranche; "
