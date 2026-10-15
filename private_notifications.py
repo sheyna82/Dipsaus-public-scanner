@@ -204,7 +204,7 @@ def notify_eu_research(store, state, report, holdings, sender=None):
             continue
         eligible.append((owned, score, symbol, kind, key))
     # Prioritize two explicitly requested recovery watches, without relaxing any gates.
-    priority_watch = {"KER.PA", "FER.MC"}
+    priority_watch = {"KER.PA", "FER.MC", "SU.PA", "ANTO.L"}
     eligible.sort(key=lambda x: (-int(x[2] in priority_watch), -int(x[0]), -x[1], x[2]))
     # A maximum of three new entry/buy-more checks per scan, five per day.
     day = generated.date().isoformat()
