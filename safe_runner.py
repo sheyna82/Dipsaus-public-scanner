@@ -107,9 +107,8 @@ def main():
                   + ' (zero means no new qualifying alerts or deduplicated signals).', flush=True)
     elif args.mode == 'eu':
         # Original EU refresh can fail its quality gate while still saving an audited database.
-        try: run('europe_ohlcv_pilot.py')
-        except RuntimeError:
-            if not Path('reports/europe_ohlcv.jsonl.gz').exists(): raise
+        # A failed EU refresh must never silently reuse old market data.
+        run('europe_ohlcv_pilot.py')
         for script in ('europe_raw_source_comparison.py', 'europe_independent_supplement.py',
                        'europe_swing_research.py', 'europe_intraday_confirmation.py',
                        'europe_quote_execution_audit.py', 'europe_combined_recovery_report.py'):
