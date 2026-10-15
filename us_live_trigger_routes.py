@@ -18,6 +18,8 @@ try:
 except Exception:
     gate={}
 notify_watchlist=set(gate.get("auto_us_notify_watchlist",[]))
+# Explicit user-requested research candidate: only eligible if independent discovery promotes it.
+notify_watchlist.add("GEHC")
 silent_follow=set(gate.get("auto_us_silent_follow",[]))
 rows=[]
 
