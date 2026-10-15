@@ -45,7 +45,10 @@ class SafetyTests(unittest.TestCase):
     def test_uncertain_delivery_not_retried(self):
         state = {'signals': {}}; store = Store()
         def fail(*args): raise TimeoutError()
-        with self.assertRaises(TimeoutError): notify(store, state, [self.entry()], [], fail)
+        with self.assertRaises(TimeoutError):
+            notify(store, state, [self.entry()], [], fail)
+        self.assertEqual(state['signals']['ENTRY|US|TEST|PHASE']['delivery'], 'uncertain')
+        self.assertEqual(store.saved[-1]['signals']['ENTRY|US|TEST|PHASE']['delivery'], 'uncertain')
         notify(store, state, [self.entry()], [], lambda *a: self.fail('duplicate'))
 
     def test_profit_deduplicates_same_day_after_brief_clear(self):
