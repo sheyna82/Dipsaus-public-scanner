@@ -20,6 +20,61 @@ def run(script, **extra):
         raise RuntimeError('SCANNER_STEP_FAILED: ' + script)
 
 
+def notification_diagnostics(entries, exits, eu_report, state, active_symbols):
+    """Private aggregate-only diagnostics; no symbols, quotes, or personal data."""
+    from collections import Counter
+    from datetime import timedelta
+    now = datetime.now(timezone.utc)
+    reasons = Counter()
+    entry_rows = entries.get('rows', [])
+    exit_rows = exits.get('rows', [])
+    eu_rows = eu_report.get('candidates', [])
+    for row in entry_rows:
+        if not row.get('prealert_trigger_observed'):
+            reasons['entry_no_trigger'] += 1
+        elif row.get('watch_type') == 'PORTFOLIO-REENTRY':
+            reasons['entry_portfolio_reentry_gate'] += 1
+        else:
+            reasons['entry_triggered_for_notification_evaluation'] += 1
+    for row in exit_rows:
+        if row.get('symbol') not in active_symbols:
+            reasons['exit_not_active_holding'] += 1
+        elif not row.get('profit_alert'):
+            reasons['exit_no_profit_alert'] += 1
+        else:
+            reasons['exit_alert_for_notification_evaluation'] += 1
+    try:
+        generated = datetime.fromisoformat(eu_report['generated_utc'].replace('Z', '+00:00'))
+        fresh = generated.tzinfo is not None and timedelta(0) <= now - generated <= timedelta(minutes=25)
+    except (KeyError, ValueError, TypeError):
+        fresh = False
+    if not fresh:
+        reasons['eu_report_missing_or_stale'] = len(eu_rows) or 1
+    else:
+        for row in eu_rows:
+            if not row.get('broker_verify_now') or not row.get('broker_check_candidate') or row.get('trade_ready'):
+                reasons['eu_broker_gate'] += 1
+            elif not (row.get('provider_freshness_pass') or row.get('provider_delayed_but_usable_for_attention')):
+                reasons['eu_quote_freshness_gate'] += 1
+            elif (row.get('early_recovery_score') or 0) < 3:
+                reasons['eu_low_score_or_holding_exception'] += 1
+            elif (row.get('historical_3500_eur_scenarios') or {}).get('rr_to_meaningful', 0) < 2:
+                reasons['eu_risk_reward_gate'] += 1
+            elif (row.get('historical_3500_eur_scenarios') or {}).get('meaningful_resistance_gross_eur', 0) < 150:
+                reasons['eu_money_gate'] += 1
+            else:
+                reasons['eu_candidate_for_dedupe_and_cap'] += 1
+    return {
+        'generated_utc': now.isoformat(),
+        'entry_rows_examined': len(entry_rows),
+        'exit_rows_examined': len(exit_rows),
+        'eu_rows_examined': len(eu_rows),
+        'eu_report_fresh': fresh,
+        'reason_counts': dict(sorted(reasons.items())),
+        'note': 'Aggregate diagnostic categories are nonexclusive of later dedupe and send gates; no trading filters changed.'
+    }
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('mode', choices=['prealert', 'eu', 'us'])
@@ -91,7 +146,8 @@ def main():
             before_sent = sum(1 for value in state.get('signals', {}).values()
                               if isinstance(value, dict) and value.get('delivery') == 'sent')
             active_exit_symbols = set(json.loads(Path('config/profit_exit_watch.json').read_text()).get('positions', {}))
-            notify(store, state, entries['rows'], [row for row in exits['rows'] if row.get('symbol') in active_exit_symbols])
+            active_exits = [row for row in exits['rows'] if row.get('symbol') in active_exit_symbols]
+            notify(store, state, entries['rows'], active_exits)
             # Private EU discovery feeds broker-verification alerts, never trade-ready claims.
             eu_report = PrivateStore('eu').load().get('latest_eu_report', {})
             profit_cfg = json.loads(Path('config/profit_exit_watch.json').read_text())
@@ -100,6 +156,11 @@ def main():
                 if isinstance(item, dict) and item.get('shares', 0) > 0:
                     holdings.add(item.get('provider_symbol') or symbol)
             notify_eu_research(store, state, eu_report, holdings)
+            diagnostics = notification_diagnostics(entries, exits, eu_report, state, active_exit_symbols)
+            diagnostics['new_confirmed_sends'] = sum(1 for value in state.get('signals', {}).values() if isinstance(value, dict) and value.get('delivery') == 'sent') - before_sent
+            state['latest_notification_diagnostics'] = diagnostics
+            store.save(state)
+            print('NOTIFICATION_DIAGNOSTICS: private_aggregate_saved=true entry_rows=' + str(diagnostics['entry_rows_examined']) + ' exit_rows=' + str(diagnostics['exit_rows_examined']) + ' eu_rows=' + str(diagnostics['eu_rows_examined']), flush=True)
             after_sent = sum(1 for value in state.get('signals', {}).values()
                              if isinstance(value, dict) and value.get('delivery') == 'sent')
             print('NOTIFICATION_AUDIT: live=true new_confirmed_sends='
