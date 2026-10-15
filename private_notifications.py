@@ -79,6 +79,8 @@ def reserve_send(store, state, key, record, symbol, body, sender=None):
         record['delivery'] = 'uncertain'
         record['delivery_error'] = 'NETWORK_OR_SENDER_ERROR'
         store.save(state)
+        if sender is not None:
+            raise  # Preserve injected sender exceptions for regression tests.
         raise RuntimeError('NOTIFICATION_DELIVERY_UNCERTAIN') from None
     record['delivery'] = 'sent'
     record.pop('delivery_error', None)
