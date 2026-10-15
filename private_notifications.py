@@ -40,25 +40,48 @@ def phase(row):
 
 
 def reserve_send(store, state, key, record, symbol, body, sender=None):
-    # An uncertain network delivery remains reserved, preventing duplicate pushes.
+    """Persist delivery outcomes; never silently treat a failed push as sent.
+
+    An ambiguous network outcome is intentionally NOT automatically retried:
+    the ntfy server may have accepted it before the connection failed.
+    """
+    import re
+    from urllib.error import HTTPError
+
+    topic = None
+    if sender is None:
+        topic = os.environ.get('NTFY_TOPIC', '')
+        if not topic:
+            raise RuntimeError('NOTIFICATION_SECRET_NOT_CONFIGURED')
+        if not re.fullmatch(r'[A-Za-z0-9_-]+', topic):
+            raise RuntimeError('NOTIFICATION_TOPIC_INVALID')
+
     record['delivery'] = 'reserved'
     state['signals'][key] = record
     store.save(state)
-    if sender:
-        sender(symbol, body)
-    else:
-        topic = os.environ.get('NTFY_TOPIC', '')
-        if not topic: raise RuntimeError('NOTIFICATION_SECRET_NOT_CONFIGURED')
-        import re
-        if not re.fullmatch(r'[A-Za-z0-9_-]+', topic):
-            raise RuntimeError('NOTIFICATION_TOPIC_INVALID')
-        req = urllib.request.Request('https://ntfy.sh/' + topic, data=body.encode(), method='POST',
-            headers={'Title': 'DIPSAUS - ' + symbol, 'Priority': '5'})
-        try:
-            with urllib.request.urlopen(req, timeout=15): pass
-        except Exception:
-            raise RuntimeError('NOTIFICATION_DELIVERY_UNCERTAIN') from None
+    try:
+        if sender:
+            sender(symbol, body)
+        else:
+            req = urllib.request.Request(
+                'https://ntfy.sh/' + topic, data=body.encode(), method='POST',
+                headers={'Title': 'DIPSAUS - ' + symbol, 'Priority': '5'})
+            with urllib.request.urlopen(req, timeout=15) as response:
+                if not 200 <= response.status < 300:
+                    raise RuntimeError('NOTIFICATION_DELIVERY_UNCERTAIN')
+    except HTTPError as exc:
+        # A definite HTTP rejection is not a delivered notification.
+        record['delivery'] = 'rejected'
+        record['delivery_error'] = 'HTTP_' + str(exc.code)
+        store.save(state)
+        raise RuntimeError('NOTIFICATION_HTTP_REJECTED_' + str(exc.code)) from None
+    except Exception:
+        record['delivery'] = 'uncertain'
+        record['delivery_error'] = 'NETWORK_OR_SENDER_ERROR'
+        store.save(state)
+        raise RuntimeError('NOTIFICATION_DELIVERY_UNCERTAIN') from None
     record['delivery'] = 'sent'
+    record.pop('delivery_error', None)
     store.save(state)
 
 
