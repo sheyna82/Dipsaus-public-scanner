@@ -37,6 +37,19 @@ class CanonicalHoldingsTests(unittest.TestCase):
                 self.assertEqual(p.read_text(), original)
 
 
+    def test_github_wrapped_base64_is_accepted(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / 'watch.json'
+            p.write_text('{"positions":{}}')
+
+            class WrappedStore:
+                def request(self, path):
+                    encoded = base64.b64encode(json.dumps({'positions': {'FER.MC': {'shares': 71}}}).encode()).decode()
+                    return {'encoding': 'base64', 'content': '\\n'.join(encoded[i:i + 12] for i in range(0, len(encoded), 12))}
+
+            sync_canonical_positions(WrappedStore(), p)
+            self.assertEqual(json.loads(p.read_text())['positions']['FER.MC']['shares'], 71)
+
     def test_malformed_private_response_fails_closed(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / 'watch.json'
