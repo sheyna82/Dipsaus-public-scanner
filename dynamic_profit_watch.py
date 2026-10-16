@@ -150,7 +150,15 @@ def evaluate(ticker, item, quote, quote_time, currency, now, previous=None, fx=N
     if state.get('identity') != identity:
         state = {'identity': identity}
     cache = state.get('cache') or {}
-    if not cache or now.replace(minute=0,second=0,microsecond=0) != timestamp(cache['fetched_utc']).replace(minute=0,second=0,microsecond=0):
+    # Hourly candles may close at :30 (e.g. US equities). Refresh a stale
+    # hourly context after 15 minutes even within the same wall-clock hour;
+    # otherwise a 10:00 fetch can hide the newly closed 10:30 candle until 11.
+    cached_hourly = cache.get('hourly', []) if isinstance(cache, dict) else []
+    cache_age = (now - timestamp(cache['fetched_utc'])) if cache and cache.get('fetched_utc') else timedelta(days=1)
+    hourly_stale = (not cached_hourly or
+                    timestamp(cached_hourly[-1]['time']) < now - timedelta(hours=2))
+    refresh_stale = hourly_stale and cache_age >= timedelta(minutes=15)
+    if not cache or now.replace(minute=0,second=0,microsecond=0) != timestamp(cache['fetched_utc']).replace(minute=0,second=0,microsecond=0) or refresh_stale:
         try:
             hourly_frame = ticker.history(period='1mo', interval='1h', prepost=False, auto_adjust=False)
             daily_frame = ticker.history(period='6mo', interval='1d', prepost=False, auto_adjust=False)
