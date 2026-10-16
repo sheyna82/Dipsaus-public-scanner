@@ -75,6 +75,32 @@ def notification_diagnostics(entries, exits, eu_report, state, active_symbols):
     }
 
 
+
+def sync_canonical_positions(store, target):
+    """Use the private canonical holdings for every live exit watch; fail closed."""
+    import base64
+    record = store.request('/contents/config/profit_exit_watch.json')
+    if record.get('encoding') != 'base64':
+        raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID')
+    try:
+        source = json.loads(base64.b64decode(record['content'], validate=True))
+        positions = source['positions']
+        current = json.loads(target.read_text())
+    except (KeyError, TypeError, ValueError, UnicodeError, OSError) as exc:
+        raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID') from None
+    if not isinstance(positions, dict) or not positions or not isinstance(current.get('positions'), dict):
+        raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID')
+    if any(not isinstance(symbol, str) or not symbol or
+           not isinstance(item, dict) or
+           not isinstance(item.get('shares'), (int, float)) or
+           isinstance(item.get('shares'), bool) or
+           not (0 < item['shares'] < float('inf'))
+           for symbol, item in positions.items()):
+        raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID')
+    current['positions'] = positions
+    target.write_text(json.dumps(current))
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('mode', choices=['prealert', 'eu', 'us'])
@@ -86,29 +112,7 @@ def main():
     hydrate()
     store = PrivateStore(args.mode); state = store.load()
     if args.mode == 'prealert' and args.live:
-        # Synchronize ALL holdings from the canonical private state, never a stale
-        # runtime Secret. Fail closed on missing or malformed canonical data.
-        import base64
-        record = store.request('/contents/config/profit_exit_watch.json')
-        if record.get('encoding') != 'base64':
-            raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID')
-        source = json.loads(base64.b64decode(record['content']))
-        positions = source.get('positions')
-        if not isinstance(positions, dict) or not positions:
-            raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID')
-        if any(not isinstance(symbol, str) or not symbol or
-               not isinstance(item, dict) or
-               not isinstance(item.get('shares'), (int, float)) or
-               isinstance(item.get('shares'), bool) or item['shares'] <= 0
-               for symbol, item in positions.items()):
-            raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID')
-        target = Path('config/profit_exit_watch.json')
-        current = json.loads(target.read_text())
-        if not isinstance(current.get('positions'), dict):
-            raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID')
-        # Full replacement also removes sold holdings and adds newly held symbols.
-        current['positions'] = positions
-        target.write_text(json.dumps(current))
+        sync_canonical_positions(store, Path('config/profit_exit_watch.json'))
 
     if args.live:
         if args.mode != 'prealert' or os.environ.get('SCANNER_NOTIFICATIONS_ENABLED') != 'true':
