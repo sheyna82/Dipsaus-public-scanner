@@ -136,9 +136,10 @@ def main():
         portfolio_path = Path('config/portfolio_reentry_watch.json')
         if profit_path.exists() and portfolio_path.exists():
             profit_cfg = json.loads(profit_path.read_text())
-            holdings = {item.get('provider_symbol') or symbol
-                        for symbol, item in profit_cfg.get('positions', {}).items()
+            holdings = {symbol for symbol, item in profit_cfg.get('positions', {}).items()
                         if isinstance(item, dict) and item.get('shares', 0) > 0}
+            holdings.update(item.get('provider_symbol') for item in profit_cfg.get('positions', {}).values()
+                            if isinstance(item, dict) and item.get('shares', 0) > 0 and item.get('provider_symbol'))
             portfolio_cfg = json.loads(portfolio_path.read_text())
             portfolio_cfg['candidates'] = {
                 symbol: item for symbol, item in portfolio_cfg.get('candidates', {}).items()
