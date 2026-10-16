@@ -37,5 +37,20 @@ class CanonicalHoldingsTests(unittest.TestCase):
                 self.assertEqual(p.read_text(), original)
 
 
+    def test_malformed_private_response_fails_closed(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / 'watch.json'
+            original = '{"positions":{"FER":{"shares":71}}}'
+            p.write_text(original)
+
+            class BadStore:
+                def request(self, path):
+                    return {'encoding': 'base64', 'content': 'not-valid-base64!!!'}
+
+            with self.assertRaisesRegex(RuntimeError, 'PRIVATE_CONFIG_SYNC_INVALID'):
+                sync_canonical_positions(BadStore(), p)
+            self.assertEqual(p.read_text(), original)
+
+
 if __name__ == '__main__':
     unittest.main()
