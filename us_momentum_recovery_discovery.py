@@ -100,7 +100,9 @@ def intraday_structure(rows):
 
 def main():
     now=datetime.now(timezone.utc); candidates=[]; failures={}
+    audit={"universe_total":0,"missing_price_or_cap_after_probe":0,"below_price_or_cap":0,"insufficient_daily_history":0,"outside_recovery_or_liquidity_gate":0,"discovery_gate_rejected":0,"qualified":0}
     for q in universe():
+        audit["universe_total"]+=1
         symbol=q.get("symbol"); price=q.get("regularMarketPrice"); change=q.get("regularMarketChangePercent"); cap=q.get("marketCap")
         if not isinstance(price,(int,float)) or not isinstance(cap,(int,float)):
             try:
@@ -116,22 +118,33 @@ def main():
                     if quick_dd>-6 or quick_turn<35_000_000: continue
             except Exception:
                 pass
-        if not symbol or not isinstance(price,(int,float)) or price<1: continue
-        if not isinstance(cap,(int,float)) or cap<2_000_000_000: continue
+        if not isinstance(price,(int,float)) or not isinstance(cap,(int,float)):
+            audit["missing_price_or_cap_after_probe"]+=1
+            continue
+        if not symbol or price<1 or cap<2_000_000_000:
+            audit["below_price_or_cap"]+=1
+            continue
         try:
             daily=chart(symbol,"3mo","1d")
-            if len(daily)<35: continue
+            if len(daily)<35:
+                audit["insufficient_daily_history"]+=1
+                continue
             peak=max(x["high"] for x in daily[-60:]); trough=min(x["low"] for x in daily[-20:])
             drawdown=(trough/peak-1)*100; rebound=(price/trough-1)*100
             avgvol=sum(x["volume"] for x in daily[-21:-1])/max(1,len(daily[-21:-1])); turnover=price*avgvol
             # Discovery gate only: do not demand an execution-ready setup here.
-            if drawdown>-8 or rebound<0 or rebound>35 or turnover<50_000_000: continue
+            if drawdown>-8 or rebound<0 or rebound>35 or turnover<50_000_000:
+                audit["outside_recovery_or_liquidity_gate"]+=1
+                continue
             intra=intraday_structure(chart(symbol,"1d","1m"))
             structural=bool(intra.get("quality"))
             early=bool(intra.get("early_recovery_observed"))
             # Keep promising recovery names in discovery even before the intraday turn is complete.
             promising,sold_off_watch=discovery_gate(drawdown,rebound,turnover,change,structural)
-            if not promising: continue
+            if not promising:
+                audit["discovery_gate_rejected"]+=1
+                continue
+            audit["qualified"]+=1
             candidates.append({"symbol":symbol,"name":q.get("shortName") or q.get("longName"),
               "status":"STRUCTURE-RECOGNISED" if structural else ("EARLY-RECOVERY-RESEARCH" if early else ("SOLD-OFF-RECOVERY-WATCH" if sold_off_watch else "DISCOVERY-WATCH")),
               "sold_off_recovery_watch":sold_off_watch,
@@ -147,6 +160,7 @@ def main():
     candidates.sort(key=lambda x:(not x["structure_quality_pass"],not x["early_recovery_observed"],-(x.get("day_change_pct") or 0),x["symbol"]))
     out={"generated_utc":now.isoformat(),"scope":"broad liquid US recovery discovery; structure recognition separated from execution; never automatic buy",
          "source":"Nasdaq Trader official Nasdaq + other-listed universe; Yahoo chart data for price/history/intraday; Yahoo ranked lists enrichment only",
+         "coverage_audit":audit,
          "candidate_count":len(candidates),"structure_count":sum(x["structure_quality_pass"] for x in candidates),
          "candidates":candidates[:30],"failures":failures}
     OUT.parent.mkdir(exist_ok=True); OUT.write_text(json.dumps(out,indent=2)); print(json.dumps(out,indent=2))
