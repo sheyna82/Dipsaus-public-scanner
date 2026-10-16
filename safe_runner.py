@@ -77,27 +77,32 @@ def notification_diagnostics(entries, exits, eu_report, state, active_symbols):
 
 
 def sync_canonical_positions(store, target):
-    """Use the private canonical holdings for every live exit watch; fail closed."""
+    """Sync private canonical holdings, with safe stage-only error diagnostics."""
     import base64
     import binascii
     record = store.request('/contents/config/profit_exit_watch.json')
-    if record.get('encoding') != 'base64':
-        raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID')
+    if not isinstance(record, dict) or record.get('encoding') != 'base64':
+        raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID_ENCODING')
     try:
         source = json.loads(base64.b64decode(''.join(record['content'].split()), validate=True))
-        positions = source['positions']
-        current = json.loads(target.read_text())
-    except (KeyError, TypeError, ValueError, UnicodeError, OSError, binascii.Error):
-        raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID') from None
-    if not isinstance(positions, dict) or not positions or not isinstance(current.get('positions'), dict):
-        raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID')
-    if any(not isinstance(symbol, str) or not symbol or
+    except (KeyError, TypeError, ValueError, UnicodeError, binascii.Error):
+        raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID_SOURCE') from None
+    if not isinstance(source, dict) or not isinstance(source.get('positions'), dict):
+        raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID_POSITIONS') 
+    positions = source['positions']
+    if not positions or any(not isinstance(symbol, str) or not symbol or
            not isinstance(item, dict) or
            not isinstance(item.get('shares'), (int, float)) or
            isinstance(item.get('shares'), bool) or
            not (0 < item['shares'] < float('inf'))
            for symbol, item in positions.items()):
-        raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID')
+        raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID_HOLDINGS')
+    try:
+        current = json.loads(target.read_text())
+    except (OSError, ValueError, UnicodeError):
+        raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID_LOCAL_FILE') from None
+    if not isinstance(current, dict) or not isinstance(current.get('positions'), dict):
+        raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID_LOCAL_SCHEMA')
     current['positions'] = positions
     target.write_text(json.dumps(current))
 
