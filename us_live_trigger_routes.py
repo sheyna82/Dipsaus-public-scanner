@@ -36,7 +36,19 @@ for x in data.get("rows",[]):
         and isinstance(x.get("space_to_first_overhead_pct"),(int,float))
         and x["space_to_first_overhead_pct"]>=3
     )
-    phone_eligible=symbol in notify_watchlist or (automatic_quality and symbol not in silent_follow)
+    # Limited research-only promotion for objectively structured fast recoveries.
+    # Does not declare a trade ready; PRE-ALERT still requires a fresh provider
+    # quote and observed turn before sending, with per-day alert caps.
+    fast_research_quality=bool(
+        early
+        and x.get("structure_quality_pass")
+        and (x.get("intraday_structure") or {}).get("early_recovery_observed")
+        and isinstance(x.get("recent_drawdown_pct"),(int,float))
+        and x["recent_drawdown_pct"]<=-8
+        and isinstance(x.get("day_change_pct"),(int,float))
+        and x["day_change_pct"]>=1
+    )
+    phone_eligible=(symbol in notify_watchlist or automatic_quality or fast_research_quality) and symbol not in silent_follow
     if early:
         ref=x.get("early_trigger_reference_usd")
         z=[round(ref*0.995,3),round(ref*1.005,3)] if isinstance(ref,(int,float)) else None
@@ -49,6 +61,7 @@ for x in data.get("rows",[]):
     elif not phone_eligible:
         row["silent_follow_reason"]="New automatic discovery: keep broad discovery/reporting, but require review/promotion before urgent phone notification."
     row["auto_quality_promoted"]=automatic_quality
+    row["fast_research_quality_promoted"]=fast_research_quality
     rows.append(row)
 
 out={"generated_utc":datetime.now(timezone.utc).isoformat(),"scope":"US PRE-ALERT live monitoring routes; broad discovery with selective phone escalation; never automatic buy","notification_gate":{"phone_watchlist":sorted(notify_watchlist),"rule":"Unreviewed automatic US discoveries are silent. Manual/portfolio watches are handled separately."},"rows":rows}
