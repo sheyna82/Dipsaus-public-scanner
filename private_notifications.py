@@ -115,6 +115,24 @@ def notify(store, state, entries, exits, sender=None):
                         'R/R >=2 en realistische bruto EUR-winst >=150 bij EUR3500; '
                         'nieuws, earnings en portefeuillerisico. Geen automatische order.')
                 reserve_send(store, state, key, record, symbol, body, sender)
+        # Research-only early recovery for an existing RENK holding.
+        # Never interpret a delayed quote as an executable buy signal.
+        if (row.get('watch_type') == 'PORTFOLIO-REENTRY'
+                and row.get('symbol') == 'R3NK.DE'
+                and row.get('provider_freshness_pass')
+                and row.get('recent_reclaim_observed')
+                and (row.get('rebound_from_5d_low_pct') or 0) >= 5
+                and (row.get('day_change_pct') or 0) >= 2):
+            day = datetime.now(timezone.utc).date().isoformat()
+            key = 'RESEARCH|R3NK.DE|EARLY|' + day
+            if key not in state.setdefault('signals', {}):
+                record = {'day': day, 'notification_schema_version': 15,
+                          'notified_utc': datetime.now(timezone.utc).isoformat()}
+                body = ('RENK: VROEGE HERSTELWAARSCHUWING (GEEN bijkoopbevestiging). '
+                        'Sterke opleving vanaf vijfdaagse bodem en positieve dagbeweging. '
+                        'Controleer DEGIRO, zelfstandige setup, hogere bodem, volume, '
+                        'invalidatie, R/R en bruto EUR-winst. Geen automatische order.')
+                reserve_send(store, state, key, record, 'R3NK.DE', body, sender)
         if not row.get('prealert_trigger_observed'): continue
         market = row.get('market', 'EU')
         if market == 'US' and not row.get('watch_type'): continue
