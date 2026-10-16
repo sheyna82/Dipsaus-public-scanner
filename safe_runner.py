@@ -79,6 +79,7 @@ def notification_diagnostics(entries, exits, eu_report, state, active_symbols):
 def sync_canonical_positions(store, target):
     """Use the private canonical holdings for every live exit watch; fail closed."""
     import base64
+    import binascii
     record = store.request('/contents/config/profit_exit_watch.json')
     if record.get('encoding') != 'base64':
         raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID')
@@ -86,7 +87,7 @@ def sync_canonical_positions(store, target):
         source = json.loads(base64.b64decode(record['content'], validate=True))
         positions = source['positions']
         current = json.loads(target.read_text())
-    except (KeyError, TypeError, ValueError, UnicodeError, OSError) as exc:
+    except (KeyError, TypeError, ValueError, UnicodeError, OSError, binascii.Error):
         raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID') from None
     if not isinstance(positions, dict) or not positions or not isinstance(current.get('positions'), dict):
         raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID')
