@@ -84,7 +84,7 @@ def sync_canonical_positions(store, target):
     if record.get('encoding') != 'base64':
         raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID')
     try:
-        source = json.loads(base64.b64decode(record['content'], validate=True))
+        source = json.loads(base64.b64decode(''.join(record['content'].split()), validate=True))
         positions = source['positions']
         current = json.loads(target.read_text())
     except (KeyError, TypeError, ValueError, UnicodeError, OSError, binascii.Error):
