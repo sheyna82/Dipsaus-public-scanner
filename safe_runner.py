@@ -163,6 +163,17 @@ def main():
             notify(store, state, entries['rows'], active_exits)
             # Private EU discovery feeds broker-verification alerts, never trade-ready claims.
             eu_report = PrivateStore('eu').load().get('latest_eu_report', {})
+            # An old EU discovery report must never produce actionable alerts.
+            # Surface the stale dependency privately, without relaxing freshness.
+            from datetime import timedelta
+            try:
+                eu_generated = datetime.fromisoformat(eu_report['generated_utc'].replace('Z', '+00:00'))
+                eu_age = datetime.now(timezone.utc) - eu_generated
+                eu_fresh = eu_generated.tzinfo is not None and timedelta(0) <= eu_age <= timedelta(minutes=25)
+            except (KeyError, ValueError, TypeError):
+                eu_fresh = False
+            if not eu_fresh:
+                print('EU_REPORT_STALE: notification research skipped; EU refresh required.', flush=True)
             profit_cfg = json.loads(Path('config/profit_exit_watch.json').read_text())
             holdings = set()
             for symbol, item in profit_cfg.get('positions', {}).items():
