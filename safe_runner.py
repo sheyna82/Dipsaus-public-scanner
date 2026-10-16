@@ -64,7 +64,31 @@ def notification_diagnostics(entries, exits, eu_report, state, active_symbols):
                 reasons['eu_money_gate'] += 1
             else:
                 reasons['eu_candidate_for_dedupe_and_cap'] += 1
+    # Aggregate-only US/EU funnel: no ticker, position, quote, or private identifiers.
+    market_counts = Counter()
+    for row in entry_rows:
+        market = 'US' if row.get('market') == 'US' else 'EU' if row.get('market') == 'EU' else 'OTHER'
+        market_counts[market + '_examined'] += 1
+        if row.get('watch_type') == 'AUTO-US-DISCOVERY':
+            market_counts['us_auto_discovery_examined'] += 1
+            if not row.get('phone_notification_eligible'):
+                market_counts['us_auto_not_phone_eligible'] += 1
+            elif not row.get('provider_freshness_pass'):
+                market_counts['us_auto_stale_provider'] += 1
+            elif not row.get('structure_available'):
+                market_counts['us_auto_missing_structure'] += 1
+            elif not row.get('early_turn_observed'):
+                market_counts['us_auto_no_early_turn'] += 1
+            elif row.get('status') == 'EARLY-RECOVERY-WATCH':
+                market_counts['us_auto_early_notification_candidate'] += 1
+            elif not row.get('prealert_trigger_observed'):
+                market_counts['us_auto_no_prealert_trigger'] += 1
+            else:
+                market_counts['us_auto_prealert_triggered'] += 1
+        elif row.get('prealert_trigger_observed'):
+            market_counts[market.lower() + '_other_triggered'] += 1
     return {
+        'market_funnel_counts': dict(sorted(market_counts.items())),
         'generated_utc': now.isoformat(),
         'entry_rows_examined': len(entry_rows),
         'exit_rows_examined': len(exit_rows),
@@ -184,6 +208,8 @@ def main():
             diagnostics['new_confirmed_sends'] = sum(1 for value in state.get('signals', {}).values() if isinstance(value, dict) and value.get('delivery') == 'sent') - before_sent
             state['latest_notification_diagnostics'] = diagnostics
             store.save(state)
+            # Public logs expose only aggregate funnel counts, never symbols or holdings.
+            print('NOTIFICATION_MARKET_FUNNEL: ' + json.dumps(diagnostics['market_funnel_counts'], sort_keys=True), flush=True)
             print('NOTIFICATION_DIAGNOSTICS: private_aggregate_saved=true entry_rows=' + str(diagnostics['entry_rows_examined']) + ' exit_rows=' + str(diagnostics['exit_rows_examined']) + ' eu_rows=' + str(diagnostics['eu_rows_examined']), flush=True)
             after_sent = sum(1 for value in state.get('signals', {}).values()
                              if isinstance(value, dict) and value.get('delivery') == 'sent')
