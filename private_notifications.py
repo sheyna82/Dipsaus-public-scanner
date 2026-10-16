@@ -249,12 +249,28 @@ def notify_eu_research(store, state, report, holdings, sender=None):
     # Prioritize two explicitly requested recovery watches, without relaxing any gates.
     priority_watch = {"KER.PA", "FER.MC", "SU.PA", "ANTO.L"}
     eligible.sort(key=lambda x: (-int(x[2] in priority_watch), -int(x[0]), -x[1], x[2]))
-    # A maximum of three new entry/buy-more checks per scan, five per day.
+    # Keep routine research capped; reserve a small extra lane for held
+    # positions and explicit priority watches, without relaxing trade gates.
     day = generated.date().isoformat()
-    already = sum(1 for k, v in state["signals"].items()
-                  if k.startswith("EU-RESEARCH|") and v.get("day") == day)
-    for owned, score, symbol, kind, key in eligible[:max(0, min(3, 5 - already))]:
+    today = [(k, v) for k, v in state["signals"].items()
+             if k.startswith("EU-RESEARCH|") and v.get("day") == day]
+    routine_used = sum(1 for _, v in today if not v.get("priority_lane"))
+    priority_used = sum(1 for _, v in today if v.get("priority_lane"))
+    selected = []
+    for item in eligible:
+        owned, score, symbol, kind, key = item
+        priority = owned or symbol in priority_watch
+        if priority and priority_used < 2:
+            selected.append((item, True))
+            priority_used += 1
+        elif routine_used < 5:
+            selected.append((item, False))
+            routine_used += 1
+        if len(selected) >= 3:
+            break
+    for (owned, score, symbol, kind, key), priority_lane in selected:
         record = {"day": day, "notification_schema_version": 11,
+                  "priority_lane": priority_lane,
                   "notified_utc": now.isoformat()}
         body = (f"{symbol}: {kind} - herstelonderzoek (score {score}), GEEN koopbevestiging.\n"
                 + broker_search_hint(symbol)
