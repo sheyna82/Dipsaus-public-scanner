@@ -86,26 +86,28 @@ def main():
     hydrate()
     store = PrivateStore(args.mode); state = store.load()
     if args.mode == 'prealert' and args.live:
-        # The live secret can lag behind the private canonical profit-watch file.
-        # Synchronize EXE only, in memory, without exposing holdings to public logs.
+        # Synchronize ALL holdings from the canonical private state, never a stale
+        # runtime Secret. Fail closed on missing or malformed canonical data.
         import base64
         record = store.request('/contents/config/profit_exit_watch.json')
         if record.get('encoding') != 'base64':
             raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID')
         source = json.loads(base64.b64decode(record['content']))
-        source_exe = (source.get('positions') or {}).get('EXE')
+        positions = source.get('positions')
+        if not isinstance(positions, dict) or not positions:
+            raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID')
+        if any(not isinstance(symbol, str) or not symbol or
+               not isinstance(item, dict) or
+               not isinstance(item.get('shares'), (int, float)) or
+               isinstance(item.get('shares'), bool) or item['shares'] <= 0
+               for symbol, item in positions.items()):
+            raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID')
         target = Path('config/profit_exit_watch.json')
         current = json.loads(target.read_text())
-        if not isinstance(source_exe, dict) or source_exe.get('shares') != 114 or source_exe.get('currency') != 'USD':
+        if not isinstance(current.get('positions'), dict):
             raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID')
-        if 'EXE' not in current.get('positions', {}):
-            raise RuntimeError('PRIVATE_CONFIG_SYNC_INVALID')
-        current['positions']['EXE'] = source_exe
-        # Canonical private holdings are authoritative for exit alerts.
-        # Never retain sold positions from a lagging runtime secret.
-        for symbol in list(current['positions']):
-            if symbol not in (source.get('positions') or {}):
-                del current['positions'][symbol]
+        # Full replacement also removes sold holdings and adds newly held symbols.
+        current['positions'] = positions
         target.write_text(json.dumps(current))
 
     if args.live:
