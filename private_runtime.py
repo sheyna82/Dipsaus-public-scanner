@@ -103,11 +103,26 @@ class PrivateStore:
         return state
 
     def save(self, state):
-        record = self.request('/contents/' + self.path, {
-            'message': 'Persist scanner runtime state', 'sha': self.sha,
-            'content': base64.b64encode(json.dumps(state).encode()).decode(),
-            'branch': self.metadata['default_branch']})
-        self.sha = record['content']['sha']
+        # A 409 may be caused by another mode committing to a different file
+        # on the same branch. Retry only if THIS file's blob SHA is unchanged.
+        # If the state file changed, fail closed: never overwrite dedupe history.
+        for attempt in range(4):
+            try:
+                record = self.request('/contents/' + self.path, {
+                    'message': 'Persist scanner runtime state', 'sha': self.sha,
+                    'content': base64.b64encode(json.dumps(state).encode()).decode(),
+                    'branch': self.metadata['default_branch']})
+                self.sha = record['content']['sha']
+                return
+            except RuntimeError as exc:
+                if str(exc) != 'PRIVATE_STATE_REQUEST_FAILED_SAVE_HTTP_409':
+                    raise
+                latest = self.request('/contents/' + self.path)
+                if latest.get('sha') != self.sha:
+                    raise RuntimeError('PRIVATE_STATE_CONCURRENT_MODIFICATION') from None
+                if attempt == 3:
+                    raise RuntimeError('PRIVATE_STATE_SAVE_CONFLICT_RETRY_EXHAUSTED') from None
+                time.sleep(1 + attempt)
 
     def require_exclusive_sender(self):
         workflows = self.request('/actions/workflows?per_page=100')
