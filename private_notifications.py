@@ -134,6 +134,14 @@ def notify(store, state, entries, exits, sender=None):
                         'invalidatie, R/R en bruto EUR-winst. Geen automatische order.')
                 reserve_send(store, state, key, record, 'R3NK.DE', body, sender)
         if not row.get('prealert_trigger_observed'): continue
+        # Automatic US discoveries must never bypass the selective phone gate,
+        # even when a later intraday trigger is observed.
+        if (row.get('watch_type') == 'AUTO-US-DISCOVERY'
+                and not (row.get('phone_notification_eligible')
+                         and row.get('provider_freshness_pass')
+                         and row.get('structure_available')
+                         and row.get('intraday_hold_confirmed'))):
+            continue
         market = row.get('market', 'EU')
         if market == 'US' and not row.get('watch_type'): continue
         route = row.get('triggered_route') or row.get('trigger_route') or 'PRE-ALERT'
