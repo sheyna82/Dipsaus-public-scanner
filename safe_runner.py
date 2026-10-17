@@ -197,7 +197,21 @@ def main():
             except (KeyError, ValueError, TypeError):
                 eu_fresh = False
             if not eu_fresh:
-                print('EU_REPORT_STALE: notification research skipped; EU refresh required.', flush=True)
+                # Diagnose the upstream refresh without publishing portfolio or
+                # candidate details. Do not treat old EU research as live.
+                try:
+                    if eu_generated.tzinfo is None:
+                        eu_reason = 'INVALID_TIMESTAMP'
+                    elif eu_age.total_seconds() < 0:
+                        eu_reason = 'FUTURE_TIMESTAMP'
+                    else:
+                        eu_reason = 'EXPIRED_REPORT'
+                        eu_age_minutes = max(0, int(eu_age.total_seconds() // 60))
+                except (NameError, TypeError, ValueError, OverflowError):
+                    eu_reason = 'MISSING_OR_INVALID_REPORT'
+                print('EU_REPORT_STALE: notification research skipped; EU refresh required. reason=' + eu_reason, flush=True)
+                if eu_reason == 'EXPIRED_REPORT':
+                    print('EU_REFRESH_LAG: age_minutes=' + str(eu_age_minutes) + ' allowed_minutes=25', flush=True)
             profit_cfg = json.loads(Path('config/profit_exit_watch.json').read_text())
             holdings = set()
             for symbol, item in profit_cfg.get('positions', {}).items():
