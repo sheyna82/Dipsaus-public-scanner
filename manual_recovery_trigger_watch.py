@@ -102,17 +102,28 @@ if US_ROUTES.exists():
     for item in us.get("rows",[]):
       symbol=item.get("symbol")
       try:
-        price,ts=latest_quote(symbol)
+        # One snapshot per ticker: quote and structure must refer to the same
+        # provider observation. Avoid a second network request that can lag,
+        # disagree or fail independently.
+        h=yf.Ticker(symbol).history(period="1d",interval="1m",prepost=False)
+        if h.empty:
+          rows.append({"symbol":symbol,"market":"US","watch_type":"AUTO-US-DISCOVERY","phone_notification_eligible":bool(item.get("phone_notification_eligible")),"provider_freshness_pass":False,"status":"DATA-BLOCKED","data_block_reason":"NO_INTRADAY_BARS","execution_ready":False})
+          continue
+        idx=h.index[-1]
+        if getattr(idx,"tzinfo",None) is None: idx=idx.tz_localize("UTC")
+        ts=idx.tz_convert("UTC").to_pydatetime()
+        price=float(h["Close"].iloc[-1])
       except Exception as exc:
-        rows.append({"symbol":symbol,"market":"US","status":"DATA-BLOCKED","error":type(exc).__name__,"execution_ready":False})
+        rows.append({"symbol":symbol,"market":"US","watch_type":"AUTO-US-DISCOVERY","phone_notification_eligible":bool(item.get("phone_notification_eligible")),"provider_freshness_pass":False,"status":"DATA-BLOCKED","error":type(exc).__name__,"execution_ready":False})
         continue
-      age=(now-ts).total_seconds() if ts else None; fresh=bool(age is not None and -30<=age<=MAX_AGE_SECONDS)
+      # Compute age at retrieval, not from the run's start time.
+      age=(datetime.now(timezone.utc)-ts).total_seconds()
+      fresh=bool(-30<=age<=MAX_AGE_SECONDS)
       level=item.get("break_above_usd"); z=item.get("hold_zone_usd") or [None,None]
       breakout=bool(price is not None and level is not None and price>level)
       hold=bool(price is not None and z[0] is not None and z[0]<=price<=z[1])
       # A historical pivot touch alone is not a breakout/hold confirmation.
       # Keep early turns visible without presenting them as buy-ready.
-      h=yf.Ticker(symbol).history(period="1d",interval="1m",prepost=False)
       structure_available=bool(len(h)>=12 and not h[["Close","Low"]].tail(12).isna().any().any())
       early_turn=False; confirmed=False; day_low=None; rebound_pct=None
       if structure_available and price is not None:
