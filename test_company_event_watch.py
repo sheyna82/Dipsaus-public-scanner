@@ -21,7 +21,9 @@ class EventWatchTests(unittest.TestCase):
         sender=lambda symbol,body:sent.append((symbol,body))
         notify_events(store,state,sender,date(2026,10,20))
         notify_events(store,state,sender,date(2026,10,20))
-        self.assertEqual([x[0] for x in sent].count("TSLA"),1)
+        self.assertEqual([x[0] for x in sent].count("TSLA"),2)
+        self.assertEqual(len([k for k in state["signals"] if k.startswith("EVENT|TSLA|")]),1)
+        self.assertEqual(len([k for k in state["signals"] if k.startswith("EVENT_RESEARCH|TSLA|")]),1)
         self.assertTrue(all("Geen koopbevestiging" in body for _,body in sent))
         self.assertTrue(all(v["delivery"]=="sent" for v in state["signals"].values()))
     def test_discovery_filters_and_marks_estimates(self):
