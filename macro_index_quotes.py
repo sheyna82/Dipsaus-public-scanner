@@ -7,7 +7,7 @@ def fetch_index_quotes(fetcher=None):
         import yfinance as yf
         fetcher = lambda symbol: yf.Ticker(symbol).history(period="2d", interval="1m", prepost=False)
     result = {}
-    for symbol in ("SPY", "QQQ"):
+    for symbol in ("SPY", "QQQ", "VIXY", "XLE", "ITA"):
         try:
             frame = fetcher(symbol)
             if frame is None or len(frame) < 2:
