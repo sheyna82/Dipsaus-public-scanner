@@ -60,5 +60,4 @@ def update_silent_context(state, now=None, fetch=None):
             context["status"] = "HEADLINE_REVIEW_ONLY"
         except Exception:
             context["status"] = "PROVIDER_UNAVAILABLE"
-    state["silent_macro_context"] = context
-    return context
+    # Use only independently supplied, timestamped market data. No stale quote inference.\n    from macro_market_confirmation import assess_macro_market\n    quotes = state.get("latest_macro_index_quotes", {})\n    context["market_confirmation"] = assess_macro_market(context, quotes, now)\n    state["silent_macro_context"] = context\n    return context
