@@ -38,4 +38,4 @@ def event_research_text(symbol,event_date,today,metrics=None):
     return (f"{symbol}: EVENT OPPORTUNITY RESEARCH {event_date}. {details}. "
             "Check issuer IR, options-implied magnitude (not direction), historical reactions, "
             "expectations, potential gross EUR3500 and worst plausible overnight gap. "
-            "No buy-ready signal, no automated orders, no assumed probabilities.")
+            "Geen koopbevestiging; no buy-ready signal, no automated orders, no assumed probabilities.")
