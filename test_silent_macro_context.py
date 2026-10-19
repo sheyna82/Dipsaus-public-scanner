@@ -7,7 +7,7 @@ class SilentMacroTests(unittest.TestCase):
     def test_categorization_and_no_alert(self):
         state = {}
         now = datetime(2026, 10, 19, tzinfo=timezone.utc)
-        with patch.dict("os.environ", {"FINNHUB_API_KEY": "dummy"}):
+        with patch("macro_index_quotes.fetch_index_quotes", return_value={}), patch.dict("os.environ", {"FINNHUB_API_KEY": "dummy"}):
             result = update_silent_context(state, now=now,
                 fetch=lambda: [{"headline": "White House announces tariff pause", "source": "example", "datetime": 1}])
         self.assertEqual(result["status"], "HEADLINE_REVIEW_ONLY")
