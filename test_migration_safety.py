@@ -41,7 +41,7 @@ class SafetyTests(unittest.TestCase):
         self.assertEqual(store.saved[0]['signals']['ENTRY|US|TEST|PHASE']['delivery'], 'reserved')
 
     def test_seeded_phase_silent(self):
-        state = {'signals': {'ENTRY|US|TEST|PHASE': {'phase': 'BREAKOUT-SEEN'}}}
+        state = {'signals': {'ENTRY|US|TEST|PHASE': {'phase': 'BREAKOUT-HOLD-RETEST'}}}
         notify(Store(), state, [self.entry()], [], lambda *a: self.fail('duplicate'))
 
     def test_uncertain_delivery_not_retried(self):
