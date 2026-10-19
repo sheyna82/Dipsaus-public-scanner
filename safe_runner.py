@@ -203,12 +203,18 @@ def main():
         exits = json.loads(Path('reports/profit_exit_watch_report.json').read_text())
         state['profit_watch_state'] = exits.pop('dynamic_state', state.get('profit_watch_state', {}))
         state['latest_watch_reports'] = {'entries': entries, 'exits': exits}
-        # Unified research remains private and cannot authorize trades or notifications.
+        # Shadow-only: connect only verified, time-stamped PRE-ALERT evidence.
+        # Unconnected research gates remain UNKNOWN; never authorize notifications.
         from dipsaus_unified_research import evaluate as evaluate_unified_research
+        from dipsaus_research_evidence import evidence_from_prealert
+        research_now = datetime.now(timezone.utc)
+        research_rows = [row for row in entries.get('rows', []) if isinstance(row, dict)][:200]
         state['latest_unified_research'] = {
-            'generated_utc': datetime.now(timezone.utc).isoformat(),
-            'rows': [evaluate_unified_research({'symbol': row.get('symbol')}, {})
-                     for row in entries.get('rows', []) if isinstance(row, dict)][:200],
+            'generated_utc': research_now.isoformat(),
+            'rows': [evaluate_unified_research(
+                {'symbol': row.get('symbol')},
+                evidence_from_prealert(row, entries.get('generated_utc'), research_now),
+                now=research_now) for row in research_rows],
             'mode': 'SHADOW_RESEARCH_ONLY',
         }
         if not args.read_only:
