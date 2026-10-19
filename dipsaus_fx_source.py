@@ -15,7 +15,7 @@ def validated_eur_per_usd(history, now=None, max_age_seconds=120):
         idx = history.index[-1]
         if getattr(idx, "tzinfo", None) is None:
             return {"status": "FX_TIMEZONE_UNKNOWN"}
-        ts = idx.to_pydatetime().astimezone(timezone.utc)
+        ts = (idx.to_pydatetime() if hasattr(idx, "to_pydatetime") else idx).astimezone(timezone.utc)
         age = (now-ts).total_seconds()
         if not math.isfinite(close) or close <= 0 or not -30 <= age <= max_age_seconds:
             return {"status": "FX_STALE_OR_INVALID"}
