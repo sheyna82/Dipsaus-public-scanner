@@ -227,6 +227,11 @@ def main():
                       **estimate_gross_eur(row, now=research_now)}
                      for row in research_rows],
         }
+        from dipsaus_eur_upside_audit import audit_rows as audit_eur_upside_rows
+        state['latest_eur_upside_evidence_audit'] = {
+            'generated_utc': research_now.isoformat(),
+            **audit_eur_upside_rows(research_rows, now=research_now),
+        }
         if not args.read_only:
             store.save(state)
         if args.live:
