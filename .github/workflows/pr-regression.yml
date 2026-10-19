@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'safe_runner.py'
+      - 'dipsaus_eur_upside.py'
+      - 'test_dipsaus_eur_upside.py'
       - 'dipsaus_research_evidence.py'
       - 'dipsaus_unified_research.py'
       - 'test_dipsaus_research_evidence.py'

@@ -217,6 +217,16 @@ def main():
                 now=research_now) for row in research_rows],
             'mode': 'SHADOW_RESEARCH_ONLY',
         }
+        # Keep gross-EUR potential private and research-only. No verified
+        # resistance/invalidation/FX in the public PRE-ALERT feed => UNKNOWN.
+        from dipsaus_eur_upside import estimate_gross_eur
+        state['latest_eur_upside_research'] = {
+            'generated_utc': research_now.isoformat(),
+            'mode': 'SHADOW_RESEARCH_ONLY',
+            'rows': [{'symbol': row.get('symbol'),
+                      **estimate_gross_eur(row, now=research_now)}
+                     for row in research_rows],
+        }
         if not args.read_only:
             store.save(state)
         if args.live:
