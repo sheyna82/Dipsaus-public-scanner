@@ -212,7 +212,8 @@ def main():
             active_exits = [row for row in exits['rows'] if row.get('symbol') in active_exit_symbols]
             # Silent, private macro headline context: no additional phone messages. 
             from silent_macro_context import update_silent_context 
-            update_silent_context(state)\n            notify(store, state, entries['rows'], active_exits)
+            update_silent_context(state)
+            notify(store, state, entries['rows'], active_exits)
             # Dated company event reminders are research-only and deduplicated privately.
             from company_event_watch import notify_events
             notify_events(store, state)
