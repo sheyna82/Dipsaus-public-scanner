@@ -280,6 +280,31 @@ def main():
             from dipsaus_eu_freshness import classify_eu_report
             eu_check = classify_eu_report(eu_report)
             eu_fresh = eu_check['fresh']
+            # Keep private freshness history bounded for detecting recurring
+            # upstream lag without exposing holdings or creating alerts.
+            eu_checked_at = datetime.now(timezone.utc)
+            eu_age_seconds = None
+            if isinstance(eu_report, dict) and isinstance(eu_report.get('generated_utc'), str):
+                try:
+                    eu_stamp = datetime.fromisoformat(eu_report['generated_utc'].replace('Z', '+00:00'))
+                    if eu_stamp.tzinfo is not None:
+                        eu_age_seconds = max(0, int((eu_checked_at - eu_stamp).total_seconds()))
+                except (TypeError, ValueError, OverflowError):
+                    pass
+            eu_observation = {
+                'checked_utc': eu_checked_at.isoformat(),
+                'status': eu_check['reason'],
+                'age_seconds': eu_age_seconds,
+            }
+            history = state.get('eu_freshness_history', [])
+            if not isinstance(history, list):
+                history = []
+            state['eu_freshness_history'] = [
+                item for item in history[-47:]
+                if isinstance(item, dict)
+            ] + [eu_observation]
+            state['latest_eu_freshness_observation'] = eu_observation
+            print('EU_FRESHNESS_STATUS: ' + eu_check['reason'], flush=True)
             if not eu_fresh:
                 # Only fixed status strings; no private symbols or holdings.
                 eu_reason = eu_check['reason']
