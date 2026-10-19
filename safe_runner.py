@@ -210,7 +210,9 @@ def main():
                               if isinstance(value, dict) and value.get('delivery') == 'sent')
             active_exit_symbols = set(json.loads(Path('config/profit_exit_watch.json').read_text()).get('positions', {}))
             active_exits = [row for row in exits['rows'] if row.get('symbol') in active_exit_symbols]
-            # Silent, private macro headline context: no additional phone messages.\n            from silent_macro_context import update_silent_context\n            update_silent_context(state)\n            notify(store, state, entries['rows'], active_exits)
+            # Silent, private macro headline context: no additional phone messages. 
+            from silent_macro_context import update_silent_context 
+            update_silent_context(state)\n            notify(store, state, entries['rows'], active_exits)
             # Dated company event reminders are research-only and deduplicated privately.
             from company_event_watch import notify_events
             notify_events(store, state)
