@@ -277,26 +277,16 @@ def main():
             eu_report = PrivateStore('eu').load().get('latest_eu_report', {})
             # An old EU discovery report must never produce actionable alerts.
             # Surface the stale dependency privately, without relaxing freshness.
-            from datetime import timedelta
-            try:
-                eu_generated = datetime.fromisoformat(eu_report['generated_utc'].replace('Z', '+00:00'))
-                eu_age = datetime.now(timezone.utc) - eu_generated
-                eu_fresh = eu_generated.tzinfo is not None and timedelta(0) <= eu_age <= timedelta(minutes=25)
-            except (KeyError, ValueError, TypeError):
-                eu_fresh = False
+            from dipsaus_eu_freshness import classify_eu_report
+            eu_check = classify_eu_report(eu_report)
+            eu_fresh = eu_check['fresh']
             if not eu_fresh:
-                # Diagnose the upstream refresh without publishing portfolio or
-                # candidate details. Do not treat old EU research as live.
-                try:
-                    if eu_generated.tzinfo is None:
-                        eu_reason = 'INVALID_TIMESTAMP'
-                    elif eu_age.total_seconds() < 0:
-                        eu_reason = 'FUTURE_TIMESTAMP'
-                    else:
-                        eu_reason = 'EXPIRED_REPORT'
-                        eu_age_minutes = max(0, int(eu_age.total_seconds() // 60))
-                except (NameError, TypeError, ValueError, OverflowError):
-                    eu_reason = 'MISSING_OR_INVALID_REPORT'
+                # Only fixed status strings; no private symbols or holdings.
+                eu_reason = eu_check['reason']
+                eu_age_minutes = None
+                if eu_reason == 'EXPIRED_REPORT':
+                    eu_generated = datetime.fromisoformat(eu_report['generated_utc'].replace('Z', '+00:00'))
+                    eu_age_minutes = max(0, int((datetime.now(timezone.utc)-eu_generated).total_seconds() // 60))
                 print('EU_REPORT_STALE: notification research skipped; EU refresh required. reason=' + eu_reason, flush=True)
                 # Diagnostic only: never bypass freshness checks or turn
                 # stale EU candidates into actionable notifications.
