@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'safe_runner.py'
+      - 'private_notifications.py'
       - 'test_migration_safety.py'
       - '.github/workflows/pr-regression.yml'
 permissions:

@@ -180,7 +180,7 @@ def notify(store, state, entries, exits, sender=None):
                   'notified_utc': datetime.now(timezone.utc).isoformat()}
         if ph == 'BOTTOM-RECOVERY':
             state['signals'][key] = record; store.save(state); continue
-        body = f'{symbol}: {ph}\nProvider quote: {row.get("provider_quote")}\nDEGIRO check: bid/ask/spread, current-leg invalidation, R/R>=2, dynamic sizing, realistic EUR recovery profit, news/events and portfolio fit. No chase; no automatic order.'
+        body = f'{symbol}: {ph}\nProvider quote: {row.get("provider_quote")}\nDEGIRO check: bid/ask/spread, current-leg invalidation, R/R>=2, dynamic sizing, realistic EUR recovery profit, news/events and portfolio fit. Research signal only; not a validated buy. Entry zone, invalidation, risk/reward and gross EUR profit still require broker verification. No automatic order.'
         reserve_send(store, state, key, record, symbol, body, sender)
     for row in exits:
         symbol = row.get('symbol', 'UNKNOWN'); key = f'EXIT|{symbol}|STATE'
