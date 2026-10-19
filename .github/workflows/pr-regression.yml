@@ -4,6 +4,8 @@ on:
     paths:
       - 'safe_runner.py'
       - 'dipsaus_eu_freshness.py'
+      - 'dipsaus_eu_session_context.py'
+      - 'test_dipsaus_eu_session_context.py'
       - 'test_dipsaus_eu_freshness.py'
       - 'dipsaus_fx_source.py'
       - 'test_dipsaus_fx_source.py'

@@ -291,7 +291,10 @@ def main():
                         eu_age_seconds = max(0, int((eu_checked_at - eu_stamp).total_seconds()))
                 except (TypeError, ValueError, OverflowError):
                     pass
+            from dipsaus_eu_session_context import eu_session_context
+            eu_session = eu_session_context(eu_checked_at)
             eu_observation = {
+                'session_context': eu_session,
                 'checked_utc': eu_checked_at.isoformat(),
                 'status': eu_check['reason'],
                 'age_seconds': eu_age_seconds,
@@ -304,7 +307,7 @@ def main():
                 if isinstance(item, dict)
             ] + [eu_observation]
             state['latest_eu_freshness_observation'] = eu_observation
-            print('EU_FRESHNESS_STATUS: ' + eu_check['reason'], flush=True)
+            print('EU_FRESHNESS_STATUS: ' + eu_check['reason'] + ' session=' + eu_session, flush=True)
             if not eu_fresh:
                 # Only fixed status strings; no private symbols or holdings.
                 eu_reason = eu_check['reason']
