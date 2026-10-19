@@ -217,6 +217,26 @@ def main():
                 now=research_now) for row in research_rows],
             'mode': 'SHADOW_RESEARCH_ONLY',
         }
+        # Independently fetch fresh EUR/USD for private research only.
+        # Never convert route breakout levels into verified resistance.
+        from dipsaus_fx_source import fetch_fx
+        try:
+            import yfinance as yf
+            fx_evidence = fetch_fx(yf, now=research_now)
+        except ImportError:
+            fx_evidence = {'status': 'FX_UNAVAILABLE'}
+        state['latest_fx_research'] = {
+            'generated_utc': research_now.isoformat(),
+            'status': fx_evidence['status'],
+            'mode': 'PRIVATE_RESEARCH_ONLY',
+        }
+        if fx_evidence['status'] == 'FX_FRESH':
+            research_rows = [
+                {**row, 'eur_per_usd': fx_evidence['eur_per_usd'],
+                 'fx_checked_utc': fx_evidence['fx_checked_utc']}
+                if row.get('market') == 'US' else row
+                for row in research_rows
+            ]
         # Keep gross-EUR potential private and research-only. No verified
         # resistance/invalidation/FX in the public PRE-ALERT feed => UNKNOWN.
         from dipsaus_eur_upside import estimate_gross_eur
