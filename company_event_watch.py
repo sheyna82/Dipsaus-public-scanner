@@ -8,6 +8,7 @@ import urllib.request
 from pathlib import Path
 from zoneinfo import ZoneInfo
 from private_notifications import reserve_send
+from event_opportunity_engine import event_research_text
 
 # Only dates with cited official issuer pages; refresh after each event.
 EVENTS = (
@@ -116,3 +117,18 @@ def notify_events(store,state,sender=None,today=None):
               "Geen koopbevestiging; pas na bevestigde structuur, R/R en bruto EUR3500-kans. "
               "Geen automatische order.")
         reserve_send(store,state,key,record,symbol,body,sender)
+    # Daily research stages for upcoming issuer-confirmed and provider-estimated events.
+    # Never send trade-ready recommendations from an event date alone.
+    day=today or datetime.now(ZoneInfo("Europe/Amsterdam")).date()
+    candidates={(sym,iso): (label,source,"ISSUER_CONFIRMED") for sym,iso,label,source in EVENTS}
+    for sym,iso,label,source,confidence in refresh_discovered_events(state,day):
+        candidates.setdefault((sym,iso),(label,source,confidence))
+    for (sym,iso),(label,source,confidence) in candidates.items():
+        research=event_research_text(sym,iso,day)
+        if research is None: continue
+        key=f"EVENT_RESEARCH|{sym}|{iso}|{day.isoformat()}"
+        if key in signals: continue
+        record={"day":day.isoformat(),"event_date":iso,"event_confidence":confidence,
+                "event_stage":"RESEARCH_ONLY","notification_schema_version":2,
+                "notified_utc":datetime.now(timezone.utc).isoformat()}
+        reserve_send(store,state,key,record,sym,research+f" Date status: {confidence}. Source: {source}",sender)
