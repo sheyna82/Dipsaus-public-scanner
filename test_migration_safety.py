@@ -126,6 +126,15 @@ class SafetyTests(unittest.TestCase):
                     self.assertFalse(row['execution_ready'])
             finally: os.chdir(previous)
 
+    def test_eu_runner_rejects_failed_refresh_even_with_old_artifact(self):
+        # Regression guard: never resurrect the old fallback on a failed refresh.
+        import inspect
+        import safe_runner
+        source = inspect.getsource(safe_runner.main)
+        eu_branch = source.split("elif args.mode == 'eu':", 1)[1].split("\n    else:", 1)[0]
+        self.assertIn("run('europe_ohlcv_pilot.py')", eu_branch)
+        self.assertNotIn("except RuntimeError:", eu_branch)
+
     def test_eu_no_old_artifact_restore(self):
         import europe_swing_research as eu
         with patch.object(eu, 'SOURCE', Path('/nonexistent/dipsaus-fresh-data')):
