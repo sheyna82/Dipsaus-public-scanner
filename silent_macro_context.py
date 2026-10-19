@@ -8,7 +8,7 @@ from datetime import datetime, timezone, timedelta
 TERMS = {
     "trade_policy": ("tariff", "trade deal", "import duty", "trade restriction"),
     "monetary_policy": ("federal reserve", "fed rate", "interest rate", "powell"),
-    "geopolitics": ("sanction", "export control", "ceasefire"),
+    "geopolitics": ("sanction", "export control", "ceasefire", "war", "invasion", "missile", "military strike", "armed conflict", "escalation", "retaliation", "oil supply disruption", "shipping disruption", "attack"),
     "fiscal_policy": ("white house", "executive order", "treasury"),
 }
 
@@ -64,6 +64,8 @@ def update_silent_context(state, now=None, fetch=None):
     from macro_market_confirmation import assess_macro_market 
     from macro_index_quotes import fetch_index_quotes
     quotes = fetch_index_quotes() if context["status"] == "HEADLINE_REVIEW_ONLY" and context["headlines"] else {} 
-    context["market_confirmation"] = assess_macro_market(context, quotes, now) 
+    context["market_confirmation"] = assess_macro_market(context, quotes, now)
+    from macro_risk_watch import evaluate_risk
+    context["market_risk"] = evaluate_risk(context, quotes, now) 
     state["silent_macro_context"] = context 
     return context
