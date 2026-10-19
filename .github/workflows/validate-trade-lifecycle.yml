@@ -6,6 +6,7 @@ on:
       - 'trade_lifecycle.py'
       - 'test_risk_budget_plan.py'
       - 'test_trade_lifecycle.py'
+      - 'test_scenario_replay.py'
       - '.github/workflows/validate-trade-lifecycle.yml'
   workflow_dispatch:
 permissions:
@@ -22,6 +23,6 @@ jobs:
         with:
           python-version: '3.12'
       - name: Unit tests for research-only trade plan
-        run: python -m unittest -v test_risk_budget_plan test_trade_lifecycle
+        run: python -m unittest -v test_risk_budget_plan test_trade_lifecycle test_scenario_replay
       - name: Compile all new modules
         run: python -m py_compile risk_budget_plan.py trade_lifecycle.py
