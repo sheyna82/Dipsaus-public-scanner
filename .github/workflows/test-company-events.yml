@@ -8,6 +8,8 @@ on:
       - 'silent_macro_context.py'
       - 'macro_market_confirmation.py'
       - 'macro_index_quotes.py'
+      - 'macro_risk_watch.py'
+      - 'test_macro_risk_watch.py'
       - 'test_silent_macro_context.py'
       - 'test_macro_market_confirmation.py'
       - 'event_opportunity_engine.py'
@@ -30,6 +32,6 @@ jobs:
       - name: Install tested pinned dependencies
         run: python -m pip install --require-hashes -r requirements.lock
       - name: Compile event code
-        run: python -m py_compile company_event_watch.py test_company_event_watch.py event_opportunity_engine.py test_event_opportunity_engine.py silent_macro_context.py test_silent_macro_context.py macro_market_confirmation.py test_macro_market_confirmation.py macro_index_quotes.py
+        run: python -m py_compile company_event_watch.py test_company_event_watch.py event_opportunity_engine.py test_event_opportunity_engine.py silent_macro_context.py test_silent_macro_context.py macro_market_confirmation.py test_macro_market_confirmation.py macro_index_quotes.py macro_risk_watch.py test_macro_risk_watch.py
       - name: Test entire scanner regression suite without secrets or push delivery
         run: python -m unittest discover -p 'test*.py'
