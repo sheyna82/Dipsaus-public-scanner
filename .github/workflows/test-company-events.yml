@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - 'company_event_watch.py'
+      - 'event_opportunity_engine.py'
+      - 'test_event_opportunity_engine.py'
       - 'test_company_event_watch.py'
       - '.github/workflows/test-company-events.yml'
 permissions:
@@ -20,6 +22,6 @@ jobs:
         with:
           python-version: '3.12'
       - name: Compile event code
-        run: python -m py_compile company_event_watch.py test_company_event_watch.py
+        run: python -m py_compile company_event_watch.py test_company_event_watch.py event_opportunity_engine.py test_event_opportunity_engine.py
       - name: Test event calendar and deduplication without secrets or push delivery
-        run: python -m unittest -v test_company_event_watch.py
+        run: python -m unittest -v test_company_event_watch.py test_event_opportunity_engine.py
