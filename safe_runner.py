@@ -203,6 +203,14 @@ def main():
         exits = json.loads(Path('reports/profit_exit_watch_report.json').read_text())
         state['profit_watch_state'] = exits.pop('dynamic_state', state.get('profit_watch_state', {}))
         state['latest_watch_reports'] = {'entries': entries, 'exits': exits}
+        # Unified research remains private and cannot authorize trades or notifications.
+        from dipsaus_unified_research import evaluate as evaluate_unified_research
+        state['latest_unified_research'] = {
+            'generated_utc': datetime.now(timezone.utc).isoformat(),
+            'rows': [evaluate_unified_research({'symbol': row.get('symbol')}, {})
+                     for row in entries.get('rows', []) if isinstance(row, dict)][:200],
+            'mode': 'SHADOW_RESEARCH_ONLY',
+        }
         if not args.read_only:
             store.save(state)
         if args.live:
