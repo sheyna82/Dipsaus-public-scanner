@@ -211,6 +211,9 @@ def main():
             active_exit_symbols = set(json.loads(Path('config/profit_exit_watch.json').read_text()).get('positions', {}))
             active_exits = [row for row in exits['rows'] if row.get('symbol') in active_exit_symbols]
             notify(store, state, entries['rows'], active_exits)
+            # Dated company event reminders are research-only and deduplicated privately.
+            from company_event_watch import notify_events
+            notify_events(store, state)
             # Private EU discovery feeds broker-verification alerts, never trade-ready claims.
             eu_report = PrivateStore('eu').load().get('latest_eu_report', {})
             # An old EU discovery report must never produce actionable alerts.
