@@ -165,7 +165,7 @@ def main():
         raise RuntimeError('READ_ONLY_MODE_INVALID')
     hydrate()
     store = PrivateStore(args.mode); state = store.load()
-    if args.mode in ('prealert', 'us') and isinstance(store, PrivateStore):
+    if args.mode in ('prealert', 'us') and type(store).__module__ == 'private_runtime':
         sync_private_notification_gate(store)
     if args.mode == 'prealert' and args.live:
         sync_canonical_positions(store, Path('config/profit_exit_watch.json'))
