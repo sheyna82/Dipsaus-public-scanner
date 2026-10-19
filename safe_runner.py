@@ -230,6 +230,13 @@ def main():
             'status': fx_evidence['status'],
             'mode': 'PRIVATE_RESEARCH_ONLY',
         }
+        # Public logs disclose only an allowlisted provider state, never
+        # portfolio contents, exchange rates or private watch levels.
+        fx_status = fx_evidence.get('status')
+        if fx_status not in ('FX_FRESH', 'FX_STALE_OR_INVALID',
+                             'FX_TIMEZONE_UNKNOWN', 'FX_UNAVAILABLE', 'FX_INVALID'):
+            fx_status = 'FX_INVALID'
+        print('FX_RESEARCH_STATUS: ' + fx_status, flush=True)
         if fx_evidence['status'] == 'FX_FRESH':
             research_rows = [
                 {**row, 'eur_per_usd': fx_evidence['eur_per_usd'],
@@ -291,6 +298,13 @@ def main():
                 except (NameError, TypeError, ValueError, OverflowError):
                     eu_reason = 'MISSING_OR_INVALID_REPORT'
                 print('EU_REPORT_STALE: notification research skipped; EU refresh required. reason=' + eu_reason, flush=True)
+                # Diagnostic only: never bypass freshness checks or turn
+                # stale EU candidates into actionable notifications.
+                state['latest_eu_refresh_required'] = {
+                    'checked_utc': datetime.now(timezone.utc).isoformat(),
+                    'reason': eu_reason,
+                    'refresh_required': True,
+                }
                 if eu_reason == 'EXPIRED_REPORT':
                     print('EU_REFRESH_LAG: age_minutes=' + str(eu_age_minutes) + ' allowed_minutes=25', flush=True)
             profit_cfg = json.loads(Path('config/profit_exit_watch.json').read_text())
