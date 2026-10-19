@@ -139,6 +139,47 @@ def main():
     report["limitations"].append("Sensitivity grid is in-sample; choose no live parameters without out-of-sample validation")
     report["limitations"].append("Baseline stop/target are simulated intraday orders, not user's actual limit-only execution")
     report["assumptions"]["protection_execution"] = "next session open after confirmed close"
+    # Chronological holdout: train on earlier 70%, evaluate untouched final 30%.
+    # Warm-up bars before split are indicators only; first holdout entry is at split.
+    for ticker, item in report["symbols"].items():
+        if "baseline" not in item:
+            continue
+        bars = fetch(ticker)
+        split = int(len(bars) * 0.7)
+        if split < 50 or len(bars) - split < 30:
+            item["holdout"] = {"status": "INSUFFICIENT_DATA"}
+            continue
+        train = bars[:split]
+        test = bars[split - 31:]
+        candidates = []
+        for horizon in (10, 15, 20):
+            for target_r in (2.0, 2.5, 3.0):
+                for protect in (False, True):
+                    result = simulate(train, protect, item["currency"], horizon, target_r)
+                    if result["count"] >= 5:
+                        candidates.append((result["net_native"], horizon, target_r, protect, result["count"]))
+        if not candidates:
+            item["holdout"] = {"status": "INSUFFICIENT_TRAIN_TRADES"}
+            continue
+        # Select ONLY on training data, never on holdout.
+        best = max(candidates, key=lambda x: x[0])
+        _, horizon, target_r, protect, train_count = best
+        hold = simulate(test, protect, item["currency"], horizon, target_r)
+        fixed = simulate(test, False, item["currency"], 10, 3.0)
+        item["holdout"] = {
+            "train_last_date": train[-1]["date"],
+            "test_first_entry_date": test[31]["date"],
+            "test_last_date": test[-1]["date"],
+            "selection": {"horizon": horizon, "target_r": target_r,
+                          "protection_next_open": protect,
+                          "train_count": train_count, "train_net_native": best[0]},
+            "selected_test": {"count": hold["count"], "net_native": hold["net_native"],
+                              "profit_factor": diagnostics(hold["trades"])["profit_factor"]},
+            "fixed_baseline_test": {"count": fixed["count"], "net_native": fixed["net_native"],
+                                    "profit_factor": diagnostics(fixed["trades"])["profit_factor"]}}
+    report["limitations"].append("Holdout split is chronological 70/30, but the 13-symbol universe and candidate grid were chosen after prior exploratory analysis")
+    report["limitations"].append("Train/test sample sizes can be small; no statistical confidence or independent market-regime replication")
+    print(json.dumps({ticker: item.get("holdout", {}) for ticker, item in report["symbols"].items()}, indent=2))
     with open("historical_comparison_report.json", "w") as output:
         json.dump(report, output, indent=2)
     print(json.dumps({ticker: {
