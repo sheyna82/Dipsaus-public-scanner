@@ -26,7 +26,9 @@ class Store:
 class SafetyTests(unittest.TestCase):
     def entry(self):
         return {'symbol': 'TEST', 'market': 'US', 'watch_type': 'AUTO-US-DISCOVERY',
-                'prealert_trigger_observed': True, 'breakout_observed': True, 'provider_quote': 42}
+                'prealert_trigger_observed': True, 'breakout_observed': True, 'provider_quote': 42,
+                'phone_notification_eligible': True, 'provider_freshness_pass': True,
+                'structure_available': True, 'intraday_hold_confirmed': True}
 
     def test_shadow_private_owner_blocks_notifications(self):
         with self.assertRaises(RuntimeError):
