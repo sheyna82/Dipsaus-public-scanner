@@ -58,6 +58,22 @@ def simulate(bars, protection=False, currency="EUR"):
             "net_native": round(sum(t["net_native"] for t in trades), 2),
             "wins": sum(t["net_native"] > 0 for t in trades)}
 
+def diagnostics(trades):
+    from collections import Counter
+    balance = high = max_drawdown = 0.0
+    for trade in trades:
+        balance += trade["net_native"]
+        high = max(high, balance)
+        max_drawdown = max(max_drawdown, high - balance)
+    positives = sum(t["net_native"] for t in trades if t["net_native"] > 0)
+    negatives = -sum(t["net_native"] for t in trades if t["net_native"] < 0)
+    return {"trades": len(trades),
+            "wins": sum(t["net_native"] > 0 for t in trades),
+            "profit_factor": round(positives / negatives, 3) if negatives else None,
+            "max_closed_trade_drawdown_native": round(max_drawdown, 2),
+            "exit_reasons": dict(Counter(t["exit_reason"] for t in trades)),
+            "worst_five": sorted(trades, key=lambda t: t["net_native"])[:5]}
+
 def main():
     report = {"research_only": True, "assumptions":
               {"fee_per_order_eur": 2, "slippage_fraction": 0.001,
@@ -86,6 +102,23 @@ def main():
             report["symbols"][ticker] = {"status": "DATA-BLOCKED",
                                           "reason": str(error)[:160]}
 
+    for ticker, item in report["symbols"].items():
+        if "baseline" not in item:
+            continue
+        item["diagnostics"] = {
+            name: diagnostics(item[name]["trades"])
+            for name in ("baseline", "profit_protection")}
+        baseline = {t["entry_date"]: t for t in item["baseline"]["trades"]}
+        protected = {t["entry_date"]: t for t in item["profit_protection"]["trades"]}
+        common = set(baseline) & set(protected)
+        item["paired_same_entry"] = {
+            "count": len(common),
+            "net_difference_native": round(sum(
+                protected[date]["net_native"] - baseline[date]["net_native"]
+                for date in common), 2),
+            "changed_exits": sum(
+                protected[date]["exit_date"] != baseline[date]["exit_date"]
+                for date in common)}
     with open("historical_comparison_report.json", "w") as output:
         json.dump(report, output, indent=2)
     print(json.dumps({ticker: {
