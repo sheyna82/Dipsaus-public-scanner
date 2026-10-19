@@ -100,6 +100,30 @@ def notification_diagnostics(entries, exits, eu_report, state, active_symbols):
 
 
 
+def sync_private_notification_gate(store):
+    """Load the canonical private notification gate without exposing it publicly.
+
+    The GitHub Secret remains available for initial hydration, but the private
+    repository file is authoritative for subsequent reviewed watchlist updates.
+    Fail closed if it cannot be read or validated: never silently use a stale gate.
+    """
+    import base64
+    import binascii
+    record = store.request('/contents/config/notification_quality_gate.json')
+    if not isinstance(record, dict) or record.get('encoding') != 'base64':
+        raise RuntimeError('PRIVATE_CONFIG_GATE_INVALID_ENCODING')
+    try:
+        gate = json.loads(base64.b64decode(''.join(record['content'].split()), validate=True))
+    except (KeyError, TypeError, ValueError, UnicodeError, binascii.Error):
+        raise RuntimeError('PRIVATE_CONFIG_GATE_INVALID_SOURCE') from None
+    if not isinstance(gate, dict) or not isinstance(gate.get('auto_us_notify_watchlist'), list) or not isinstance(gate.get('auto_us_silent_follow'), list):
+        raise RuntimeError('PRIVATE_CONFIG_GATE_INVALID_SCHEMA')
+    for key in ('auto_us_notify_watchlist', 'auto_us_silent_follow'):
+        if any(not isinstance(symbol, str) or not symbol or len(symbol) > 24 for symbol in gate[key]):
+            raise RuntimeError('PRIVATE_CONFIG_GATE_INVALID_SYMBOLS')
+    Path('config/notification_quality_gate.json').write_text(json.dumps(gate))
+
+
 def sync_canonical_positions(store, target):
     """Sync private canonical holdings, with safe stage-only error diagnostics."""
     import base64
@@ -141,6 +165,8 @@ def main():
         raise RuntimeError('READ_ONLY_MODE_INVALID')
     hydrate()
     store = PrivateStore(args.mode); state = store.load()
+    if args.mode in ('prealert', 'us'):
+        sync_private_notification_gate(store)
     if args.mode == 'prealert' and args.live:
         sync_canonical_positions(store, Path('config/profit_exit_watch.json'))
 
