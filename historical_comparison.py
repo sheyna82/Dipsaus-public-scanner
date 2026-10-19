@@ -3,10 +3,10 @@ from historical_replay import fetch
 from risk_budget_plan import build_trade_plan
 import json
 
-def simulate(bars, protection=False, currency="EUR"):
+def simulate(bars, protection=False, currency="EUR", horizon=10, target_r=3.0):
     trades = []
     index = 30
-    while index < len(bars) - 11:
+    while index < len(bars) - horizon - 2:
         history = bars[:index+1]
         closes = [bar["close"] for bar in history]
         lows = [bar["low"] for bar in history]
@@ -23,13 +23,13 @@ def simulate(bars, protection=False, currency="EUR"):
         if stop >= entry:
             index += 1
             continue
-        target = entry + 3 * (entry-stop)
+        target = entry + target_r * (entry-stop)
         plan = build_trade_plan(entry, stop, target)
         if not plan.shares or plan.potential_profit < 150:
             index += 1
             continue
         peak = entry
-        end = index + 10
+        end = index + horizon
         sale = bars[end]["close"] * 0.999
         reason = "TIME"
         for day_index in range(index+1, end+1):
@@ -47,7 +47,7 @@ def simulate(bars, protection=False, currency="EUR"):
             if (protection and day_index > index+1
                     and peak-entry >= entry-stop
                     and day["close"] <= peak - 0.35*(peak-entry)):
-                sale, end, reason = day["close"] * 0.999, day_index, "GIVEBACK"
+                sale, end, reason = bars[day_index+1]["open"] * 0.999, day_index+1, "GIVEBACK_NEXT_OPEN"
                 break
         trades.append({"entry_date": bars[index+1]["date"],
                        "exit_date": bars[end]["date"],
@@ -119,6 +119,26 @@ def main():
             "changed_exits": sum(
                 protected[date]["exit_date"] != baseline[date]["exit_date"]
                 for date in common)}
+    # Independent exit-rule sensitivity grid. Research only: same synthetic signal.
+    # Protection executes next session open after a completed daily close.
+    for ticker, item in report["symbols"].items():
+        if "baseline" not in item:
+            continue
+        bars = fetch(ticker)
+        item["sensitivity"] = {}
+        for horizon in (10, 15, 20):
+            for target_r in (2.0, 2.5, 3.0):
+                key = f"h{horizon}_r{target_r:g}"
+                item["sensitivity"][key] = {}
+                for protection, mode in ((False, "baseline"), (True, "protection_next_open")):
+                    run = simulate(bars, protection, item["currency"], horizon, target_r)
+                    item["sensitivity"][key][mode] = {
+                        "count": run["count"], "net_native": run["net_native"],
+                        "profit_factor": diagnostics(run["trades"])["profit_factor"],
+                        "stop_or_gap": sum(t["exit_reason"] in ("STOP", "GAP") for t in run["trades"])}
+    report["limitations"].append("Sensitivity grid is in-sample; choose no live parameters without out-of-sample validation")
+    report["limitations"].append("Baseline stop/target are simulated intraday orders, not user's actual limit-only execution")
+    report["assumptions"]["protection_execution"] = "next session open after confirmed close"
     with open("historical_comparison_report.json", "w") as output:
         json.dump(report, output, indent=2)
     print(json.dumps({ticker: {
