@@ -1,7 +1,7 @@
 """No-network regression tests for earnings reminders."""
 import unittest
 from datetime import date
-from company_event_watch import due_events,notify_events
+from company_event_watch import due_events,notify_events,discover_earnings,refresh_discovered_events
 
 class FakeStore:
     def __init__(self): self.saved=0
@@ -24,7 +24,28 @@ class EventWatchTests(unittest.TestCase):
         self.assertEqual([x[0] for x in sent].count("TSLA"),1)
         self.assertTrue(all("Geen koopbevestiging" in body for _,body in sent))
         self.assertTrue(all(v["delivery"]=="sent" for v in state["signals"].values()))
-    def test_missing_source_does_not_claim_automatic_discovery(self):
-        import company_event_watch
-        self.assertIn("NOT automatic discovery",company_event_watch.__doc__)
+    def test_discovery_filters_and_marks_estimates(self):
+        def fetch(_):
+            return {"earningsCalendar":[
+              {"symbol":"WRBY","date":"2026-10-23"},
+              {"symbol":"TSLA","date":"2026-10-21"},
+              {"symbol":"OTHER","date":"2026-10-23"},
+              {"symbol":"ARQT","date":"invalid"}]}
+        found=discover_earnings(["WRBY","TSLA","ARQT"],date(2026,10,19),fetch)
+        self.assertEqual(len(found),1)
+        self.assertEqual(found[0][0],"WRBY")
+        self.assertEqual(found[0][-1],"ESTIMATED")
+    def test_provider_failure_fails_closed(self):
+        self.assertEqual(discover_earnings(["WRBY"],date(2026,10,19),
+            lambda _: {"error":"rate limit"}),[])
+    def test_cached_calendar_on_provider_failure(self):
+        from unittest.mock import patch
+        import json
+        from pathlib import Path
+        cache={"company_event_calendar":{"checked_day":"2026-10-18",
+            "events":[["WRBY","2026-10-23","Earnings estimate","https://finnhub.io/","ESTIMATED"]]}}
+        with patch("company_event_watch.Path.read_text",return_value=json.dumps(
+            {"auto_us_notify_watchlist":["WRBY"],"auto_us_silent_follow":[]})):
+            result=refresh_discovered_events(cache,date(2026,10,19),lambda _: {})
+        self.assertEqual(len(result),1)
 if __name__=="__main__": unittest.main()
