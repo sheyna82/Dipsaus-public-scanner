@@ -64,13 +64,21 @@ def main():
                "single_position": True, "horizon_sessions": 10},
               "limitations": ["Synthetic rules, not user's historical orders",
                               "Daily close protection proxy, not live structure engine",
-                              "USD results are in USD, EUR in EUR; no FX conversion or combined portfolio P&L",\n                              "Nominal risk budget 75 in native currency, not comparable cross-currency",\n                              "No news or intraday sequence verification"],
+                              "USD results are in USD, EUR in EUR; no FX conversion or combined portfolio P&L",
+                              "Nominal risk budget 75 in native currency, not comparable cross-currency",
+                              "No news or intraday sequence verification"],
               "symbols": {}}
-    # Broad market research universe; no personal holdings or trade records.\n    universe = {"FER.MC":"EUR", "RHM.DE":"EUR", "BESI.AS":"EUR",\n                "HWM":"USD", "FCX":"USD", "GEV":"USD", "AMD":"USD",\n                "COHR":"USD", "KLAC":"USD", "LRCX":"USD",\n                "TSLA":"USD", "VRT":"USD", "HEI":"USD"}\n    for ticker, currency in universe.items():
+    # Broad market research universe; no personal holdings or trade records.
+    universe = {"FER.MC":"EUR", "RHM.DE":"EUR", "BESI.AS":"EUR",
+                "HWM":"USD", "FCX":"USD", "GEV":"USD", "AMD":"USD",
+                "COHR":"USD", "KLAC":"USD", "LRCX":"USD",
+                "TSLA":"USD", "VRT":"USD", "HEI":"USD"}
+    for ticker, currency in universe.items():
         try:
             bars = fetch(ticker)
             report["symbols"][ticker] = {
-                "currency": currency,\n                "baseline": simulate(bars, currency=currency),
+                "currency": currency,
+                "baseline": simulate(bars, currency=currency),
                 "profit_protection": simulate(bars, True, currency=currency),
                 "first_date": bars[0]["date"],
                 "last_date": bars[-1]["date"]}
