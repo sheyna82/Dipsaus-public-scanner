@@ -131,7 +131,7 @@ class SafetyTests(unittest.TestCase):
         import inspect
         import safe_runner
         source = inspect.getsource(safe_runner.main)
-        eu_branch = source.split("elif args.mode == 'eu':", 1)[1].split("\\n    else:", 1)[0]
+        eu_branch = source.split("elif args.mode == 'eu':", 1)[1].split("\n    else:", 1)[0]
         self.assertIn("run('europe_ohlcv_pilot.py')", eu_branch)
         self.assertNotIn("except RuntimeError:", eu_branch)
 
