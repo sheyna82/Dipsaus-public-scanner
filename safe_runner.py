@@ -14,8 +14,17 @@ from private_notifications import notify, notify_eu_research
 def run(script, **extra):
     env = dict(os.environ, **{k: str(v) for k, v in extra.items()})
     # Suppress stdout, stderr and tracebacks containing holdings, API URLs or contact data.
-    result = subprocess.run([sys.executable, script], env=env,
-                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=1500)
+    if script == "europe_ohlcv_pilot.py":
+        # Capture internally but publish only a fixed allowlisted aggregate line.
+        result = subprocess.run([sys.executable, script], env=env,
+                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                text=True, timeout=1500)
+        for line in result.stdout.splitlines():
+            if re.fullmatch(r"EU_OHLCV_QUALITY: attempted=\\d+ passed=\\d+ fresh_verified=\\d+ coverage_gate=90pct", line):
+                print(line, flush=True)
+    else:
+        result = subprocess.run([sys.executable, script], env=env,
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=1500)
     if result.returncode:
         raise RuntimeError('SCANNER_STEP_FAILED: ' + script)
 
