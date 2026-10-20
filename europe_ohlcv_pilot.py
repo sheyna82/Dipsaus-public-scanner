@@ -144,6 +144,17 @@ def main():
     if coverage_ratio<0.90:
         raise SystemExit("DATA-BLOCKED: fewer than 90% of symbols produced valid same-run OHLCV")
     if not report["freshness"]["freshness_passed"]:
-        raise SystemExit("STALE-DATA: OHLCV artifact retained for historical research; current trade signals blocked")
+        # Do not fail the entire refresh for isolated stale/unverified names.
+        # Downstream research must exclude those names from the same-run dataset.
+        invalid = set(report["freshness"]["stale_symbols"]) | set(report["freshness"]["recent_merge_unverified"])
+        valid_records = [record for record in records if record["symbol"] not in invalid]
+        with gzip.open(OUT/"europe_ohlcv.jsonl.gz","wt",encoding="utf-8") as output:
+            for record in valid_records:
+                output.write(json.dumps(record,separators=(",",":"))+"\n")
+        report["usable_fresh_symbols"] = len(valid_records)
+        report["research_refresh_usable"] = len(valid_records)/len(results) >= 0.90
+        (OUT/"europe_ohlcv_audit.json").write_text(json.dumps(report,indent=2,ensure_ascii=False),encoding="utf-8")
+        if not report["research_refresh_usable"]:
+            raise SystemExit("STALE-DATA: fewer than 90% independently fresh symbols; current trade signals blocked")
 if __name__=="__main__":main()
 
