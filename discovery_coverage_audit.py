@@ -66,7 +66,8 @@ def audit_us_batch(report, *, now=None):
         raise ValueError("US promoted candidates invalid")
     return {"selected":len(selected),"screened_count_only":len(screened),
             "provider_failures":len(failures),"per_symbol_screened_proof":True,
-            "complete":True,"reason":"US_BATCH_SYMBOLS_RECONCILED"}
+            "complete":True,"all_data_available":len(failures)==0,
+            "reason":"US_BATCH_SYMBOLS_RECONCILED_WITH_BLOCKERS" if failures else "US_BATCH_SYMBOLS_RECONCILED"}
 
 def audit_eu_pipeline(history, intraday, quotes, joined):
     """Reconcile EU eligible watchlist across every stage; never claim market-wide coverage."""
