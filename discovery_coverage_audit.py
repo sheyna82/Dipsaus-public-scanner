@@ -44,6 +44,10 @@ def audit_us_batch(report, *, now=None):
     selected=report.get("sample_symbols")
     if not isinstance(selected,list) or len(selected)!=len(set(selected)):
         raise ValueError("US sample invalid")
+    if not selected:
+        return {"selected":0,"screened_count_only":0,"provider_failures":0,
+                "per_symbol_screened_proof":False,"complete":False,
+                "all_data_available":False,"reason":"US_EMPTY_BATCH_NO_COVERAGE_PROOF"}
     failures=report.get("failures",{})
     screened=report.get("screened_symbols")
     if not isinstance(failures,dict) or not set(failures).issubset(set(selected)):
