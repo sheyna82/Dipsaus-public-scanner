@@ -46,6 +46,30 @@ class DiscoveryNetworkAuditTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             list(discovery.ordered_bounded_map(lambda x:x,[1],workers=5,window=4))
 
+    def test_opt_in_pacer_waits_before_request(self):
+        from unittest.mock import Mock
+        pacer=Mock()
+        class Response:
+            def __enter__(self): return self
+            def __exit__(self,*args): return False
+            def read(self): return b"{}"
+        with patch.object(discovery,"REQUEST_PACER",pacer), patch.object(discovery.urllib.request,"urlopen",return_value=Response()):
+            discovery.get_json("https://example.invalid")
+        pacer.wait.assert_called_once_with()
+        pacer.defer.assert_not_called()
+
+    def test_http_429_cooldown_is_capped_and_failure_propagates(self):
+        from unittest.mock import Mock
+        from urllib.error import HTTPError
+        pacer=Mock()
+        error=HTTPError("https://example.invalid",429,"Too Many Requests",{"Retry-After":"99999"},None)
+        with patch.object(discovery,"REQUEST_PACER",pacer), patch.object(discovery.urllib.request,"urlopen",side_effect=error):
+            with self.assertRaises(HTTPError):
+                discovery.get_json("https://example.invalid")
+        pacer.wait.assert_called_once_with()
+        pacer.defer.assert_called_once_with(30.0)
+        self.assertEqual(discovery.NETWORK_AUDIT["failures"],1)
+
     def test_success_is_counted_without_logging_response(self):
         class Response:
             def __enter__(self):
