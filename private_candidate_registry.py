@@ -11,7 +11,8 @@ VALID_STATES = frozenset({"REGISTERED", "ACTIVE", "APPROACHING",
                           "STALE", "DEFERRED", "INVALIDATED", "CLOSED"})
 
 def validate_registry(registry):
-    if not isinstance(registry, dict) or registry.get("schema_version") != 1:
+    if (not isinstance(registry, dict) or type(registry.get("schema_version")) is not int
+            or registry["schema_version"] != 1):
         raise ValueError("unsupported registry schema")
     entries = registry.get("candidates")
     if not isinstance(entries, list):
