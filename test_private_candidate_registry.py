@@ -37,6 +37,15 @@ class PrivateRegistryTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_registry(registry(item("X"), item("X")))
 
+    def test_empty_canonical_registry_cannot_claim_complete(self):
+        with self.assertRaises(ValueError):
+            reconcile_registry_with_manual_config(registry(), {"candidates":{}})
+
+    def test_canonical_nomination_requires_explicit_route(self):
+        with self.assertRaises(ValueError):
+            reconcile_registry_with_manual_config(
+                registry(item("A")), {"candidates":{"A":{}}})
+
     def test_nominated_manual_symbol_missing_from_scanner(self):
         r=registry(item("A", monitor_mode="MANUAL"),
                    item("B", monitor_mode="MANUAL"))
