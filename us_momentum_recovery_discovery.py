@@ -6,7 +6,8 @@ US stocks from both most-active and day-gainer universes, then recognises an
 intraday bottom -> higher-low -> reclaim pattern. Research/pre-alert only; never a
 buy signal.
 """
-import csv, io, json, math, re, time, urllib.parse, urllib.request
+import csv, io, json, math, re, threading, time, urllib.parse, urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -18,21 +19,25 @@ CHART="https://query1.finance.yahoo.com/v8/finance/chart/"
 LISTING_START_UTC={"SPCX":datetime(2026,6,12,tzinfo=timezone.utc).timestamp()}
 
 NETWORK_AUDIT={"requests":0,"failures":0,"elapsed_s":0.0,"slow_requests":0}
+NETWORK_AUDIT_LOCK=threading.Lock()
 
 def get_json(url, params=None):
     if params: url += "?" + urllib.parse.urlencode(params)
     req=urllib.request.Request(url,headers=HEADERS)
     started=time.monotonic()
-    NETWORK_AUDIT["requests"]+=1
+    with NETWORK_AUDIT_LOCK:
+        NETWORK_AUDIT["requests"]+=1
     try:
         with urllib.request.urlopen(req,timeout=15) as r: return json.loads(r.read().decode())
     except Exception:
-        NETWORK_AUDIT["failures"]+=1
+        with NETWORK_AUDIT_LOCK:
+            NETWORK_AUDIT["failures"]+=1
         raise
     finally:
         elapsed=time.monotonic()-started
-        NETWORK_AUDIT["elapsed_s"]+=elapsed
-        if elapsed>=5: NETWORK_AUDIT["slow_requests"]+=1
+        with NETWORK_AUDIT_LOCK:
+            NETWORK_AUDIT["elapsed_s"]+=elapsed
+            if elapsed>=5: NETWORK_AUDIT["slow_requests"]+=1
 
 def chart(symbol, rng, interval):
     d=get_json(CHART+urllib.parse.quote(symbol),{"range":rng,"interval":interval,"includePrePost":"false"})
@@ -109,6 +114,22 @@ def intraday_structure(rows):
     return {"quality":quality,"early_recovery_observed":early,"day_low":round(low,3),"first_rebound_high":round(first_peak,3),
             "higher_low":round(higher_low,3),"higher_low_margin_pct":round(hl_margin,2),
             "reclaim_observed":reclaim,"path_efficiency":round(efficiency,3)}
+
+def ordered_bounded_map(fn, items, workers=4, window=8):
+    """Bound in-flight requests and preserve input order without eager universe-wide dispatch."""
+    if not (1 <= workers <= window):
+        raise ValueError("invalid concurrency limits")
+    iterator=iter(items)
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        pending=[]
+        for _ in range(window):
+            try: pending.append(pool.submit(fn,next(iterator)))
+            except StopIteration: break
+        while pending:
+            future=pending.pop(0)
+            yield future.result()
+            try: pending.append(pool.submit(fn,next(iterator)))
+            except StopIteration: pass
 
 def main():
     started=time.monotonic()
