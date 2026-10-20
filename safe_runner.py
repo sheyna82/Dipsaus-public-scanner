@@ -184,10 +184,16 @@ def main():
     args = parser.parse_args()
     if args.read_only and (args.live or args.mode != 'prealert'):
         raise RuntimeError('READ_ONLY_MODE_INVALID')
+    # Fixed stage markers identify early failures without exposing private details.
+    print('SCANNER_STAGE: hydrate_start', flush=True)
     hydrate()
+    print('SCANNER_STAGE: private_state_load_start', flush=True)
     store = PrivateStore(args.mode); state = store.load()
+    print('SCANNER_STAGE: private_state_loaded', flush=True)
     if args.mode in ('prealert', 'us') and type(store).__module__ == 'private_runtime':
+        print('SCANNER_STAGE: private_gate_sync_start', flush=True)
         sync_private_notification_gate(store)
+        print('SCANNER_STAGE: private_gate_synced', flush=True)
     if args.mode == 'prealert' and args.live:
         sync_canonical_positions(store, Path('config/profit_exit_watch.json'))
 
