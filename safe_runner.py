@@ -25,14 +25,15 @@ def run(script, **extra):
                 continue
             try:
                 payload = json.loads(line[len("US_DISCOVERY_AUDIT: "):])
-                keys = ("universe_count", "missing_price_or_cap", "qualified_count",
+                keys = ("universe_count", "missing_price_or_cap", "quick_probe_rejected",
+                        "probe_errors", "qualified_count",
                         "requests", "failed_requests", "slow_requests",
                         "request_seconds", "total_seconds")
                 if set(payload) != set(keys):
                     continue
-                if any(type(payload[k]) is not int or payload[k] < 0 for k in keys[:6]):
+                if any(type(payload[k]) is not int or payload[k] < 0 for k in keys[:8]):
                     continue
-                if any(type(payload[k]) not in (int, float) or payload[k] < 0 or payload[k] > 1500 for k in keys[6:]):
+                if any(type(payload[k]) not in (int, float) or payload[k] < 0 or payload[k] > 1500 for k in keys[8:]):
                     continue
                 print("US_DISCOVERY_AUDIT: " + json.dumps(payload, sort_keys=True), flush=True)
             except (ValueError, TypeError):
