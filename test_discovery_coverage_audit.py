@@ -30,6 +30,16 @@ class DiscoveryCoverageTests(unittest.TestCase):
         j={"candidates":[{"symbol":"A"},{"symbol":"B"}],"joined_count":2}
         return h,i,q,j
 
+    def test_us_rejects_blank_symbol(self):
+        r={"sample_symbols":[""],"requested_symbols":1,"actual_symbols_screened":1,
+           "screened_symbols":[""],"failures":{},"candidates":[]}
+        with self.assertRaises(ValueError): audit_us_batch(r)
+
+    def test_us_rejects_invalid_batch_index(self):
+        r={"sample_symbols":["A"],"requested_symbols":1,"actual_symbols_screened":1,
+           "screened_symbols":["A"],"failures":{},"candidates":[],"batch_index":22}
+        with self.assertRaises(ValueError): audit_us_batch(r)
+
     def test_eu_all_four_stages_complete(self):
         self.assertTrue(audit_eu_pipeline(*self.eu_reports())["complete"])
 
