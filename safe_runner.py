@@ -15,6 +15,31 @@ from private_notifications import notify, notify_eu_research
 def run(script, **extra):
     env = dict(os.environ, **{k: str(v) for k, v in extra.items()})
     # Suppress stdout, stderr and tracebacks containing holdings, API URLs or contact data.
+    if script == "us_momentum_recovery_discovery.py":
+        # Child prints private candidate details; allow only a strictly parsed aggregate audit.
+        result = subprocess.run([sys.executable, script], env=env,
+                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                text=True, timeout=1500)
+        for line in result.stdout.splitlines():
+            if not line.startswith("US_DISCOVERY_AUDIT: "):
+                continue
+            try:
+                payload = json.loads(line[len("US_DISCOVERY_AUDIT: "):])
+                keys = ("universe_count", "missing_price_or_cap", "qualified_count",
+                        "requests", "failed_requests", "slow_requests",
+                        "request_seconds", "total_seconds")
+                if set(payload) != set(keys):
+                    continue
+                if any(type(payload[k]) is not int or payload[k] < 0 for k in keys[:6]):
+                    continue
+                if any(type(payload[k]) not in (int, float) or payload[k] < 0 or payload[k] > 1500 for k in keys[6:]):
+                    continue
+                print("US_DISCOVERY_AUDIT: " + json.dumps(payload, sort_keys=True), flush=True)
+            except (ValueError, TypeError):
+                continue
+        if result.returncode:
+            raise RuntimeError("SCANNER_STEP_FAILED: " + script)
+        return
     if script == "europe_ohlcv_pilot.py":
         # Capture internally but publish only a fixed allowlisted aggregate line.
         # Stream only exact allowlisted diagnostics; never publish raw child output.
