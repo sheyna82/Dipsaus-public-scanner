@@ -113,6 +113,7 @@ def audit_eu_pipeline(history, intraday, quotes, joined):
                                                 "STALE-OR-TIMESTAMP-INVALID")
         or "QUOTE-DATA-BLOCKED" in (row.get("execution_blocks") or [])
         for row in quotes["candidates"])
+    selection_nonempty = bool(eligible)
     missing_intraday = eligible - intraday_symbols
     missing_quote = intraday_symbols - quote_symbols
     missing_joined = intraday_symbols - joined_symbols
@@ -126,10 +127,11 @@ def audit_eu_pipeline(history, intraday, quotes, joined):
         "missing_joined": len(missing_joined),
         "intraday_blocked": intraday_blocked,
         "quote_blocked": quote_blocked,
-        "complete": not (missing_intraday or missing_quote or missing_joined),
-        "all_data_available": not (missing_intraday or missing_quote or missing_joined or
+        "complete": selection_nonempty and not (missing_intraday or missing_quote or missing_joined),
+        "all_data_available": selection_nonempty and not (missing_intraday or missing_quote or missing_joined or
                                    intraday_blocked or quote_blocked),
         "scope": "EU_DISCOVERY_ELIGIBLE_ONLY",
+        "selection_nonempty": selection_nonempty,
     }
 
 
