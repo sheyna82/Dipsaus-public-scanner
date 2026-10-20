@@ -1,6 +1,6 @@
 """Bounded US recovery discovery pilot. Research only, never trade-ready."""
 import csv, io, json, math, os, re, time, urllib.request
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from us_recovery_map import recovery_map
@@ -94,33 +94,43 @@ def assess(rows):
     return {"last_bar_date":last["date"],"last_close_usd":round(last["close"],3),"six_month_high":round(high,3),"six_month_low":round(low,3),"drawdown_pct":round(drawdown,2),"rebound_from_low_pct":round(rebound,2),"signals":signals,"early_turn":early_turn,"established_turn":established_turn,"signal_count":signal_count,"last_volume_shares":round(last["volume"]),"average_20d_volume_shares":round(avg_volume),"pre_screen_match":pre_screen_match}
 
 def main():
+    started = time.monotonic()
+    def progress(phase, **metrics):
+        # Only aggregate counters and timings; no private runtime data.
+        print("US_RECOVERY_PROGRESS:", json.dumps({"phase": phase, "elapsed_s": round(time.monotonic()-started, 1), **metrics}, sort_keys=True), flush=True)
     batch = parse_batch(os.environ.get("US_BATCH")); print("US_BATCH_REQUESTED:", batch, flush=True)
     universe_rows, counts, errors, rejected=universe()
+    progress('universe_loaded', eligible=len(universe_rows), source_errors=len(errors))
     if errors or not universe_rows: raise RuntimeError("US_UNIVERSE_INVALID: source error or zero eligible equities; refusing green research run")
     n=min(LIMIT,len(universe_rows)); sample=universe_rows[batch::BATCH_COUNT][:n]
     report={"run_utc":datetime.now(timezone.utc).isoformat(),"status":"BOUNDED_RESEARCH_PILOT","source":"Nasdaq Trader official lists + Yahoo public historical daily chart","selection_method":"Rotating interleaved alphabetic batch; full 21-batch universe scheduled every US trading day; NOT sector-stratified","batch_index":batch,"batch_count":BATCH_COUNT,"filtered_list_counts":counts,"excluded_by_reason":rejected,"list_errors":errors,"filtered_unique_symbols":len(universe_rows),"requested_symbols":len(sample),"actual_symbols_screened":0,"failures":{},"sample_symbols":[x["symbol"] for x in sample],"candidates":[],"full_us_scan_executed":False,"promoted_candidates_complete":False,"new_buy_valid":False,"trade_ready":False,"recovery_map_version":"historical_daily_weekly_pivots_v2_early_turn_discovery","limitations":"Discovery only. Early turns intentionally surface before weekly confirmation. Identity/event/broker/money-RR/portfolio gates remain fail-closed for execution."}
     try:
-        # Bound concurrent network waits while retaining the existing 350ms
-        # request-start pacing and all 240 symbols per batch.
+        # Bounded concurrent requests, with visible progress for long-running jobs.
+        # Do not drop symbols: every future is still consumed and counted.
         def screen(item):
             rows = bars(item["symbol"])
             result = assess(rows)
             if result is None: raise ValueError("INSUFFICIENT_VALID_DAILY_BARS")
-            candidate = ({**item, **result, "recovery_map": recovery_map(rows, six_month_high=result["six_month_high"])}) if result["pre_screen_match"] else None
-            return candidate
+            return ({**item, **result, "recovery_map": recovery_map(rows, six_month_high=result["six_month_high"])}) if result["pre_screen_match"] else None
 
-        with ThreadPoolExecutor(max_workers=4) as pool:
-            futures = []
+        progress("screen_started", requested=len(sample))
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            futures = {}
             for item in sample:
-                futures.append((item["symbol"], pool.submit(screen, item)))
-                time.sleep(0.35)
-            for symbol, future in futures:
+                futures[pool.submit(screen, item)] = item["symbol"]
+                time.sleep(0.25)
+            for future in as_completed(futures):
+                symbol = futures[future]
                 try:
                     candidate = future.result()
                     report["actual_symbols_screened"] += 1
                     if candidate is not None: report["candidates"].append(candidate)
                 except Exception as exc:
                     report["failures"][symbol] = type(exc).__name__
+                processed = report["actual_symbols_screened"] + len(report["failures"])
+                if processed % 20 == 0 or processed == len(sample):
+                    progress("screen_progress", processed=processed, requested=len(sample), failures=len(report["failures"]))
+        progress("screen_finished", screened=report["actual_symbols_screened"], failures=len(report["failures"]), candidates=len(report["candidates"]))
     finally:
         report["candidates"].sort(key=lambda x:(not x.get("early_turn",False),-x["signal_count"],x["symbol"]))
         for candidate in report["candidates"]:
@@ -129,6 +139,7 @@ def main():
             space=round(100*(overhead/close-1),2) if overhead else None; weekly=m["weekly_structure"]
             candidate["research_triage"]={"first_overhead_reference_usd":overhead,"space_to_first_overhead_pct":space,"weekly_close_rising":weekly["completed_week_close_rising"],"weekly_higher_low":weekly["completed_week_higher_low"],"bottom_signal_count":m["bottom_signal_count"],"early_turn":candidate.get("early_turn",False),"company_event_risk_status":"NOT_CHECKED","corporate_actions_status":"NOT_CHECKED","sector_status":"UNVERIFIED","portfolio_fit_status":"NOT_CHECKED","broker_price_status":"NOT_CHECKED","first_overhead_status":"HISTORICAL_REFERENCE_NOT_VALIDATED","status":"EARLY_RECOVERY_RESEARCH_ONLY_NOT_TRADE_READY" if candidate.get("early_turn") else "RESEARCH_ONLY_NOT_TRADE_READY"}
         shortlist, queue_exclusions=research_queue(report["candidates"],limit=12)
+        progress('research_started', shortlist=len(shortlist))
         report["identity_shortlist"]=[]; priority=[]
         for candidate in shortlist:
             profile=company_profile(candidate["symbol"]); check=identity_check(candidate["symbol"],candidate["name"],profile)
@@ -150,6 +161,7 @@ def main():
             candidate=next(x for x in report["candidates"] if x["symbol"]==queued["symbol"]); queued["research_dossier"]=dossier(candidate,queued)
             queued["research_dossier"]["news_relevance"]=classify_headlines(queued["alternative_event_research"],candidate["issuer_profile"]); queued["research_dossier"]["news_event_triage"]=classify_event_materiality(queued["research_dossier"]["news_relevance"]); queued["research_dossier"]["issuer_profile"]=candidate["issuer_profile"]; queued["research_dossier"]["identity_crosscheck"]=candidate["identity_crosscheck"]
             if queued["identity_status"]=="IDENTITY_UNVERIFIED": queued["review_decision"]="BLOCK_IDENTITY_AND_EVENT_CLEARANCE_PENDING"
+        progress('research_finished', deep_dive=len(report['deep_dive_queue']))
         report["excluded_from_queue_due_to_near_overhead"]=queue_exclusions["near_overhead"]; report["queue_selection_limitations"]="Early technical recovery candidates survive optional profile/SEC outages, but identity, event, broker, money/RR and portfolio-fit gates remain fail-closed for execution."; report["deep_dive_queue_complete"]=False
         (OUT/"us_recovery_pilot.json").write_text(json.dumps(report,indent=2),encoding="utf-8"); print(json.dumps({k:v for k,v in report.items() if k!="candidates"},indent=2)); print("PRE-SCREEN CANDIDATES:",json.dumps(report["candidates"]))
     if report["actual_symbols_screened"]==0: raise RuntimeError("US_SCREEN_EMPTY: no valid daily histories; refusing green research run")
