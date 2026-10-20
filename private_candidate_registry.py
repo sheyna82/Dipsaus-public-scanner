@@ -61,6 +61,11 @@ def reconcile_registry_with_manual_config(registry, primary, supplemental=None):
            and row.get("monitor_mode") not in ("MANUAL", "DISCOVERY")
            for row in entries):
         raise ValueError("canonical nomination missing monitoring route")
+    active = [row for row in entries if row["status"] not in ("CLOSED", "INVALIDATED")]
+    if not active:
+        raise ValueError("canonical registry has no active nominations")
+    if len({row["symbol"] for row in active}) != len(active):
+        raise ValueError("duplicate active canonical symbol")
     configured = {r["symbol"] for r in from_manual_configs(primary, supplemental)["candidates"]}
     required = {r["symbol"] for r in entries
                 if r["status"] not in ("CLOSED", "INVALIDATED")
