@@ -1,4 +1,7 @@
 import unittest
+from unittest.mock import patch
+
+import prealert_cadence
 
 from prealert_cadence import run_checks
 
@@ -19,6 +22,11 @@ class CadenceTests(unittest.TestCase):
 
         run_checks(scan, checks=checks, clock=lambda: now[0], wait=wait)
         return starts, waits
+
+    def test_scheduled_run_only_scans_once(self):
+        with patch.dict('os.environ', {'GITHUB_EVENT_NAME': 'schedule'}), patch.object(prealert_cadence, 'run_checks') as checks, patch.object(prealert_cadence.subprocess, 'run'):
+            prealert_cadence.main()
+            self.assertEqual(checks.call_args.kwargs['checks'], 1)
 
     def test_six_checks_keep_five_minute_start_interval(self):
         starts, waits = self.simulate([45] * 6, 6)

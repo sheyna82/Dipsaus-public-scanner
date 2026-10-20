@@ -8,11 +8,11 @@ on:
         default: false
         required: true
   schedule:
-    # One serial live run per half-hour; prealert_cadence.py checks every five minutes.
-    # Offset from the EU five-minute refreshes to reduce stale-report encounters.
-    - cron: '3,33 7-16 * * 1-5'
+    # One short scan every five minutes; never hold a runner idle for 25 minutes.
+    # Offset from the EU five-minute refreshes to reduce handoff races.
+    - cron: '3,8,13,18,23,28,33,38,43,48,53,58 7-16 * * 1-5'
       timezone: Europe/Amsterdam
-    - cron: '3 17 * * 1-5'
+    - cron: '3,8,13,18,23,28 17 * * 1-5'
       timezone: Europe/Amsterdam
 permissions:
   contents: read
