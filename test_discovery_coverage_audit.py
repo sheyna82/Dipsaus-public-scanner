@@ -17,6 +17,23 @@ class DiscoveryCoverageTests(unittest.TestCase):
         self.assertTrue(a["complete"])
         self.assertTrue(a["per_symbol_screened_proof"])
         self.assertFalse(a["all_data_available"])
+    def test_us_all_provider_failures_are_accounted_but_unusable(self):
+        report={"sample_symbols":["A","B"],"requested_symbols":2,
+                "actual_symbols_screened":0,"screened_symbols":[],
+                "failures":{"A":"TimeoutError","B":"TimeoutError"},
+                "candidates":[]}
+        result=audit_us_batch(report)
+        self.assertTrue(result["complete"])
+        self.assertFalse(result["all_data_available"])
+        self.assertEqual(result["provider_failures"],2)
+
+    def test_us_screened_and_failed_cannot_overlap(self):
+        report={"sample_symbols":["A","B"],"requested_symbols":2,
+                "actual_symbols_screened":1,"screened_symbols":["A"],
+                "failures":{"A":"TimeoutError"},"candidates":[]}
+        with self.assertRaises(ValueError):
+            audit_us_batch(report)
+
     def test_us_no_failures_means_all_data_available(self):
         r={"sample_symbols":["A"],"requested_symbols":1,"actual_symbols_screened":1,
            "screened_symbols":["A"],"failures":{},"candidates":[]}
