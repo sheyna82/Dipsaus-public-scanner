@@ -6,7 +6,8 @@ US stocks from both most-active and day-gainer universes, then recognises an
 intraday bottom -> higher-low -> reclaim pattern. Research/pre-alert only; never a
 buy signal.
 """
-import csv, io, json, math, re, threading, time, urllib.parse, urllib.request
+import csv, io, json, math, os, re, threading, time, urllib.error, urllib.parse, urllib.request
+from dipsaus_request_pacer import SharedRequestPacer
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,15 +21,31 @@ LISTING_START_UTC={"SPCX":datetime(2026,6,12,tzinfo=timezone.utc).timestamp()}
 
 NETWORK_AUDIT={"requests":0,"failures":0,"elapsed_s":0.0,"slow_requests":0}
 NETWORK_AUDIT_LOCK=threading.Lock()
+# Only explicitly enabled in notification-disabled shadow mode. Defaults to off.
+REQUEST_PACER = (SharedRequestPacer(0.25) if os.environ.get("DIPSAUS_US_PACING_SHADOW") == "true" and os.environ.get("SCANNER_NOTIFICATIONS_ENABLED") == "false" else None)
 
 def get_json(url, params=None):
     if params: url += "?" + urllib.parse.urlencode(params)
     req=urllib.request.Request(url,headers=HEADERS)
+    if REQUEST_PACER is not None:
+        REQUEST_PACER.wait()
     started=time.monotonic()
     with NETWORK_AUDIT_LOCK:
         NETWORK_AUDIT["requests"]+=1
     try:
         with urllib.request.urlopen(req,timeout=15) as r: return json.loads(r.read().decode())
+    except urllib.error.HTTPError as error:
+        if error.code == 429 and REQUEST_PACER is not None:
+            # Clamp untrusted Retry-After to a modest bounded delay; no auto-retry.
+            try:
+                delay = float(error.headers.get("Retry-After", "3"))
+                if not math.isfinite(delay): delay = 3.0
+            except (ValueError, TypeError, AttributeError):
+                delay = 3.0
+            REQUEST_PACER.defer(min(30.0, max(0.0, delay)))
+        with NETWORK_AUDIT_LOCK:
+            NETWORK_AUDIT["failures"]+=1
+        raise
     except Exception:
         with NETWORK_AUDIT_LOCK:
             NETWORK_AUDIT["failures"]+=1
