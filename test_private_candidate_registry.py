@@ -11,6 +11,14 @@ def item(cid, status="ACTIVE", **extra):
     return {"id": cid, "symbol": cid, "status": status, **extra}
 
 class PrivateRegistryTests(unittest.TestCase):
+    def test_whitespace_padded_symbol_rejected(self):
+        with self.assertRaises(ValueError):
+            validate_registry(registry({"id":"A","symbol":" A ","status":"ACTIVE"}))
+
+    def test_whitespace_padded_candidate_id_rejected(self):
+        with self.assertRaises(ValueError):
+            validate_registry(registry({"id":" A ","symbol":"A","status":"ACTIVE"}))
+
     def test_boolean_schema_version_is_invalid(self):
         with self.assertRaises(ValueError):
             validate_registry({"schema_version":True,"candidates":[]})
