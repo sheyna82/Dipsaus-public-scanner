@@ -12,6 +12,19 @@ def obs(cid, status="FRESH_CHECKED", at=NOW, reason=None):
             "checked_at": at.isoformat(), "reason": reason}
 
 class CoverageAuditTests(unittest.TestCase):
+    def test_closed_candidate_excluded_from_active_coverage(self):
+        result = reconcile(
+            [{"id":"old","status":"CLOSED"},
+             {"id":"new","status":"ACTIVE"}], [])
+        self.assertEqual(result["summary"]["active"],1)
+        self.assertEqual(result["summary"]["overdue"],1)
+        self.assertEqual([r["candidate_id"] for r in result["private_details"]],["new"])
+
+    def test_duplicate_id_closed_and_active_is_rejected(self):
+        with self.assertRaises(ValueError):
+            reconcile([{"id":"A","status":"CLOSED"},
+                       {"id":"A","status":"ACTIVE"}], [])
+
     def test_complete(self):
         r = reconcile([candidate("a"), candidate("b")],
             [obs("a"), obs("b", "DEFERRED", reason="MARKET_CLOSED")], now=NOW)
