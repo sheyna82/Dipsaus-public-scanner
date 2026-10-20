@@ -71,7 +71,11 @@ def reconcile_registry_with_manual_config(registry, primary, supplemental=None):
                 if r["status"] not in ("CLOSED", "INVALIDATED")
                 and r.get("monitor_mode") == "MANUAL"}
     missing = sorted(required - configured)
+    discovery_unverified = sum(
+        row["monitor_mode"] == "DISCOVERY" for row in active)
     return {"required": len(required), "configured": len(required & configured),
-            "missing": len(missing), "complete": not missing,
+            "missing": len(missing), "discovery_unverified": discovery_unverified,
+            "manual_complete": not missing,
+            "complete": not missing and discovery_unverified == 0,
             "private_missing_symbols": missing}
 
