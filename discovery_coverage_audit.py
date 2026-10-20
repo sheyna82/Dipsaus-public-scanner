@@ -62,6 +62,58 @@ def audit_us_batch(report, *, now=None):
             "provider_failures":len(failures),"per_symbol_screened_proof":True,
             "complete":True,"reason":"US_BATCH_SYMBOLS_RECONCILED"}
 
+def audit_eu_pipeline(history, intraday, quotes, joined):
+    """Reconcile EU eligible watchlist across every stage; never claim market-wide coverage."""
+    reports = (history, intraday, quotes, joined)
+    if any(not isinstance(r, dict) for r in reports):
+        raise ValueError("EU stage report missing")
+
+    def symbols(report):
+        rows = report.get("candidates")
+        if not isinstance(rows, list):
+            raise ValueError("EU stage candidates missing")
+        names = [r.get("symbol") for r in rows if isinstance(r, dict)]
+        if (len(names) != len(rows) or
+                any(not isinstance(x, str) or not x for x in names) or
+                len(set(names)) != len(names)):
+            raise ValueError("EU stage symbols invalid or duplicate")
+        return set(names)
+
+    historical = symbols(history)
+    eligible = {r["symbol"] for r in history["candidates"] if r.get("discovery_eligible")}
+    intraday_symbols = symbols(intraday)
+    quote_symbols = symbols(quotes)
+    joined_symbols = symbols(joined)
+
+    if not intraday_symbols.issubset(historical):
+        raise ValueError("EU intraday includes unknown historical symbol")
+    if not quote_symbols.issubset(intraday_symbols) or not joined_symbols.issubset(intraday_symbols):
+        raise ValueError("EU downstream includes unknown symbol")
+    if intraday.get("watchlist_eligible_count") != len(eligible):
+        raise ValueError("EU eligible count mismatch")
+    if intraday.get("checked_count") != len(intraday_symbols):
+        raise ValueError("EU intraday count mismatch")
+    if quotes.get("checked") != len(quote_symbols):
+        raise ValueError("EU quote count mismatch")
+    if joined.get("joined_count") != len(joined_symbols):
+        raise ValueError("EU joined count mismatch")
+
+    missing_intraday = eligible - intraday_symbols
+    missing_quote = intraday_symbols - quote_symbols
+    missing_joined = intraday_symbols - joined_symbols
+    return {
+        "eligible": len(eligible),
+        "intraday": len(intraday_symbols),
+        "quote": len(quote_symbols),
+        "joined": len(joined_symbols),
+        "missing_intraday": len(missing_intraday),
+        "missing_quote": len(missing_quote),
+        "missing_joined": len(missing_joined),
+        "complete": not (missing_intraday or missing_quote or missing_joined),
+        "scope": "EU_DISCOVERY_ELIGIBLE_ONLY",
+    }
+
+
 def audit_eu_joined(report, *, now=None):
     """EU joined candidates alone do not prove the whole upstream universe."""
     if not isinstance(report,dict) or not isinstance(report.get("candidates"),list):
