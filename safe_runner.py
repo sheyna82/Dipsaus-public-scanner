@@ -184,6 +184,25 @@ def main():
     if args.read_only and (args.live or args.mode != 'prealert'):
         raise RuntimeError('READ_ONLY_MODE_INVALID')
     hydrate()
+    # Shadow-only canonical nomination check after private hydration.
+    # Never print candidate identities or presume the manual config is canonical.
+    if args.mode == 'prealert':
+        try:
+            from private_candidate_registry import reconcile_registry_with_manual_config
+            registry_path = Path('config/candidate_registry.json')
+            if not registry_path.exists():
+                print('CANONICAL_CANDIDATE_COVERAGE: unavailable_registry_missing', flush=True)
+            else:
+                registry = json.loads(registry_path.read_text())
+                primary = json.loads(Path('config/manual_recovery_triggers.json').read_text())
+                supplemental_path = Path('config/manual_recovery_triggers_supplemental.json')
+                supplemental = json.loads(supplemental_path.read_text()) if supplemental_path.exists() else {}
+                canonical = reconcile_registry_with_manual_config(registry, primary, supplemental)
+                print('CANONICAL_CANDIDATE_COVERAGE: ' + ' '.join(
+                    key + '=' + str(canonical[key]) for key in
+                    ('required', 'configured', 'missing', 'complete')), flush=True)
+        except Exception:
+            print('CANONICAL_CANDIDATE_COVERAGE: unavailable', flush=True)
     store = PrivateStore(args.mode); state = store.load()
     if args.mode in ('prealert', 'us') and type(store).__module__ == 'private_runtime':
         sync_private_notification_gate(store)
