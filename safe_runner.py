@@ -219,6 +219,21 @@ def main():
         run('manual_recovery_trigger_watch.py'); run('profit_exit_watch.py')
         # Retain the existing recheck while avoiding a public summary or artifacts.
         run('manual_recovery_trigger_watch.py')
+        # Shadow-only candidate coverage audit. This uses the already hydrated
+        # private config and the just-written report; only counters reach logs.
+        # Failures cannot block the established notification pipeline.
+        try:
+            from candidate_coverage_runtime_gate import check_hydrated_runtime
+            from private_candidate_registry import public_aggregate
+            coverage = check_hydrated_runtime()
+            state['latest_candidate_coverage'] = coverage
+            print('CANDIDATE_COVERAGE: ' + ' '.join(
+                key + '=' + str(coverage[key]) for key in
+                ('active', 'fresh_checked', 'blocked', 'deferred', 'overdue', 'reconciled')),
+                flush=True)
+        except Exception:
+            # Never disclose config paths, symbols, raw exceptions or holdings.
+            print('CANDIDATE_COVERAGE: unavailable', flush=True)
         entries = json.loads(Path('reports/manual_recovery_trigger_report.json').read_text())
         exits = json.loads(Path('reports/profit_exit_watch_report.json').read_text())
         state['profit_watch_state'] = exits.pop('dynamic_state', state.get('profit_watch_state', {}))
