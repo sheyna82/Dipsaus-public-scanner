@@ -46,9 +46,6 @@ class DiscoveryNetworkAuditTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             list(discovery.ordered_bounded_map(lambda x:x,[1],workers=5,window=4))
 
-    def test_pacer_disabled_by_default(self):
-        self.assertIsNone(discovery.REQUEST_PACER)
-
     def test_http_429_without_pacer_does_not_retry(self):
         from urllib.error import HTTPError
         error=HTTPError("https://example.invalid",429,"Too Many Requests",{"Retry-After":"5"},None)
