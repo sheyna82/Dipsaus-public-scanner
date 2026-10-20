@@ -446,9 +446,13 @@ def main():
             # Audit only the seven batches refreshed in THIS run. The directory
             # may also contain older batches from prior sweeps.
             current_batch_ids = [(start + i) % 21 for i in range(7)]
-            batch_coverage = [audit_us_batch(json.loads(
-                Path(f'reports/us_batch_runs/batch_{batch}.json').read_text()))
+            batch_reports = [json.loads(
+                Path(f'reports/us_batch_runs/batch_{batch}.json').read_text())
                 for batch in current_batch_ids]
+            if any(report.get('batch_index') != batch
+                   for batch, report in zip(current_batch_ids, batch_reports)):
+                raise ValueError('US_BATCH_ID_MISMATCH')
+            batch_coverage = [audit_us_batch(report) for report in batch_reports]
             us_coverage = {
                 'batches': len(batch_coverage),
                 'selected': sum(x['selected'] for x in batch_coverage),
