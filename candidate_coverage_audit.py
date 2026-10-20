@@ -16,7 +16,7 @@ def _parse_utc(value):
     try:
         dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
         return dt.astimezone(timezone.utc) if dt.tzinfo else None
-    except ValueError:
+    except (ValueError, OverflowError):
         return None
 
 def reconcile(candidates, observations, *, now=None, max_age_seconds=600):
