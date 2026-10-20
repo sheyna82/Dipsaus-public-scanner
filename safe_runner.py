@@ -20,7 +20,7 @@ def run(script, **extra):
                                 stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                                 text=True, timeout=1500)
         for line in result.stdout.splitlines():
-            if re.fullmatch(r"EU_OHLCV_QUALITY: attempted=\\d+ passed=\\d+ fresh_verified=\\d+ coverage_gate=90pct", line):
+            if re.fullmatch(r"EU_OHLCV_QUALITY: attempted=\d+ passed=\d+ fresh_verified=\d+ coverage_gate=90pct", line):
                 print(line, flush=True)
     else:
         result = subprocess.run([sys.executable, script], env=env,
