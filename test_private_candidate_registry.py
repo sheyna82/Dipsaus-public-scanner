@@ -11,6 +11,10 @@ def item(cid, status="ACTIVE", **extra):
     return {"id": cid, "symbol": cid, "status": status, **extra}
 
 class PrivateRegistryTests(unittest.TestCase):
+    def test_boolean_schema_version_is_invalid(self):
+        with self.assertRaises(ValueError):
+            validate_registry({"schema_version":True,"candidates":[]})
+
     def test_active_registered_and_deferred_are_retained(self):
         r = audit_private_registry(registry(item("NU"), item("STNE", "REGISTERED")),
             [{"candidate_id": "NU", "status": "FRESH_CHECKED",
