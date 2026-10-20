@@ -402,6 +402,12 @@ def main():
             diagnostics['new_confirmed_sends'] = sum(1 for value in state.get('signals', {}).values() if isinstance(value, dict) and value.get('delivery') == 'sent') - before_sent
             state['latest_notification_diagnostics'] = diagnostics
             store.save(state)
+            # Shadow-only, aggregate notification state audit; no sends and no symbols.
+            from notification_delivery_audit import format_public_delivery_summary
+            try:
+                print(format_public_delivery_summary(state), flush=True)
+            except (ValueError, TypeError):
+                print('NOTIFICATION_DELIVERY_AUDIT: unavailable', flush=True)
             # Public logs expose only aggregate funnel counts, never symbols or holdings.
             print('NOTIFICATION_MARKET_FUNNEL: ' + json.dumps(diagnostics['market_funnel_counts'], sort_keys=True), flush=True)
             print('NOTIFICATION_DIAGNOSTICS: private_aggregate_saved=true entry_rows=' + str(diagnostics['entry_rows_examined']) + ' exit_rows=' + str(diagnostics['exit_rows_examined']) + ' eu_rows=' + str(diagnostics['eu_rows_examined']), flush=True)
