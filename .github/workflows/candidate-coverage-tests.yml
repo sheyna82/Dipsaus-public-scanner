@@ -1,0 +1,38 @@
+name: Candidate coverage audit tests (isolated)
+on:
+  pull_request:
+    paths:
+      - 'candidate_coverage_audit.py'
+      - 'notification_delivery_audit.py'
+      - 'test_notification_delivery_audit.py'
+      - 'safe_runner.py'
+      - 'private_candidate_registry.py'
+      - 'manual_candidate_coverage_adapter.py'
+      - 'test_candidate_coverage_audit.py'
+      - 'test_private_candidate_registry.py'
+      - 'test_manual_candidate_coverage_adapter.py'
+      - 'test_candidate_private_hydration_integration.py'
+      - 'candidate_coverage_runtime_gate.py'
+      - 'test_candidate_coverage_runtime_gate.py'
+      - 'discovery_coverage_audit.py'
+      - 'test_discovery_coverage_audit.py'
+      - 'us_recovery_pilot.py'
+      - '.github/workflows/candidate-coverage-tests.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Compile candidate audit modules
+        run: python -m py_compile candidate_coverage_audit.py private_candidate_registry.py manual_candidate_coverage_adapter.py notification_delivery_audit.py safe_runner.py
+      - name: Run isolated tests without secrets, providers or notifications
+        run: python -m unittest -v test_candidate_coverage_audit test_private_candidate_registry test_manual_candidate_coverage_adapter test_candidate_private_hydration_integration test_candidate_coverage_runtime_gate test_notification_delivery_audit test_discovery_coverage_audit
