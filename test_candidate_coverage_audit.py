@@ -12,6 +12,12 @@ def obs(cid, status="FRESH_CHECKED", at=NOW, reason=None):
             "checked_at": at.isoformat(), "reason": reason}
 
 class CoverageAuditTests(unittest.TestCase):
+    def test_future_dated_evidence_never_counts_as_fresh(self):
+        future = NOW + timedelta(seconds=1)
+        result = reconcile([candidate("A")], [obs("A", at=future)], now=NOW)
+        self.assertEqual(result["summary"]["fresh_checked"], 0)
+        self.assertEqual(result["summary"]["overdue"], 1)
+
     def test_invalid_freshness_window_rejected(self):
         for value in (True, float("inf"), float("nan"), -1, 0):
             with self.subTest(value=value), self.assertRaises(ValueError):
