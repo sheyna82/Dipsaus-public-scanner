@@ -46,6 +46,30 @@ class DiscoveryNetworkAuditTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             list(discovery.ordered_bounded_map(lambda x:x,[1],workers=5,window=4))
 
+    def test_pacer_disabled_by_default(self):
+        self.assertIsNone(discovery.REQUEST_PACER)
+
+    def test_http_429_without_pacer_does_not_retry(self):
+        from urllib.error import HTTPError
+        error=HTTPError("https://example.invalid",429,"Too Many Requests",{"Retry-After":"5"},None)
+        with patch.object(discovery,"REQUEST_PACER",None), patch.object(discovery.urllib.request,"urlopen",side_effect=error) as opener:
+            with self.assertRaises(HTTPError):
+                discovery.get_json("https://example.invalid")
+        opener.assert_called_once()
+        self.assertEqual(discovery.NETWORK_AUDIT["failures"],1)
+
+    def test_non_429_error_does_not_cooldown(self):
+        from unittest.mock import Mock
+        from urllib.error import HTTPError
+        pacer=Mock()
+        error=HTTPError("https://example.invalid",503,"Unavailable",{"Retry-After":"10"},None)
+        with patch.object(discovery,"REQUEST_PACER",pacer), patch.object(discovery.urllib.request,"urlopen",side_effect=error):
+            with self.assertRaises(HTTPError):
+                discovery.get_json("https://example.invalid")
+        pacer.wait.assert_called_once_with()
+        pacer.defer.assert_not_called()
+        self.assertEqual(discovery.NETWORK_AUDIT["failures"],1)
+
     def test_opt_in_pacer_waits_before_request(self):
         from unittest.mock import Mock
         pacer=Mock()
