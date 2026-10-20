@@ -73,7 +73,9 @@ class PrivateRegistryTests(unittest.TestCase):
                    item("C", monitor_mode="MANUAL"))
         result=reconcile_registry_with_manual_config(
             r, {"candidates":{"C":{}}}, {})
-        self.assertTrue(result["complete"])
+        self.assertTrue(result["manual_complete"])
+        self.assertFalse(result["complete"])
+        self.assertEqual(result["discovery_unverified"],1)
         self.assertEqual(result["required"],1)
 
     def test_schema_version_required(self):
