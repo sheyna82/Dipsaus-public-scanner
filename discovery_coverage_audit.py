@@ -39,21 +39,28 @@ def audit_us_batch(report, *, now=None):
     if report.get("actual_symbols_screened")!=(
         report.get("requested_symbols",0)-len(report.get("failures",{}))):
         raise ValueError("US screened/failure count mismatch")
-    # The pilot only persists promoted candidates, so screened successes
-    # cannot be reconstructed per symbol. Count them separately; never
-    # invent per-symbol FRESH_CHECKED proof.
     selected=report.get("sample_symbols")
     if not isinstance(selected,list) or len(selected)!=len(set(selected)):
         raise ValueError("US sample invalid")
     failures=report.get("failures",{})
+    screened=report.get("screened_symbols")
     if not isinstance(failures,dict) or not set(failures).issubset(set(selected)):
         raise ValueError("US failures invalid")
+    if screened is None:
+        return {"selected":len(selected),"screened_count_only":report["actual_symbols_screened"],
+                "provider_failures":len(failures),"per_symbol_screened_proof":False,
+                "complete":False,"reason":"US_NONPROMOTED_SCREENED_SYMBOLS_NOT_PERSISTED"}
+    if not isinstance(screened,list) or len(screened)!=len(set(screened)):
+        raise ValueError("US screened symbols invalid")
+    if len(screened)!=report["actual_symbols_screened"] or (
+        set(screened)|set(failures))!=set(selected) or set(screened)&set(failures):
+        raise ValueError("US per-symbol reconciliation mismatch")
     promoted=report.get("candidates",[])
-    if not isinstance(promoted,list) or any(not isinstance(x,dict) or x.get("symbol") not in selected for x in promoted):
+    if not isinstance(promoted,list) or any(not isinstance(x,dict) or x.get("symbol") not in screened for x in promoted):
         raise ValueError("US promoted candidates invalid")
-    return {"selected":len(selected),"screened_count_only":report["actual_symbols_screened"],
-            "provider_failures":len(failures),"per_symbol_screened_proof":False,
-            "complete":False,"reason":"US_NONPROMOTED_SCREENED_SYMBOLS_NOT_PERSISTED"}
+    return {"selected":len(selected),"screened_count_only":len(screened),
+            "provider_failures":len(failures),"per_symbol_screened_proof":True,
+            "complete":True,"reason":"US_BATCH_SYMBOLS_RECONCILED"}
 
 def audit_eu_joined(report, *, now=None):
     """EU joined candidates alone do not prove the whole upstream universe."""
