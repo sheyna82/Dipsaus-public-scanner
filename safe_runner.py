@@ -310,7 +310,6 @@ def main():
             # private handoff is stale, allow a bounded reread for a refresh
             # already in flight; never re-date or trust the old report.
             if args.live and os.environ.get('GITHUB_ACTIONS') == 'true' and not eu_check['fresh']:
-                import time
                 time.sleep(20)
                 newer_report = PrivateStore('eu').load().get('latest_eu_report', {})
                 newer_check = classify_eu_report(newer_report)
