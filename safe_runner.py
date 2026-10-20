@@ -299,6 +299,19 @@ def main():
             # Surface the stale dependency privately, without relaxing freshness.
             from dipsaus_eu_freshness import classify_eu_report
             eu_check = classify_eu_report(eu_report)
+            # GitHub's EU refresh and PRE-ALERT run independently. If the
+            # private handoff is stale, allow a bounded reread for a refresh
+            # already in flight; never re-date or trust the old report.
+            if args.live and os.environ.get('GITHUB_ACTIONS') == 'true' and not eu_check['fresh']:
+                import time
+                time.sleep(20)
+                newer_report = PrivateStore('eu').load().get('latest_eu_report', {})
+                newer_check = classify_eu_report(newer_report)
+                if newer_check['fresh']:
+                    eu_report, eu_check = newer_report, newer_check
+                    print('EU_HANDOFF_RECOVERED: fresh_report_received_after_retry', flush=True)
+                else:
+                    print('EU_HANDOFF_RETRY: no_fresh_report; freshness_gate_retained', flush=True)
             eu_fresh = eu_check['fresh']
             # Keep private freshness history bounded for detecting recurring
             # upstream lag without exposing holdings or creating alerts.
