@@ -22,12 +22,13 @@ def validate_registry(registry):
         if not isinstance(row, dict):
             raise ValueError("candidate must be an object")
         cid = row.get("id")
-        if not isinstance(cid, str) or not cid.strip() or cid in ids:
+        if not isinstance(cid, str) or not cid.strip() or cid != cid.strip() or cid in ids:
             raise ValueError("missing or duplicate candidate id")
         ids.add(cid)
         if row.get("status") not in VALID_STATES:
             raise ValueError("invalid candidate state")
-        if not isinstance(row.get("symbol"), str) or not row["symbol"].strip():
+        if (not isinstance(row.get("symbol"), str) or not row["symbol"].strip()
+                or row["symbol"] != row["symbol"].strip()):
             raise ValueError("missing provider symbol")
         if row["status"] in ("CLOSED", "INVALIDATED") and not row.get("closure_reason"):
             raise ValueError("closed candidate requires reason")
