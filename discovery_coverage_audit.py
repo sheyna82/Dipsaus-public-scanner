@@ -105,6 +105,14 @@ def audit_eu_pipeline(history, intraday, quotes, joined):
     if joined.get("joined_count") != len(joined_symbols):
         raise ValueError("EU joined count mismatch")
 
+    intraday_blocked = sum(
+        row.get("data_status") != "INTRADAY-RESEARCH-ONLY"
+        for row in intraday["candidates"])
+    quote_blocked = sum(
+        row.get("provider_freshness_class") in ("DATA-BLOCKED", "NO-VALID-QUOTE",
+                                                "STALE-OR-TIMESTAMP-INVALID")
+        or "QUOTE-DATA-BLOCKED" in (row.get("execution_blocks") or [])
+        for row in quotes["candidates"])
     missing_intraday = eligible - intraday_symbols
     missing_quote = intraday_symbols - quote_symbols
     missing_joined = intraday_symbols - joined_symbols
@@ -116,7 +124,11 @@ def audit_eu_pipeline(history, intraday, quotes, joined):
         "missing_intraday": len(missing_intraday),
         "missing_quote": len(missing_quote),
         "missing_joined": len(missing_joined),
+        "intraday_blocked": intraday_blocked,
+        "quote_blocked": quote_blocked,
         "complete": not (missing_intraday or missing_quote or missing_joined),
+        "all_data_available": not (missing_intraday or missing_quote or missing_joined or
+                                   intraday_blocked or quote_blocked),
         "scope": "EU_DISCOVERY_ELIGIBLE_ONLY",
     }
 
