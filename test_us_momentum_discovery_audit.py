@@ -16,6 +16,32 @@ class DiscoveryNetworkAuditTests(unittest.TestCase):
         result=list(discovery.ordered_bounded_map(lambda x: x*x, values, workers=3, window=5))
         self.assertEqual(result,[x*x for x in values])
 
+    def test_bounded_map_never_exceeds_worker_limit(self):
+        import threading
+        import time
+        active=0
+        maximum=0
+        lock=threading.Lock()
+        def work(x):
+            nonlocal active, maximum
+            with lock:
+                active+=1
+                maximum=max(maximum,active)
+            time.sleep(0.002)
+            with lock:
+                active-=1
+            return x
+        self.assertEqual(list(discovery.ordered_bounded_map(work,range(17),workers=3,window=5)),list(range(17)))
+        self.assertLessEqual(maximum,3)
+
+    def test_bounded_map_propagates_worker_errors(self):
+        def work(x):
+            if x==3:
+                raise ValueError("synthetic error")
+            return x
+        with self.assertRaisesRegex(ValueError,"synthetic error"):
+            list(discovery.ordered_bounded_map(work,range(8),workers=2,window=3))
+
     def test_bounded_map_rejects_invalid_limits(self):
         with self.assertRaises(ValueError):
             list(discovery.ordered_bounded_map(lambda x:x,[1],workers=5,window=4))
