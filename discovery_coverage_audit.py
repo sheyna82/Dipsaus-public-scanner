@@ -38,8 +38,10 @@ def audit_us_batch(report, *, now=None):
         raise ValueError("US report or sample missing")
     if report.get("requested_symbols")!=len(report["sample_symbols"]):
         raise ValueError("US batch selection count mismatch")
+    if not isinstance(report.get("failures"), dict):
+        raise ValueError("US failures invalid")
     if report.get("actual_symbols_screened")!=(
-        report.get("requested_symbols",0)-len(report.get("failures",{}))):
+        report.get("requested_symbols",0)-len(report["failures"])):
         raise ValueError("US screened/failure count mismatch")
     selected=report.get("sample_symbols")
     if not isinstance(selected,list) or len(selected)!=len(set(selected)):
