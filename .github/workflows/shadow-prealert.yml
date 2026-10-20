@@ -14,10 +14,8 @@ on:
       timezone: Europe/Amsterdam
     - cron: '3,8,13,18,23,28,33,38,43,48,53,58 17-21 * * 1-5'
       timezone: Europe/Amsterdam
-    # US cash session closes at 22:00 local outside the brief DST mismatch weeks.
-    # Continue to 23:00 local during the US/EU DST transition mismatch.
-    - cron: '3,8,13,18,23,28,33,38,43,48,53,58 22 * * 1-5'
-      timezone: Europe/Amsterdam
+    # US closes at 22:00 local most weeks, 21:00 in EU/US DST mismatch weeks.
+    # Late checks after close remain gated by live provider freshness.
 permissions:
   contents: read
 concurrency:
