@@ -34,7 +34,9 @@ def _checked(report, timestamp_key, universe_key, observed_key, failures_key=Non
 
 def audit_us_batch(report, *, now=None):
     """US sample_symbols are selected universe, not just promoted candidates."""
-    if report.get("requested_symbols")!=len(report.get("sample_symbols",[])):
+    if not isinstance(report, dict) or not isinstance(report.get("sample_symbols"), list):
+        raise ValueError("US report or sample missing")
+    if report.get("requested_symbols")!=len(report["sample_symbols"]):
         raise ValueError("US batch selection count mismatch")
     if report.get("actual_symbols_screened")!=(
         report.get("requested_symbols",0)-len(report.get("failures",{}))):
@@ -46,6 +48,10 @@ def audit_us_batch(report, *, now=None):
     screened=report.get("screened_symbols")
     if not isinstance(failures,dict) or not set(failures).issubset(set(selected)):
         raise ValueError("US failures invalid")
+    if any(not isinstance(x,str) or not x for x in selected):
+        raise ValueError("US sample symbol invalid")
+    if report.get("batch_index") is not None and (not isinstance(report["batch_index"],int) or not 0 <= report["batch_index"] < 21):
+        raise ValueError("US batch index invalid")
     if screened is None:
         return {"selected":len(selected),"screened_count_only":report["actual_symbols_screened"],
                 "provider_failures":len(failures),"per_symbol_screened_proof":False,
