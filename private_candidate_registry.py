@@ -28,6 +28,8 @@ def validate_registry(registry):
             raise ValueError("invalid candidate state")
         if not isinstance(row.get("symbol"), str) or not row["symbol"].strip():
             raise ValueError("missing provider symbol")
+        if row["status"] not in ("CLOSED", "INVALIDATED") and row.get("monitor_mode") not in ("MANUAL", "DISCOVERY"):
+            raise ValueError("active candidate requires explicit monitoring route")
         if row["status"] in ("CLOSED", "INVALIDATED") and not row.get("closure_reason"):
             raise ValueError("closed candidate requires reason")
     return entries
@@ -55,6 +57,8 @@ def reconcile_registry_with_manual_config(registry, primary, supplemental=None):
     """
     from manual_candidate_coverage_adapter import from_manual_configs
     entries = validate_registry(registry)
+    if not entries:
+        raise ValueError("canonical registry empty: coverage cannot be established")
     configured = {r["symbol"] for r in from_manual_configs(primary, supplemental)["candidates"]}
     required = {r["symbol"] for r in entries
                 if r["status"] not in ("CLOSED", "INVALIDATED")
