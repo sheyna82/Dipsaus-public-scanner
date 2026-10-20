@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from private_runtime import hydrate, PrivateStore
 from private_notifications import notify, notify_eu_research
@@ -397,21 +398,39 @@ def main():
         if not persisted_check['fresh']:
             raise RuntimeError('PRIVATE_STATE_EU_HANDOFF_NOT_FRESH')
     else:
-        run('us_momentum_recovery_discovery.py')
+        # Fixed-label, aggregate-only timings. No tickers, positions or provider URLs.
+        us_timing = {}
+        def timed_us_step(label, script, **kwargs):
+            started = time.monotonic()
+            try:
+                run(script, **kwargs)
+            finally:
+                seconds = round(time.monotonic() - started, 2)
+                us_timing[label] = seconds
+                print('US_STEP_TIMING: step=' + label + ' seconds=' + str(seconds), flush=True)
+
+        timed_us_step('discovery', 'us_momentum_recovery_discovery.py')
         # Advance by completed sweeps, not UTC day/hour. This guarantees that
         # three successful US sweeps cover all 21 batches, even if jobs run late.
         start = int(state.get('us_next_batch', 0)) % 21
         Path('reports/us_batch_runs').mkdir(parents=True, exist_ok=True)
         for i in range(7):
             batch = (start + i) % 21
-            run('us_recovery_pilot.py', US_BATCH=batch)
+            timed_us_step('batch_' + str(i + 1), 'us_recovery_pilot.py', US_BATCH=batch)
             Path(f'reports/us_batch_runs/batch_{batch}.json').write_bytes(Path('reports/us_recovery_pilot.json').read_bytes())
-        run('us_auto_prealert_handoff.py'); run('us_live_trigger_routes.py')
+        timed_us_step('handoff', 'us_auto_prealert_handoff.py')
+        timed_us_step('routes', 'us_live_trigger_routes.py')
         state['us_routes'] = json.loads(Path('reports/us_live_trigger_routes.json').read_text())
         state['latest_us_reports'] = {p.name: json.loads(p.read_text()) for p in Path('reports/us_batch_runs').glob('*.json')}
         state['us_last_completed_batches'] = [(start + i) % 21 for i in range(7)]
         state['us_next_batch'] = (start + 7) % 21
-        store.save(state)
+        persist_started = time.monotonic()
+        try:
+            store.save(state)
+        finally:
+            seconds = round(time.monotonic() - persist_started, 2)
+            print('US_STEP_TIMING: step=save seconds=' + str(seconds), flush=True)
+        print('US_STEP_TIMING: measured_steps=' + str(len(us_timing) + 1), flush=True)
     print('Scanner completed. ' + ('Read-only test; ' if args.read_only else 'Runtime details saved privately; ') + 'notifications ' + ('enabled.' if args.live else 'disabled (shadow mode).'))
 
 
