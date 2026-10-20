@@ -56,7 +56,7 @@ def reconcile(candidates, observations, *, now=None, max_age_seconds=600):
         status = item.get("status") if item else None
         timestamp = _parse_utc(item.get("checked_at")) if item else None
         age = (now - timestamp).total_seconds() if timestamp else None
-        valid_age = age is not None and -30 <= age <= max_age_seconds
+        valid_age = age is not None and 0 <= age <= max_age_seconds
         valid_reason = status == "FRESH_CHECKED" or bool(item and item.get("reason"))
         covered = status in VALID and valid_age and valid_reason
         details.append({
