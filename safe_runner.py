@@ -24,6 +24,7 @@ def run(script, **extra):
                 line = line.rstrip("\r\n")
                 if (re.fullmatch(r"EU_OHLCV_QUALITY: attempted=\d+ passed=\d+ fresh_verified=\d+ coverage_gate=90pct", line)
                     or re.fullmatch(r"EU_OHLCV_PROGRESS: completed=\d+", line)
+                    or re.fullmatch(r"EU_OHLCV_DATE_COUNT: date=\d{4}-\d{2}-\d{2} count=\d+", line)
                     or re.fullmatch(r"EU_OHLCV_FRESHNESS: stale=\d+ recent_unverified=\d+ overlap=\d+", line)
                     or re.fullmatch(r"EU_OHLCV_RECENT_ERRORS: HTTPError=\d+ URLError=\d+ TimeoutError=\d+ ValueError=\d+ KeyError=\d+ Other=\d+", line)
                     or line in ("EU_OHLCV_STAGE: started", "EU_OHLCV_STAGE: fetching_complete")):
