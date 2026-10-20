@@ -18,7 +18,8 @@ def run_checks(scan, *, checks=6, interval=300, clock=time.monotonic, wait=time.
 
 
 def main():
-    checks = 6 if os.environ.get("GITHUB_EVENT_NAME") == "schedule" else 1
+    # GitHub schedules each five-minute scan as a separate short job.
+    checks = 1
     run_checks(
         lambda: subprocess.run(
             [sys.executable, "safe_runner.py", "prealert", *sys.argv[1:]],
