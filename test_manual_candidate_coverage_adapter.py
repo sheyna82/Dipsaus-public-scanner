@@ -29,11 +29,16 @@ class ManualAdapterTests(unittest.TestCase):
     def test_missing_candidate_is_overdue(self):
         r = audit_manual_candidate_coverage(
             {"candidates": {"NU": {}, "STNE": {}}}, {},
-            {"rows": [{"symbol": "NU", "status": "WATCH",
+            {"generated_utc": TS, "rows": [{"symbol": "NU", "status": "WATCH",
                        "provider_freshness_pass": True}]}, checked_at=TS, now=NOW)
         self.assertEqual(r["summary"]["overdue"], 1)
         self.assertFalse(r["summary"]["reconciled"])
         self.assertNotIn("NU", str(public_aggregate(r)))
+
+    def test_missing_generated_timestamp_fails_closed(self):
+        with self.assertRaises(ValueError):
+            audit_manual_candidate_coverage({"candidates": {"NU": {}}}, {},
+                {"rows": []}, checked_at=TS, now=NOW)
 
     def test_excludes_portfolio_and_auto_rows(self):
         r = from_manual_report({"rows": [
