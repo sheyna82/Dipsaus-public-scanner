@@ -33,12 +33,14 @@ def reconcile(candidates, observations, *, now=None, max_age_seconds=600):
     if max_age_seconds <= 0:
         raise ValueError("max_age_seconds must be positive")
     active = {}
+    all_ids = set()
     for candidate in candidates:
         cid = candidate.get("id")
         if not isinstance(cid, str) or not cid:
             raise ValueError("candidate id missing")
-        if cid in active:
+        if cid in all_ids:
             raise ValueError("duplicate candidate id")
+        all_ids.add(cid)
         if candidate.get("status") not in CLOSED:
             active[cid] = candidate
     seen = {}
