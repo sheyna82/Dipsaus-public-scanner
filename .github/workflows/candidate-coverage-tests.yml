@@ -3,6 +3,9 @@ on:
   pull_request:
     paths:
       - 'candidate_coverage_audit.py'
+      - 'notification_delivery_audit.py'
+      - 'test_notification_delivery_audit.py'
+      - 'safe_runner.py'
       - 'private_candidate_registry.py'
       - 'manual_candidate_coverage_adapter.py'
       - 'test_candidate_coverage_audit.py'
@@ -30,6 +33,6 @@ jobs:
         with:
           python-version: '3.12'
       - name: Compile candidate audit modules
-        run: python -m py_compile candidate_coverage_audit.py private_candidate_registry.py manual_candidate_coverage_adapter.py
+        run: python -m py_compile candidate_coverage_audit.py private_candidate_registry.py manual_candidate_coverage_adapter.py notification_delivery_audit.py safe_runner.py
       - name: Run isolated tests without secrets, providers or notifications
-        run: python -m unittest -v test_candidate_coverage_audit test_private_candidate_registry test_manual_candidate_coverage_adapter test_candidate_private_hydration_integration test_candidate_coverage_runtime_gate test_discovery_coverage_audit
+        run: python -m unittest -v test_candidate_coverage_audit test_private_candidate_registry test_manual_candidate_coverage_adapter test_candidate_private_hydration_integration test_candidate_coverage_runtime_gate test_notification_delivery_audit test_discovery_coverage_audit
