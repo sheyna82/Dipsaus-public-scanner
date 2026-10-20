@@ -11,6 +11,18 @@ def item(cid, status="ACTIVE", **extra):
     return {"id": cid, "symbol": cid, "status": status, **extra}
 
 class PrivateRegistryTests(unittest.TestCase):
+    def test_duplicate_active_symbol_rejected_even_with_different_ids(self):
+        with self.assertRaises(ValueError):
+            validate_registry(registry(
+                {"id":"first","symbol":"A","status":"ACTIVE"},
+                {"id":"second","symbol":"A","status":"REGISTERED"}))
+
+    def test_closed_historical_symbol_may_be_renominated(self):
+        rows=validate_registry(registry(
+            {"id":"old","symbol":"A","status":"CLOSED","closure_reason":"expired"},
+            {"id":"new","symbol":"A","status":"ACTIVE"}))
+        self.assertEqual(len(rows),2)
+
     def test_whitespace_padded_symbol_rejected(self):
         with self.assertRaises(ValueError):
             validate_registry(registry({"id":"A","symbol":" A ","status":"ACTIVE"}))
