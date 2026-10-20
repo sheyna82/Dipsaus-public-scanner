@@ -1,5 +1,6 @@
 """Bounded US recovery discovery pilot. Research only, never trade-ready."""
 import csv, io, json, math, os, re, time, urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 from us_recovery_map import recovery_map
@@ -99,15 +100,27 @@ def main():
     n=min(LIMIT,len(universe_rows)); sample=universe_rows[batch::BATCH_COUNT][:n]
     report={"run_utc":datetime.now(timezone.utc).isoformat(),"status":"BOUNDED_RESEARCH_PILOT","source":"Nasdaq Trader official lists + Yahoo public historical daily chart","selection_method":"Rotating interleaved alphabetic batch; full 21-batch universe scheduled every US trading day; NOT sector-stratified","batch_index":batch,"batch_count":BATCH_COUNT,"filtered_list_counts":counts,"excluded_by_reason":rejected,"list_errors":errors,"filtered_unique_symbols":len(universe_rows),"requested_symbols":len(sample),"actual_symbols_screened":0,"failures":{},"sample_symbols":[x["symbol"] for x in sample],"candidates":[],"full_us_scan_executed":False,"promoted_candidates_complete":False,"new_buy_valid":False,"trade_ready":False,"recovery_map_version":"historical_daily_weekly_pivots_v2_early_turn_discovery","limitations":"Discovery only. Early turns intentionally surface before weekly confirmation. Identity/event/broker/money-RR/portfolio gates remain fail-closed for execution."}
     try:
-        for item in sample:
-            symbol=item["symbol"]
-            try:
-                rows=bars(symbol); result=assess(rows)
-                if result is None: raise ValueError("INSUFFICIENT_VALID_DAILY_BARS")
-                report["actual_symbols_screened"]+=1
-                if result["pre_screen_match"]: report["candidates"].append({**item,**result,"recovery_map":recovery_map(rows, six_month_high=result["six_month_high"])})
-            except Exception as exc: report["failures"][symbol]=type(exc).__name__
-            time.sleep(0.35)
+        # Bound concurrent network waits while retaining the existing 350ms
+        # request-start pacing and all 240 symbols per batch.
+        def screen(item):
+            rows = bars(item["symbol"])
+            result = assess(rows)
+            if result is None: raise ValueError("INSUFFICIENT_VALID_DAILY_BARS")
+            candidate = ({**item, **result, "recovery_map": recovery_map(rows, six_month_high=result["six_month_high"])}) if result["pre_screen_match"] else None
+            return candidate
+
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            futures = []
+            for item in sample:
+                futures.append((item["symbol"], pool.submit(screen, item)))
+                time.sleep(0.35)
+            for symbol, future in futures:
+                try:
+                    candidate = future.result()
+                    report["actual_symbols_screened"] += 1
+                    if candidate is not None: report["candidates"].append(candidate)
+                except Exception as exc:
+                    report["failures"][symbol] = type(exc).__name__
     finally:
         report["candidates"].sort(key=lambda x:(not x.get("early_turn",False),-x["signal_count"],x["symbol"]))
         for candidate in report["candidates"]:

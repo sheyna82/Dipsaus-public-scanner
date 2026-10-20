@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'safe_runner.py'
+      - 'us_recovery_pilot.py'
+      - 'test_us_recovery_pilot.py'
       - 'dipsaus_eu_freshness.py'
       - 'dipsaus_eu_session_context.py'
       - 'test_dipsaus_eu_session_context.py'
