@@ -113,14 +113,18 @@ def freshness_audit(results):
             "note":"Previous weekday benchmark only; exchange holidays and intraday completeness NOT verified. Not a live quote."}
 
 def main():
+    print("EU_OHLCV_STAGE: started", flush=True)
     results=[];records=[]
     for sector,symbols in UNIVERSE.items():
         for symbol in symbols:
+            if len(results) % 20 == 0:
+                print("EU_OHLCV_PROGRESS: completed=" + str(len(results)), flush=True)
             row,record=fetch(symbol,sector)
             results.append(row)
             if record:records.append(record)
             print(symbol,row["status"],row.get("last_bar_date"),flush=True)
             time.sleep(.25)
+    print("EU_OHLCV_STAGE: fetching_complete", flush=True)
     with gzip.open(OUT/"europe_ohlcv.jsonl.gz","wt",encoding="utf-8") as f:
         for record in records:f.write(json.dumps(record,separators=(",",":"))+"\n")
     dates={}

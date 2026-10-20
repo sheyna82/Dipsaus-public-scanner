@@ -16,12 +16,20 @@ def run(script, **extra):
     # Suppress stdout, stderr and tracebacks containing holdings, API URLs or contact data.
     if script == "europe_ohlcv_pilot.py":
         # Capture internally but publish only a fixed allowlisted aggregate line.
-        result = subprocess.run([sys.executable, script], env=env,
-                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                                text=True, timeout=1500)
-        for line in result.stdout.splitlines():
-            if re.fullmatch(r"EU_OHLCV_QUALITY: attempted=\d+ passed=\d+ fresh_verified=\d+ coverage_gate=90pct", line):
-                print(line, flush=True)
+        # Stream only exact allowlisted diagnostics; never publish raw child output.
+        with subprocess.Popen([sys.executable, "-u", script], env=env,
+                              stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                              text=True, bufsize=1) as process:
+            for line in process.stdout:
+                line = line.rstrip("\r\n")
+                if (re.fullmatch(r"EU_OHLCV_QUALITY: attempted=\d+ passed=\d+ fresh_verified=\d+ coverage_gate=90pct", line)
+                    or re.fullmatch(r"EU_OHLCV_PROGRESS: completed=\d+", line)
+                    or line in ("EU_OHLCV_STAGE: started", "EU_OHLCV_STAGE: fetching_complete")):
+                    print(line, flush=True)
+            returncode = process.wait(timeout=1500)
+        if returncode:
+            raise RuntimeError('SCANNER_STEP_FAILED: ' + script)
+        return
     else:
         result = subprocess.run([sys.executable, script], env=env,
                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=1500)
