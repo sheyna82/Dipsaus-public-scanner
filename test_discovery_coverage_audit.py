@@ -16,6 +16,14 @@ class DiscoveryCoverageTests(unittest.TestCase):
         a=audit_us_batch(r)
         self.assertTrue(a["complete"])
         self.assertTrue(a["per_symbol_screened_proof"])
+        self.assertFalse(a["all_data_available"])
+    def test_us_no_failures_means_all_data_available(self):
+        r={"sample_symbols":["A"],"requested_symbols":1,"actual_symbols_screened":1,
+           "screened_symbols":["A"],"failures":{},"candidates":[]}
+        a=audit_us_batch(r)
+        self.assertTrue(a["complete"])
+        self.assertTrue(a["all_data_available"])
+
     def test_us_missing_symbol_fails_closed(self):
         r={"sample_symbols":["A","B"],"requested_symbols":2,"actual_symbols_screened":2,
            "screened_symbols":["A"],"failures":{},"candidates":[]}
