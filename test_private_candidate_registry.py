@@ -37,6 +37,18 @@ class PrivateRegistryTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_registry(registry(item("X"), item("X")))
 
+    def test_only_closed_nominations_cannot_claim_complete(self):
+        with self.assertRaises(ValueError):
+            reconcile_registry_with_manual_config(
+                registry(item("A","CLOSED",closure_reason="REMOVED")),{"candidates":{}})
+
+    def test_duplicate_active_symbol_with_different_ids_rejected(self):
+        with self.assertRaises(ValueError):
+            reconcile_registry_with_manual_config(
+                registry({"id":"first","symbol":"A","status":"ACTIVE","monitor_mode":"MANUAL"},
+                         {"id":"second","symbol":"A","status":"REGISTERED","monitor_mode":"MANUAL"}),
+                {"candidates":{"A":{}}})
+
     def test_empty_canonical_registry_cannot_claim_complete(self):
         with self.assertRaises(ValueError):
             reconcile_registry_with_manual_config(registry(), {"candidates":{}})
