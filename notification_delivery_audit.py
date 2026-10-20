@@ -33,3 +33,21 @@ def format_public_delivery_summary(state):
             "sent_to_provider={sent_to_provider} reserved={reserved} "
             "rejected={rejected} uncertain={uncertain} unknown={unknown} "
             "phone_receipt_verified=false delivery_verified=false").format(**result)
+
+def audit_delivery_delta(before_state, after_state):
+    """Count newly recorded provider outcomes; never equate with phone receipt."""
+    if not isinstance(before_state, dict) or not isinstance(before_state.get("signals"), dict):
+        raise ValueError("before notification state unavailable")
+    if not isinstance(after_state, dict) or not isinstance(after_state.get("signals"), dict):
+        raise ValueError("after notification state unavailable")
+    before = before_state["signals"]
+    after = after_state["signals"]
+    changed = {}
+    for key, record in after.items():
+        if not isinstance(record, dict):
+            raise ValueError("notification record invalid")
+        if key not in before or before[key] != record:
+            changed[key] = record
+    result = audit_delivery_state({"signals": changed})
+    result["scope"] = "changed_records_not_confirmed_attempts"
+    return result
