@@ -388,6 +388,14 @@ def main():
             run(script)
         state['latest_eu_report'] = json.loads(Path('reports/europe_combined_recovery_report.json').read_text())
         store.save(state)
+        # Confirm the persisted EU handoff, not merely successful provider data.
+        # Only aggregate freshness status is logged; no symbols or private rows.
+        from dipsaus_eu_freshness import classify_eu_report
+        persisted = PrivateStore('eu').load().get('latest_eu_report', {})
+        persisted_check = classify_eu_report(persisted)
+        print('EU_HANDOFF_POSTSAVE: ' + persisted_check['reason'], flush=True)
+        if not persisted_check['fresh']:
+            raise RuntimeError('PRIVATE_STATE_EU_HANDOFF_NOT_FRESH')
     else:
         run('us_momentum_recovery_discovery.py')
         # Advance by completed sweeps, not UTC day/hour. This guarantees that
