@@ -12,6 +12,12 @@ def obs(cid, status="FRESH_CHECKED", at=NOW, reason=None):
             "checked_at": at.isoformat(), "reason": reason}
 
 class CoverageAuditTests(unittest.TestCase):
+    def test_invalid_freshness_window_rejected(self):
+        for value in (True, float("inf"), float("nan"), -1, 0):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                reconcile([candidate("A")], [], now=NOW,
+                          max_age_seconds=value)
+
     def test_closed_candidate_excluded_from_active_coverage(self):
         result = reconcile(
             [{"id":"old","status":"CLOSED"},
