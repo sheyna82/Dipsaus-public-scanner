@@ -48,6 +48,16 @@ class DiscoveryCoverageTests(unittest.TestCase):
            "screened_symbols":["A"],"failures":{},"candidates":[],"batch_index":22}
         with self.assertRaises(ValueError): audit_us_batch(r)
 
+    def test_eu_empty_selection_does_not_prove_coverage(self):
+        h={"candidates":[]}
+        i={"candidates":[],"watchlist_eligible_count":0,"checked_count":0}
+        q={"candidates":[],"checked":0}
+        j={"candidates":[],"joined_count":0}
+        result=audit_eu_pipeline(h,i,q,j)
+        self.assertFalse(result["complete"])
+        self.assertFalse(result["all_data_available"])
+        self.assertFalse(result["selection_nonempty"])
+
     def test_eu_all_four_stages_complete(self):
         self.assertTrue(audit_eu_pipeline(*self.eu_reports())["complete"])
 
