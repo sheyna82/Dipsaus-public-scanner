@@ -459,11 +459,12 @@ def main():
                 'screened': sum(x['screened_count_only'] for x in batch_coverage),
                 'provider_failures': sum(x['provider_failures'] for x in batch_coverage),
                 'complete': len(batch_coverage) == 7 and all(x['complete'] for x in batch_coverage),
+                'all_data_available': len(batch_coverage) == 7 and all(x.get('all_data_available') for x in batch_coverage),
             }
             state['latest_us_candidate_coverage'] = us_coverage
             print('US_CANDIDATE_COVERAGE: ' + ' '.join(
                 key + '=' + str(us_coverage[key]) for key in
-                ('batches', 'selected', 'screened', 'provider_failures', 'complete')),
+                ('batches', 'selected', 'screened', 'provider_failures', 'complete', 'all_data_available')),
                 flush=True)
         except Exception:
             print('US_CANDIDATE_COVERAGE: unavailable', flush=True)
