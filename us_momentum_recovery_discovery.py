@@ -135,12 +135,22 @@ def main():
     started=time.monotonic()
     now=datetime.now(timezone.utc); candidates=[]; failures={}
     audit={"universe_total":0,"missing_price_or_cap_after_probe":0,"quick_probe_rejected":0,"probe_errors":0,"below_price_or_cap":0,"insufficient_daily_history":0,"outside_recovery_or_liquidity_gate":0,"discovery_gate_rejected":0,"qualified":0}
-    for q in universe():
+    universe_rows=universe()
+    def probe_if_needed(q):
+        if isinstance(q.get("regularMarketPrice"),(int,float)) and isinstance(q.get("marketCap"),(int,float)):
+            return None
+        try:
+            return get_json(CHART+urllib.parse.quote(q.get("symbol")),{"range":"1mo","interval":"1d"})["chart"]["result"][0]
+        except Exception:
+            return None
+    for q, prefetched_probe in zip(universe_rows, ordered_bounded_map(probe_if_needed, universe_rows)):
         audit["universe_total"]+=1
         symbol=q.get("symbol"); price=q.get("regularMarketPrice"); change=q.get("regularMarketChangePercent"); cap=q.get("marketCap")
         if not isinstance(price,(int,float)) or not isinstance(cap,(int,float)):
             try:
-                probe=get_json(CHART+urllib.parse.quote(symbol),{"range":"1mo","interval":"1d"})["chart"]["result"][0]
+                if prefetched_probe is None:
+                    raise ValueError("Probe unavailable")
+                probe=prefetched_probe
                 meta=probe.get("meta",{}); price=price if isinstance(price,(int,float)) else meta.get("regularMarketPrice")
                 cap=cap if isinstance(cap,(int,float)) else meta.get("marketCap")
                 pq=probe.get("indicators",{}).get("quote",[{}])[0]; closes=[x for x in pq.get("close",[]) if isinstance(x,(int,float))]
