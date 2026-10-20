@@ -148,6 +148,17 @@ def main():
     # Safe aggregate-only failure diagnostics: no symbols, prices or credentials.
     fresh_count = sum(1 for r in results if r["status"] == "PASS" and r["symbol"] not in (set(report["freshness"]["stale_symbols"]) | set(report["freshness"]["recent_merge_unverified"])))
     print("EU_OHLCV_QUALITY: attempted=" + str(len(results)) + " passed=" + str(len(records)) + " fresh_verified=" + str(fresh_count) + " coverage_gate=90pct", flush=True)
+    # Distinguish stale daily bars from failed recent-window identity/provider verification.
+    stale_set = set(report["freshness"]["stale_symbols"])
+    unverified_set = set(report["freshness"]["recent_merge_unverified"])
+    print("EU_OHLCV_FRESHNESS: stale=" + str(len(stale_set)) + " recent_unverified=" + str(len(unverified_set)) + " overlap=" + str(len(stale_set & unverified_set)), flush=True)
+    reasons = {"HTTPError": 0, "URLError": 0, "TimeoutError": 0, "ValueError": 0, "KeyError": 0, "Other": 0}
+    for row in results:
+        if row["symbol"] in unverified_set:
+            reason = row.get("recent_merge_reason", "Other")
+            reasons[reason if reason in reasons else "Other"] += 1
+    print("EU_OHLCV_RECENT_ERRORS: " + " ".join(k + "=" + str(v) for k,v in reasons.items()), flush=True)
+
     if coverage_ratio<0.90:
         raise SystemExit("DATA-BLOCKED: fewer than 90% of symbols produced valid same-run OHLCV")
     if not report["freshness"]["freshness_passed"]:
