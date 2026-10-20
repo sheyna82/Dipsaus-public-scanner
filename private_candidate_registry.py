@@ -46,3 +46,21 @@ def public_aggregate(result):
     return {k: s[k] for k in
             ("active", "fresh_checked", "blocked", "deferred", "overdue",
              "reconciled")}
+
+def reconcile_registry_with_manual_config(registry, primary, supplemental=None):
+    """Compare canonical nominations against actual manual scanner configuration.
+
+    Private result: symbol-level details MUST NOT be printed or published.
+    Discovery-only nominations are not presumed to have a manual route.
+    """
+    from manual_candidate_coverage_adapter import from_manual_configs
+    entries = validate_registry(registry)
+    configured = {r["symbol"] for r in from_manual_configs(primary, supplemental)["candidates"]}
+    required = {r["symbol"] for r in entries
+                if r["status"] not in ("CLOSED", "INVALIDATED")
+                and r.get("monitor_mode") == "MANUAL"}
+    missing = sorted(required - configured)
+    return {"required": len(required), "configured": len(required & configured),
+            "missing": len(missing), "complete": not missing,
+            "private_missing_symbols": missing}
+
