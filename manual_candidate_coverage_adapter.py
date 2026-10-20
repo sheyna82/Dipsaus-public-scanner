@@ -15,7 +15,8 @@ def from_manual_configs(primary, supplemental=None):
     """
     if not isinstance(primary, dict):
         raise ValueError("primary config missing")
-    supplemental = supplemental or {}
+    if supplemental is None:
+        supplemental = {}
     if not isinstance(supplemental, dict):
         raise ValueError("supplemental config invalid")
     combined = {}
@@ -51,6 +52,8 @@ def from_manual_report(report, *, checked_at):
     out = []
     seen = set()
     for row in report["rows"]:
+        if not isinstance(row, dict):
+            raise ValueError("invalid manual report row")
         symbol = row.get("symbol")
         if not isinstance(symbol, str) or not symbol:
             continue
@@ -63,7 +66,7 @@ def from_manual_report(report, *, checked_at):
         seen.add(cid)
         if row.get("status") == "DATA-BLOCKED" or not row.get("provider_freshness_pass"):
             status = "DATA_BLOCKED"
-            reason = row.get("status") or "PROVIDER_QUOTE_NOT_FRESH"
+            reason = "PROVIDER_QUOTE_NOT_FRESH" if row.get("status") != "DATA-BLOCKED" else "DATA_BLOCKED"
         else:
             status = "FRESH_CHECKED"
             reason = None
@@ -75,7 +78,11 @@ def audit_manual_candidate_coverage(primary, supplemental, report, *,
                                     checked_at, now=None, max_age_seconds=600):
     """Private result; public logs may receive public_aggregate(result) only."""
     registry = from_manual_configs(primary, supplemental)
-    observations = from_manual_report(report, checked_at=checked_at)
+    # Trust the report generation time, never a caller-supplied fresh timestamp.
+    generated = report.get("generated_utc") if isinstance(report, dict) else None
+    if generated is None:
+        raise ValueError("report generation timestamp missing")
+    observations = from_manual_report(report, checked_at=generated)
     result = audit_private_registry(registry, observations, now=now,
                                     max_age_seconds=max_age_seconds)
     return result
