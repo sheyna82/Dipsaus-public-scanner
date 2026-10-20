@@ -6,7 +6,7 @@ US stocks from both most-active and day-gainer universes, then recognises an
 intraday bottom -> higher-low -> reclaim pattern. Research/pre-alert only; never a
 buy signal.
 """
-import csv, io, json, math, re, urllib.parse, urllib.request
+import csv, io, json, math, re, time, urllib.parse, urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -17,10 +17,22 @@ CHART="https://query1.finance.yahoo.com/v8/finance/chart/"
 # Current-security identity boundary for reused tickers.
 LISTING_START_UTC={"SPCX":datetime(2026,6,12,tzinfo=timezone.utc).timestamp()}
 
+NETWORK_AUDIT={"requests":0,"failures":0,"elapsed_s":0.0,"slow_requests":0}
+
 def get_json(url, params=None):
     if params: url += "?" + urllib.parse.urlencode(params)
     req=urllib.request.Request(url,headers=HEADERS)
-    with urllib.request.urlopen(req,timeout=15) as r: return json.loads(r.read().decode())
+    started=time.monotonic()
+    NETWORK_AUDIT["requests"]+=1
+    try:
+        with urllib.request.urlopen(req,timeout=15) as r: return json.loads(r.read().decode())
+    except Exception:
+        NETWORK_AUDIT["failures"]+=1
+        raise
+    finally:
+        elapsed=time.monotonic()-started
+        NETWORK_AUDIT["elapsed_s"]+=elapsed
+        if elapsed>=5: NETWORK_AUDIT["slow_requests"]+=1
 
 def chart(symbol, rng, interval):
     d=get_json(CHART+urllib.parse.quote(symbol),{"range":rng,"interval":interval,"includePrePost":"false"})
@@ -99,6 +111,7 @@ def intraday_structure(rows):
             "reclaim_observed":reclaim,"path_efficiency":round(efficiency,3)}
 
 def main():
+    started=time.monotonic()
     now=datetime.now(timezone.utc); candidates=[]; failures={}
     audit={"universe_total":0,"missing_price_or_cap_after_probe":0,"below_price_or_cap":0,"insufficient_daily_history":0,"outside_recovery_or_liquidity_gate":0,"discovery_gate_rejected":0,"qualified":0}
     for q in universe():
@@ -164,5 +177,7 @@ def main():
          "candidate_count":len(candidates),"structure_count":sum(x["structure_quality_pass"] for x in candidates),
          "candidates":candidates[:30],"failures":failures}
     OUT.parent.mkdir(exist_ok=True); OUT.write_text(json.dumps(out,indent=2)); print(json.dumps(out,indent=2))
+    # Aggregate-only telemetry; no tickers, URLs, prices, holdings or credentials.
+    print("US_DISCOVERY_AUDIT: "+json.dumps({"universe_count":audit["universe_total"],"missing_price_or_cap":audit["missing_price_or_cap_after_probe"],"qualified_count":audit["qualified"],"requests":NETWORK_AUDIT["requests"],"failed_requests":NETWORK_AUDIT["failures"],"slow_requests":NETWORK_AUDIT["slow_requests"],"request_seconds":round(NETWORK_AUDIT["elapsed_s"],2),"total_seconds":round(time.monotonic()-started,2)},sort_keys=True),flush=True)
 if __name__=="__main__": main()
 
