@@ -141,6 +141,9 @@ def main():
     report["coverage_ratio"]=round(coverage_ratio,4)
     report["research_refresh_usable"]=coverage_ratio>=0.90 and report["freshness"]["freshness_passed"]
     (OUT/"europe_ohlcv_audit.json").write_text(json.dumps(report,indent=2,ensure_ascii=False),encoding="utf-8")
+    # Safe aggregate-only failure diagnostics: no symbols, prices or credentials.
+    fresh_count = sum(1 for r in results if r["status"] == "PASS" and r["symbol"] not in (set(report["freshness"]["stale_symbols"]) | set(report["freshness"]["recent_merge_unverified"])))
+    print("EU_OHLCV_QUALITY: attempted=" + str(len(results)) + " passed=" + str(len(records)) + " fresh_verified=" + str(fresh_count) + " coverage_gate=90pct", flush=True)
     if coverage_ratio<0.90:
         raise SystemExit("DATA-BLOCKED: fewer than 90% of symbols produced valid same-run OHLCV")
     if not report["freshness"]["freshness_passed"]:
