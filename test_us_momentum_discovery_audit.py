@@ -11,6 +11,15 @@ class DiscoveryNetworkAuditTests(unittest.TestCase):
     def setUp(self):
         discovery.NETWORK_AUDIT.update(requests=0, failures=0, elapsed_s=0.0, slow_requests=0)
 
+    def test_bounded_map_preserves_order_and_coverage(self):
+        values=list(range(23))
+        result=list(discovery.ordered_bounded_map(lambda x: x*x, values, workers=3, window=5))
+        self.assertEqual(result,[x*x for x in values])
+
+    def test_bounded_map_rejects_invalid_limits(self):
+        with self.assertRaises(ValueError):
+            list(discovery.ordered_bounded_map(lambda x:x,[1],workers=5,window=4))
+
     def test_success_is_counted_without_logging_response(self):
         class Response:
             def __enter__(self):
