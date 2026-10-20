@@ -8,6 +8,7 @@ on:
       - 'test_candidate_coverage_audit.py'
       - 'test_private_candidate_registry.py'
       - 'test_manual_candidate_coverage_adapter.py'
+      - 'test_candidate_private_hydration_integration.py'
       - '.github/workflows/candidate-coverage-tests.yml'
   workflow_dispatch:
 permissions:
@@ -26,4 +27,4 @@ jobs:
       - name: Compile candidate audit modules
         run: python -m py_compile candidate_coverage_audit.py private_candidate_registry.py manual_candidate_coverage_adapter.py
       - name: Run isolated tests without secrets, providers or notifications
-        run: python -m unittest -v test_candidate_coverage_audit test_private_candidate_registry test_manual_candidate_coverage_adapter
+        run: python -m unittest -v test_candidate_coverage_audit test_private_candidate_registry test_manual_candidate_coverage_adapter test_candidate_private_hydration_integration
