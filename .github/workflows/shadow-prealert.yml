@@ -7,6 +7,13 @@ on:
         type: boolean
         default: false
         required: true
+  schedule:
+    # One serial live run per half-hour; prealert_cadence.py checks every five minutes.
+    # Offset from the EU five-minute refreshes to reduce stale-report encounters.
+    - cron: '3,33 7-16 * * 1-5'
+      timezone: Europe/Amsterdam
+    - cron: '3 17 * * 1-5'
+      timezone: Europe/Amsterdam
 permissions:
   contents: read
 concurrency:
