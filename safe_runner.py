@@ -440,6 +440,25 @@ def main():
             batch = (start + i) % 21
             run('us_recovery_pilot.py', US_BATCH=batch)
             Path(f'reports/us_batch_runs/batch_{batch}.json').write_bytes(Path('reports/us_recovery_pilot.json').read_bytes())
+        # Shadow-only proof for each selected US batch; no per-symbol logs.
+        try:
+            from discovery_coverage_audit import audit_us_batch
+            batch_coverage = [audit_us_batch(json.loads(p.read_text()))
+                for p in sorted(Path('reports/us_batch_runs').glob('batch_*.json'))]
+            us_coverage = {
+                'batches': len(batch_coverage),
+                'selected': sum(x['selected'] for x in batch_coverage),
+                'screened': sum(x['screened_count_only'] for x in batch_coverage),
+                'provider_failures': sum(x['provider_failures'] for x in batch_coverage),
+                'complete': len(batch_coverage) == 7 and all(x['complete'] for x in batch_coverage),
+            }
+            state['latest_us_candidate_coverage'] = us_coverage
+            print('US_CANDIDATE_COVERAGE: ' + ' '.join(
+                key + '=' + str(us_coverage[key]) for key in
+                ('batches', 'selected', 'screened', 'provider_failures', 'complete')),
+                flush=True)
+        except Exception:
+            print('US_CANDIDATE_COVERAGE: unavailable', flush=True)
         run('us_auto_prealert_handoff.py'); run('us_live_trigger_routes.py')
         state['us_routes'] = json.loads(Path('reports/us_live_trigger_routes.json').read_text())
         state['latest_us_reports'] = {p.name: json.loads(p.read_text()) for p in Path('reports/us_batch_runs').glob('*.json')}
