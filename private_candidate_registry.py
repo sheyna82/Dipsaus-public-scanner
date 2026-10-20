@@ -18,6 +18,7 @@ def validate_registry(registry):
     if not isinstance(entries, list):
         raise ValueError("registry candidates must be a list")
     ids = set()
+    symbols = set()
     for row in entries:
         if not isinstance(row, dict):
             raise ValueError("candidate must be an object")
@@ -30,6 +31,10 @@ def validate_registry(registry):
         if (not isinstance(row.get("symbol"), str) or not row["symbol"].strip()
                 or row["symbol"] != row["symbol"].strip()):
             raise ValueError("missing provider symbol")
+        if row["status"] not in ("CLOSED", "INVALIDATED"):
+            if row["symbol"] in symbols:
+                raise ValueError("duplicate active provider symbol")
+            symbols.add(row["symbol"])
         if row["status"] in ("CLOSED", "INVALIDATED") and not row.get("closure_reason"):
             raise ValueError("closed candidate requires reason")
     return entries
