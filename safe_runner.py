@@ -200,7 +200,7 @@ def main():
                 canonical = reconcile_registry_with_manual_config(registry, primary, supplemental)
                 print('CANONICAL_CANDIDATE_COVERAGE: ' + ' '.join(
                     key + '=' + str(canonical[key]) for key in
-                    ('required', 'configured', 'missing', 'complete')), flush=True)
+                    ('required', 'configured', 'missing', 'discovery_unverified', 'manual_complete', 'complete')), flush=True)
         except Exception:
             print('CANONICAL_CANDIDATE_COVERAGE: unavailable', flush=True)
     store = PrivateStore(args.mode); state = store.load()
