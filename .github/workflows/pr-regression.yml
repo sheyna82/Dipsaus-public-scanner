@@ -5,6 +5,8 @@ on:
       - 'safe_runner.py'
       - 'us_momentum_recovery_discovery.py'
       - 'test_us_momentum_discovery_audit.py'
+      - 'dipsaus_request_pacer.py'
+      - 'test_dipsaus_request_pacer.py'
       - 'us_recovery_pilot.py'
       - 'test_us_recovery_pilot.py'
       - 'dipsaus_eu_freshness.py'
