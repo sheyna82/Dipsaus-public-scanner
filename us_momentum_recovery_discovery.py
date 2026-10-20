@@ -6,7 +6,7 @@ US stocks from both most-active and day-gainer universes, then recognises an
 intraday bottom -> higher-low -> reclaim pattern. Research/pre-alert only; never a
 buy signal.
 """
-import csv, io, json, math, re, threading, time, urllib.error, urllib.parse, urllib.request
+import csv, io, json, math, os, re, threading, time, urllib.error, urllib.parse, urllib.request
 from dipsaus_request_pacer import SharedRequestPacer
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -21,8 +21,8 @@ LISTING_START_UTC={"SPCX":datetime(2026,6,12,tzinfo=timezone.utc).timestamp()}
 
 NETWORK_AUDIT={"requests":0,"failures":0,"elapsed_s":0.0,"slow_requests":0}
 NETWORK_AUDIT_LOCK=threading.Lock()
-# Deliberately disabled until separate shadow validation; no live behavior change.
-REQUEST_PACER = None
+# Only explicitly enabled in notification-disabled shadow mode. Defaults to off.
+REQUEST_PACER = (SharedRequestPacer(0.25) if os.environ.get("DIPSAUS_US_PACING_SHADOW") == "true" and os.environ.get("SCANNER_NOTIFICATIONS_ENABLED") == "false" else None)
 
 def get_json(url, params=None):
     if params: url += "?" + urllib.parse.urlencode(params)
