@@ -443,8 +443,12 @@ def main():
         # Shadow-only proof for each selected US batch; no per-symbol logs.
         try:
             from discovery_coverage_audit import audit_us_batch
-            batch_coverage = [audit_us_batch(json.loads(p.read_text()))
-                for p in sorted(Path('reports/us_batch_runs').glob('batch_*.json'))]
+            # Audit only the seven batches refreshed in THIS run. The directory
+            # may also contain older batches from prior sweeps.
+            current_batch_ids = [(start + i) % 21 for i in range(7)]
+            batch_coverage = [audit_us_batch(json.loads(
+                Path(f'reports/us_batch_runs/batch_{batch}.json').read_text()))
+                for batch in current_batch_ids]
             us_coverage = {
                 'batches': len(batch_coverage),
                 'selected': sum(x['selected'] for x in batch_coverage),
