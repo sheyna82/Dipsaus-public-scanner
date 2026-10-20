@@ -439,6 +439,8 @@ def main():
                  'intraday_blocked', 'quote_blocked', 'complete', 'all_data_available')),
                 flush=True)
         except Exception:
+            state['latest_eu_candidate_coverage'] = {
+                'available': False, 'complete': False, 'all_data_available': False}
             print('EU_CANDIDATE_COVERAGE: unavailable', flush=True)
         state['latest_eu_report'] = json.loads(Path('reports/europe_combined_recovery_report.json').read_text())
         store.save(state)
@@ -487,6 +489,8 @@ def main():
                 ('batches', 'selected', 'screened', 'provider_failures', 'complete', 'all_data_available')),
                 flush=True)
         except Exception:
+            state['latest_us_candidate_coverage'] = {
+                'available': False, 'complete': False, 'all_data_available': False}
             print('US_CANDIDATE_COVERAGE: unavailable', flush=True)
         run('us_auto_prealert_handoff.py'); run('us_live_trigger_routes.py')
         state['us_routes'] = json.loads(Path('reports/us_live_trigger_routes.json').read_text())
