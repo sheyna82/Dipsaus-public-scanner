@@ -51,6 +51,30 @@ class DiscoveryCoverageTests(unittest.TestCase):
     def test_eu_all_four_stages_complete(self):
         self.assertTrue(audit_eu_pipeline(*self.eu_reports())["complete"])
 
+    def test_eu_blocked_quote_is_accounted_but_not_usable(self):
+        h,i,q,j=self.eu_reports()
+        for row in i["candidates"]:
+            row["data_status"]="INTRADAY-RESEARCH-ONLY"
+        for row in q["candidates"]:
+            row["provider_freshness_class"]="FRESH"
+        q["candidates"][0]["provider_freshness_class"]="DATA-BLOCKED"
+        a=audit_eu_pipeline(h,i,q,j)
+        self.assertTrue(a["complete"])
+        self.assertFalse(a["all_data_available"])
+        self.assertEqual(a["quote_blocked"],1)
+
+    def test_eu_blocked_intraday_is_accounted_but_not_usable(self):
+        h,i,q,j=self.eu_reports()
+        for row in i["candidates"]:
+            row["data_status"]="INTRADAY-RESEARCH-ONLY"
+        for row in q["candidates"]:
+            row["provider_freshness_class"]="FRESH"
+        i["candidates"][0]["data_status"]="DATA-BLOCKED"
+        a=audit_eu_pipeline(h,i,q,j)
+        self.assertTrue(a["complete"])
+        self.assertFalse(a["all_data_available"])
+        self.assertEqual(a["intraday_blocked"],1)
+
     def test_eu_missing_intraday_detected(self):
         h,i,q,j=self.eu_reports()
         i["candidates"].pop();i["checked_count"]=1
