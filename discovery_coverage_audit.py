@@ -36,6 +36,11 @@ def audit_us_batch(report, *, now=None):
     """US sample_symbols are selected universe, not just promoted candidates."""
     if not isinstance(report, dict) or not isinstance(report.get("sample_symbols"), list):
         raise ValueError("US report or sample missing")
+    if (type(report.get("requested_symbols")) is not int or
+            type(report.get("actual_symbols_screened")) is not int or
+            report["requested_symbols"] < 0 or
+            report["actual_symbols_screened"] < 0):
+        raise ValueError("US batch counts invalid")
     if report.get("requested_symbols")!=len(report["sample_symbols"]):
         raise ValueError("US batch selection count mismatch")
     if not isinstance(report.get("failures"), dict):
