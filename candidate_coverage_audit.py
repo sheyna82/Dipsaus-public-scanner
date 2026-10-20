@@ -30,8 +30,9 @@ def reconcile(candidates, observations, *, now=None, max_age_seconds=600):
     now = now or datetime.now(timezone.utc)
     if now.tzinfo is None:
         raise ValueError("now must be timezone aware")
-    if max_age_seconds <= 0:
-        raise ValueError("max_age_seconds must be positive")
+    if (type(max_age_seconds) not in (int, float) or
+            not 0 < max_age_seconds < float("inf")):
+        raise ValueError("max_age_seconds must be finite and positive")
     active = {}
     all_ids = set()
     for candidate in candidates:
