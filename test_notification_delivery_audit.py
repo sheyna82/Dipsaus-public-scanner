@@ -1,5 +1,5 @@
 import unittest
-from notification_delivery_audit import audit_delivery_state
+from notification_delivery_audit import audit_delivery_state, format_public_delivery_summary
 
 class DeliveryAuditTests(unittest.TestCase):
     def test_distinguishes_provider_acceptance_from_phone_receipt(self):
@@ -21,3 +21,10 @@ class DeliveryAuditTests(unittest.TestCase):
     def test_missing_state_fails_closed(self):
         with self.assertRaises(ValueError):
             audit_delivery_state({})
+
+    def test_public_summary_contains_only_aggregate_counters(self):
+        result=format_public_delivery_summary({"signals":{
+            "SECRET_TICKER":{"delivery":"sent"}}})
+        self.assertIn("sent_to_provider=1",result)
+        self.assertIn("phone_receipt_verified=false",result)
+        self.assertNotIn("SECRET_TICKER",result)
