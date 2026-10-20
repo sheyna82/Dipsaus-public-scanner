@@ -25,3 +25,11 @@ def audit_delivery_state(state):
         "phone_receipt_verified": False,
         "delivery_verified": False,
     }
+
+def format_public_delivery_summary(state):
+    """Safe, fixed-field diagnostic line for trusted runtime logs."""
+    result = audit_delivery_state(state)
+    return ("NOTIFICATION_DELIVERY_AUDIT: records={records} "
+            "sent_to_provider={sent_to_provider} reserved={reserved} "
+            "rejected={rejected} uncertain={uncertain} unknown={unknown} "
+            "phone_receipt_verified=false delivery_verified=false").format(**result)
