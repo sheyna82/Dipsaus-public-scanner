@@ -125,6 +125,13 @@ def main():
             print(symbol,row["status"],row.get("last_bar_date"),flush=True)
             time.sleep(.25)
     print("EU_OHLCV_STAGE: fetching_complete", flush=True)
+    date_counts={}
+    for row in results:
+        if row.get("status")=="PASS" and row.get("last_bar_date"):
+            day=row["last_bar_date"]
+            date_counts[day]=date_counts.get(day,0)+1
+    for day,count in sorted(date_counts.items())[-7:]:
+        print("EU_OHLCV_DATE_COUNT: date="+day+" count="+str(count), flush=True)
     with gzip.open(OUT/"europe_ohlcv.jsonl.gz","wt",encoding="utf-8") as f:
         for record in records:f.write(json.dumps(record,separators=(",",":"))+"\n")
     dates={}
