@@ -82,6 +82,37 @@ def fetch(symbol,sector):
                     except (KeyError,IndexError,TypeError,ValueError):continue
                 if not extra:raise ValueError("No valid recent OHLCV")
                 old_last=bars[-1][0]
+                # A stale short-window response can be a provider-cache artifact.
+                # Retry the alternate chart host once, validating full instrument
+                # identity and every bar. Never replace newer bars with older ones.
+                benchmark=datetime.now(timezone.utc).date()-timedelta(days=1)
+                while benchmark.weekday()>=5:
+                    benchmark-=timedelta(days=1)
+                if max(b[0] for b in extra)<benchmark.isoformat():
+                    try:
+                        alternate_url=recent_url.replace("query1.finance.yahoo.com","query2.finance.yahoo.com")
+                        alternate_req=urllib.request.Request(alternate_url,headers={"User-Agent":"Mozilla/5.0","Accept":"application/json","Cache-Control":"no-cache"})
+                        with urllib.request.urlopen(alternate_req,timeout=20) as response:
+                            alternate_data=json.load(response)
+                        alternate=(alternate_data.get("chart",{}).get("result") or [None])[0]
+                        if not alternate:raise ValueError("No alternate chart")
+                        am=alternate.get("meta") or {}
+                        if any(am.get(k)!=meta.get(k) for k in ("symbol","currency","exchangeName","exchangeTimezoneName")):
+                            raise ValueError("Alternate identity mismatch")
+                        aq=alternate["indicators"]["quote"][0]
+                        fresh_extra=[]
+                        for i,stamp in enumerate(alternate.get("timestamp") or []):
+                            try:
+                                o,h,l,c,v=[aq[k][i] for k in ("open","high","low","close","volume")]
+                                if not all(isinstance(x,(int,float)) and math.isfinite(x) for x in (o,h,l,c,v)):continue
+                                if l<=0 or l>min(o,c) or max(o,c)>h or v<0:continue
+                                day=datetime.fromtimestamp(stamp,timezone.utc).astimezone(tz).date().isoformat()
+                                fresh_extra.append([day,round(o,5),round(h,5),round(l,5),round(c,5),int(v)])
+                            except (KeyError,IndexError,TypeError,ValueError):continue
+                        if fresh_extra and max(b[0] for b in fresh_extra)>max(b[0] for b in extra):
+                            extra=fresh_extra
+                    except Exception:
+                        pass  # Original source remains subject to strict freshness gate.
                 bars=sorted({b[0]:b for b in bars+extra}.values())
                 row.update(long_window_last_date=old_last,recent_window_last_date=max(b[0] for b in extra),
                            last_bar_date=bars[-1][0],valid_bars=len(bars),recent_merge_status="PASS")
