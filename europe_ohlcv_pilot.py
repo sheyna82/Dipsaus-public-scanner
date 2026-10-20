@@ -150,7 +150,7 @@ def main():
         valid_records = [record for record in records if record["symbol"] not in invalid]
         with gzip.open(OUT/"europe_ohlcv.jsonl.gz","wt",encoding="utf-8") as output:
             for record in valid_records:
-                output.write(json.dumps(record,separators=(",",":"))+"\\n")
+                output.write(json.dumps(record,separators=(",",":"))+"\n")
         report["usable_fresh_symbols"] = len(valid_records)
         report["research_refresh_usable"] = len(valid_records)/len(results) >= 0.90
         (OUT/"europe_ohlcv_audit.json").write_text(json.dumps(report,indent=2,ensure_ascii=False),encoding="utf-8")
