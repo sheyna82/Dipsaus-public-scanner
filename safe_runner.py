@@ -416,7 +416,8 @@ def main():
             print('EU_CANDIDATE_COVERAGE: ' + ' '.join(
                 key + '=' + str(eu_coverage[key]) for key in
                 ('eligible', 'intraday', 'quote', 'joined',
-                 'missing_intraday', 'missing_quote', 'missing_joined', 'complete')),
+                 'missing_intraday', 'missing_quote', 'missing_joined',
+                 'intraday_blocked', 'quote_blocked', 'complete', 'all_data_available')),
                 flush=True)
         except Exception:
             print('EU_CANDIDATE_COVERAGE: unavailable', flush=True)
