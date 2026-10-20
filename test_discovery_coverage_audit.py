@@ -7,6 +7,13 @@ class DiscoveryCoverageTests(unittest.TestCase):
         self.assertFalse(a["complete"])
         self.assertFalse(a["per_symbol_screened_proof"])
         self.assertEqual(a["provider_failures"],1)
+    def test_us_rejects_non_mapping_provider_failures(self):
+        report={"sample_symbols":["A"],"requested_symbols":1,
+                "actual_symbols_screened":1,"screened_symbols":["A"],
+                "failures":[],"candidates":[]}
+        with self.assertRaises(ValueError):
+            audit_us_batch(report)
+
     def test_us_rejects_mismatched_counts(self):
         with self.assertRaises(ValueError):
             audit_us_batch({"sample_symbols":["A"],"requested_symbols":1,"actual_symbols_screened":0,"failures":{},"candidates":[]})
