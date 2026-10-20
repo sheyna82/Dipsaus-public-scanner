@@ -401,6 +401,25 @@ def main():
                        'europe_swing_research.py', 'europe_intraday_confirmation.py',
                        'europe_quote_execution_audit.py', 'europe_combined_recovery_report.py'):
             run(script)
+        # Shadow-only, aggregate EU coverage audit. A failed audit is visible
+        # but never interrupts the existing EU report handoff.
+        try:
+            from discovery_coverage_audit import audit_eu_pipeline
+            def _load_eu_stage(name):
+                return json.loads(Path('reports', name).read_text())
+            eu_coverage = audit_eu_pipeline(
+                _load_eu_stage('europe_swing_research.json'),
+                _load_eu_stage('europe_intraday_confirmation.json'),
+                _load_eu_stage('europe_quote_execution_audit.json'),
+                _load_eu_stage('europe_combined_recovery_report.json'))
+            state['latest_eu_candidate_coverage'] = eu_coverage
+            print('EU_CANDIDATE_COVERAGE: ' + ' '.join(
+                key + '=' + str(eu_coverage[key]) for key in
+                ('eligible', 'intraday', 'quote', 'joined',
+                 'missing_intraday', 'missing_quote', 'missing_joined', 'complete')),
+                flush=True)
+        except Exception:
+            print('EU_CANDIDATE_COVERAGE: unavailable', flush=True)
         state['latest_eu_report'] = json.loads(Path('reports/europe_combined_recovery_report.json').read_text())
         store.save(state)
         # Confirm the persisted EU handoff, not merely successful provider data.
