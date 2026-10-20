@@ -11,11 +11,37 @@ from unittest.mock import patch
 from datetime import datetime, timezone
 from private_runtime import hydrate
 from manual_candidate_coverage_adapter import audit_manual_candidate_coverage
-from private_candidate_registry import public_aggregate
+from private_candidate_registry import public_aggregate, reconcile_registry_with_manual_config
 
 NOW = datetime(2026, 10, 20, 15, tzinfo=timezone.utc)
 
 class SyntheticPrivateIntegrationTests(unittest.TestCase):
+    def test_hydrated_canonical_registry_detects_unconfigured_nomination(self):
+        bundle = {
+            "manual_recovery_triggers.json": {"candidates":{"SYNTHETIC_A":{}}},
+            "portfolio_reentry_watch.json": {"candidates":{}},
+            "profit_exit_watch.json": {"candidates":{}},
+            "notification_quality_gate.json": {},
+            "candidate_registry.json": {"schema_version":1,"candidates":[
+                {"id":"nomination-A","symbol":"SYNTHETIC_A","status":"ACTIVE","monitor_mode":"MANUAL"},
+                {"id":"nomination-B","symbol":"SYNTHETIC_B","status":"REGISTERED","monitor_mode":"MANUAL"}]},
+        }
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, {}, clear=True):
+            cwd=os.getcwd()
+            try:
+                os.chdir(temp)
+                hydrate(json.dumps(bundle))
+                registry=json.loads(Path("config/candidate_registry.json").read_text())
+                primary=json.loads(Path("config/manual_recovery_triggers.json").read_text())
+                result=reconcile_registry_with_manual_config(registry,primary,{})
+            finally:
+                os.chdir(cwd)
+        self.assertEqual(result["required"],2)
+        self.assertEqual(result["configured"],1)
+        self.assertEqual(result["missing"],1)
+        self.assertFalse(result["complete"])
+        self.assertEqual(result["private_missing_symbols"],["SYNTHETIC_B"])
+
     def test_hydrated_candidate_missing_from_scan_is_overdue(self):
         bundle = {
             "manual_recovery_triggers.json": {
