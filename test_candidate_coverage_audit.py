@@ -12,6 +12,15 @@ def obs(cid, status="FRESH_CHECKED", at=NOW, reason=None):
             "checked_at": at.isoformat(), "reason": reason}
 
 class CoverageAuditTests(unittest.TestCase):
+    def test_missing_and_malformed_timestamps_are_overdue(self):
+        for stamp in (None, "", "not-a-date", "2026-10-20T15:00:00"):
+            with self.subTest(stamp=stamp):
+                record={"candidate_id":"A","status":"FRESH_CHECKED",
+                        "checked_at":stamp}
+                result=reconcile([candidate("A")],[record],now=NOW)
+                self.assertEqual(result["summary"]["overdue"],1)
+                self.assertEqual(result["summary"]["fresh_checked"],0)
+
     def test_future_dated_evidence_never_counts_as_fresh(self):
         future = NOW + timedelta(seconds=1)
         result = reconcile([candidate("A")], [obs("A", at=future)], now=NOW)
