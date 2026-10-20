@@ -113,7 +113,7 @@ def intraday_structure(rows):
 def main():
     started=time.monotonic()
     now=datetime.now(timezone.utc); candidates=[]; failures={}
-    audit={"universe_total":0,"missing_price_or_cap_after_probe":0,"below_price_or_cap":0,"insufficient_daily_history":0,"outside_recovery_or_liquidity_gate":0,"discovery_gate_rejected":0,"qualified":0}
+    audit={"universe_total":0,"missing_price_or_cap_after_probe":0,"quick_probe_rejected":0,"probe_errors":0,"below_price_or_cap":0,"insufficient_daily_history":0,"outside_recovery_or_liquidity_gate":0,"discovery_gate_rejected":0,"qualified":0}
     for q in universe():
         audit["universe_total"]+=1
         symbol=q.get("symbol"); price=q.get("regularMarketPrice"); change=q.get("regularMarketChangePercent"); cap=q.get("marketCap")
@@ -128,9 +128,11 @@ def main():
                 if price and highs and vols:
                     quick_dd=(min(closes[-20:])/max(highs)-1)*100 if closes else 0
                     quick_turn=price*(sum(vols[-20:])/max(1,len(vols[-20:])))
-                    if quick_dd>-6 or quick_turn<35_000_000: continue
+                    if quick_dd>-6 or quick_turn<35_000_000:
+                        audit["quick_probe_rejected"]+=1
+                        continue
             except Exception:
-                pass
+                audit["probe_errors"]+=1
         if not isinstance(price,(int,float)) or not isinstance(cap,(int,float)):
             audit["missing_price_or_cap_after_probe"]+=1
             continue
@@ -178,6 +180,6 @@ def main():
          "candidates":candidates[:30],"failures":failures}
     OUT.parent.mkdir(exist_ok=True); OUT.write_text(json.dumps(out,indent=2)); print(json.dumps(out,indent=2))
     # Aggregate-only telemetry; no tickers, URLs, prices, holdings or credentials.
-    print("US_DISCOVERY_AUDIT: "+json.dumps({"universe_count":audit["universe_total"],"missing_price_or_cap":audit["missing_price_or_cap_after_probe"],"qualified_count":audit["qualified"],"requests":NETWORK_AUDIT["requests"],"failed_requests":NETWORK_AUDIT["failures"],"slow_requests":NETWORK_AUDIT["slow_requests"],"request_seconds":round(NETWORK_AUDIT["elapsed_s"],2),"total_seconds":round(time.monotonic()-started,2)},sort_keys=True),flush=True)
+    print("US_DISCOVERY_AUDIT: "+json.dumps({"universe_count":audit["universe_total"],"missing_price_or_cap":audit["missing_price_or_cap_after_probe"],"quick_probe_rejected":audit["quick_probe_rejected"],"probe_errors":audit["probe_errors"],"qualified_count":audit["qualified"],"requests":NETWORK_AUDIT["requests"],"failed_requests":NETWORK_AUDIT["failures"],"slow_requests":NETWORK_AUDIT["slow_requests"],"request_seconds":round(NETWORK_AUDIT["elapsed_s"],2),"total_seconds":round(time.monotonic()-started,2)},sort_keys=True),flush=True)
 if __name__=="__main__": main()
 
