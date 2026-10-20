@@ -1,6 +1,6 @@
 import unittest
 from datetime import datetime, timezone
-from private_candidate_registry import validate_registry, audit_private_registry, public_aggregate
+from private_candidate_registry import validate_registry, audit_private_registry, public_aggregate, reconcile_registry_with_manual_config
 
 NOW = datetime(2026, 10, 20, 15, tzinfo=timezone.utc)
 
@@ -36,6 +36,24 @@ class PrivateRegistryTests(unittest.TestCase):
     def test_duplicate_id_rejected(self):
         with self.assertRaises(ValueError):
             validate_registry(registry(item("X"), item("X")))
+
+    def test_nominated_manual_symbol_missing_from_scanner(self):
+        r=registry(item("A", monitor_mode="MANUAL"),
+                   item("B", monitor_mode="MANUAL"))
+        result=reconcile_registry_with_manual_config(
+            r, {"candidates":{"A":{}}}, {})
+        self.assertFalse(result["complete"])
+        self.assertEqual(result["missing"],1)
+        self.assertEqual(result["private_missing_symbols"],["B"])
+
+    def test_closed_and_discovery_candidates_do_not_require_manual_route(self):
+        r=registry(item("A", "CLOSED", closure_reason="REMOVED", monitor_mode="MANUAL"),
+                   item("B", monitor_mode="DISCOVERY"),
+                   item("C", monitor_mode="MANUAL"))
+        result=reconcile_registry_with_manual_config(
+            r, {"candidates":{"C":{}}}, {})
+        self.assertTrue(result["complete"])
+        self.assertEqual(result["required"],1)
 
     def test_schema_version_required(self):
         with self.assertRaises(ValueError):
