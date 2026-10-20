@@ -21,6 +21,7 @@ on:
       - 'test_dipsaus_breakout_distance.py'
       - 'test_migration_safety.py'
       - '.github/workflows/pr-regression.yml'
+      - '.github/workflows/shadow-prealert.yml'
 permissions:
   contents: read
 jobs:
