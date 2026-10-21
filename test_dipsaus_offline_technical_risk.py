@@ -1,5 +1,5 @@
 import unittest
-from dipsaus_offline_technical_risk import assess_risk, research_optional_stop_reference, research_profit_protection_reference, research_pullback_context, research_consolidated_risk
+from dipsaus_offline_technical_risk import assess_risk, research_optional_stop_reference, research_profit_protection_reference, research_pullback_context, research_consolidated_risk, research_alert_transition
 
 class RiskTests(unittest.TestCase):
     def setUp(self):
@@ -125,6 +125,25 @@ class RiskTests(unittest.TestCase):
         bars = [{"high": 101, "low": 99, "close": 100} for _ in range(30)]
         self.assertEqual(research_consolidated_risk(bars)["priority"], "routine")
         self.assertIsNone(research_consolidated_risk([]))
+
+    def test_duplicate_risk_does_not_repeat(self):
+        state = {"priority": "large_gap", "reasons": ["large_overnight_gap"]}
+        r = research_alert_transition(state, state)
+        self.assertFalse(r["suggest_review"])
+        self.assertTrue(r["duplicate_suppressed"])
+
+    def test_new_risk_reason_gets_attention(self):
+        old = {"priority": "large_gap", "reasons": ["large_overnight_gap"]}
+        new = {"priority": "structural_break",
+               "reasons": ["large_overnight_gap", "prior_support_broken"]}
+        r = research_alert_transition(old, new)
+        self.assertTrue(r["suggest_review"])
+        self.assertTrue(r["priority_escalated"])
+        self.assertEqual(r["new_reasons"], ["prior_support_broken"])
+        self.assertFalse(r["notification_sent"])
+
+    def test_routine_does_not_trigger(self):
+        self.assertFalse(research_alert_transition(None, {"priority": "routine", "reasons": []})["suggest_review"])
 
     def test_stoploss_advice_cannot_be_enabled(self):
         self.assertIsNone(assess_risk(self.bars, 118, stoploss_advice=True))
