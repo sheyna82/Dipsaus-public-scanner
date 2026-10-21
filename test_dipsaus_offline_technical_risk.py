@@ -1,5 +1,5 @@
 import unittest
-from dipsaus_offline_technical_risk import assess_risk, research_optional_stop_reference, research_profit_protection_reference
+from dipsaus_offline_technical_risk import assess_risk, research_optional_stop_reference, research_profit_protection_reference, research_pullback_context
 
 class RiskTests(unittest.TestCase):
     def setUp(self):
@@ -71,6 +71,19 @@ class RiskTests(unittest.TestCase):
         self.assertIsNone(fn(100, 110, 0))
         self.assertIsNone(fn(100, 110, float("inf")))
         self.assertIsNone(fn(100, 110, 2, previous_reference=-1))
+
+    def test_pullback_context_distinguishes_normal_and_break(self):
+        stable = [{"high": 101, "low": 99, "close": 100} for _ in range(30)]
+        self.assertEqual(research_pullback_context(stable)["context"], "within_one_atr")
+        broken = list(stable)
+        broken[-1] = {"high": 99, "low": 94, "close": 95}
+        result = research_pullback_context(broken)
+        self.assertEqual(result["context"], "structural_break")
+        self.assertIsNone(result["order_instruction"])
+
+    def test_pullback_context_invalid_input(self):
+        self.assertIsNone(research_pullback_context([]))
+        self.assertIsNone(research_pullback_context(self.bars[:4]))
 
     def test_stoploss_advice_cannot_be_enabled(self):
         self.assertIsNone(assess_risk(self.bars, 118, stoploss_advice=True))
