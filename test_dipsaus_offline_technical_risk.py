@@ -95,6 +95,22 @@ class RiskTests(unittest.TestCase):
     def test_profit_protection_rejects_impossible_peak(self):
         self.assertIsNone(research_profit_protection_reference(100, 90, 2))
 
+    def test_overnight_gap_warning(self):
+        bars = [{"high": 101, "low": 99, "close": 100} for _ in range(20)]
+        bars[-1] = {"open": 90, "high": 101, "low": 89, "close": 100}
+        risk = assess_risk(bars, 100)
+        self.assertTrue(risk["overnight_gap_warning_1_5x_atr"])
+        self.assertGreater(risk["overnight_gap_atr_units"], 1.5)
+        self.assertIsNone(risk["order_instruction"])
+
+    def test_invalid_last_open_rejected(self):
+        bars = list(self.bars)
+        bars[-1] = dict(bars[-1], open=200)
+        self.assertIsNone(assess_risk(bars, 118))
+
+    def test_gap_unavailable_without_open(self):
+        self.assertIsNone(assess_risk(self.bars, 118)["overnight_gap_warning_1_5x_atr"])
+
     def test_stoploss_advice_cannot_be_enabled(self):
         self.assertIsNone(assess_risk(self.bars, 118, stoploss_advice=True))
 
