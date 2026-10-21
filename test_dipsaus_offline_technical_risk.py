@@ -28,6 +28,19 @@ class RiskTests(unittest.TestCase):
     def test_insufficient_history_for_volatility_comparison(self):
         self.assertIsNone(assess_risk(self.bars, 118)["volatility_expansion_1_5x"])
 
+    def test_duplicate_and_unordered_dates_rejected(self):
+        bars = [dict(b, date=f"2026-09-{i+1:02d}") for i, b in enumerate(self.bars)]
+        self.assertIsNotNone(assess_risk(bars, 118))
+        bars[-1]["date"] = bars[-2]["date"]
+        self.assertIsNone(assess_risk(bars, 118))
+        bars[-1]["date"] = "not-a-date"
+        self.assertIsNone(assess_risk(bars, 118))
+
+    def test_partial_dates_rejected(self):
+        bars = list(self.bars)
+        bars[0] = dict(bars[0], date="2026-09-01")
+        self.assertIsNone(assess_risk(bars, 118))
+
     def test_stoploss_advice_cannot_be_enabled(self):
         self.assertIsNone(assess_risk(self.bars, 118, stoploss_advice=True))
 
