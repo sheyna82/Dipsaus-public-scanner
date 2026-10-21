@@ -182,3 +182,38 @@ def research_consolidated_risk(bars, period=14):
             "notification_sent": False, "research_only": True,
             "trade_ready": False, "order_instruction": None,
             "warning": "Research classification; no live alert or order."}
+
+
+def research_alert_transition(previous, current):
+    """Pure offline comparison of consecutive consolidated risk assessments.
+
+    Only a new issue, a worsening priority, or newly appearing reason merits
+    review. This returns a suggestion, never sends a notification.
+    """
+    ranks = {"routine": 0, "large_pullback": 1, "volatility_expansion": 2,
+             "large_gap": 3, "structural_break": 4}
+    if not isinstance(current, dict) or current.get("priority") not in ranks:
+        return None
+    if not isinstance(current.get("reasons"), list) or any(
+        not isinstance(reason, str) for reason in current["reasons"]
+    ):
+        return None
+    if previous is not None:
+        if not isinstance(previous, dict) or previous.get("priority") not in ranks:
+            return None
+        if not isinstance(previous.get("reasons"), list) or any(
+            not isinstance(reason, str) for reason in previous["reasons"]
+        ):
+            return None
+    old_priority = previous["priority"] if previous is not None else "routine"
+    old_reasons = set(previous["reasons"]) if previous is not None else set()
+    new_reasons = sorted(set(current["reasons"]) - old_reasons)
+    escalated = ranks[current["priority"]] > ranks[old_priority]
+    suggest_review = current["priority"] != "routine" and (
+        escalated or bool(new_reasons))
+    return {"suggest_review": suggest_review,
+            "priority_escalated": escalated,
+            "new_reasons": new_reasons,
+            "duplicate_suppressed": not suggest_review,
+            "notification_sent": False,
+            "research_only": True, "order_instruction": None}
