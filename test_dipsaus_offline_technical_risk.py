@@ -7,8 +7,8 @@ class RiskTests(unittest.TestCase):
 
     def test_risk_calculation(self):
         r = assess_risk(self.bars, 118, 130)
-        self.assertEqual(r["technical_invalidation_reference"], 109)
-        self.assertAlmostEqual(r["risk_reward"], 12/9, places=4)
+        self.assertEqual(r["technical_invalidation_reference"], 108)
+        self.assertAlmostEqual(r["risk_reward"], 12/10, places=4)
         self.assertFalse(r["trade_ready"])
         self.assertIsNone(r["order_instruction"])
 
@@ -44,7 +44,7 @@ class RiskTests(unittest.TestCase):
     def test_optional_reference_is_not_order(self):
         result = research_optional_stop_reference(self.bars, 118)
         self.assertEqual(result["atr_buffer_reference"], 114)
-        self.assertEqual(result["structural_reference"], 109)
+        self.assertEqual(result["structural_reference"], 108)
         self.assertFalse(result["stop_order_proposed"])
         self.assertIsNone(result["order_instruction"])
         self.assertFalse(result["trade_ready"])
@@ -84,6 +84,16 @@ class RiskTests(unittest.TestCase):
     def test_pullback_context_invalid_input(self):
         self.assertIsNone(research_pullback_context([]))
         self.assertIsNone(research_pullback_context(self.bars[:4]))
+
+    def test_prior_support_not_contaminated_by_current_bar(self):
+        bars = list(self.bars)
+        bars[-1] = {"high": 111, "low": 90, "close": 95}
+        risk = assess_risk(bars, 118)
+        self.assertEqual(risk["technical_invalidation_reference"], 108)
+        self.assertTrue(risk["trend_break_below_previous_10_bar_low"])
+
+    def test_profit_protection_rejects_impossible_peak(self):
+        self.assertIsNone(research_profit_protection_reference(100, 90, 2))
 
     def test_stoploss_advice_cannot_be_enabled(self):
         self.assertIsNone(assess_risk(self.bars, 118, stoploss_advice=True))
