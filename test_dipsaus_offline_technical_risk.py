@@ -1,5 +1,5 @@
 import unittest
-from dipsaus_offline_technical_risk import assess_risk, research_optional_stop_reference
+from dipsaus_offline_technical_risk import assess_risk, research_optional_stop_reference, research_profit_protection_reference
 
 class RiskTests(unittest.TestCase):
     def setUp(self):
@@ -55,6 +55,22 @@ class RiskTests(unittest.TestCase):
         self.assertIsNone(research_optional_stop_reference(self.bars, 118, atr_multiplier=float("nan")))
         self.assertIsNone(research_optional_stop_reference(self.bars, 108))
         self.assertIsNone(research_optional_stop_reference(self.bars, 2, atr_multiplier=2))
+
+    def test_profit_protection_activation_and_monotonicity(self):
+        fn = research_profit_protection_reference
+        self.assertFalse(fn(100, 104, 2)["active"])
+        first = fn(100, 110, 2)
+        self.assertEqual(first["reference"], 106)
+        later = fn(100, 108, 2, previous_reference=106)
+        self.assertEqual(later["reference"], 106)
+        self.assertIsNone(later["order_instruction"])
+        self.assertFalse(later["trade_ready"])
+
+    def test_profit_protection_invalid_inputs(self):
+        fn = research_profit_protection_reference
+        self.assertIsNone(fn(100, 110, 0))
+        self.assertIsNone(fn(100, 110, float("inf")))
+        self.assertIsNone(fn(100, 110, 2, previous_reference=-1))
 
     def test_stoploss_advice_cannot_be_enabled(self):
         self.assertIsNone(assess_risk(self.bars, 118, stoploss_advice=True))
