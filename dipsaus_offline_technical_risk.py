@@ -54,3 +54,33 @@ def assess_risk(bars, entry, target=None, period=14, stoploss_advice=False):
             "stoploss_advice_enabled": False, "order_instruction": None,
             "research_only": True, "trade_ready": False,
             "warning": "Invalidation is not a guaranteed exit price or maximum loss."}
+
+
+def research_optional_stop_reference(bars, entry, atr_multiplier=2.0, period=14):
+    """Offline, non-executable stop-reference study; never an order recommendation.
+
+    Compare a structural support reference with an ATR buffer. Both are
+    illustrative levels, not guaranteed fills or loss caps. No live wiring.
+    """
+    if not _valid(atr_multiplier):
+        return None
+    risk = assess_risk(bars, entry, period=period)
+    if risk is None or not risk["invalidation_below_entry"]:
+        return None
+    atr_reference = entry - atr_multiplier * risk["atr"]
+    structural_reference = risk["technical_invalidation_reference"]
+    if atr_reference <= 0:
+        return None
+    return {
+        "atr_buffer_reference": round(atr_reference, 6),
+        "structural_reference": structural_reference,
+        "atr_multiplier": atr_multiplier,
+        "reference_only": True,
+        "stop_order_proposed": False,
+        "order_instruction": None,
+        "research_only": True,
+        "trade_ready": False,
+        "warning": ("A stop order can fill below its trigger after gaps or slippage; "
+                    "a stop-limit order may not fill at all. These levels are "
+                    "not guaranteed exits or maximum losses."),
+    }
