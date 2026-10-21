@@ -17,6 +17,17 @@ def assess_risk(bars, entry, target=None, period=14, stoploss_advice=False):
             return None
         if b["low"] > b["close"] or b["close"] > b["high"]:
             return None
+    # Reject malformed chronological sessions rather than silently calculating on them.
+    if any("date" in b for b in bars):
+        from datetime import date
+        try:
+            days = [date.fromisoformat(b["date"]) for b in bars]
+        except (KeyError, TypeError, ValueError):
+            return None
+        if any(not isinstance(b["date"], str) or b["date"] != d.isoformat() for b, d in zip(bars, days)):
+            return None
+        if any(b <= a for a, b in zip(days, days[1:])):
+            return None
     trs = []
     for previous, current in zip(bars, bars[1:]):
         trs.append(max(current["high"] - current["low"],
