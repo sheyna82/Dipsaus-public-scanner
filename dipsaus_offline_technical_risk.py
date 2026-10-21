@@ -38,6 +38,15 @@ def assess_risk(bars, entry, target=None, period=14, stoploss_advice=False):
                     if len(trs) >= 2 * period else None)
     volatility_expansion = (atr / previous_atr >= 1.5
                             if previous_atr is not None and previous_atr > 0 else None)
+    # A large overnight gap makes stop references particularly unreliable.
+    last_open = bars[-1].get("open")
+    if last_open is not None and (not _valid(last_open)
+                                 or not bars[-1]["low"] <= last_open <= bars[-1]["high"]):
+        return None
+    overnight_gap_atr = (abs(last_open - bars[-2]["close"]) / atr
+                         if last_open is not None and atr > 0 else None)
+    overnight_gap_warning = (overnight_gap_atr >= 1.5
+                             if overnight_gap_atr is not None else None)
     previous_low = min(b["low"] for b in bars[-11:-1])
     trend_break = bars[-1]["close"] < previous_low
     invalidation = min(b["low"] for b in bars[-11:-1])
@@ -47,6 +56,8 @@ def assess_risk(bars, entry, target=None, period=14, stoploss_advice=False):
     return {"atr": round(atr, 6), "atr_pct_of_entry": round(100 * atr / entry, 4),
             "technical_invalidation_reference": invalidation,
             "volatility_expansion_1_5x": volatility_expansion,
+            "overnight_gap_atr_units": round(overnight_gap_atr, 4) if overnight_gap_atr is not None else None,
+            "overnight_gap_warning_1_5x_atr": overnight_gap_warning,
             "trend_break_below_previous_10_bar_low": trend_break,
             "risk_reward": round(rr, 4) if rr is not None else None,
             "risk_reward_unresolved": rr is None,
