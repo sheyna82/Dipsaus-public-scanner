@@ -16,7 +16,7 @@ class RiskTests(unittest.TestCase):
         self.assertIsNone(assess_risk(self.bars, 118, stoploss_advice=True))
 
     def test_invalid_data_rejected(self):
-        self.assertIsNone(assess_risk(self.bars[:-1], 118))
+        self.assertIsNone(assess_risk(self.bars[:14], 118))
         self.assertIsNone(assess_risk(self.bars, float("nan")))
         self.assertIsNone(assess_risk(self.bars, 118, period=True))
 
