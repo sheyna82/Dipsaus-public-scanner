@@ -2,8 +2,8 @@ import unittest
 from dipsaus_offline_risk_matching import match_risk_controls
 
 
-def record(id, sector="energy", regime="down", atr=3):
-    return {"id": id, "sector": sector, "market_regime": regime, "atr_pct": atr}
+def record(id, sector="energy", regime="down", atr=3, day="2026-10-21"):
+    return {"id": id, "sector": sector, "market_regime": regime, "atr_pct": atr, "signal_date": day}
 
 
 class RiskMatchingTests(unittest.TestCase):
@@ -25,6 +25,20 @@ class RiskMatchingTests(unittest.TestCase):
     def test_no_control_reuse(self):
         r = match_risk_controls([record("w1"), record("w2")], [record("c")])
         self.assertEqual(r["matched_warnings"], 1)
+
+    def test_reject_distant_calendar_period(self):
+        r = match_risk_controls([record("w", day="2026-10-21")],
+                                [record("c", day="2026-09-21")])
+        self.assertEqual(r["matched_warnings"], 0)
+
+    def test_allow_nearby_calendar_period(self):
+        r = match_risk_controls([record("w", day="2026-10-21")],
+                                [record("c", day="2026-10-19")])
+        self.assertEqual(r["pairs"][0]["calendar_day_gap"], 2)
+
+    def test_reject_malformed_date(self):
+        self.assertIsNone(match_risk_controls([record("w", day="2026-02-30")], []))
+        self.assertIsNone(match_risk_controls([record("w")], [], max_calendar_days=-1))
 
     def test_reject_duplicate_ids_and_invalid_atr(self):
         self.assertIsNone(match_risk_controls([record("same")], [record("same")]))
