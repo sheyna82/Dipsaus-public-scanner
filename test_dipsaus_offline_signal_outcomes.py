@@ -27,6 +27,18 @@ class OutcomeTests(unittest.TestCase):
         self.assertIsNone(outcome["horizons"][3])
         self.assertIsNone(outcome["horizons"][5])
 
+    def test_costs_are_explicit_and_do_not_change_gross_excursion(self):
+        gross = evaluate_signal(self.rows, 0, (1,), roundtrip_cost_bps=0)
+        net = evaluate_signal(self.rows, 0, (1,), roundtrip_cost_bps=35)
+        self.assertEqual(net["roundtrip_cost_bps"], 35)
+        self.assertEqual(net["horizons"][1]["close_return_pct"],
+                         gross["horizons"][1]["close_return_pct"])
+        self.assertAlmostEqual(net["horizons"][1]["estimated_net_close_return_pct"], 1.4682)
+        self.assertEqual(net["horizons"][1]["max_favorable_pct"],
+                         gross["horizons"][1]["max_favorable_pct"])
+        for bad in (-1, True, float("nan"), float("inf"), 10000, "30"):
+            self.assertIsNone(evaluate_signal(self.rows, 0, (1,), roundtrip_cost_bps=bad))
+
     def test_dates_are_required_unique_and_ordered(self):
         bad = [dict(x) for x in self.rows]
         bad[2].pop("date")
