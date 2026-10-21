@@ -111,3 +111,31 @@ def research_profit_protection_reference(entry, highest_close, atr, previous_ref
             "gain_pct": round(gain_pct, 4), "research_only": True,
             "trade_ready": False, "order_instruction": None,
             "warning": "Trailing reference is not a guaranteed exit or loss limit."}
+
+
+def research_pullback_context(bars, period=14):
+    """Classify last-close drawdown relative to ATR; offline context, not a trade signal.
+
+    A close below prior 10-session support is treated as structural damage,
+    while smaller declines are described relative to normal daily movement.
+    """
+    if not isinstance(bars, (list, tuple)) or not bars:
+        return None
+    entry = bars[-1].get("close") if isinstance(bars[-1], dict) else None
+    risk = assess_risk(bars, entry, period=period)
+    if risk is None or risk["atr"] <= 0:
+        return None
+    previous_close = bars[-2]["close"]
+    decline = max(0.0, previous_close - entry)
+    atr_units = decline / risk["atr"]
+    if risk["trend_break_below_previous_10_bar_low"]:
+        context = "structural_break"
+    elif risk["volatility_expansion_1_5x"] is True:
+        context = "volatility_expansion"
+    elif atr_units <= 1.0:
+        context = "within_one_atr"
+    else:
+        context = "large_move_without_confirmed_break"
+    return {"context": context, "down_move_atr_units": round(atr_units, 4),
+            "research_only": True, "trade_ready": False, "order_instruction": None,
+            "warning": "Heuristic context only; no validated predictive performance."}
