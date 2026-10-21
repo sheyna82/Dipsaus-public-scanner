@@ -84,3 +84,30 @@ def research_optional_stop_reference(bars, entry, atr_multiplier=2.0, period=14)
                     "a stop-limit order may not fill at all. These levels are "
                     "not guaranteed exits or maximum losses."),
     }
+
+
+def research_profit_protection_reference(entry, highest_close, atr, previous_reference=None,
+                                         activation_gain_pct=5.0, atr_multiplier=2.0):
+    """Offline trailing reference inspired by external stop research; never places orders.
+
+    Uses highest *closing* price, not intraday highs, and activates only after
+    a configurable unrealized gain. Previous reference must come from the
+    caller's offline research state; the result never lowers that reference.
+    """
+    if any(not _valid(x) for x in (entry, highest_close, atr,
+                                   activation_gain_pct, atr_multiplier)):
+        return None
+    if previous_reference is not None and not _valid(previous_reference):
+        return None
+    gain_pct = 100 * (highest_close / entry - 1)
+    if gain_pct < activation_gain_pct:
+        return {"active": False, "reference": previous_reference,
+                "research_only": True, "order_instruction": None}
+    candidate = highest_close - atr_multiplier * atr
+    if candidate <= 0:
+        return None
+    reference = max(candidate, previous_reference) if previous_reference is not None else candidate
+    return {"active": True, "reference": round(reference, 6),
+            "gain_pct": round(gain_pct, 4), "research_only": True,
+            "trade_ready": False, "order_instruction": None,
+            "warning": "Trailing reference is not a guaranteed exit or loss limit."}
