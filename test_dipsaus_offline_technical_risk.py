@@ -1,5 +1,5 @@
 import unittest
-from dipsaus_offline_technical_risk import assess_risk, research_optional_stop_reference, research_profit_protection_reference, research_pullback_context
+from dipsaus_offline_technical_risk import assess_risk, research_optional_stop_reference, research_profit_protection_reference, research_pullback_context, research_consolidated_risk
 
 class RiskTests(unittest.TestCase):
     def setUp(self):
@@ -110,6 +110,21 @@ class RiskTests(unittest.TestCase):
 
     def test_gap_unavailable_without_open(self):
         self.assertIsNone(assess_risk(self.bars, 118)["overnight_gap_warning_1_5x_atr"])
+
+    def test_consolidated_priority_deduplicates_reasons(self):
+        bars = [{"high": 101, "low": 99, "close": 100} for _ in range(30)]
+        bars[-1] = {"open": 90, "high": 99, "low": 89, "close": 95}
+        result = research_consolidated_risk(bars)
+        self.assertEqual(result["priority"], "structural_break")
+        self.assertIn("large_overnight_gap", result["reasons"])
+        self.assertTrue(result["single_summary"])
+        self.assertFalse(result["notification_sent"])
+        self.assertIsNone(result["order_instruction"])
+
+    def test_consolidated_routine_and_invalid(self):
+        bars = [{"high": 101, "low": 99, "close": 100} for _ in range(30)]
+        self.assertEqual(research_consolidated_risk(bars)["priority"], "routine")
+        self.assertIsNone(research_consolidated_risk([]))
 
     def test_stoploss_advice_cannot_be_enabled(self):
         self.assertIsNone(assess_risk(self.bars, 118, stoploss_advice=True))
