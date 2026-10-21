@@ -1,5 +1,5 @@
 import unittest
-from dipsaus_offline_technical_risk import assess_risk
+from dipsaus_offline_technical_risk import assess_risk, research_optional_stop_reference
 
 class RiskTests(unittest.TestCase):
     def setUp(self):
@@ -40,6 +40,21 @@ class RiskTests(unittest.TestCase):
         bars = list(self.bars)
         bars[0] = dict(bars[0], date="2026-09-01")
         self.assertIsNone(assess_risk(bars, 118))
+
+    def test_optional_reference_is_not_order(self):
+        result = research_optional_stop_reference(self.bars, 118)
+        self.assertEqual(result["atr_buffer_reference"], 114)
+        self.assertEqual(result["structural_reference"], 109)
+        self.assertFalse(result["stop_order_proposed"])
+        self.assertIsNone(result["order_instruction"])
+        self.assertFalse(result["trade_ready"])
+        self.assertIn("may not fill", result["warning"])
+
+    def test_optional_reference_rejects_unsafe_inputs(self):
+        self.assertIsNone(research_optional_stop_reference(self.bars, 118, atr_multiplier=0))
+        self.assertIsNone(research_optional_stop_reference(self.bars, 118, atr_multiplier=float("nan")))
+        self.assertIsNone(research_optional_stop_reference(self.bars, 108))
+        self.assertIsNone(research_optional_stop_reference(self.bars, 2, atr_multiplier=2))
 
     def test_stoploss_advice_cannot_be_enabled(self):
         self.assertIsNone(assess_risk(self.bars, 118, stoploss_advice=True))
