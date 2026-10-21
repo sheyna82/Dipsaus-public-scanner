@@ -19,6 +19,13 @@ class OutcomeTests(unittest.TestCase):
     def evaluate(self, rows, index, horizons=(1, 3, 5, 10), **kwargs):
         return evaluate_signal(rows, index, horizons, price_metadata=self.metadata, **kwargs)
 
+    def test_research_never_becomes_trade_clearance(self):
+        outcome = self.evaluate(self.rows, 0, (1,))
+        self.assertTrue(outcome["research_only"])
+        self.assertFalse(outcome["trade_ready"])
+        self.assertFalse(outcome["data_provenance_independently_verified"])
+        self.assertFalse(outcome["horizons"][1]["manual_review_required"])
+
     def test_provenance_is_required(self):
         self.assertIsNone(evaluate_signal(self.rows, 0))
         for key, value in (("split_adjusted", False),
@@ -51,6 +58,7 @@ class OutcomeTests(unittest.TestCase):
         self.assertIsNotNone(outcome)
         self.assertTrue(outcome["large_entry_gap_review"])
         self.assertTrue(outcome["horizons"][1]["large_gap_review"])
+        self.assertTrue(outcome["horizons"][1]["manual_review_required"])
         self.assertAlmostEqual(outcome["entry_gap_pct"], 44.2308)
         self.assertFalse(outcome["horizons"][2] is None)
 
