@@ -4,6 +4,8 @@ on:
     paths:
       - 'dipsaus_optional_risk_research.py'
       - 'test_dipsaus_optional_risk_research.py'
+      - 'dipsaus_risk_profit_research.py'
+      - 'test_dipsaus_risk_profit_research.py'
       - '.github/workflows/offline-optional-risk-research.yml'
 permissions:
   contents: read
@@ -15,4 +17,4 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: python -m unittest -v test_dipsaus_optional_risk_research
+      - run: python -m unittest -v test_dipsaus_optional_risk_research test_dipsaus_risk_profit_research
