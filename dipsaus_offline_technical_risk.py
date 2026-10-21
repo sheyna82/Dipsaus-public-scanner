@@ -151,3 +151,34 @@ def research_pullback_context(bars, period=14):
     return {"context": context, "down_move_atr_units": round(atr_units, 4),
             "research_only": True, "trade_ready": False, "order_instruction": None,
             "warning": "Heuristic context only; no validated predictive performance."}
+
+
+def research_consolidated_risk(bars, period=14):
+    """One offline risk assessment from overlapping technical indicators.
+
+    Precedence is intentional: structural break > gap > volatility expansion >
+    unusually large pullback > routine movement. This is NOT a notification.
+    """
+    context = research_pullback_context(bars, period=period)
+    if context is None:
+        return None
+    risk = assess_risk(bars, bars[-1]["close"], period=period)
+    if risk is None:
+        return None
+    reasons = []
+    if risk["trend_break_below_previous_10_bar_low"]:
+        reasons.append("prior_support_broken")
+    if risk["overnight_gap_warning_1_5x_atr"] is True:
+        reasons.append("large_overnight_gap")
+    if risk["volatility_expansion_1_5x"] is True:
+        reasons.append("volatility_expansion")
+    if context["down_move_atr_units"] > 1.0:
+        reasons.append("large_daily_decline")
+    priority = ("structural_break" if "prior_support_broken" in reasons else
+                "large_gap" if "large_overnight_gap" in reasons else
+                "volatility_expansion" if "volatility_expansion" in reasons else
+                "large_pullback" if "large_daily_decline" in reasons else "routine")
+    return {"priority": priority, "reasons": reasons, "single_summary": True,
+            "notification_sent": False, "research_only": True,
+            "trade_ready": False, "order_instruction": None,
+            "warning": "Research classification; no live alert or order."}
