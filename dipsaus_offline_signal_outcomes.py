@@ -60,7 +60,9 @@ def evaluate_signal(prices, signal_index, horizons=(1, 3, 5, 10),
               "currency": price_metadata["currency"],
               "entry_gap_pct": round(entry_gap_pct, 4),
               "large_entry_gap_review": abs(entry_gap_pct) >= 20,
-              "roundtrip_cost_bps": roundtrip_cost_bps, "horizons": {}}
+              "roundtrip_cost_bps": roundtrip_cost_bps, "horizons": {},
+              "research_only": True, "trade_ready": False,
+              "data_provenance_independently_verified": False}
     for horizon in horizons:
         end = signal_index + horizon
         if end >= len(prices):
@@ -75,6 +77,7 @@ def evaluate_signal(prices, signal_index, horizons=(1, 3, 5, 10),
             "close_return_pct": round(gross_return, 4),
             "largest_overnight_gap_pct": round(max(gaps, key=abs), 4),
             "large_gap_review": any(abs(gap) >= 20 for gap in gaps),
+            "manual_review_required": any(abs(gap) >= 20 for gap in gaps),
             "estimated_net_close_return_pct": round(gross_return - roundtrip_cost_bps / 100, 4),
             "max_favorable_pct": round((max(r["high"] for r in window) / entry - 1) * 100, 4),
             "max_adverse_pct": round((min(r["low"] for r in window) / entry - 1) * 100, 4),
