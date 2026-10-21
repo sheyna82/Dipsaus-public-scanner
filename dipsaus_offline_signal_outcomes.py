@@ -5,6 +5,7 @@ A signal is evaluated strictly from the NEXT trading session open; this avoids
 assuming fills at a price known only after a signal was observed.
 """
 import math
+from datetime import date
 
 
 def _price(value):
@@ -24,6 +25,16 @@ def evaluate_signal(prices, signal_index, horizons=(1, 3, 5, 10)):
     if not horizons or any(not isinstance(h, int) or isinstance(h, bool) or h < 1 for h in horizons):
         return None
     if any(not isinstance(row, dict) or any(not _price(row.get(k)) for k in ("open", "high", "low", "close")) or row["low"] > min(row["open"], row["close"]) or row["high"] < max(row["open"], row["close"]) for row in prices):
+        return None
+    # Require ISO dates in strictly increasing session order.
+    try:
+        dates = [date.fromisoformat(row["date"]) for row in prices]
+    except (KeyError, ValueError, TypeError):
+        return None
+    if any(not isinstance(row["date"], str) or row["date"] != d.isoformat()
+           for row, d in zip(prices, dates)):
+        return None
+    if any(later <= earlier for earlier, later in zip(dates, dates[1:])):
         return None
     entry = prices[signal_index + 1]["open"]
     result = {"entry_open": entry, "horizons": {}}
