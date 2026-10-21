@@ -27,6 +27,17 @@ class OutcomeTests(unittest.TestCase):
         self.assertIsNone(outcome["horizons"][3])
         self.assertIsNone(outcome["horizons"][5])
 
+    def test_large_gap_is_flagged_not_silently_filtered(self):
+        rows = [dict(x) for x in self.rows]
+        rows[1].update(open=150, high=155, low=145, close=152)
+        rows[2].update(open=149, high=160, low=140, close=159)
+        outcome = evaluate_signal(rows, 0, (1, 2))
+        self.assertIsNotNone(outcome)
+        self.assertTrue(outcome["large_entry_gap_review"])
+        self.assertTrue(outcome["horizons"][1]["large_gap_review"])
+        self.assertAlmostEqual(outcome["entry_gap_pct"], 44.2308)
+        self.assertFalse(outcome["horizons"][2] is None)
+
     def test_costs_are_explicit_and_do_not_change_gross_excursion(self):
         gross = evaluate_signal(self.rows, 0, (1,), roundtrip_cost_bps=0)
         net = evaluate_signal(self.rows, 0, (1,), roundtrip_cost_bps=35)
