@@ -11,6 +11,8 @@ class OutcomeTests(unittest.TestCase):
             {"open": 108, "high": 120, "low": 99, "close": 119},
             {"open": 118, "high": 125, "low": 113, "close": 123},
         ]
+        for i, row in enumerate(self.rows, 1):
+            row["date"] = f"2026-10-{i:02d}"
 
     def test_next_open_avoids_same_day_lookahead(self):
         outcome = evaluate_signal(self.rows, 0, (1, 2, 3))
@@ -24,6 +26,20 @@ class OutcomeTests(unittest.TestCase):
         self.assertIsNotNone(outcome["horizons"][1])
         self.assertIsNone(outcome["horizons"][3])
         self.assertIsNone(outcome["horizons"][5])
+
+    def test_dates_are_required_unique_and_ordered(self):
+        bad = [dict(x) for x in self.rows]
+        bad[2].pop("date")
+        self.assertIsNone(evaluate_signal(bad, 0))
+        bad = [dict(x) for x in self.rows]
+        bad[2]["date"] = bad[1]["date"]
+        self.assertIsNone(evaluate_signal(bad, 0))
+        bad = [dict(x) for x in self.rows]
+        bad[2]["date"] = "2026-09-30"
+        self.assertIsNone(evaluate_signal(bad, 0))
+        bad = [dict(x) for x in self.rows]
+        bad[2]["date"] = "yesterday"
+        self.assertIsNone(evaluate_signal(bad, 0))
 
     def test_invalid_data_fails_closed(self):
         self.assertIsNone(evaluate_signal(self.rows, 3))
