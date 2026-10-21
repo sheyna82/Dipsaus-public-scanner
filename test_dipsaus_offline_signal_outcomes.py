@@ -11,11 +11,27 @@ class OutcomeTests(unittest.TestCase):
             {"open": 108, "high": 120, "low": 99, "close": 119},
             {"open": 118, "high": 125, "low": 113, "close": 123},
         ]
+        self.metadata = {"split_adjusted": True, "ohlc_consistent": True,
+                         "source": "offline-test-fixture", "currency": "USD"}
         for i, row in enumerate(self.rows, 1):
             row["date"] = f"2026-10-{i:02d}"
 
+    def evaluate(self, rows, index, horizons=(1, 3, 5, 10), **kwargs):
+        return evaluate_signal(rows, index, horizons, price_metadata=self.metadata, **kwargs)
+
+    def test_provenance_is_required(self):
+        self.assertIsNone(evaluate_signal(self.rows, 0))
+        for key, value in (("split_adjusted", False),
+                           ("ohlc_consistent", False),
+                           ("source", ""), ("currency", "US")):
+            bad = dict(self.metadata)
+            bad[key] = value
+            self.assertIsNone(evaluate_signal(self.rows, 0, price_metadata=bad))
+        self.assertEqual(self.evaluate(self.rows, 0)["price_source"],
+                         "offline-test-fixture")
+
     def test_next_open_avoids_same_day_lookahead(self):
-        outcome = evaluate_signal(self.rows, 0, (1, 2, 3))
+        outcome = self.evaluate(self.rows, 0, (1, 2, 3))
         self.assertEqual(outcome["entry_open"], 110)
         self.assertAlmostEqual(outcome["horizons"][1]["close_return_pct"], 1.8182)
         self.assertAlmostEqual(outcome["horizons"][2]["max_favorable_pct"], 9.0909)
