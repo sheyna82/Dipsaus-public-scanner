@@ -38,7 +38,7 @@ class OutcomeTests(unittest.TestCase):
         self.assertEqual(outcome["horizons"][2]["max_adverse_pct"], -10.0)
 
     def test_incomplete_horizon_is_explicitly_missing(self):
-        outcome = evaluate_signal(self.rows, 2, (1, 3, 5))
+        outcome = self.evaluate(self.rows, 2, (1, 3, 5))
         self.assertIsNotNone(outcome["horizons"][1])
         self.assertIsNone(outcome["horizons"][3])
         self.assertIsNone(outcome["horizons"][5])
@@ -47,7 +47,7 @@ class OutcomeTests(unittest.TestCase):
         rows = [dict(x) for x in self.rows]
         rows[1].update(open=150, high=155, low=145, close=152)
         rows[2].update(open=149, high=160, low=140, close=159)
-        outcome = evaluate_signal(rows, 0, (1, 2))
+        outcome = self.evaluate(rows, 0, (1, 2))
         self.assertIsNotNone(outcome)
         self.assertTrue(outcome["large_entry_gap_review"])
         self.assertTrue(outcome["horizons"][1]["large_gap_review"])
@@ -55,8 +55,8 @@ class OutcomeTests(unittest.TestCase):
         self.assertFalse(outcome["horizons"][2] is None)
 
     def test_costs_are_explicit_and_do_not_change_gross_excursion(self):
-        gross = evaluate_signal(self.rows, 0, (1,), roundtrip_cost_bps=0)
-        net = evaluate_signal(self.rows, 0, (1,), roundtrip_cost_bps=35)
+        gross = self.evaluate(self.rows, 0, (1,), roundtrip_cost_bps=0)
+        net = self.evaluate(self.rows, 0, (1,), roundtrip_cost_bps=35)
         self.assertEqual(net["roundtrip_cost_bps"], 35)
         self.assertEqual(net["horizons"][1]["close_return_pct"],
                          gross["horizons"][1]["close_return_pct"])
@@ -64,33 +64,33 @@ class OutcomeTests(unittest.TestCase):
         self.assertEqual(net["horizons"][1]["max_favorable_pct"],
                          gross["horizons"][1]["max_favorable_pct"])
         for bad in (-1, True, float("nan"), float("inf"), 10000, "30"):
-            self.assertIsNone(evaluate_signal(self.rows, 0, (1,), roundtrip_cost_bps=bad))
+            self.assertIsNone(self.evaluate(self.rows, 0, (1,), roundtrip_cost_bps=bad))
 
     def test_dates_are_required_unique_and_ordered(self):
         bad = [dict(x) for x in self.rows]
         bad[2].pop("date")
-        self.assertIsNone(evaluate_signal(bad, 0))
+        self.assertIsNone(self.evaluate(bad, 0))
         bad = [dict(x) for x in self.rows]
         bad[2]["date"] = bad[1]["date"]
-        self.assertIsNone(evaluate_signal(bad, 0))
+        self.assertIsNone(self.evaluate(bad, 0))
         bad = [dict(x) for x in self.rows]
         bad[2]["date"] = "2026-09-30"
-        self.assertIsNone(evaluate_signal(bad, 0))
+        self.assertIsNone(self.evaluate(bad, 0))
         bad = [dict(x) for x in self.rows]
         bad[2]["date"] = "yesterday"
-        self.assertIsNone(evaluate_signal(bad, 0))
+        self.assertIsNone(self.evaluate(bad, 0))
 
     def test_invalid_data_fails_closed(self):
-        self.assertIsNone(evaluate_signal(self.rows, 3))
-        self.assertIsNone(evaluate_signal(self.rows, -1))
-        self.assertIsNone(evaluate_signal(self.rows, True))
-        self.assertIsNone(evaluate_signal(self.rows, 0, (0,)))
+        self.assertIsNone(self.evaluate(self.rows, 3))
+        self.assertIsNone(self.evaluate(self.rows, -1))
+        self.assertIsNone(self.evaluate(self.rows, True))
+        self.assertIsNone(self.evaluate(self.rows, 0, (0,)))
         bad = [dict(x) for x in self.rows]
         bad[2]["low"] = float("nan")
-        self.assertIsNone(evaluate_signal(bad, 0))
+        self.assertIsNone(self.evaluate(bad, 0))
         bad = [dict(x) for x in self.rows]
         bad[2]["high"] = 100
-        self.assertIsNone(evaluate_signal(bad, 0))
+        self.assertIsNone(self.evaluate(bad, 0))
 
 
 if __name__ == "__main__":
