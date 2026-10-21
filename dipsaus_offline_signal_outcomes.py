@@ -12,13 +12,25 @@ def _price(value):
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value > 0
 
 
-def evaluate_signal(prices, signal_index, horizons=(1, 3, 5, 10), roundtrip_cost_bps=0):
+def evaluate_signal(prices, signal_index, horizons=(1, 3, 5, 10),
+                    roundtrip_cost_bps=0, price_metadata=None):
     """Evaluate forward returns and excursion using supplied OHLC rows.
 
-    Returns None for invalid inputs. Incomplete horizons remain None, never
+    Requires caller-attested split-adjusted, internally consistent OHLC data.\n    This metadata is NOT independent verification of the provider.\n    Returns None for invalid inputs. Incomplete horizons remain None, never
     silently converted to zero or truncated. Roundtrip cost is a simple
     explicit assumption (basis points), NOT an execution or fill simulation.
     """
+    # Require explicit caller-provided provenance; never infer adjusted prices.
+    if (not isinstance(price_metadata, dict)
+            or price_metadata.get("split_adjusted") is not True
+            or price_metadata.get("ohlc_consistent") is not True
+            or not isinstance(price_metadata.get("source"), str)
+            or not price_metadata["source"].strip()
+            or not isinstance(price_metadata.get("currency"), str)
+            or len(price_metadata["currency"]) != 3
+            or not price_metadata["currency"].isalpha()
+            or price_metadata["currency"] != price_metadata["currency"].upper()):
+        return None
     if not isinstance(prices, (list, tuple)) or not isinstance(signal_index, int) or isinstance(signal_index, bool):
         return None
     if signal_index < 0 or signal_index + 1 >= len(prices):
@@ -44,7 +56,9 @@ def evaluate_signal(prices, signal_index, horizons=(1, 3, 5, 10), roundtrip_cost
     # Flag large close-to-next-open jumps for review, never silently discard.
     entry = prices[signal_index + 1]["open"]
     entry_gap_pct = (entry / prices[signal_index]["close"] - 1) * 100
-    result = {"entry_open": entry, "entry_gap_pct": round(entry_gap_pct, 4),
+    result = {"entry_open": entry, "price_source": price_metadata["source"],
+              "currency": price_metadata["currency"],
+              "entry_gap_pct": round(entry_gap_pct, 4),
               "large_entry_gap_review": abs(entry_gap_pct) >= 20,
               "roundtrip_cost_bps": roundtrip_cost_bps, "horizons": {}}
     for horizon in horizons:
