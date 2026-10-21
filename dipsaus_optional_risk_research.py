@@ -48,3 +48,36 @@ def assess_risk(bars, entry_price, lookback=14, support_window=10,
         "notify": False,
         "note": "Historical structure only; gaps can cause losses beyond support. No execution guarantee.",
     }
+
+
+def assess_structure_pressure(risk_context, observed_price):
+    """Describe pressure relative to historical support and ATR, not a sell signal.
+
+    Below-support observations need independent confirmation. ATR is a volatility
+    scale, not a guarantee, and this is not a trailing stop.
+    """
+    if (not isinstance(risk_context, dict) or risk_context.get("risk_reference_only") is not True
+            or not _positive(observed_price)
+            or not _positive(risk_context.get("recent_support"))
+            or not _positive(risk_context.get("atr"))):
+        return None
+    support = risk_context["recent_support"]
+    atr = risk_context["atr"]
+    distance_atr = (observed_price - support) / atr
+    if observed_price >= support:
+        state = "ABOVE_REFERENCE_SUPPORT"
+    elif distance_atr >= -0.5:
+        state = "BELOW_SUPPORT_REVIEW"
+    else:
+        state = "DEEPER_SUPPORT_BREACH_REVIEW"
+    return {
+        "state": state,
+        "distance_from_support_atr": round(distance_atr, 4),
+        "independent_confirmation_required": state != "ABOVE_REFERENCE_SUPPORT",
+        "research_only": True,
+        "trade_ready": False,
+        "sell_recommendation": False,
+        "stop_advice_enabled": False,
+        "notify": False,
+        "note": "One observed price cannot confirm a trend break; validate timing, market and fresh price.",
+    }
