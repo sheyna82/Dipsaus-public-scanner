@@ -40,7 +40,7 @@ def assess_risk(bars, entry, target=None, period=14, stoploss_advice=False):
                             if previous_atr is not None and previous_atr > 0 else None)
     previous_low = min(b["low"] for b in bars[-11:-1])
     trend_break = bars[-1]["close"] < previous_low
-    invalidation = min(b["low"] for b in bars[-10:])
+    invalidation = min(b["low"] for b in bars[-11:-1])
     downside = entry - invalidation
     upside = target - entry if target is not None else None
     rr = upside / downside if upside is not None and upside > 0 and downside > 0 else None
@@ -97,12 +97,13 @@ def research_profit_protection_reference(entry, highest_close, atr, previous_ref
     if any(not _valid(x) for x in (entry, highest_close, atr,
                                    activation_gain_pct, atr_multiplier)):
         return None
-    if previous_reference is not None and not _valid(previous_reference):
+    if highest_close < entry or (previous_reference is not None and not _valid(previous_reference)):
         return None
     gain_pct = 100 * (highest_close / entry - 1)
     if gain_pct < activation_gain_pct:
         return {"active": False, "reference": previous_reference,
-                "research_only": True, "order_instruction": None}
+                "research_only": True, "trade_ready": False,
+                "order_instruction": None}
     candidate = highest_close - atr_multiplier * atr
     if candidate <= 0:
         return None
