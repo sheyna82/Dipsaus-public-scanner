@@ -41,8 +41,12 @@ def evaluate_signal(prices, signal_index, horizons=(1, 3, 5, 10), roundtrip_cost
         return None
     if any(later <= earlier for earlier, later in zip(dates, dates[1:])):
         return None
+    # Flag large close-to-next-open jumps for review, never silently discard.
     entry = prices[signal_index + 1]["open"]
-    result = {"entry_open": entry, "roundtrip_cost_bps": roundtrip_cost_bps, "horizons": {}}
+    entry_gap_pct = (entry / prices[signal_index]["close"] - 1) * 100
+    result = {"entry_open": entry, "entry_gap_pct": round(entry_gap_pct, 4),
+              "large_entry_gap_review": abs(entry_gap_pct) >= 20,
+              "roundtrip_cost_bps": roundtrip_cost_bps, "horizons": {}}
     for horizon in horizons:
         end = signal_index + horizon
         if end >= len(prices):
@@ -51,8 +55,12 @@ def evaluate_signal(prices, signal_index, horizons=(1, 3, 5, 10), roundtrip_cost
         # Includes the next session through the horizon-th future session.
         window = prices[signal_index + 1:end + 1]
         gross_return = (window[-1]["close"] / entry - 1) * 100
+        gaps = [(prices[k]["open"] / prices[k - 1]["close"] - 1) * 100
+                for k in range(signal_index + 1, end + 1)]
         result["horizons"][horizon] = {
             "close_return_pct": round(gross_return, 4),
+            "largest_overnight_gap_pct": round(max(gaps, key=abs), 4),
+            "large_gap_review": any(abs(gap) >= 20 for gap in gaps),
             "estimated_net_close_return_pct": round(gross_return - roundtrip_cost_bps / 100, 4),
             "max_favorable_pct": round((max(r["high"] for r in window) / entry - 1) * 100, 4),
             "max_adverse_pct": round((min(r["low"] for r in window) / entry - 1) * 100, 4),
