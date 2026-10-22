@@ -27,6 +27,7 @@ def summarize(records):
     from collections import Counter
     day_counts = Counter()
     all_signal_days = []
+    all_event_outcomes = []
     for row in valid:
         dependency = row.get("dependence_diagnostic")
         if not isinstance(dependency, dict):
@@ -36,6 +37,15 @@ def summarize(records):
                 or len(set(dates)) != len(dates)
                 or any(not isinstance(day, str) or len(day) != 10 for day in dates)):
             return {"status": "DATA_BLOCKED", "reason": "invalid_signal_dates", "trade_ready": False}
+        outcomes = dependency.get("test_event_outcomes")
+        if (not isinstance(outcomes, list) or len(outcomes) != len(dates)
+                or [o.get("date") for o in outcomes if isinstance(o, dict)] != dates
+                or any(type(o.get("atr_structure_selected")) is not bool
+                       or type(o.get("net_return_pct")) not in (int, float)
+                       for o in outcomes if isinstance(o, dict))
+                or any(not isinstance(o, dict) for o in outcomes)):
+            return {"status": "DATA_BLOCKED", "reason": "invalid_event_outcomes", "trade_ready": False}
+        all_event_outcomes.extend(outcomes)
         day_counts.update(dates)
         all_signal_days.extend(dates)
     from datetime import date
@@ -49,6 +59,26 @@ def summarize(records):
         for i in range(len(ordered_days)) for j in range(i + 1, len(ordered_days))
         if (ordered_days[j] - ordered_days[i]).days < 14
     )
+    # Non-overlapping 14-calendar-day blocks anchored to the first signal date.
+    # Equal-weight block comparisons prevent crowded days from dominating the sign count.
+    anchor = ordered_days[0]
+    blocks = {}
+    for event in all_event_outcomes:
+        block = (date.fromisoformat(event["date"]) - anchor).days // 14
+        blocks.setdefault(block, []).append(event)
+    paired_block_deltas = []
+    for group in blocks.values():
+        selected = [e["net_return_pct"] for e in group if e["atr_structure_selected"]]
+        rejected = [e["net_return_pct"] for e in group if not e["atr_structure_selected"]]
+        if selected and rejected:
+            paired_block_deltas.append(sum(selected)/len(selected) - sum(rejected)/len(rejected))
+    time_block = {"calendar_days_per_block": 14, "total_blocks": len(blocks),
+                  "paired_blocks": len(paired_block_deltas),
+                  "selected_better_blocks": sum(d > 0 for d in paired_block_deltas),
+                  "selected_worse_blocks": sum(d < 0 for d in paired_block_deltas),
+                  "selected_equal_blocks": sum(d == 0 for d in paired_block_deltas),
+                  "mean_paired_block_delta_pct": round(sum(paired_block_deltas)/len(paired_block_deltas), 5) if paired_block_deltas else None,
+                  "formal_significance_test": False}
     cross_symbol = {"distinct_signal_days": len(day_counts),
                     "cross_day_pairs_within_14_calendar_days": rolling_pairs_14_calendar_days,
                     "days_with_multiple_symbols": sum(n > 1 for n in day_counts.values()),
@@ -144,6 +174,7 @@ def summarize(records):
     return {"status": "EXPLORATORY_SECTOR_REPLICATION_SUMMARY",
             "symbols_evaluated": len(valid), "symbols_blocked": sorted(blocked),
             "comparisons": comparisons, "cross_symbol_dependence": cross_symbol,
+            "time_block_sensitivity": time_block,
             "market_regime_summary": regime_summary, "symbol_dependence_unadjusted": True,
             "survivorship_free": False, "independent_holdout": False,
             "corporate_actions_verified": False, "trade_ready": False}
