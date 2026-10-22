@@ -40,10 +40,12 @@ class WikiSubsetTests(unittest.TestCase):
         with self.src.open("w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
             w.writerow(self.fields)
+            day = datetime.date(2017, 1, 2)
             for i in range(35):
-                w.writerow(("AAPL", (datetime.date(2017, 1, 1) +
-                            datetime.timedelta(days=i)).isoformat(),
-                            10, 12, 9, 11, 100))
+                while day.weekday() >= 5:
+                    day += datetime.timedelta(days=1)
+                w.writerow(("AAPL", day.isoformat(), 10, 12, 9, 11, 100))
+                day += datetime.timedelta(days=1)
         result = convert_wiki_subset(self.src, self.dst, symbol="AAPL")
         self.assertEqual(result["bars"], 35)
         self.assertFalse(result["trade_ready"])
