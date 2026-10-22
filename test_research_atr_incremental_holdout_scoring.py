@@ -23,6 +23,12 @@ class IncrementalATRHoldoutScoringTests(unittest.TestCase):
         self.assertFalse(result["independent_holdout_verified"])
         self.assertFalse(result["trade_ready"])
 
+    def test_nonsequence_training_input_rejected(self):
+        with self.assertRaises(ValueError):
+            fit({"severe": True})
+        with self.assertRaises(ValueError):
+            fit("not training events")
+
     def test_nonsequence_forecast_input_rejected(self):
         model = fit([self.event(True, True, True, False)])
         with self.assertRaises(ValueError):
