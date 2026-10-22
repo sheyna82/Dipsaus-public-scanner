@@ -10,6 +10,7 @@ from research_aapl_adjustment_sensitivity import (
 from research_audit_aapl_spy_adjustments import read_public_csv, APPLE_URL
 from research_reproduce_aapl_spy import download_spy_csv
 from dipsaus_offline_price_history_eval import evaluate_local_history
+from dipsaus_offline_downside_metrics import downside_metrics
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -53,6 +54,8 @@ def evaluate_cohorts():
         skipped = [r for r in result["rows"] if r["score"] < 5]
         report[label] = {"selected": cohort_summary(selected),
                          "skipped": cohort_summary(skipped),
+                         "selected_downside": downside_metrics(selected),
+                         "skipped_downside": downside_metrics(skipped),
                          "selected_dates": [r["signal_date"] for r in selected]}
     report["selection_dates_identical"] = (
         report["raw"]["selected_dates"] == report["adjusted_scenario"]["selected_dates"])
