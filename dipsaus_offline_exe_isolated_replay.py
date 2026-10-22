@@ -7,6 +7,7 @@ from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from portfolio_downside_research import replay_intraday
 from dipsaus_offline_exe_gate_diagnostics import explain_no_signal
+from dipsaus_offline_exe_drawdown_context import summarize_span_drawdown
 
 NY = ZoneInfo("America/New_York")
 FIELDS = ("open", "high", "low", "close")
@@ -50,7 +51,8 @@ def replay_isolated_spans(timestamps, quote, session):
                             "first_signal_available_utc":
                                 ((span[idx][0] + timedelta(minutes=1)).isoformat() if idx is not None else None),
                             "signal_bar_count": replay["signal_count"],
-                            "gate_diagnostics": explain_no_signal([bar for _, bar in span])})
+                            "gate_diagnostics": explain_no_signal([bar for _, bar in span]),
+                            "drawdown_context": summarize_span_drawdown([bar for _, bar in span])})
         return {"status": "ISOLATED_SPANS_RESEARCH", "session": session,
                 "spans": results, "rejected_bars": rejected,
                 "history_resets_at_gaps": True,
