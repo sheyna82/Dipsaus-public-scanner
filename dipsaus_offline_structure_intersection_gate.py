@@ -58,7 +58,8 @@ def evaluate_structure_intersections(stock, benchmark, *, min_test=10):
             last = position
     return {"status": "EXPLORATORY_JOINT_FACTOR_DIAGNOSTIC",
             "market_regime_diagnostics": regime_groups,
-            "dependence_diagnostic": {"overlapping_event_pairs": overlap_pairs,
+            "dependence_diagnostic": {"test_signal_dates": [r["signal_date"] for r in rows],
+                "overlapping_event_pairs": overlap_pairs,
                 "greedy_nonoverlapping_event_count": nonoverlapping_greedy,
                 "horizon_sessions": 10, "independent_observations_claimed": False},
             "test_events": len(rows), "baseline_test": metrics(rows), "factors": factors,
