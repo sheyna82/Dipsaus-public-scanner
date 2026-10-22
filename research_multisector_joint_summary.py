@@ -261,6 +261,25 @@ def summarize(records):
         "symbols_equal": sum(
             x["rate_difference_true_minus_false_pct_points"] == 0 for x in atr_comparable),
         "descriptive_only": True, "validated_predictor": False}
+    # Sector-level ATR contrast: aggregated descriptive counts, not independent samples.
+    atr_sector_contrasts = []
+    for sector in sorted({row["sector"] for row in valid}):
+        outcomes = [e for row in valid if row["sector"] == sector
+                    for e in row["dependence_diagnostic"]["test_event_outcomes"]]
+        groups = []
+        for value in (False, True):
+            matching = [e for e in outcomes if e["atr_expanding"] is value]
+            severe = sum(e["max_adverse_excursion_pct"] <= -3 for e in matching)
+            groups.append({"flag_value": value, "events": len(matching),
+                           "severe_events": severe,
+                           "severe_rate_pct": round(100 * severe / len(matching), 3)
+                           if matching else None})
+        delta = (round(groups[1]["severe_rate_pct"] - groups[0]["severe_rate_pct"], 3)
+                 if all(g["events"] for g in groups) else None)
+        atr_sector_contrasts.append({"sector": sector, "symbols": sum(
+            row["sector"] == sector for row in valid), "groups": groups,
+            "rate_difference_true_minus_false_pct_points": delta,
+            "descriptive_only": True})
     # Fixed-regime cross-era sign consistency, with no trading threshold inferred.
     regime_consistency = []
     for market_up in (True, False):
@@ -422,6 +441,7 @@ def summarize(records):
             "early_risk_flag_discrimination": early_risk_discrimination,
             "early_risk_flag_era_stability": early_risk_era_stability,
             "atr_symbol_risk_heterogeneity": atr_symbol_summary,
+            "atr_sector_risk_heterogeneity": atr_sector_contrasts,
             "market_regime_summary": regime_summary, "symbol_dependence_unadjusted": True,
             "survivorship_free": False, "independent_holdout": False,
             "corporate_actions_verified": False, "trade_ready": False}
