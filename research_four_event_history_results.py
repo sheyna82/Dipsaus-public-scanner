@@ -10,6 +10,7 @@ from urllib.request import Request, urlopen
 from research_probe_alternative_daily_source import BASE, SYMBOLS
 from research_audit_four_event_ohlcv import audit_chart
 from dipsaus_offline_event_history_outcomes import evaluate_daily_event_history
+from dipsaus_offline_event_calendar_baseline import compare_calendar_baseline
 from dipsaus_offline_completed_daily_bar_gate import completed_daily_bars
 
 
@@ -29,6 +30,7 @@ def evaluate_payload(symbol, payload):
         return {'symbol': symbol, 'status': 'DATA_BLOCKED', 'reason': gate['reason']}
     bars = gate['rows']
     outcomes = evaluate_daily_event_history(bars, horizon=10, fee_bps_each_side=10)
+    baseline = compare_calendar_baseline(bars, horizon=10, fee_bps_each_side=10)
     return {"symbol": symbol, "status": outcomes["status"],
             "history_bars": len(bars), "signal_count": outcomes.get("sample_count"),
             "positive_terminal_count": outcomes.get("positive_terminal_count"),
@@ -36,6 +38,7 @@ def evaluate_payload(symbol, payload):
             "severe_intraperiod_drawdown_count": outcomes.get("severe_intraperiod_drawdown_count"),
             "mean_terminal_net_pct": outcomes.get("mean_terminal_net_pct"),
             "signal_dates": [x["signal_date"] for x in outcomes.get("outcomes", [])],
+            "calendar_baseline": baseline,
             "earnings_dates_verified": False, "independent_holdout": False,
             "predictive_edge_proven": False, "trade_ready": False}
 
