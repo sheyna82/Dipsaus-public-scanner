@@ -1,7 +1,4 @@
-"""Fixed, non-optimized intersections of previously defined structure/regime flags.
-
-Purely exploratory: no threshold search and no live-trading integration.
-"""
+"""Fixed joint factor diagnostics on actual chronological event rows; research only."""
 from dipsaus_offline_structure_regime_diagnostic import evaluate_structure_regime
 
 
@@ -10,12 +7,31 @@ def evaluate_structure_intersections(stock, benchmark, *, min_test=10):
     if base.get("status") != "EXPLORATORY_STRUCTURE_REGIME_DIAGNOSTIC":
         return {"status": "DATA_BLOCKED", "reason": base.get("reason", "invalid_history"),
                 "test_events": base.get("test_events"), "trade_ready": False}
-    # The parent module returns aggregate metrics, not event-level classifications.
-    # Do not infer intersections from marginal counts: they are mathematically
-    # insufficient to reconstruct overlap and would fabricate observations.
-    return {"status": "DATA_BLOCKED", "reason": "joint_event_rows_not_exposed",
-            "parent_status": base["status"], "test_events": base["test_events"],
-            "required_fields": ["signal_date", "atr_expanding",
-                                "structure_above_20d_mean", "market_20d_positive",
-                                "terminal_return_net_pct", "max_adverse_excursion_pct"],
+    rows = base.get("test_rows")
+    if not isinstance(rows, list) or len(rows) != base["test_events"]:
+        return {"status": "DATA_BLOCKED", "reason": "joint_event_rows_not_exposed", "trade_ready": False}
+
+    def metrics(group):
+        if not group:
+            return None
+        return {"events": len(group),
+                "mean_net_return_pct": round(sum(r["terminal_return_net_pct"] for r in group)/len(group), 5),
+                "mean_adverse_excursion_pct": round(sum(r["max_adverse_excursion_pct"] for r in group)/len(group), 5),
+                "severe_adverse_rate_pct": round(100*sum(r["max_adverse_excursion_pct"] <= -3 for r in group)/len(group), 3),
+                "winning_events": sum(r["terminal_return_net_pct"] > 0 for r in group)}
+
+    combinations = {
+        "atr_and_structure": ("atr_expanding", "structure_above_20d_mean"),
+        "atr_and_market": ("atr_expanding", "market_20d_positive"),
+        "atr_structure_market": ("atr_expanding", "structure_above_20d_mean", "market_20d_positive"),
+    }
+    factors = {}
+    for name, fields in combinations.items():
+        selected = [r for r in rows if all(r[field] for field in fields)]
+        skipped = [r for r in rows if not all(r[field] for field in fields)]
+        factors[name] = {"selected": metrics(selected), "skipped": metrics(skipped),
+                         "missed_winning_events": sum(r["terminal_return_net_pct"] > 0 for r in skipped)}
+    return {"status": "EXPLORATORY_JOINT_FACTOR_DIAGNOSTIC",
+            "test_events": len(rows), "baseline_test": metrics(rows), "factors": factors,
+            "combinations_predeclared": True, "independent_untouched_holdout": False,
             "predictive_edge_proven": False, "trade_ready": False}
