@@ -37,6 +37,31 @@ def fit(training):
             "training_events": len(training)}
 
 
+
+def forecast(model, rows):
+    """Produce causal forecasts without requiring future outcome labels."""
+    if not isinstance(model, dict) or not all(
+            key in model for key in ("baseline", "expanded", "pooled")):
+        raise ValueError("invalid_model")
+    output = []
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError("invalid_event")
+        for name in ("structure_above_20d_mean", "market_20d_positive", "atr_expanding"):
+            if type(row.get(name)) is not bool:
+                raise ValueError("invalid_flag")
+        key = (row["structure_above_20d_mean"], row["market_20d_positive"])
+        baseline = model["baseline"].get(key)
+        expanded = model["expanded"].get(key + (row["atr_expanding"],))
+        output.append({"baseline_probability": _rate(baseline[1], baseline[0])
+                       if baseline else model["pooled"],
+                       "atr_probability": _rate(expanded[1], expanded[0])
+                       if expanded else model["pooled"],
+                       "baseline_fallback": baseline is None,
+                       "atr_fallback": expanded is None,
+                       "trade_ready": False})
+    return output
+
 def predict(model, rows):
     """Return paired frozen forecasts; unknown cells fall back to pooled prior."""
     output = []
