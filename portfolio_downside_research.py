@@ -12,6 +12,8 @@ def evaluate_intraday_downside(closes, highs, lows, opens, *, enabled=False):
         if any(not math.isfinite(v) or v<=0 for s in series for v in s):
             return {'status':'INVALID_DATA','trigger':False}
         c,h,l,o=series
+        if any(lo>min(op,cl) or hi<max(op,cl) or lo>hi for cl,hi,lo,op in zip(c,h,l,o)):
+            return {'status':'INVALID_OHLC','trigger':False}
         drawdown=(c[-1]/max(h)-1)*100
         lower_low=l[-1]<min(l[-31:-1])
         red=sum(c[-i]<o[-i] for i in range(1,6))
