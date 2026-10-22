@@ -22,7 +22,7 @@ def pair_return_and_downside(returns, downside):
             excess = float(r["excess_pct_points"])
             extra_downside = float(d["extra_adverse_pct_points"])
             from math import isfinite
-            if not isfinite(excess) or not isfinite(extra_downside) or extra_downside > 0:
+            if not isfinite(excess) or not isfinite(extra_downside):
                 raise ValueError
         except (KeyError, TypeError, ValueError):
             return {"status": "DATA_BLOCKED", "reason": "invalid_metric", "trade_ready": False}
