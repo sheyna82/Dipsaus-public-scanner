@@ -23,6 +23,16 @@ class IncrementalATRHoldoutScoringTests(unittest.TestCase):
         self.assertFalse(result["independent_holdout_verified"])
         self.assertFalse(result["trade_ready"])
 
+    def test_corrupt_forecast_model_rejected(self):
+        features = [{"structure_above_20d_mean": True,
+                     "market_20d_positive": True, "atr_expanding": False}]
+        for bad in ({"baseline": [], "expanded": {}, "pooled": 0.5},
+                    {"baseline": {}, "expanded": {}, "pooled": float("nan")},
+                    {"baseline": {}, "expanded": {}, "pooled": True}):
+            with self.subTest(model=repr(bad)):
+                with self.assertRaises(ValueError):
+                    forecast(bad, features)
+
     def test_nonsequence_training_input_rejected(self):
         with self.assertRaises(ValueError):
             fit({"severe": True})
