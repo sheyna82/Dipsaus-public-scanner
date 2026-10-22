@@ -309,6 +309,37 @@ def summarize(records):
         "mean_equal_day_paired_difference_pct_points":
             round(sum(paired_days) / len(paired_days), 3) if paired_days else None,
         "descriptive_only": True, "independence_established": False}
+    # Predeclared 14-calendar-day blocks: avoid counting neighboring signal days
+    # as independent evidence. Equal-weight within-block ATR contrasts only.
+    atr_block_sensitivity = []
+    for offset in (0, 3, 7, 10):
+        blocks = {}
+        for event in all_event_outcomes:
+            index = ((date.fromisoformat(event["date"]) - first_day).days + offset) // 14
+            blocks.setdefault(index, []).append(event)
+        paired = []
+        for events in blocks.values():
+            groups = []
+            for value in (False, True):
+                matching = [e for e in events if e["atr_expanding"] is value]
+                severe = sum(e["max_adverse_excursion_pct"] <= -3 for e in matching)
+                groups.append((len(matching), 100 * severe / len(matching) if matching else None))
+            if groups[0][0] and groups[1][0]:
+                paired.append(groups[1][1] - groups[0][1])
+        atr_block_sensitivity.append({"offset_calendar_days": offset,
+            "total_blocks": len(blocks), "paired_blocks": len(paired),
+            "lower_risk_blocks": sum(x < 0 for x in paired),
+            "higher_risk_blocks": sum(x > 0 for x in paired),
+            "equal_risk_blocks": sum(x == 0 for x in paired),
+            "equal_block_mean_difference_pct_points":
+                round(sum(paired) / len(paired), 3) if paired else None})
+    atr_block_summary = {"calendar_days_per_block": 14,
+        "offsets": atr_block_sensitivity,
+        "all_offsets_negative": all(x["equal_block_mean_difference_pct_points"] is not None
+                                    and x["equal_block_mean_difference_pct_points"] < 0
+                                    for x in atr_block_sensitivity),
+        "independence_established": False, "validated_predictor": False,
+        "descriptive_only": True}
     # Fixed-regime cross-era sign consistency, with no trading threshold inferred.
     regime_consistency = []
     for market_up in (True, False):
@@ -472,6 +503,7 @@ def summarize(records):
             "atr_symbol_risk_heterogeneity": atr_symbol_summary,
             "atr_sector_risk_heterogeneity": atr_sector_contrasts,
             "atr_same_day_cluster_sensitivity": atr_same_day,
+            "atr_14_day_block_sensitivity": atr_block_summary,
             "market_regime_summary": regime_summary, "symbol_dependence_unadjusted": True,
             "survivorship_free": False, "independent_holdout": False,
             "corporate_actions_verified": False, "trade_ready": False}
