@@ -11,7 +11,7 @@ def make_bars():
     start = date(2026, 1, 5)
     days = [start + timedelta(days=i) for i in range(32)
             if (start + timedelta(days=i)).weekday() < 5]
-    return "".join(f"{day.isoformat()},10,11,9,10,1000\\n" for day in days[:22])
+    return "".join(f"{day.isoformat()},10,11,9,10,1000\n" for day in days[:22])
 
 BARS = make_bars()
 
