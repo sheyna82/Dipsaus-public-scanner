@@ -121,6 +121,7 @@ on:
       - 'dipsaus_offline_structure_intersection_gate.py'
       - 'research_observed_four_structure_intersections.py'
       - 'research_multisector_five_year_coverage.py'
+      - 'research_multisector_five_year_joint_replication.py'
       - 'test_research_multisector_five_year_coverage.py'
       - 'test_dipsaus_offline_structure_intersection_gate.py'
       - 'dipsaus_offline_chronological_rs_atr.py'
@@ -476,3 +477,18 @@ jobs:
           python-version: '3.12'
       - name: Probe fixed multisector historical source coverage
         run: python research_multisector_five_year_coverage.py
+
+  multisector-five-year-joint-replication:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Replicate fixed joint factors across eight sectors
+        run: python research_multisector_five_year_joint_replication.py
