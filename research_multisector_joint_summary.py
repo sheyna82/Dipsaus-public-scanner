@@ -374,6 +374,32 @@ def summarize(records):
                                 for x in comparable_cells),
         "descriptive_only": True, "incremental_predictive_value_proven": False,
         "independent_holdout": False}
+    # Chronological stability of the four predeclared ATR/structure/market cells.
+    atr_conditional_eras = []
+    for era in range(3):
+        era_events = [e for e in all_event_outcomes
+                      if min(2, 3 * (date.fromisoformat(e["date"]) - first_day).days // span) == era]
+        cells = []
+        for structure in (False, True):
+            for market_up in (False, True):
+                subset = [e for e in era_events
+                          if e["structure_above_20d_mean"] is structure
+                          and e["market_20d_positive"] is market_up]
+                counts = []
+                for atr in (False, True):
+                    matching = [e for e in subset if e["atr_expanding"] is atr]
+                    severe = sum(e["max_adverse_excursion_pct"] <= -3 for e in matching)
+                    counts.append({"atr_expanding": atr, "events": len(matching),
+                                   "severe_events": severe,
+                                   "severe_rate_pct": round(100 * severe / len(matching), 3)
+                                   if matching else None})
+                delta = (round(counts[1]["severe_rate_pct"] - counts[0]["severe_rate_pct"], 3)
+                         if all(g["events"] for g in counts) else None)
+                cells.append({"structure_above_20d_mean": structure,
+                              "market_20d_positive": market_up,
+                              "groups": counts, "atr_true_minus_false_severe_rate_pp": delta})
+        atr_conditional_eras.append({"chronological_third": era + 1,
+                                     "events": len(era_events), "cells": cells})
     # Fixed-regime cross-era sign consistency, with no trading threshold inferred.
     regime_consistency = []
     for market_up in (True, False):
@@ -539,6 +565,7 @@ def summarize(records):
             "atr_same_day_cluster_sensitivity": atr_same_day,
             "atr_14_day_block_sensitivity": atr_block_summary,
             "atr_conditional_structure_market_risk": atr_conditional_summary,
+            "atr_conditional_chronological_eras": atr_conditional_eras,
             "market_regime_summary": regime_summary, "symbol_dependence_unadjusted": True,
             "survivorship_free": False, "independent_holdout": False,
             "corporate_actions_verified": False, "trade_ready": False}
