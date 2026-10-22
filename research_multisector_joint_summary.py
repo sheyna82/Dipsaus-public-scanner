@@ -81,7 +81,11 @@ def summarize(records):
             "selected_worse_blocks": sum(d < 0 for d in deltas),
             "selected_equal_blocks": sum(d == 0 for d in deltas),
             "mean_paired_block_delta_pct": round(sum(deltas)/len(deltas), 5) if deltas else None})
+    observed_deltas = [x["mean_paired_block_delta_pct"] for x in offset_sensitivity]
     time_block = {"calendar_days_per_block": 14,
+                  "all_offsets_positive": all(x is not None and x > 0 for x in observed_deltas),
+                  "min_offset_delta_pct": min(x for x in observed_deltas if x is not None) if any(x is not None for x in observed_deltas) else None,
+                  "max_offset_delta_pct": max(x for x in observed_deltas if x is not None) if any(x is not None for x in observed_deltas) else None,
                   **{k: v for k, v in offset_sensitivity[0].items() if k != "offset_calendar_days"},
                   "offset_sensitivity": offset_sensitivity,
                   "formal_significance_test": False}
