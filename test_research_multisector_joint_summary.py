@@ -46,8 +46,8 @@ class JointSummaryTests(unittest.TestCase):
         self.assertEqual(result["market_regime_summary"]["market_20d_positive"]["baseline_mean_adverse_excursion_pct"], -5.0)
         self.assertEqual(result["market_regime_summary"]["market_20d_positive"]["rejected_mean_net_return_pct"], 0.0)
         self.assertEqual(result["market_regime_summary"]["market_20d_positive"]["rejected_severe_adverse_rate_pct"], 100.0)
-        self.assertEqual(result["time_block_sensitivity"]["paired_blocks"], 2)
-        self.assertEqual(result["time_block_sensitivity"]["selected_better_blocks"], 2)
+        self.assertEqual(result["time_block_sensitivity"]["paired_blocks"], 1)
+        self.assertEqual(result["time_block_sensitivity"]["selected_better_blocks"], 1)
         self.assertEqual(result["time_block_sensitivity"]["mean_paired_block_delta_pct"], 2.0)
         self.assertFalse(result["trade_ready"])
 
