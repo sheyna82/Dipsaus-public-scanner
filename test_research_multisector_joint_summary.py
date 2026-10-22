@@ -14,7 +14,7 @@ def valid_row(symbol, sector):
                     "atr_structure_selected": {"events": 2, "winning_events": 1,
                         "mean_net_return_pct": 2.0, "mean_adverse_excursion_pct": -4.0,
                         "severe_adverse_rate_pct": 50.0},
-                    "atr_structure_rejected": {"events": 2}, "missed_winning_events": 1},
+                    "atr_structure_rejected": {"events": 2, "mean_net_return_pct": 0.0, "mean_adverse_excursion_pct": -6.0, "severe_adverse_rate_pct": 100.0}, "missed_winning_events": 1},
                 "market_20d_nonpositive": {"baseline": None,
                     "atr_structure_selected": None, "atr_structure_rejected": None,
                     "missed_winning_events": 0}},
@@ -34,6 +34,8 @@ class JointSummaryTests(unittest.TestCase):
         self.assertEqual(result["market_regime_summary"]["market_20d_positive"]["selected_mean_net_return_pct"], 2.0)
         self.assertEqual(result["market_regime_summary"]["market_20d_positive"]["baseline_mean_net_return_pct"], 1.0)
         self.assertEqual(result["market_regime_summary"]["market_20d_positive"]["baseline_mean_adverse_excursion_pct"], -5.0)
+        self.assertEqual(result["market_regime_summary"]["market_20d_positive"]["rejected_mean_net_return_pct"], 0.0)
+        self.assertEqual(result["market_regime_summary"]["market_20d_positive"]["rejected_severe_adverse_rate_pct"], 100.0)
         self.assertFalse(result["trade_ready"])
 
     def test_missing_symbol_blocks(self):
