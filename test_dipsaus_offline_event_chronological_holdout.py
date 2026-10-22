@@ -21,7 +21,9 @@ class ChronologicalHoldoutTests(unittest.TestCase):
         self.assertFalse(out["predictive_edge_proven"])
         self.assertFalse(out["trade_ready"])
         self.assertFalse(out["test_set_independent_of_development"])
-        self.assertTrue(out["rule_frozen"])\n        self.assertFalse(out["test_signal_count_sufficient"])\n        self.assertEqual(out["sample_warning"], "INSUFFICIENT_TEST_SIGNALS")
+        self.assertTrue(out["rule_frozen"])
+        self.assertFalse(out["test_signal_count_sufficient"])
+        self.assertEqual(out["sample_warning"], "INSUFFICIENT_TEST_SIGNALS")
 
     def test_no_signals_still_valid_split(self):
         out = chronological_holdout(sample(falling=True))
@@ -31,7 +33,8 @@ class ChronologicalHoldoutTests(unittest.TestCase):
 
     def test_bad_input_blocks(self):
         self.assertEqual(chronological_holdout([])["status"], "DATA_BLOCKED")
-        self.assertEqual(chronological_holdout(sample(), horizon=0)["status"], "DATA_BLOCKED")\n        self.assertEqual(chronological_holdout(sample(), fee_bps_each_side=-1)["status"], "DATA_BLOCKED")
+        self.assertEqual(chronological_holdout(sample(), horizon=0)["status"], "DATA_BLOCKED")
+        self.assertEqual(chronological_holdout(sample(), fee_bps_each_side=-1)["status"], "DATA_BLOCKED")
 
 
 if __name__ == "__main__":
