@@ -112,6 +112,7 @@ on:
       - 'research_diagnose_dis_history.py'
       - 'research_multisector_source_availability.py'
       - 'test_research_multisector_source_availability.py'
+      - 'research_observed_four_event_spy_risk.py'
       - 'dipsaus_offline_frozen_event_market_bridge.py'
       - 'test_dipsaus_offline_frozen_event_market_bridge.py'
       - 'dipsaus_offline_combined_return_risk.py'
@@ -349,3 +350,18 @@ jobs:
           python-version: '3.12'
       - name: Inspect DIS rejected bars without repairing vendor data
         run: python research_diagnose_dis_history.py
+
+  observed-four-event-spy-risk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Compare observed frozen events to SPY return and downside (unverified source)
+        run: python research_observed_four_event_spy_risk.py
