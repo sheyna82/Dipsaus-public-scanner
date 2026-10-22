@@ -22,8 +22,8 @@ def _rate(severe, count):
 
 def fit(training):
     """Fit baseline and ATR-augmented cell frequencies using training labels only."""
-    if not training:
-        raise ValueError("empty_training")
+    if not isinstance(training, (list, tuple)) or not training:
+        raise ValueError("invalid_training_rows")
     baseline = {}
     expanded = {}
     for row in training:
