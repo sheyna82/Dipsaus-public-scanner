@@ -52,7 +52,22 @@ def evaluate_cohorts():
             raise ValueError("evaluation_rejected")
         selected = [r for r in result["rows"] if r["score"] >= 5]
         skipped = [r for r in result["rows"] if r["score"] < 5]
-        # Prespecified calendar split, not a truly untouched holdout: earlier\n        # exploratory work already inspected the full Apple history.\n        split_date = "2016-02-17"\n        chronological = {}\n        for period, predicate in (("early", lambda d: d < split_date),\n                                  ("late", lambda d: d >= split_date)):\n            period_rows = [r for r in result["rows"] if predicate(r["signal_date"])]\n            period_selected = [r for r in period_rows if r["score"] >= 5]\n            period_skipped = [r for r in period_rows if r["score"] < 5]\n            chronological[period] = {\n                "selected": cohort_summary(period_selected),\n                "skipped": cohort_summary(period_skipped),\n                "selected_downside": downside_metrics(period_selected),\n                "skipped_downside": downside_metrics(period_skipped)}\n        report[label] = {"chronological_diagnostic": chronological,\n                         "selected": cohort_summary(selected),
+        # Prespecified calendar split, not a truly untouched holdout: earlier
+        # exploratory work already inspected the full Apple history.
+        split_date = "2016-02-17"
+        chronological = {}
+        for period, predicate in (("early", lambda d: d < split_date),
+                                  ("late", lambda d: d >= split_date)):
+            period_rows = [r for r in result["rows"] if predicate(r["signal_date"])]
+            period_selected = [r for r in period_rows if r["score"] >= 5]
+            period_skipped = [r for r in period_rows if r["score"] < 5]
+            chronological[period] = {
+                "selected": cohort_summary(period_selected),
+                "skipped": cohort_summary(period_skipped),
+                "selected_downside": downside_metrics(period_selected),
+                "skipped_downside": downside_metrics(period_skipped)}
+        report[label] = {"chronological_diagnostic": chronological,
+                         "selected": cohort_summary(selected),
                          "skipped": cohort_summary(skipped),
                          "selected_downside": downside_metrics(selected),
                          "skipped_downside": downside_metrics(skipped),
@@ -60,7 +75,8 @@ def evaluate_cohorts():
     report["selection_dates_identical"] = (
         report["raw"]["selected_dates"] == report["adjusted_scenario"]["selected_dates"])
     report["adjustment_policy_verified"] = False
-    report["holdout_validated"] = False\n    report["chronological_split_is_independent_holdout"] = False
+    report["holdout_validated"] = False
+    report["chronological_split_is_independent_holdout"] = False
     report["trade_ready"] = False
     return report
 
