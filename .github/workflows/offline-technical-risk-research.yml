@@ -64,6 +64,7 @@ on:
       - 'dipsaus_offline_exe_missing_minutes.py'
       - 'test_dipsaus_offline_exe_missing_minutes.py'
       - 'test_research_exe_historical_lead_time.py'
+      - 'dipsaus_offline_exe_contiguous_spans.py'
       - 'dipsaus_offline_event_holdout_risk_summary.py'
       - 'test_dipsaus_offline_event_holdout_risk_summary.py'
       - 'dipsaus_offline_event_calendar_phases.py'
