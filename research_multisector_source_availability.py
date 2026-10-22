@@ -5,10 +5,12 @@ Success for surviving names does not establish survivorship-free coverage.
 No data stored, no indicators scored, no trading decisions.
 """
 import json
+from datetime import datetime, timezone
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
 from research_audit_four_event_ohlcv import audit_chart
+from dipsaus_offline_completed_daily_bar_gate import completed_daily_bars
 
 CANDIDATES = (
     ("XOM", "Energy", "active"),
@@ -39,9 +41,26 @@ def inspect_candidate(symbol, sector, listing_status, fetch=None):
         if len(raw) > 1_500_000:
             return {"symbol": symbol, "sector": sector, "listing_status": listing_status,
                     "status": "DATA_BLOCKED", "reason": "oversized"}
-        audit = audit_chart(json.loads(raw), symbol)
+        payload = json.loads(raw)
+        result = payload['chart']['result'][0]
+        timestamps = result['timestamp']
+        quote = result['indicators']['quote'][0]
+        rows = [{'date': datetime.fromtimestamp(ts, timezone.utc).date().isoformat(),
+                 **{field: quote[field][i] for field in ('open', 'high', 'low', 'close', 'volume')}}
+                for i, ts in enumerate(timestamps)]
+        completed = completed_daily_bars(rows, now_utc=datetime.now(timezone.utc))
+        if completed['status'] != 'PRIOR_DATE_ONLY':
+            return {'symbol': symbol, 'sector': sector, 'listing_status': listing_status,
+                    'status': 'DATA_BLOCKED', 'reason': 'incomplete_session_gate',
+                    'trade_ready': False}
+        keep = len(completed['rows'])
+        result['timestamp'] = timestamps[:keep]
+        for field in ('open', 'high', 'low', 'close', 'volume'):
+            quote[field] = quote[field][:keep]
+        audit = audit_chart(payload, symbol)
         return {"symbol": symbol, "sector": sector, "listing_status": listing_status,
                 "status": audit["status"], "bars": audit.get("bars"),
+                "discarded_unconfirmed_bars": len(rows) - keep,
                 "reason": audit.get("reason"),
                 "corporate_actions_verified": False,
                 "point_in_time_earnings_verified": False,
