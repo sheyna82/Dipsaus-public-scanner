@@ -46,6 +46,7 @@ on:
       - 'test_dipsaus_offline_adjustment_gate.py'
       - 'dipsaus_offline_adjustment_factor_audit.py'
       - 'test_dipsaus_offline_adjustment_factor_audit.py'
+      - 'research_observe_apple_adjustment_factors.py'
       - '.github/workflows/offline-technical-risk-research.yml'
 permissions:
   contents: read
@@ -106,3 +107,18 @@ jobs:
           python-version: '3.12'
       - name: Audit public Apple and SPY price adjustments
         run: python research_audit_aapl_spy_adjustments.py
+
+  observed-apple-adjustment-factors:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Observe real Apple adjusted-close factor changes
+        run: python research_observe_apple_adjustment_factors.py
