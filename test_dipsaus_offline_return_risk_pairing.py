@@ -29,10 +29,11 @@ class ReturnRiskPairingTests(unittest.TestCase):
         b["rows"].pop()
         self.assertEqual(pair(a, b)["reason"], "event_count_mismatch")
 
-    def test_positive_extra_downside_blocks(self):
+    def test_shallower_than_market_drawdown_is_valid(self):
         a, b = self.inputs()
         b["rows"][0]["extra_adverse_pct_points"] = 1
-        self.assertEqual(pair(a, b)["reason"], "invalid_metric")
+        self.assertEqual(pair(a, b)["status"], "EXPLORATORY_RETURN_RISK_PAIRING")
+        self.assertEqual(pair(a, b)["beat_market_with_deeper_drawdown_count"], 0)
 
 
 if __name__ == "__main__":
