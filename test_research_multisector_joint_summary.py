@@ -9,7 +9,11 @@ def valid_row(symbol, sector):
     return {"symbol": symbol, "sector": sector,
             "status": "EXPLORATORY_JOINT_FACTOR_DIAGNOSTIC",
             "baseline_test": metric,
-            "dependence_diagnostic": {"test_signal_dates": ["2026-01-01", "2026-01-12", "2026-01-23", "2026-02-04"]},
+            "dependence_diagnostic": {"test_signal_dates": ["2026-01-01", "2026-01-12", "2026-01-23", "2026-02-04"],
+                "test_event_outcomes": [{"date": day, "net_return_pct": ret,
+                    "atr_structure_selected": chosen} for day, ret, chosen in
+                    [("2026-01-01", 2.0, True), ("2026-01-12", 0.0, False),
+                     ("2026-01-23", 2.0, True), ("2026-02-04", 0.0, False)]]},
             "market_regime_diagnostics": {
                 "market_20d_positive": {"baseline": {"events": 4, "mean_net_return_pct": 1.0, "mean_adverse_excursion_pct": -5.0, "severe_adverse_rate_pct": 75.0},
                     "atr_structure_selected": {"events": 2, "winning_events": 1,
@@ -42,6 +46,9 @@ class JointSummaryTests(unittest.TestCase):
         self.assertEqual(result["market_regime_summary"]["market_20d_positive"]["baseline_mean_adverse_excursion_pct"], -5.0)
         self.assertEqual(result["market_regime_summary"]["market_20d_positive"]["rejected_mean_net_return_pct"], 0.0)
         self.assertEqual(result["market_regime_summary"]["market_20d_positive"]["rejected_severe_adverse_rate_pct"], 100.0)
+        self.assertEqual(result["time_block_sensitivity"]["paired_blocks"], 2)
+        self.assertEqual(result["time_block_sensitivity"]["selected_better_blocks"], 2)
+        self.assertEqual(result["time_block_sensitivity"]["mean_paired_block_delta_pct"], 2.0)
         self.assertFalse(result["trade_ready"])
 
     def test_missing_symbol_blocks(self):
