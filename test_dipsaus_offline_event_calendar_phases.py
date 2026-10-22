@@ -1,9 +1,10 @@
 import unittest
+from datetime import date, timedelta
 from dipsaus_offline_event_calendar_phases import compare_calendar_phases
 
 
 def rows(n=85):
-    return [{"date": f"day-{i:03d}", "open": 100 + i,
+    return [{"date": (date(2026, 1, 1) + timedelta(days=i)).isoformat(), "open": 100 + i,
              "high": 101 + i, "low": 99 + i,
              "close": 100 + i, "volume": 1000} for i in range(n)]
 
