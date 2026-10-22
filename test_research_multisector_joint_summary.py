@@ -68,6 +68,10 @@ class JointSummaryTests(unittest.TestCase):
         self.assertEqual(sum(g["events"] for x in sector_rows
                              for g in x["groups"]), 64)
         self.assertTrue(all(x["descriptive_only"] for x in sector_rows))
+        conditional_eras = result["atr_conditional_chronological_eras"]
+        self.assertEqual(len(conditional_eras), 3)
+        self.assertTrue(all(len(era["cells"]) == 4 for era in conditional_eras))
+        self.assertEqual(sum(era["events"] for era in conditional_eras), 64)
         conditional = result["atr_conditional_structure_market_risk"]
         self.assertEqual(len(conditional["cells"]), 4)
         self.assertEqual(sum(g["events"] for cell in conditional["cells"]
