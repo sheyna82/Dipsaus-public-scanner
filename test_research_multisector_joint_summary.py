@@ -11,7 +11,8 @@ def valid_row(symbol, sector):
             "baseline_test": metric,
             "dependence_diagnostic": {"test_signal_dates": ["2026-01-01", "2026-01-12", "2026-01-23", "2026-02-04"],
                 "test_event_outcomes": [{"date": day, "net_return_pct": ret,
-                    "atr_structure_selected": chosen, "market_20d_positive": True} for day, ret, chosen in
+                    "atr_structure_selected": chosen, "market_20d_positive": True,
+                    "atr_expanding": chosen, "structure_above_20d_mean": True} for day, ret, chosen in
                     [("2026-01-01", 2.0, True), ("2026-01-12", 0.0, False),
                      ("2026-01-23", 2.0, True), ("2026-02-04", 0.0, False)]]},
             "market_regime_diagnostics": {
@@ -56,6 +57,8 @@ class JointSummaryTests(unittest.TestCase):
         self.assertEqual(len(result["chronological_era_breadth"]), 3)
         self.assertEqual(len(result["chronological_era_market_regimes"]), 3)
         self.assertEqual(len(result["market_regime_cross_era_consistency"]), 2)
+        self.assertEqual(len(result["chronological_era_factor_prevalence"]), 3)
+        self.assertEqual(sum(x["factor_true_counts"]["atr_expanding"] for x in result["chronological_era_factor_prevalence"]), 32)
         self.assertFalse(result["market_regime_cross_era_consistency"][1]["all_three_eras_comparable"])
         self.assertEqual(sum(z["events"] for x in result["chronological_era_market_regimes"] for z in x["regimes"]), 64)
         self.assertTrue(all(x["comparable_symbols"] <= 16 for x in result["chronological_era_breadth"]))
