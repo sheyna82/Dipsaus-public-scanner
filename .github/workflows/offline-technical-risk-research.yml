@@ -2,6 +2,7 @@ name: DIPSAUS offline technical risk research
 on:
   pull_request:
     paths:
+      - 'research_exe_intraday_replay.py'
       - 'portfolio_downside_research.py'
       - 'test_portfolio_downside_research.py'
       - 'dipsaus_offline_technical_risk.py'
