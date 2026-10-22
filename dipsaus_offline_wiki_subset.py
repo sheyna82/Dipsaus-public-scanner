@@ -5,6 +5,7 @@ Adjusted OHLC must be complete: never mix adjusted and raw columns.
 """
 import csv
 import math
+from datetime import date
 from pathlib import Path
 
 from dipsaus_offline_ohlcv_csv import load_local_ohlcv_csv
@@ -42,6 +43,12 @@ def convert_wiki_subset(input_path, output_path, *, symbol, adjusted=True):
             op, hi, lo, cl, vol = values
             if min(op, hi, lo, cl) <= 0 or vol < 0 or hi < max(op, cl, lo) or lo > min(op, cl, hi):
                 raise ValueError("invalid_ohlcv")
+            try:
+                observed_date = date.fromisoformat(row["date"])
+            except ValueError as exc:
+                raise ValueError("invalid_date") from exc
+            if observed_date.isoformat() != row["date"] or observed_date.weekday() >= 5:
+                raise ValueError("invalid_trading_date")
             parsed.append((row["date"], values))
             if len(parsed) > 15000:
                 raise ValueError("too_many_bars")
