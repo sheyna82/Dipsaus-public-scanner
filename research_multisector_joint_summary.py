@@ -280,6 +280,35 @@ def summarize(records):
             row["sector"] == sector for row in valid), "groups": groups,
             "rate_difference_true_minus_false_pct_points": delta,
             "descriptive_only": True})
+    # Same-day clusters: each signal date contributes at most one descriptive contrast.
+    # This reduces same-day symbol overweighting but does not remove serial dependence.
+    atr_day_groups = {}
+    for event in all_event_outcomes:
+        atr_day_groups.setdefault(event["date"], []).append(event)
+    day_contrasts = []
+    for signal_day, events in sorted(atr_day_groups.items()):
+        groups = []
+        for value in (False, True):
+            matching = [e for e in events if e["atr_expanding"] is value]
+            severe = sum(e["max_adverse_excursion_pct"] <= -3 for e in matching)
+            groups.append({"flag_value": value, "events": len(matching),
+                           "severe_rate_pct": round(100 * severe / len(matching), 3)
+                           if matching else None})
+        delta = (round(groups[1]["severe_rate_pct"] - groups[0]["severe_rate_pct"], 3)
+                 if all(g["events"] for g in groups) else None)
+        day_contrasts.append({"date": signal_day, "symbols": len(events),
+                              "rate_difference_true_minus_false_pct_points": delta})
+    paired_days = [d["rate_difference_true_minus_false_pct_points"] for d in day_contrasts
+                   if d["rate_difference_true_minus_false_pct_points"] is not None]
+    atr_same_day = {"distinct_days": len(day_contrasts),
+        "days_with_multiple_symbols": sum(d["symbols"] > 1 for d in day_contrasts),
+        "days_with_both_atr_groups": len(paired_days),
+        "paired_days_lower_risk_with_atr": sum(x < 0 for x in paired_days),
+        "paired_days_higher_risk_with_atr": sum(x > 0 for x in paired_days),
+        "paired_days_equal": sum(x == 0 for x in paired_days),
+        "mean_equal_day_paired_difference_pct_points":
+            round(sum(paired_days) / len(paired_days), 3) if paired_days else None,
+        "descriptive_only": True, "independence_established": False}
     # Fixed-regime cross-era sign consistency, with no trading threshold inferred.
     regime_consistency = []
     for market_up in (True, False):
@@ -442,6 +471,7 @@ def summarize(records):
             "early_risk_flag_era_stability": early_risk_era_stability,
             "atr_symbol_risk_heterogeneity": atr_symbol_summary,
             "atr_sector_risk_heterogeneity": atr_sector_contrasts,
+            "atr_same_day_cluster_sensitivity": atr_same_day,
             "market_regime_summary": regime_summary, "symbol_dependence_unadjusted": True,
             "survivorship_free": False, "independent_holdout": False,
             "corporate_actions_verified": False, "trade_ready": False}
