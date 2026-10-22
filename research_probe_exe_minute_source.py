@@ -17,12 +17,22 @@ def probe(opener=urllib.request.urlopen):
         timestamps=result.get("timestamp") or []
         quote=result["indicators"]["quote"][0]
         dates={}
+        times={}
+        invalid_ohlc=0
         for i,t in enumerate(timestamps):
             day=datetime.fromtimestamp(t,timezone.utc).astimezone(NY).date().isoformat()
             if all(i<len(quote.get(k,[])) and quote[k][i] is not None for k in ("open","high","low","close")):
                 dates[day]=dates.get(day,0)+1
+                times.setdefault(day,[]).append(datetime.fromtimestamp(t,timezone.utc).astimezone(NY))
+                if not (quote["low"][i]<=min(quote["open"][i],quote["close"][i])<=max(quote["open"][i],quote["close"][i])<=quote["high"][i]):
+                    invalid_ohlc+=1
+        target=times.get("2026-10-22",[])
+        gaps=sum((target[i+1]-target[i]).total_seconds()!=60 for i in range(len(target)-1))
         return {"status":"SOURCE_RESPONSE","symbol":"EXE","interval":"1m",
-                "bars_by_ny_session":dates,"target_2026_10_22_bars":dates.get("2026-10-22",0),
+                "bars_by_ny_session":dates,
+                "target_first_ny":target[0].isoformat() if target else None,
+                "target_last_ny":target[-1].isoformat() if target else None,
+                "target_gap_count":gaps,"invalid_ohlc_bars":invalid_ohlc,"target_2026_10_22_bars":dates.get("2026-10-22",0),
                 "trade_ready":False,"source_verified_for_replay":False}
     except urllib.error.HTTPError as e:
         return {"status":"HTTP_ERROR","http_status":e.code,"trade_ready":False}
