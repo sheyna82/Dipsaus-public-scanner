@@ -15,6 +15,8 @@ def audit_chronological_split(training, holdout, sessions, *, embargo_sessions=1
         sessions = []
     try:
         parsed = [date.fromisoformat(x) for x in sessions]
+        if any(day.isoformat() != raw for day, raw in zip(parsed, sessions)):
+            errors.append("noncanonical_session_date")
         if len(set(parsed)) != len(parsed) or parsed != sorted(parsed):
             errors.append("unordered_or_duplicate_sessions")
     except (TypeError, ValueError):
