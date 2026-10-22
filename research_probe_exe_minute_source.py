@@ -27,12 +27,17 @@ def probe(opener=urllib.request.urlopen):
                 if not (quote["low"][i]<=min(quote["open"][i],quote["close"][i])<=max(quote["open"][i],quote["close"][i])<=quote["high"][i]):
                     invalid_ohlc+=1
         target=times.get("2026-10-22",[])
-        gaps=sum((target[i+1]-target[i]).total_seconds()!=60 for i in range(len(target)-1))
+        gap_details=[{"previous":target[i].isoformat(),"next":target[i+1].isoformat(),"seconds":(target[i+1]-target[i]).total_seconds()} for i in range(len(target)-1) if (target[i+1]-target[i]).total_seconds()!=60]
+        gaps=len(gap_details)
+        incomplete_tail=bool(target and (target[-1].second!=0 or target[-1].microsecond!=0))
         return {"status":"SOURCE_RESPONSE","symbol":"EXE","interval":"1m",
                 "bars_by_ny_session":dates,
                 "target_first_ny":target[0].isoformat() if target else None,
                 "target_last_ny":target[-1].isoformat() if target else None,
-                "target_gap_count":gaps,"invalid_ohlc_bars":invalid_ohlc,"target_2026_10_22_bars":dates.get("2026-10-22",0),
+                "target_gap_count":gaps,"target_gap_details":gap_details,
+                "target_last_bar_in_progress":incomplete_tail,
+                "target_completed_minute_bars":len(target)-int(incomplete_tail),
+                "invalid_ohlc_bars":invalid_ohlc,"target_2026_10_22_bars":dates.get("2026-10-22",0),
                 "trade_ready":False,"source_verified_for_replay":False}
     except urllib.error.HTTPError as e:
         return {"status":"HTTP_ERROR","http_status":e.code,"trade_ready":False}
