@@ -49,6 +49,7 @@ on:
       - 'research_observe_apple_adjustment_factors.py'
       - 'research_aapl_adjustment_sensitivity.py'
       - 'research_aapl_spy_selected_skipped.py'
+      - 'research_probe_four_event_tickers.py'
       - 'dipsaus_offline_event_session_gate.py'
       - 'test_dipsaus_offline_event_session_gate.py'
       - 'dipsaus_offline_event_daily_evidence.py'
@@ -176,3 +177,18 @@ jobs:
           python-version: '3.12'
       - name: Compare selected and skipped observed Apple signals
         run: python research_aapl_spy_selected_skipped.py
+
+  four-event-ticker-source-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Probe four free daily data endpoints (nonblocking research)
+        run: python research_probe_four_event_tickers.py
