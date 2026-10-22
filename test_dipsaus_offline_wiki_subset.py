@@ -36,6 +36,8 @@ class WikiSubsetTests(unittest.TestCase):
 
     def test_rejects_invalid_dates(self):
         self.write()
+        content = self.src.read_text(encoding="utf-8")
+        self.src.write_text(content.replace("2017-02-01", "2017-02-30", 1), encoding="utf-8")
         with self.assertRaises(ValueError):
             convert_wiki_subset(self.src, self.dst, symbol="AAPL")
         self.assertFalse(self.dst.exists())
