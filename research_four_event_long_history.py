@@ -7,6 +7,7 @@ import json
 from urllib.request import Request, urlopen
 from research_probe_alternative_daily_source import BASE, SYMBOLS
 from research_four_event_history_results import evaluate_payload
+from dipsaus_offline_event_holdout_risk_summary import summarize_holdouts
 
 LONG_BASE = BASE.replace("range=3mo", "range=2y")
 
@@ -36,8 +37,9 @@ def evaluate_long_symbol(symbol, fetch=None):
 
 
 if __name__ == "__main__":
-    for symbol in SYMBOLS:
-        result = evaluate_long_symbol(symbol)
+    all_results = [evaluate_long_symbol(symbol) for symbol in SYMBOLS]
+    for result in all_results:
+        symbol = result["symbol"]
         # Avoid huge log lines; print just key diagnostics.
         holdout = result.get("chronological_holdout", {})
         print(json.dumps({"symbol": symbol, "status": result.get("status"),
@@ -47,3 +49,5 @@ if __name__ == "__main__":
                           "adjustments_independently_verified": False,
                           "predictive_edge_proven": False, "trade_ready": False},
                          sort_keys=True))
+
+    print(json.dumps({"pooled_holdout_risk": summarize_holdouts(all_results)}, sort_keys=True))
