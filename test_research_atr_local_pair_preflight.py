@@ -39,7 +39,7 @@ class ATRLocalPairPreflightTests(unittest.TestCase):
         self.assertEqual(result["reason"], "hash_mismatch")
 
     def test_session_mismatch_blocks(self):
-        result = self.run_pair(BARS, BARS.replace("2026-01-06", "2026-01-10"))
+        result = self.run_pair(BARS, BARS.replace("2026-02-03", "2026-02-04"))
         self.assertEqual(result["reason"], "unaligned_sessions")
 
     def test_suspicious_jump_blocks(self):
