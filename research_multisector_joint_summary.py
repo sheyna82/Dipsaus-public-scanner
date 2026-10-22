@@ -89,6 +89,23 @@ def summarize(records):
                   **{k: v for k, v in offset_sensitivity[0].items() if k != "offset_calendar_days"},
                   "offset_sensitivity": offset_sensitivity,
                   "formal_significance_test": False}
+    # Predeclared chronological thirds: a descriptive stability check across eras.
+    # Calendar thirds use the observed holdout span; no future outcomes inform selection.
+    first_day, final_day = ordered_days[0], ordered_days[-1]
+    span = (final_day - first_day).days + 1
+    era_sensitivity = []
+    for era in range(3):
+        group = [e for e in all_event_outcomes
+                 if min(2, 3 * (date.fromisoformat(e["date"]) - first_day).days // span) == era]
+        selected = [e["net_return_pct"] for e in group if e["atr_structure_selected"]]
+        rejected = [e["net_return_pct"] for e in group if not e["atr_structure_selected"]]
+        era_sensitivity.append({
+            "chronological_third": era + 1,
+            "events": len(group), "selected_events": len(selected),
+            "rejected_events": len(rejected),
+            "selected_minus_rejected_mean_pct":
+                round(sum(selected)/len(selected) - sum(rejected)/len(rejected), 5)
+                if selected and rejected else None})
     cross_symbol = {"distinct_signal_days": len(day_counts),
                     "cross_day_pairs_within_14_calendar_days": rolling_pairs_14_calendar_days,
                     "days_with_multiple_symbols": sum(n > 1 for n in day_counts.values()),
@@ -185,6 +202,7 @@ def summarize(records):
             "symbols_evaluated": len(valid), "symbols_blocked": sorted(blocked),
             "comparisons": comparisons, "cross_symbol_dependence": cross_symbol,
             "time_block_sensitivity": time_block,
+            "chronological_era_sensitivity": era_sensitivity,
             "market_regime_summary": regime_summary, "symbol_dependence_unadjusted": True,
             "survivorship_free": False, "independent_holdout": False,
             "corporate_actions_verified": False, "trade_ready": False}
