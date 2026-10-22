@@ -19,9 +19,14 @@ class WikiSubsetTests(unittest.TestCase):
         with self.src.open("w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
             w.writerow(self.fields)
+            import datetime
+            day = datetime.date(2017, 2, 1)
             for i in range(35):
+                while day.weekday() >= 5:
+                    day += datetime.timedelta(days=1)
                 w.writerow(("OTHER" if bad and i == 10 else "AAPL",
-                            f"2017-02-{i+1:02d}", 10, 12, 9, 11, 100))
+                            day.isoformat(), 10, 12, 9, 11, 100))
+                day += datetime.timedelta(days=1)
 
     def test_rejects_mixed_symbols(self):
         self.write(bad=True)
