@@ -16,7 +16,7 @@ def chronological_holdout(rows, *, train_fraction=0.7, horizon=10,
     if type(horizon) is not int or not 1 <= horizon <= 30:
         return {"status": "DATA_BLOCKED", "reason": "invalid_horizon",
                 "predictive_edge_proven": False, "trade_ready": False}
-    split = int(len(rows) * train_fraction)
+    if type(fee_bps_each_side) not in (int, float) or not 0 <= fee_bps_each_side <= 100:\n        return {"status": "DATA_BLOCKED", "reason": "invalid_cost",\n                "predictive_edge_proven": False, "trade_ready": False}\n    split = int(len(rows) * train_fraction)
     # To compute a test signal at split, allow pre-split feature lookback,
     # but never count pre-split signals or use a future test bar for training.
     test_start = max(0, split - 21)
@@ -43,6 +43,6 @@ def chronological_holdout(rows, *, train_fraction=0.7, horizon=10,
             "test_start_date": rows[split]["date"],
             "train": summary(train["outcomes"]),
             "test": summary(test_outcomes),
-            "rule_frozen": True, "parameter_tuning_performed": False,
+            "test_signal_count_sufficient": len(test_outcomes) >= 30,\n            "minimum_test_signals_for_screening": 30,\n            "sample_warning": ("INSUFFICIENT_TEST_SIGNALS" if len(test_outcomes) < 30\n                               else "DESCRIPTIVE_ONLY"),\n            "rule_frozen": True, "parameter_tuning_performed": False,
             "test_set_independent_of_development": False,
             "predictive_edge_proven": False, "trade_ready": False}
