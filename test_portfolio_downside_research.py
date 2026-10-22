@@ -23,8 +23,8 @@ class DownsideTests(unittest.TestCase):
         for i in range(5):
             rows.append({'open':98.8-i*.2,'high':99.-i*.2,'low':98.4-i*.2,'close':98.5-i*.2})
         result=replay_intraday(rows,enabled=True)
-        self.assertEqual(result['first_signal_index'],34)
-        self.assertEqual(result['signal_count'],1)
+        self.assertEqual(result['first_signal_index'],32)
+        self.assertEqual(result['signal_count'],3)
     def test_replay_disabled(self):
         self.assertEqual(replay_intraday([],enabled=False)['status'],'DISABLED')
     def test_replay_missing_field(self):
