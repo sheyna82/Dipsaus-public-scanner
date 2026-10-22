@@ -41,13 +41,9 @@ def evaluate_cohorts():
                             for d in dates]
     with TemporaryDirectory() as folder:
         paths = [Path(folder) / x for x in ("raw.csv", "adjusted.csv", "spy.csv")]
-        for path, payload in zip(paths, ("
-".join(raw) + "
-",
+        for path, payload in zip(paths, ("\n".join(raw) + "\n",
                                          make_adjusted_apple_csv(apple),
-                                         "
-".join(benchmark) + "
-")):
+                                         "\n".join(benchmark) + "\n")):
             path.write_text(payload, encoding="utf-8")
         outputs = [evaluate_local_history(paths[i], paths[2]) for i in (0, 1)]
     report = {}
