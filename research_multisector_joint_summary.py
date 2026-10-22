@@ -26,6 +26,7 @@ def summarize(records):
     # Cross-symbol same-day clusters are not independent observations.
     from collections import Counter
     day_counts = Counter()
+    all_signal_days = []
     for row in valid:
         dependency = row.get("dependence_diagnostic")
         if not isinstance(dependency, dict):
@@ -36,7 +37,20 @@ def summarize(records):
                 or any(not isinstance(day, str) or len(day) != 10 for day in dates)):
             return {"status": "DATA_BLOCKED", "reason": "invalid_signal_dates", "trade_ready": False}
         day_counts.update(dates)
+        all_signal_days.extend(dates)
+    from datetime import date
+    try:
+        ordered_days = sorted(date.fromisoformat(day) for day in day_counts)
+    except ValueError:
+        return {"status": "DATA_BLOCKED", "reason": "invalid_signal_date_format", "trade_ready": False}
+    # Calendar-window clustering is only a sensitivity proxy, not trading-session independence.
+    rolling_pairs_14_calendar_days = sum(
+        day_counts[ordered_days[i].isoformat()] * day_counts[ordered_days[j].isoformat()]
+        for i in range(len(ordered_days)) for j in range(i + 1, len(ordered_days))
+        if (ordered_days[j] - ordered_days[i]).days < 14
+    )
     cross_symbol = {"distinct_signal_days": len(day_counts),
+                    "cross_day_pairs_within_14_calendar_days": rolling_pairs_14_calendar_days,
                     "days_with_multiple_symbols": sum(n > 1 for n in day_counts.values()),
                     "signals_on_shared_days": sum(n for n in day_counts.values() if n > 1),
                     "same_day_cross_symbol_pairs": sum(n * (n - 1) // 2 for n in day_counts.values()),
