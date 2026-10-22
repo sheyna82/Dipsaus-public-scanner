@@ -112,6 +112,7 @@ on:
       - 'research_diagnose_dis_history.py'
       - 'research_multisector_source_availability.py'
       - 'test_research_multisector_source_availability.py'
+      - 'dipsaus_offline_pooled_chronological_risk.py'
       - 'dipsaus_offline_chronological_matched_risk.py'
       - 'research_observed_four_event_spy_risk.py'
       - 'dipsaus_offline_frozen_event_market_bridge.py'
