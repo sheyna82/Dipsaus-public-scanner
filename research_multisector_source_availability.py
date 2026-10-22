@@ -65,7 +65,7 @@ def inspect_candidate(symbol, sector, listing_status, fetch=None):
                 "corporate_actions_verified": False,
                 "point_in_time_earnings_verified": False,
                 "delisted_coverage_verified": False,
-                "trade_ready": False}
+                "trade_ready": False, "delisted_coverage_verified": False}
     except HTTPError as exc:
         return {"symbol": symbol, "sector": sector, "listing_status": listing_status,
                 "status": "DATA_BLOCKED", "reason": "http_error",
