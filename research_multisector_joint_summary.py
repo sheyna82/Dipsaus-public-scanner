@@ -48,6 +48,9 @@ def summarize(records):
         totals = {"events": 0, "selected_events": 0, "rejected_events": 0,
                   "missed_winning_events": 0, "selected_winning_events": 0,
                   "selected_severe_adverse_events_estimate": None}
+        baseline_return_weighted = 0.0
+        baseline_adverse_weighted = 0.0
+        baseline_severe_weighted = 0.0
         selected_return_weighted = 0.0
         selected_adverse_weighted = 0.0
         selected_severe_weighted = 0.0
@@ -66,6 +69,10 @@ def summarize(records):
             if ns + nr != n or type(missed) is not int or not 0 <= missed <= nr:
                 return {"status": "DATA_BLOCKED", "reason": "regime_count_inconsistent",
                         "trade_ready": False}
+            if base:
+                baseline_return_weighted += n * base["mean_net_return_pct"]
+                baseline_adverse_weighted += n * base["mean_adverse_excursion_pct"]
+                baseline_severe_weighted += n * base["severe_adverse_rate_pct"]
             totals["events"] += n
             totals["selected_events"] += ns
             totals["rejected_events"] += nr
@@ -75,6 +82,10 @@ def summarize(records):
                 selected_return_weighted += ns * selected["mean_net_return_pct"]
                 selected_adverse_weighted += ns * selected["mean_adverse_excursion_pct"]
                 selected_severe_weighted += ns * selected["severe_adverse_rate_pct"]
+        n = totals["events"]
+        totals["baseline_mean_net_return_pct"] = round(baseline_return_weighted / n, 5) if n else None
+        totals["baseline_mean_adverse_excursion_pct"] = round(baseline_adverse_weighted / n, 5) if n else None
+        totals["baseline_severe_adverse_rate_pct"] = round(baseline_severe_weighted / n, 3) if n else None
         ns = totals["selected_events"]
         totals["selected_mean_net_return_pct"] = round(selected_return_weighted / ns, 5) if ns else None
         totals["selected_mean_adverse_excursion_pct"] = round(selected_adverse_weighted / ns, 5) if ns else None
