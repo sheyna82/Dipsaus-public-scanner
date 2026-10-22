@@ -21,6 +21,8 @@ def audit_chronological_split(training, holdout, sessions, *, embargo_sessions=1
             errors.append("unordered_or_duplicate_sessions")
     except (TypeError, ValueError):
         errors.append("invalid_session_calendar")
+    if "invalid_session_calendar" in errors:
+        sessions = []
     indices = {day: i for i, day in enumerate(sessions)}
     groups = {}
     for name, rows in (("training", training), ("holdout", holdout)):
