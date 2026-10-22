@@ -68,6 +68,12 @@ class JointSummaryTests(unittest.TestCase):
         self.assertEqual(sum(g["events"] for x in sector_rows
                              for g in x["groups"]), 64)
         self.assertTrue(all(x["descriptive_only"] for x in sector_rows))
+        same_day = result["atr_same_day_cluster_sensitivity"]
+        self.assertEqual(same_day["distinct_days"], 4)
+        self.assertEqual(same_day["days_with_multiple_symbols"], 4)
+        self.assertEqual(same_day["days_with_both_atr_groups"], 0)
+        self.assertIsNone(same_day["mean_equal_day_paired_difference_pct_points"])
+        self.assertFalse(same_day["independence_established"])
         self.assertEqual(len(result["atr_symbol_risk_heterogeneity"]["symbols"]), 16)
         self.assertEqual(result["atr_symbol_risk_heterogeneity"]["symbols_comparable"], 16)
         self.assertFalse(result["atr_symbol_risk_heterogeneity"]["validated_predictor"])
