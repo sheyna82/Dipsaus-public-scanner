@@ -27,6 +27,11 @@ class JointStructureTests(unittest.TestCase):
             rejected = (group["atr_structure_rejected"] or {}).get("events", 0)
             self.assertEqual(selected + rejected, (group["baseline"] or {}).get("events", 0))
             self.assertLessEqual(group["missed_winning_events"], rejected)
+        dependence = r["dependence_diagnostic"]
+        self.assertGreaterEqual(dependence["overlapping_event_pairs"], 0)
+        self.assertLessEqual(dependence["greedy_nonoverlapping_event_count"], r["test_events"])
+        self.assertEqual(dependence["horizon_sessions"], 10)
+        self.assertFalse(dependence["independent_observations_claimed"])
         self.assertFalse(r["trade_ready"])
 
     def test_small_history_blocks(self):
