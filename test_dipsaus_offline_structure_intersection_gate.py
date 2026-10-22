@@ -19,7 +19,7 @@ class JointStructureTests(unittest.TestCase):
         for factor in r["factors"].values():
             n = (factor["selected"] or {}).get("events",0)+(factor["skipped"] or {}).get("events",0)
             self.assertEqual(n,r["test_events"])
-        self.assertFalse(r["trade_ready"])
+        regimes = r["market_regime_diagnostics"]\n        total = sum((v["baseline"] or {}).get("events", 0) for v in regimes.values())\n        self.assertEqual(total, r["test_events"])\n        for group in regimes.values():\n            selected = (group["atr_structure_selected"] or {}).get("events", 0)\n            rejected = (group["atr_structure_rejected"] or {}).get("events", 0)\n            self.assertEqual(selected + rejected, (group["baseline"] or {}).get("events", 0))\n            self.assertLessEqual(group["missed_winning_events"], rejected)\n        self.assertFalse(r["trade_ready"])
 
     def test_small_history_blocks(self):
         self.assertEqual(evaluate_structure_intersections(bars(90),bars(90,growth=.15))["status"],"DATA_BLOCKED")
