@@ -66,7 +66,7 @@ def evaluate_cohorts():
                 "skipped": cohort_summary(period_skipped),
                 "selected_downside": downside_metrics(period_selected),
                 "skipped_downside": downside_metrics(period_skipped)}
-        report[label] = {"chronological_diagnostic": chronological,
+        # Fixed descriptive regimes: benchmark 5-day return, known at signal close.\n        # Never tune thresholds on these observed outcomes.\n        market_regimes = {}\n        for name, predicate in (("market_down_5d", lambda x: x < -2),\n                                ("market_flat_5d", lambda x: -2 <= x <= 2),\n                                ("market_up_5d", lambda x: x > 2)):\n            group = [r for r in result["rows"] if predicate(r["market_return_5d"])]\n            yes = [r for r in group if r["score"] >= 5]\n            no = [r for r in group if r["score"] < 5]\n            market_regimes[name] = {"selected": cohort_summary(yes),\n                                    "skipped": cohort_summary(no),\n                                    "selected_downside": downside_metrics(yes),\n                                    "skipped_downside": downside_metrics(no)}\n        report[label] = {"market_regime_diagnostic": market_regimes,\n                         "chronological_diagnostic": chronological,
                          "selected": cohort_summary(selected),
                          "skipped": cohort_summary(skipped),
                          "selected_downside": downside_metrics(selected),
