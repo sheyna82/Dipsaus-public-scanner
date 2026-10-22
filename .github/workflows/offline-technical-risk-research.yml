@@ -49,6 +49,8 @@ on:
       - 'research_observe_apple_adjustment_factors.py'
       - 'research_aapl_adjustment_sensitivity.py'
       - 'research_aapl_spy_selected_skipped.py'
+      - 'dipsaus_offline_multiticker_eval.py'
+      - 'test_dipsaus_offline_multiticker_eval.py'
       - 'dipsaus_offline_cohort_gate.py'
       - 'test_dipsaus_offline_cohort_gate.py'
       - 'dipsaus_offline_history_quality.py'
@@ -71,7 +73,7 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.12'
-      - run: python -m unittest -v test_dipsaus_offline_technical_risk test_dipsaus_offline_risk_followthrough test_dipsaus_offline_risk_cohorts test_dipsaus_offline_risk_matching test_dipsaus_offline_asof_audit test_dipsaus_offline_recovery_baseline test_dipsaus_offline_recovery_outcomes test_dipsaus_offline_recovery_score_report test_dipsaus_offline_recovery_pipeline test_dipsaus_offline_recovery_dataset test_dipsaus_offline_recovery_holdout test_dipsaus_offline_recovery_holdout_report test_dipsaus_offline_dataset_manifest test_dipsaus_offline_ohlcv_features test_dipsaus_offline_ohlcv_csv test_dipsaus_offline_csv_pilot test_dipsaus_offline_price_history_eval test_research_reproduce_plotly_aapl test_dipsaus_offline_benchmark_sessions test_dipsaus_offline_adjustment_gate test_dipsaus_offline_adjustment_factor_audit test_dipsaus_offline_downside_metrics test_dipsaus_offline_wiki_subset test_dipsaus_offline_history_quality test_dipsaus_offline_cohort_gate
+      - run: python -m unittest -v test_dipsaus_offline_technical_risk test_dipsaus_offline_risk_followthrough test_dipsaus_offline_risk_cohorts test_dipsaus_offline_risk_matching test_dipsaus_offline_asof_audit test_dipsaus_offline_recovery_baseline test_dipsaus_offline_recovery_outcomes test_dipsaus_offline_recovery_score_report test_dipsaus_offline_recovery_pipeline test_dipsaus_offline_recovery_dataset test_dipsaus_offline_recovery_holdout test_dipsaus_offline_recovery_holdout_report test_dipsaus_offline_dataset_manifest test_dipsaus_offline_ohlcv_features test_dipsaus_offline_ohlcv_csv test_dipsaus_offline_csv_pilot test_dipsaus_offline_price_history_eval test_research_reproduce_plotly_aapl test_dipsaus_offline_benchmark_sessions test_dipsaus_offline_adjustment_gate test_dipsaus_offline_adjustment_factor_audit test_dipsaus_offline_downside_metrics test_dipsaus_offline_wiki_subset test_dipsaus_offline_history_quality test_dipsaus_offline_cohort_gate test_dipsaus_offline_multiticker_eval
 
   observed-price-pilot:
     runs-on: ubuntu-latest
