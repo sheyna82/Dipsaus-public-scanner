@@ -14,6 +14,10 @@ class DownsideTests(unittest.TestCase):
         self.assertEqual(check([100],[100],[99],[100],enabled=True)['status'],'INSUFFICIENT_DATA')
     def test_flat(self):
         self.assertFalse(check([100.]*35,[100.2]*35,[99.8]*35,[100.]*35,enabled=True)['trigger'])
+    def test_inconsistent_ohlc(self):
+        self.assertEqual(check([100.]*35,[99.]*35,[99.]*35,[100.]*35,enabled=True)['status'],'INVALID_OHLC')
+    def test_gradual_decline_without_break(self):
+        self.assertFalse(check([99.]*35,[100.]*35,[98.]*35,[99.]*35,enabled=True)['trigger'])
     def test_nan(self):
         self.assertEqual(check([float('nan')]*35,[100.]*35,[99.]*35,[100.]*35,enabled=True)['status'],'INVALID_DATA')
 if __name__=='__main__':
