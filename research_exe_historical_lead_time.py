@@ -22,6 +22,11 @@ def evaluate_payload(payload, session=TARGET):
         quote = result["indicators"]["quote"][0]
         if any(len(quote[k]) != len(times) for k in ("open", "high", "low", "close")):
             raise ValueError("mismatched_lengths")
+        grid = audit_regular_session_timestamps(times, session)
+        if grid["status"] != "COMPLETE":
+            return {"symbol": "EXE", "session": session, "status": "DATA_BLOCKED",
+                    "reason": "incomplete_regular_session", "minute_audit": grid,
+                    "source_independently_verified": False, "trade_ready": False}
         rows = []
         for i, stamp in enumerate(times):
             utc = datetime.fromtimestamp(stamp, timezone.utc)
@@ -38,11 +43,6 @@ def evaluate_payload(payload, session=TARGET):
             if utc.second != 0 or utc.microsecond != 0:
                 raise ValueError("unfinished_bar")
             rows.append((utc, bar))
-        grid = audit_regular_session_timestamps(times, session)
-        if grid['status'] != 'COMPLETE':
-            return {'symbol': 'EXE', 'session': session, 'status': 'DATA_BLOCKED',
-                    'reason': 'incomplete_regular_session', 'minute_audit': grid,
-                    'source_independently_verified': False, 'trade_ready': False}
         if len(rows) != 390:
             raise ValueError("incomplete_regular_session")
         if any((rows[i+1][0] - rows[i][0]).total_seconds() != 60
