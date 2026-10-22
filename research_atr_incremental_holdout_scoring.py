@@ -47,6 +47,12 @@ def forecast(model, rows):
         raise ValueError("invalid_model_tables")
     if type(model["pooled"]) not in (float, int) or not math.isfinite(model["pooled"]) or not 0 < model["pooled"] < 1:
         raise ValueError("invalid_model_prior")
+    for table in (model["baseline"], model["expanded"]):
+        for cell in table.values():
+            if (not isinstance(cell, tuple) or len(cell) != 2
+                    or type(cell[0]) is not int or type(cell[1]) is not int
+                    or cell[0] <= 0 or not 0 <= cell[1] <= cell[0]):
+                raise ValueError("invalid_model_cell")
     output = []
     if not isinstance(rows, (list, tuple)):
         raise ValueError("invalid_forecast_rows")
