@@ -3,9 +3,11 @@ import argparse
 import csv
 import json
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from portfolio_downside_research import replay_intraday
 
+NY=ZoneInfo('America/New_York')
 REQUIRED=('timestamp','open','high','low','close')
 
 def load_session(path, session):
@@ -18,7 +20,7 @@ def load_session(path, session):
             ts=datetime.fromisoformat(item['timestamp'].replace('Z','+00:00'))
             if ts.tzinfo is None:
                 raise ValueError('Timezone-aware timestamps required')
-            if ts.date().isoformat()!=session:
+            if ts.astimezone(NY).date().isoformat()!=session:
                 continue
             rows.append((ts,{k:float(item[k]) for k in REQUIRED[1:]}))
     if not rows:
