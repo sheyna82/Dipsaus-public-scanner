@@ -43,6 +43,10 @@ def forecast(model, rows):
     if not isinstance(model, dict) or not all(
             key in model for key in ("baseline", "expanded", "pooled")):
         raise ValueError("invalid_model")
+    if not isinstance(model["baseline"], dict) or not isinstance(model["expanded"], dict):
+        raise ValueError("invalid_model_tables")
+    if type(model["pooled"]) not in (float, int) or not math.isfinite(model["pooled"]) or not 0 < model["pooled"] < 1:
+        raise ValueError("invalid_model_prior")
     output = []
     if not isinstance(rows, (list, tuple)):
         raise ValueError("invalid_forecast_rows")
