@@ -63,21 +63,15 @@ def forecast(model, rows):
     return output
 
 def predict(model, rows):
-    """Return paired frozen forecasts; unknown cells fall back to pooled prior."""
-    output = []
+    """Attach observed labels to the same frozen feature-only forecasts.
+
+    Evaluation must never use outcome labels to calculate probabilities.
+    """
     for row in rows:
         _validate_event(row)
-        key = (row["structure_above_20d_mean"], row["market_20d_positive"])
-        baseline = model["baseline"].get(key)
-        expanded = model["expanded"].get(key + (row["atr_expanding"],))
-        output.append({"severe": row["severe"],
-                       "baseline_probability": _rate(baseline[1], baseline[0])
-                       if baseline else model["pooled"],
-                       "atr_probability": _rate(expanded[1], expanded[0])
-                       if expanded else model["pooled"],
-                       "baseline_fallback": baseline is None,
-                       "atr_fallback": expanded is None})
-    return output
+    forecasts = forecast(model, rows)
+    return [{**prediction, "severe": row["severe"]}
+            for prediction, row in zip(forecasts, rows)]
 
 
 def evaluate(predictions):
