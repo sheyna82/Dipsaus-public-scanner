@@ -1,9 +1,10 @@
 import unittest
+from datetime import date, timedelta
 from dipsaus_offline_frozen_event_market_bridge import evaluate_frozen_events_against_market
 
 
 def flat_bars():
-    return [{"date": "2025-01-%03d" % (i + 1), "open": 100, "high": 101,
+    return [{"date": (date(2025, 1, 1) + timedelta(days=i)).isoformat(), "open": 100, "high": 101,
              "low": 99, "close": 100, "volume": 1000} for i in range(50)]
 
 
