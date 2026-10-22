@@ -51,6 +51,9 @@ def summarize(records):
         baseline_return_weighted = 0.0
         baseline_adverse_weighted = 0.0
         baseline_severe_weighted = 0.0
+        rejected_return_weighted = 0.0
+        rejected_adverse_weighted = 0.0
+        rejected_severe_weighted = 0.0
         selected_return_weighted = 0.0
         selected_adverse_weighted = 0.0
         selected_severe_weighted = 0.0
@@ -77,6 +80,10 @@ def summarize(records):
             totals["selected_events"] += ns
             totals["rejected_events"] += nr
             totals["missed_winning_events"] += missed
+            if rejected:
+                rejected_return_weighted += nr * rejected["mean_net_return_pct"]
+                rejected_adverse_weighted += nr * rejected["mean_adverse_excursion_pct"]
+                rejected_severe_weighted += nr * rejected["severe_adverse_rate_pct"]
             if selected:
                 totals["selected_winning_events"] += selected["winning_events"]
                 selected_return_weighted += ns * selected["mean_net_return_pct"]
@@ -86,6 +93,10 @@ def summarize(records):
         totals["baseline_mean_net_return_pct"] = round(baseline_return_weighted / n, 5) if n else None
         totals["baseline_mean_adverse_excursion_pct"] = round(baseline_adverse_weighted / n, 5) if n else None
         totals["baseline_severe_adverse_rate_pct"] = round(baseline_severe_weighted / n, 3) if n else None
+        nr = totals["rejected_events"]
+        totals["rejected_mean_net_return_pct"] = round(rejected_return_weighted / nr, 5) if nr else None
+        totals["rejected_mean_adverse_excursion_pct"] = round(rejected_adverse_weighted / nr, 5) if nr else None
+        totals["rejected_severe_adverse_rate_pct"] = round(rejected_severe_weighted / nr, 3) if nr else None
         ns = totals["selected_events"]
         totals["selected_mean_net_return_pct"] = round(selected_return_weighted / ns, 5) if ns else None
         totals["selected_mean_adverse_excursion_pct"] = round(selected_adverse_weighted / ns, 5) if ns else None
