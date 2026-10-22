@@ -35,6 +35,11 @@ class SourceAvailabilityTests(unittest.TestCase):
         self.assertEqual(result["status"], "DATA_BLOCKED")
         self.assertFalse(result["trade_ready"])
 
+    def test_missing_chart_fails_closed(self):
+        result = inspect_candidate('XOM', 'Energy', 'active', fetch=lambda url: b'{}')
+        self.assertEqual(result['status'], 'DATA_BLOCKED')
+        self.assertEqual(result['reason'], 'request_or_schema_failure')
+
     def test_does_not_claim_price_verification(self):
         result = inspect_candidate("LEH", "Financials", "delisted",
                                    fetch=lambda url: b'{}')
