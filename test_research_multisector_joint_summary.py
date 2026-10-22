@@ -10,7 +10,7 @@ def valid_row(symbol, sector):
             "status": "EXPLORATORY_JOINT_FACTOR_DIAGNOSTIC",
             "baseline_test": metric,
             "market_regime_diagnostics": {
-                "market_20d_positive": {"baseline": {"events": 4},
+                "market_20d_positive": {"baseline": {"events": 4, "mean_net_return_pct": 1.0, "mean_adverse_excursion_pct": -5.0, "severe_adverse_rate_pct": 75.0},
                     "atr_structure_selected": {"events": 2, "winning_events": 1,
                         "mean_net_return_pct": 2.0, "mean_adverse_excursion_pct": -4.0,
                         "severe_adverse_rate_pct": 50.0},
@@ -32,6 +32,8 @@ class JointSummaryTests(unittest.TestCase):
         self.assertEqual(result["market_regime_summary"]["market_20d_positive"]["events"], 64)
         self.assertEqual(result["market_regime_summary"]["market_20d_positive"]["selected_events"], 32)
         self.assertEqual(result["market_regime_summary"]["market_20d_positive"]["selected_mean_net_return_pct"], 2.0)
+        self.assertEqual(result["market_regime_summary"]["market_20d_positive"]["baseline_mean_net_return_pct"], 1.0)
+        self.assertEqual(result["market_regime_summary"]["market_20d_positive"]["baseline_mean_adverse_excursion_pct"], -5.0)
         self.assertFalse(result["trade_ready"])
 
     def test_missing_symbol_blocks(self):
