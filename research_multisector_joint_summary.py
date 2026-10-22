@@ -172,6 +172,24 @@ def summarize(records):
                 "all_eras_positive": all(g["mean_net_return_pct"] is not None and
                                          g["mean_net_return_pct"] > 0 for g in groups),
                 "predictive_edge_proven": False})
+    # Expose terminal-return versus adverse-excursion tradeoff per frozen cell.
+    # Negative adverse excursion is a loss, so report its magnitude as a positive number.
+    era_risk_return_tradeoff = []
+    for era in era_joint_factor_composition:
+        cells = []
+        for cell in era["cells"]:
+            adverse = cell["mean_adverse_excursion_pct"]
+            cells.append({"atr_expanding": cell["atr_expanding"],
+                "structure_above_20d_mean": cell["structure_above_20d_mean"],
+                "events": cell["events"],
+                "mean_net_return_pct": cell["mean_net_return_pct"],
+                "mean_adverse_magnitude_pct": round(-adverse, 5) if adverse is not None else None,
+                "severe_adverse_rate_pct": cell["severe_adverse_rate_pct"],
+                "positive_return_with_severe_risk": cell["mean_net_return_pct"] is not None
+                    and cell["mean_net_return_pct"] > 0
+                    and cell["severe_adverse_rate_pct"] >= 40})
+        era_risk_return_tradeoff.append({"chronological_third": era["chronological_third"],
+            "cells": cells, "descriptive_only": True})
     # Fixed-regime cross-era sign consistency, with no trading threshold inferred.
     regime_consistency = []
     for market_up in (True, False):
@@ -329,6 +347,7 @@ def summarize(records):
             "chronological_era_factor_prevalence": era_factor_prevalence,
             "chronological_era_joint_factor_composition": era_joint_factor_composition,
             "joint_factor_era_stability": cell_stability,
+            "chronological_era_risk_return_tradeoff": era_risk_return_tradeoff,
             "market_regime_summary": regime_summary, "symbol_dependence_unadjusted": True,
             "survivorship_free": False, "independent_holdout": False,
             "corporate_actions_verified": False, "trade_ready": False}
