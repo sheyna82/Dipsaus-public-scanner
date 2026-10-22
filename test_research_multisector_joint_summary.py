@@ -31,6 +31,8 @@ class JointSummaryTests(unittest.TestCase):
         self.assertEqual(result["symbols_evaluated"], 16)
         self.assertEqual(result["cross_symbol_dependence"]["same_day_cross_symbol_pairs"], 480)
         self.assertEqual(result["cross_symbol_dependence"]["signals_on_shared_days"], 64)
+        self.assertEqual(result["cross_symbol_dependence"]["largest_same_day_cluster"], 16)
+        self.assertEqual(result["cross_symbol_dependence"]["effective_days_kish_descriptive"], 4.0)
         self.assertEqual(result["comparisons"]["atr_and_structure"]["symbols_better"], 16)
         self.assertEqual(result["market_regime_summary"]["market_20d_positive"]["events"], 64)
         self.assertEqual(result["market_regime_summary"]["market_20d_positive"]["selected_events"], 32)
