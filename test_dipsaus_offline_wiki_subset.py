@@ -42,6 +42,23 @@ class WikiSubsetTests(unittest.TestCase):
             convert_wiki_subset(self.src, self.dst, symbol="AAPL")
         self.assertFalse(self.dst.exists())
 
+    def test_rejects_unexplained_price_jump(self):
+        import datetime
+        with self.src.open("w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(self.fields)
+            day = datetime.date(2017, 1, 2)
+            for i in range(35):
+                while day.weekday() >= 5:
+                    day += datetime.timedelta(days=1)
+                close = 50 if i >= 15 else 100
+                w.writerow(("AAPL", day.isoformat(), close, close + 1,
+                            close - 1, close, 100))
+                day += datetime.timedelta(days=1)
+        with self.assertRaisesRegex(ValueError, "history_quality_review_required"):
+            convert_wiki_subset(self.src, self.dst, symbol="AAPL")
+        self.assertFalse(self.dst.exists())
+
     def test_valid_calendar_and_adjusted_columns(self):
         import datetime
         with self.src.open("w", newline="", encoding="utf-8") as f:
