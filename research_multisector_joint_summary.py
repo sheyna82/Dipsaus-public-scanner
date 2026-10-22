@@ -190,6 +190,22 @@ def summarize(records):
                     and cell["severe_adverse_rate_pct"] >= 40})
         era_risk_return_tradeoff.append({"chronological_third": era["chronological_third"],
             "cells": cells, "descriptive_only": True})
+    # Ex-ante flag versus ex-post severe drawdown: descriptive early-risk discrimination.
+    # No thresholds are fitted; severe adverse is the pre-existing -3% definition.
+    early_risk_discrimination = []
+    for flag in ("atr_expanding", "structure_above_20d_mean", "market_20d_positive"):
+        groups = []
+        for value in (False, True):
+            subset = [e for e in all_event_outcomes if e[flag] is value]
+            severe = sum(e["max_adverse_excursion_pct"] <= -3 for e in subset)
+            groups.append({"flag_value": value, "events": len(subset),
+                "severe_events": severe,
+                "severe_rate_pct": round(100 * severe / len(subset), 3) if subset else None})
+        early_risk_discrimination.append({"factor": flag, "groups": groups,
+            "rate_difference_true_minus_false_pct_points":
+                round(groups[1]["severe_rate_pct"] - groups[0]["severe_rate_pct"], 3)
+                if all(g["severe_rate_pct"] is not None for g in groups) else None,
+            "validated_predictor": False})
     # Fixed-regime cross-era sign consistency, with no trading threshold inferred.
     regime_consistency = []
     for market_up in (True, False):
@@ -348,6 +364,7 @@ def summarize(records):
             "chronological_era_joint_factor_composition": era_joint_factor_composition,
             "joint_factor_era_stability": cell_stability,
             "chronological_era_risk_return_tradeoff": era_risk_return_tradeoff,
+            "early_risk_flag_discrimination": early_risk_discrimination,
             "market_regime_summary": regime_summary, "symbol_dependence_unadjusted": True,
             "survivorship_free": False, "independent_holdout": False,
             "corporate_actions_verified": False, "trade_ready": False}
