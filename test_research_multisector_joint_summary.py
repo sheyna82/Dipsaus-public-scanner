@@ -10,7 +10,7 @@ def valid_row(symbol, sector):
             "status": "EXPLORATORY_JOINT_FACTOR_DIAGNOSTIC",
             "baseline_test": metric,
             "dependence_diagnostic": {"test_signal_dates": ["2026-01-01", "2026-01-12", "2026-01-23", "2026-02-04"],
-                "test_event_outcomes": [{"date": day, "net_return_pct": ret,
+                "test_event_outcomes": [{"date": day, "net_return_pct": ret, "max_adverse_excursion_pct": -4.0,
                     "atr_structure_selected": chosen, "market_20d_positive": True,
                     "atr_expanding": chosen, "structure_above_20d_mean": True} for day, ret, chosen in
                     [("2026-01-01", 2.0, True), ("2026-01-12", 0.0, False),
@@ -59,6 +59,7 @@ class JointSummaryTests(unittest.TestCase):
         self.assertEqual(len(result["market_regime_cross_era_consistency"]), 2)
         self.assertEqual(len(result["chronological_era_factor_prevalence"]), 3)
         self.assertEqual(len(result["chronological_era_joint_factor_composition"]), 3)
+        self.assertTrue(all(cell["severe_adverse_rate_pct"] == 100.0 for era in result["chronological_era_joint_factor_composition"] for cell in era["cells"] if cell["events"]))
         self.assertEqual(len(result["joint_factor_era_stability"]), 4)
         self.assertTrue(all(not x["predictive_edge_proven"] for x in result["joint_factor_era_stability"]))
         self.assertEqual(sum(cell["events"] for era in result["chronological_era_joint_factor_composition"] for cell in era["cells"]), 64)
