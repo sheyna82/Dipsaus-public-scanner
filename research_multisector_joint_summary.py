@@ -40,6 +40,8 @@ def summarize(records):
                     "days_with_multiple_symbols": sum(n > 1 for n in day_counts.values()),
                     "signals_on_shared_days": sum(n for n in day_counts.values() if n > 1),
                     "same_day_cross_symbol_pairs": sum(n * (n - 1) // 2 for n in day_counts.values()),
+                    "largest_same_day_cluster": max(day_counts.values(), default=0),
+                    "effective_days_kish_descriptive": round(sum(day_counts.values()) ** 2 / sum(n*n for n in day_counts.values()), 3) if day_counts else None,
                     "cross_day_market_dependence_unmeasured": True}
     comparisons = {}
     for key in ("atr_and_structure", "atr_and_market", "atr_structure_market"):
