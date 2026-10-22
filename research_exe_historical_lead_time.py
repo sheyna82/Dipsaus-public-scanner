@@ -9,6 +9,7 @@ from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 from research_probe_exe_minute_source import URL
 from dipsaus_offline_exe_lead_time_audit import audit_downside_lead_time
+from dipsaus_offline_exe_missing_minutes import audit_regular_session_timestamps
 
 NY = ZoneInfo("America/New_York")
 TARGET = "2026-10-21"
@@ -37,6 +38,11 @@ def evaluate_payload(payload, session=TARGET):
             if utc.second != 0 or utc.microsecond != 0:
                 raise ValueError("unfinished_bar")
             rows.append((utc, bar))
+        grid = audit_regular_session_timestamps(times, session)
+        if grid['status'] != 'COMPLETE':
+            return {'symbol': 'EXE', 'session': session, 'status': 'DATA_BLOCKED',
+                    'reason': 'incomplete_regular_session', 'minute_audit': grid,
+                    'source_independently_verified': False, 'trade_ready': False}
         if len(rows) != 390:
             raise ValueError("incomplete_regular_session")
         if any((rows[i+1][0] - rows[i][0]).total_seconds() != 60
