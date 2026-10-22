@@ -51,6 +51,7 @@ on:
       - 'research_aapl_spy_selected_skipped.py'
       - 'dipsaus_offline_event_calendar_baseline.py'
       - 'research_four_event_history_results.py'
+      - 'research_four_event_long_history.py'
       - 'dipsaus_offline_event_calendar_phases.py'
       - 'test_dipsaus_offline_event_calendar_phases.py'
       - 'dipsaus_offline_event_chronological_holdout.py'
@@ -228,3 +229,18 @@ jobs:
           python research_audit_four_event_ohlcv.py
           python research_four_event_daily_snapshot.py
           python research_four_event_history_results.py
+
+  long-history-four-symbol-research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Two-year descriptive signal history (research only)
+        run: python research_four_event_long_history.py
