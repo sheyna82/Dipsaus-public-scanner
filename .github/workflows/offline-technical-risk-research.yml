@@ -49,6 +49,7 @@ on:
       - 'research_observe_apple_adjustment_factors.py'
       - 'research_aapl_adjustment_sensitivity.py'
       - 'research_aapl_spy_selected_skipped.py'
+      - 'research_four_event_history_results.py'
       - 'dipsaus_offline_event_history_outcomes.py'
       - 'test_dipsaus_offline_event_history_outcomes.py'
       - 'research_four_event_daily_snapshot.py'
@@ -218,3 +219,4 @@ jobs:
           python research_probe_alternative_daily_source.py
           python research_audit_four_event_ohlcv.py
           python research_four_event_daily_snapshot.py
+          python research_four_event_history_results.py
