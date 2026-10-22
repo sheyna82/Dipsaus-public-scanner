@@ -55,6 +55,8 @@ class JointSummaryTests(unittest.TestCase):
         self.assertEqual(len(result["chronological_era_symbol_coverage"]), 3)
         self.assertEqual(len(result["chronological_era_breadth"]), 3)
         self.assertEqual(len(result["chronological_era_market_regimes"]), 3)
+        self.assertEqual(len(result["market_regime_cross_era_consistency"]), 2)
+        self.assertFalse(result["market_regime_cross_era_consistency"][1]["all_three_eras_comparable"])
         self.assertEqual(sum(z["events"] for x in result["chronological_era_market_regimes"] for z in x["regimes"]), 64)
         self.assertTrue(all(x["comparable_symbols"] <= 16 for x in result["chronological_era_breadth"]))
         self.assertEqual(sum(x["symbols_with_both_groups"] for x in result["chronological_era_symbol_coverage"]), 16)
