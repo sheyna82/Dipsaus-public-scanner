@@ -1,6 +1,6 @@
 """Synthetic checks only: no historical test outcomes consumed."""
 import unittest
-from research_atr_incremental_holdout_scoring import fit, predict, evaluate
+from research_atr_incremental_holdout_scoring import fit, predict, evaluate, forecast
 
 
 class IncrementalATRHoldoutScoringTests(unittest.TestCase):
@@ -22,6 +22,16 @@ class IncrementalATRHoldoutScoringTests(unittest.TestCase):
         self.assertLess(result["atr_brier"], result["baseline_brier"])
         self.assertFalse(result["independent_holdout_verified"])
         self.assertFalse(result["trade_ready"])
+
+    def test_forecast_does_not_require_future_outcomes(self):
+        model = fit([self.event(True, True, True, False)])
+        features = {"structure_above_20d_mean": True,
+                    "market_20d_positive": True, "atr_expanding": True}
+        result = forecast(model, [features])
+        self.assertEqual(len(result), 1)
+        self.assertNotIn("severe", result[0])
+        self.assertFalse(result[0]["trade_ready"])
+        self.assertEqual(result[0]["atr_probability"], 1 / 3)
 
     def test_unknown_cells_use_training_prior(self):
         training = [self.event(True, True, True, True)]
