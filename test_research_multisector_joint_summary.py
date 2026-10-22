@@ -68,6 +68,12 @@ class JointSummaryTests(unittest.TestCase):
         self.assertEqual(sum(g["events"] for x in sector_rows
                              for g in x["groups"]), 64)
         self.assertTrue(all(x["descriptive_only"] for x in sector_rows))
+        conditional = result["atr_conditional_structure_market_risk"]
+        self.assertEqual(len(conditional["cells"]), 4)
+        self.assertEqual(sum(g["events"] for cell in conditional["cells"]
+                             for g in cell["groups"]), 64)
+        self.assertFalse(conditional["incremental_predictive_value_proven"])
+        self.assertFalse(conditional["independent_holdout"])
         blocks = result["atr_14_day_block_sensitivity"]
         self.assertEqual([x["offset_calendar_days"] for x in blocks["offsets"]],
                          [0, 3, 7, 10])
