@@ -23,7 +23,7 @@ class LeadTimeAuditTests(unittest.TestCase):
 
     def test_crossing_same_candle_not_early(self):
         bars = fixture()
-        result = audit_downside_lead_time(bars, decline_pct=2)
+        result = audit_downside_lead_time(bars, decline_pct=1.5)
         self.assertEqual(result["status"], "DESCRIPTIVE_LEAD_TIME")
         self.assertFalse(result["alert_before_decline"])
 
