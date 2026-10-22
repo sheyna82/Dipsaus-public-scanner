@@ -122,6 +122,20 @@ def summarize(records):
                     round(sum(selected)/len(selected) - sum(rejected)/len(rejected), 5)
                     if selected and rejected else None})
         era_market_regimes.append({"chronological_third": era + 1, "regimes": regimes})
+    # Fixed-regime cross-era sign consistency, with no trading threshold inferred.
+    regime_consistency = []
+    for market_up in (True, False):
+        groups = [era["regimes"][0 if market_up else 1] for era in era_market_regimes]
+        comparable = [g for g in groups if g["selected_minus_rejected_mean_pct"] is not None]
+        regime_consistency.append({
+            "market_20d_positive": market_up,
+            "eras_with_events": sum(g["events"] > 0 for g in groups),
+            "eras_comparable": len(comparable),
+            "eras_filter_better": sum(g["selected_minus_rejected_mean_pct"] > 0 for g in comparable),
+            "eras_filter_worse": sum(g["selected_minus_rejected_mean_pct"] < 0 for g in comparable),
+            "all_three_eras_comparable": len(comparable) == 3,
+            "consistent_positive_effect": len(comparable) == 3 and all(
+                g["selected_minus_rejected_mean_pct"] > 0 for g in comparable)})
     # Diagnose whether era differences are driven by changing symbol composition.
     # Within-symbol contrasts are descriptive and deliberately unweighted.
     symbol_era = []
@@ -261,6 +275,7 @@ def summarize(records):
             "chronological_era_symbol_coverage": era_symbol_coverage,
             "chronological_era_breadth": era_breadth,
             "chronological_era_market_regimes": era_market_regimes,
+            "market_regime_cross_era_consistency": regime_consistency,
             "market_regime_summary": regime_summary, "symbol_dependence_unadjusted": True,
             "survivorship_free": False, "independent_holdout": False,
             "corporate_actions_verified": False, "trade_ready": False}
