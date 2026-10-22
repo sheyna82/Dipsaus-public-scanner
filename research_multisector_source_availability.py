@@ -40,7 +40,8 @@ def inspect_candidate(symbol, sector, listing_status, fetch=None):
             raw = fetch(url)
         if len(raw) > 1_500_000:
             return {"symbol": symbol, "sector": sector, "listing_status": listing_status,
-                    "status": "DATA_BLOCKED", "reason": "oversized"}
+                    "status": "DATA_BLOCKED", "reason": "oversized",
+                    "trade_ready": False, "delisted_coverage_verified": False}
         payload = json.loads(raw)
         result = payload['chart']['result'][0]
         timestamps = result['timestamp']
@@ -65,15 +66,16 @@ def inspect_candidate(symbol, sector, listing_status, fetch=None):
                 "corporate_actions_verified": False,
                 "point_in_time_earnings_verified": False,
                 "delisted_coverage_verified": False,
-                "trade_ready": False, "delisted_coverage_verified": False}
+                "trade_ready": False}
     except HTTPError as exc:
         return {"symbol": symbol, "sector": sector, "listing_status": listing_status,
                 "status": "DATA_BLOCKED", "reason": "http_error",
-                "http_status": exc.code, "trade_ready": False}
+                "http_status": exc.code, "trade_ready": False,
+                "delisted_coverage_verified": False}
     except (OSError, URLError, TimeoutError, UnicodeError, ValueError, TypeError, KeyError, IndexError, AttributeError):
         return {"symbol": symbol, "sector": sector, "listing_status": listing_status,
                 "status": "DATA_BLOCKED", "reason": "request_or_schema_failure",
-                "trade_ready": False}
+                "trade_ready": False, "delisted_coverage_verified": False}
 
 
 if __name__ == "__main__":
