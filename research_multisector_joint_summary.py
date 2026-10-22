@@ -134,6 +134,21 @@ def summarize(records):
             "factor_true_counts": counts,
             "factor_true_rates_pct": {k: round(100 * n / len(group), 2) if group else None
                                       for k, n in counts.items()}})
+    # Fixed 2x2 ATR/structure composition: joint prevalence, not a causal explanation.
+    era_joint_factor_composition = []
+    for era in range(3):
+        group = [e for e in all_event_outcomes
+                 if min(2, 3 * (date.fromisoformat(e["date"]) - first_day).days // span) == era]
+        cells = []
+        for atr in (False, True):
+            for structure in (False, True):
+                subset = [e for e in group if e["atr_expanding"] is atr
+                          and e["structure_above_20d_mean"] is structure]
+                cells.append({"atr_expanding": atr, "structure_above_20d_mean": structure,
+                    "events": len(subset),
+                    "mean_net_return_pct": round(sum(e["net_return_pct"] for e in subset)/len(subset), 5)
+                        if subset else None})
+        era_joint_factor_composition.append({"chronological_third": era + 1, "cells": cells})
     # Fixed-regime cross-era sign consistency, with no trading threshold inferred.
     regime_consistency = []
     for market_up in (True, False):
@@ -289,6 +304,7 @@ def summarize(records):
             "chronological_era_market_regimes": era_market_regimes,
             "market_regime_cross_era_consistency": regime_consistency,
             "chronological_era_factor_prevalence": era_factor_prevalence,
+            "chronological_era_joint_factor_composition": era_joint_factor_composition,
             "market_regime_summary": regime_summary, "symbol_dependence_unadjusted": True,
             "survivorship_free": False, "independent_holdout": False,
             "corporate_actions_verified": False, "trade_ready": False}
