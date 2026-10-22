@@ -106,6 +106,30 @@ def summarize(records):
             "selected_minus_rejected_mean_pct":
                 round(sum(selected)/len(selected) - sum(rejected)/len(rejected), 5)
                 if selected and rejected else None})
+    # Diagnose whether era differences are driven by changing symbol composition.
+    # Within-symbol contrasts are descriptive and deliberately unweighted.
+    symbol_era = []
+    for row in valid:
+        outcomes = row["dependence_diagnostic"]["test_event_outcomes"]
+        for era in range(3):
+            group = [e for e in outcomes
+                     if min(2, 3 * (date.fromisoformat(e["date"]) - first_day).days // span) == era]
+            selected = [e["net_return_pct"] for e in group if e["atr_structure_selected"]]
+            rejected = [e["net_return_pct"] for e in group if not e["atr_structure_selected"]]
+            symbol_era.append({"symbol": row["symbol"], "chronological_third": era + 1,
+                "events": len(group), "selected_events": len(selected), "rejected_events": len(rejected),
+                "selected_minus_rejected_mean_pct":
+                    round(sum(selected)/len(selected) - sum(rejected)/len(rejected), 5)
+                    if selected and rejected else None})
+    era_symbol_coverage = []
+    for era in range(1, 4):
+        groups = [x for x in symbol_era if x["chronological_third"] == era]
+        comparable = [x for x in groups if x["selected_minus_rejected_mean_pct"] is not None]
+        era_symbol_coverage.append({"chronological_third": era,
+            "symbols_with_events": sum(x["events"] > 0 for x in groups),
+            "symbols_with_both_groups": len(comparable),
+            "symbols_selected_better": sum(x["selected_minus_rejected_mean_pct"] > 0 for x in comparable),
+            "symbols_rejected_better": sum(x["selected_minus_rejected_mean_pct"] < 0 for x in comparable)})
     era_deltas = [e["selected_minus_rejected_mean_pct"] for e in era_sensitivity]
     era_stability = {"all_eras_positive": all(x is not None and x > 0 for x in era_deltas),
                      "eras_positive": sum(x is not None and x > 0 for x in era_deltas),
@@ -211,6 +235,7 @@ def summarize(records):
             "time_block_sensitivity": time_block,
             "chronological_era_sensitivity": era_sensitivity,
             "chronological_era_stability": era_stability,
+            "chronological_era_symbol_coverage": era_symbol_coverage,
             "market_regime_summary": regime_summary, "symbol_dependence_unadjusted": True,
             "survivorship_free": False, "independent_holdout": False,
             "corporate_actions_verified": False, "trade_ready": False}
