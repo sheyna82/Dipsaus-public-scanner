@@ -33,6 +33,14 @@ class ATRChronologicalSplitGateTests(unittest.TestCase):
             [{"signal_date": self.sessions[30]}], self.sessions)
         self.assertIn("signal_outside_calendar", result["errors"])
 
+    def test_unhashable_calendar_fails_closed(self):
+        result = audit_chronological_split(
+            [{"signal_date": self.sessions[1]}],
+            [{"signal_date": self.sessions[20]}],
+            [self.sessions[0], ["not-a-date"]])
+        self.assertEqual(result["status"], "DATA_BLOCKED")
+        self.assertIn("invalid_session_calendar", result["errors"])
+
     def test_duplicate_calendar_rejected(self):
         self.assertIn("unordered_or_duplicate_sessions",
                       audit_chronological_split(
