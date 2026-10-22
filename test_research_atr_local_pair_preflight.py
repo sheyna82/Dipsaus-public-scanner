@@ -5,9 +5,15 @@ from pathlib import Path
 from research_atr_local_pair_preflight import inspect_local_pair
 
 HEADER = "Date,Open,High,Low,Close,Volume\n"
-BARS = ("2026-01-05,10,11,9,10,1000\n"
-        "2026-01-06,10,11,9,10.5,1100\n"
-        "2026-01-07,10.5,12,10,11,1200\n")
+from datetime import date, timedelta
+
+def make_bars():
+    start = date(2026, 1, 5)
+    days = [start + timedelta(days=i) for i in range(32)
+            if (start + timedelta(days=i)).weekday() < 5]
+    return "".join(f"{day.isoformat()},10,11,9,10,1000\\n" for day in days[:22])
+
+BARS = make_bars()
 
 
 class ATRLocalPairPreflightTests(unittest.TestCase):
@@ -33,11 +39,11 @@ class ATRLocalPairPreflightTests(unittest.TestCase):
         self.assertEqual(result["reason"], "hash_mismatch")
 
     def test_session_mismatch_blocks(self):
-        result = self.run_pair(BARS, BARS.replace("2026-01-07", "2026-01-08"))
+        result = self.run_pair(BARS, BARS.replace("2026-01-06", "2026-01-10"))
         self.assertEqual(result["reason"], "unaligned_sessions")
 
     def test_suspicious_jump_blocks(self):
-        result = self.run_pair(BARS.replace("10.5,12,10,11,1200", "21,22,20,21,1200"), BARS)
+        result = self.run_pair(BARS.replace("10,11,9,10,1000", "21,22,20,21,1000", 1), BARS)
         self.assertEqual(result["reason"], "price_anomaly_review_required")
 
 
