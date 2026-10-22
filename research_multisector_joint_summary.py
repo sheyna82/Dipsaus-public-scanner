@@ -232,6 +232,35 @@ def summarize(records):
             "negative_difference_eras": sum(x < 0 for x in comparable),
             "positive_difference_eras": sum(x > 0 for x in comparable),
             "validated_predictor": False, "descriptive_only": True})
+    # ATR risk contrast by symbol: reveal concentration behind pooled observations.
+    # Each symbol has its own descriptive rates; no independence or significance claim.
+    atr_symbol_contrasts = []
+    for row in valid:
+        outcomes = row["dependence_diagnostic"]["test_event_outcomes"]
+        groups = []
+        for value in (False, True):
+            events = [e for e in outcomes if e["atr_expanding"] is value]
+            severe = sum(e["max_adverse_excursion_pct"] <= -3 for e in events)
+            groups.append({"flag_value": value, "events": len(events),
+                           "severe_events": severe,
+                           "severe_rate_pct": round(100 * severe / len(events), 3)
+                           if events else None})
+        difference = (round(groups[1]["severe_rate_pct"] - groups[0]["severe_rate_pct"], 3)
+                      if all(g["events"] for g in groups) else None)
+        atr_symbol_contrasts.append({"symbol": row["symbol"], "sector": row["sector"],
+                                    "groups": groups,
+                                    "rate_difference_true_minus_false_pct_points": difference})
+    atr_comparable = [x for x in atr_symbol_contrasts
+                      if x["rate_difference_true_minus_false_pct_points"] is not None]
+    atr_symbol_summary = {"symbols": atr_symbol_contrasts,
+        "symbols_comparable": len(atr_comparable),
+        "symbols_lower_severe_risk_with_atr": sum(
+            x["rate_difference_true_minus_false_pct_points"] < 0 for x in atr_comparable),
+        "symbols_higher_severe_risk_with_atr": sum(
+            x["rate_difference_true_minus_false_pct_points"] > 0 for x in atr_comparable),
+        "symbols_equal": sum(
+            x["rate_difference_true_minus_false_pct_points"] == 0 for x in atr_comparable),
+        "descriptive_only": True, "validated_predictor": False}
     # Fixed-regime cross-era sign consistency, with no trading threshold inferred.
     regime_consistency = []
     for market_up in (True, False):
@@ -392,6 +421,7 @@ def summarize(records):
             "chronological_era_risk_return_tradeoff": era_risk_return_tradeoff,
             "early_risk_flag_discrimination": early_risk_discrimination,
             "early_risk_flag_era_stability": early_risk_era_stability,
+            "atr_symbol_risk_heterogeneity": atr_symbol_summary,
             "market_regime_summary": regime_summary, "symbol_dependence_unadjusted": True,
             "survivorship_free": False, "independent_holdout": False,
             "corporate_actions_verified": False, "trade_ready": False}
