@@ -27,6 +27,21 @@ def evaluate_payload(payload, session=TARGET):
             return {"symbol": "EXE", "session": session, "status": "DATA_BLOCKED",
                     "reason": "incomplete_regular_session", "minute_audit": grid,
                     "source_independently_verified": False, "trade_ready": False}
+        invalid_quote_minutes = []
+        for i, stamp in enumerate(times):
+            utc = datetime.fromtimestamp(stamp, timezone.utc)
+            ny = utc.astimezone(NY)
+            if ny.date().isoformat() != session or not (570 <= ny.hour*60+ny.minute < 960):
+                continue
+            if any(i >= len(quote[k]) or type(quote[k][i]) not in (float, int)
+                   or quote[k][i] <= 0 for k in ("open", "high", "low", "close")):
+                invalid_quote_minutes.append(ny.isoformat())
+        if invalid_quote_minutes:
+            return {"symbol": "EXE", "session": session, "status": "DATA_BLOCKED",
+                    "reason": "missing_or_invalid_ohlc", "minute_audit": grid,
+                    "invalid_ohlc_minutes_ny": invalid_quote_minutes[:25],
+                    "invalid_ohlc_count": len(invalid_quote_minutes),
+                    "source_independently_verified": False, "trade_ready": False}
         rows = []
         for i, stamp in enumerate(times):
             utc = datetime.fromtimestamp(stamp, timezone.utc)
