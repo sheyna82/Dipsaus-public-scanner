@@ -27,6 +27,14 @@ class GuardedATREvaluationTests(unittest.TestCase):
         self.assertEqual(result["status"], "DATA_BLOCKED")
         self.assertNotIn("scores", result)
 
+    def test_malformed_outcome_blocks_without_crash(self):
+        invalid = self.event(16, True)
+        invalid["severe"] = "unknown"
+        result = evaluate_guarded([self.event(0, True)], [invalid], self.sessions)
+        self.assertEqual(result["status"], "DATA_BLOCKED")
+        self.assertEqual(result["reason"], "invalid_scoring_events")
+        self.assertNotIn("scores", result)
+
     def test_insufficient_embargo_never_scores(self):
         result = evaluate_guarded([self.event(10, True)], [self.event(20, False)],
                                   self.sessions)
