@@ -44,6 +44,8 @@ def forecast(model, rows):
             key in model for key in ("baseline", "expanded", "pooled")):
         raise ValueError("invalid_model")
     output = []
+    if not isinstance(rows, (list, tuple)):
+        raise ValueError("invalid_forecast_rows")
     for row in rows:
         if not isinstance(row, dict):
             raise ValueError("invalid_event")
@@ -67,6 +69,8 @@ def predict(model, rows):
 
     Evaluation must never use outcome labels to calculate probabilities.
     """
+    if not isinstance(rows, (list, tuple)):
+        raise ValueError("invalid_holdout_rows")
     for row in rows:
         _validate_event(row)
     forecasts = forecast(model, rows)
