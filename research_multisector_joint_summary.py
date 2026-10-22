@@ -206,6 +206,32 @@ def summarize(records):
                 round(groups[1]["severe_rate_pct"] - groups[0]["severe_rate_pct"], 3)
                 if all(g["severe_rate_pct"] is not None for g in groups) else None,
             "validated_predictor": False})
+    # Descriptive severe-risk contrasts by fixed chronological calendar thirds.
+    early_risk_era_stability = []
+    for flag in ("atr_expanding", "structure_above_20d_mean", "market_20d_positive"):
+        thirds = []
+        for third in range(3):
+            subset = [e for e in all_event_outcomes
+                      if min(2, 3 * (date.fromisoformat(e["date"]) - first_day).days // span) == third]
+            groups = []
+            for value in (False, True):
+                matching = [e for e in subset if e[flag] is value]
+                severe = sum(e["max_adverse_excursion_pct"] <= -3 for e in matching)
+                groups.append({"flag_value": value, "events": len(matching),
+                               "severe_events": severe,
+                               "severe_rate_pct": round(100 * severe / len(matching), 3)
+                               if matching else None})
+            difference = (round(groups[1]["severe_rate_pct"] - groups[0]["severe_rate_pct"], 3)
+                          if all(g["events"] for g in groups) else None)
+            thirds.append({"chronological_third": third + 1, "groups": groups,
+                           "rate_difference_true_minus_false_pct_points": difference})
+        comparable = [x["rate_difference_true_minus_false_pct_points"] for x in thirds
+                      if x["rate_difference_true_minus_false_pct_points"] is not None]
+        early_risk_era_stability.append({"factor": flag, "eras": thirds,
+            "comparable_eras": len(comparable),
+            "negative_difference_eras": sum(x < 0 for x in comparable),
+            "positive_difference_eras": sum(x > 0 for x in comparable),
+            "validated_predictor": False, "descriptive_only": True})
     # Fixed-regime cross-era sign consistency, with no trading threshold inferred.
     regime_consistency = []
     for market_up in (True, False):
@@ -365,6 +391,7 @@ def summarize(records):
             "joint_factor_era_stability": cell_stability,
             "chronological_era_risk_return_tradeoff": era_risk_return_tradeoff,
             "early_risk_flag_discrimination": early_risk_discrimination,
+            "early_risk_flag_era_stability": early_risk_era_stability,
             "market_regime_summary": regime_summary, "symbol_dependence_unadjusted": True,
             "survivorship_free": False, "independent_holdout": False,
             "corporate_actions_verified": False, "trade_ready": False}
