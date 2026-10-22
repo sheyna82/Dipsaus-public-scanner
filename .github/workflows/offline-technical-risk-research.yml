@@ -49,6 +49,7 @@ on:
       - 'research_observe_apple_adjustment_factors.py'
       - 'research_aapl_adjustment_sensitivity.py'
       - 'research_aapl_spy_selected_skipped.py'
+      - 'dipsaus_offline_event_calendar_baseline.py'
       - 'research_four_event_history_results.py'
       - 'dipsaus_offline_completed_daily_bar_gate.py'
       - 'test_dipsaus_offline_completed_daily_bar_gate.py'
