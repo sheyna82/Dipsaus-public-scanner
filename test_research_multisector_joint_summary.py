@@ -61,6 +61,8 @@ class JointSummaryTests(unittest.TestCase):
         self.assertEqual(len(result["chronological_era_joint_factor_composition"]), 3)
         self.assertTrue(all(cell["severe_adverse_rate_pct"] == 100.0 for era in result["chronological_era_joint_factor_composition"] for cell in era["cells"] if cell["events"]))
         self.assertEqual(len(result["joint_factor_era_stability"]), 4)
+        self.assertEqual(len(result["chronological_era_risk_return_tradeoff"]), 3)
+        self.assertTrue(all(era["descriptive_only"] for era in result["chronological_era_risk_return_tradeoff"]))
         self.assertTrue(all(not x["predictive_edge_proven"] for x in result["joint_factor_era_stability"]))
         self.assertEqual(sum(cell["events"] for era in result["chronological_era_joint_factor_composition"] for cell in era["cells"]), 64)
         self.assertEqual(sum(x["factor_true_counts"]["atr_expanding"] for x in result["chronological_era_factor_prevalence"]), 32)
