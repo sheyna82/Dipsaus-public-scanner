@@ -122,6 +122,18 @@ def summarize(records):
                     round(sum(selected)/len(selected) - sum(rejected)/len(rejected), 5)
                     if selected and rejected else None})
         era_market_regimes.append({"chronological_third": era + 1, "regimes": regimes})
+    # Factor prevalence by era. This describes changes in the signal population,
+    # not causal attribution or an optimized trading rule.
+    era_factor_prevalence = []
+    for era in range(3):
+        group = [e for e in all_event_outcomes
+                 if min(2, 3 * (date.fromisoformat(e["date"]) - first_day).days // span) == era]
+        counts = {field: sum(e[field] for e in group)
+                  for field in ("atr_expanding", "structure_above_20d_mean", "market_20d_positive")}
+        era_factor_prevalence.append({"chronological_third": era + 1, "events": len(group),
+            "factor_true_counts": counts,
+            "factor_true_rates_pct": {k: round(100 * n / len(group), 2) if group else None
+                                      for k, n in counts.items()}})
     # Fixed-regime cross-era sign consistency, with no trading threshold inferred.
     regime_consistency = []
     for market_up in (True, False):
@@ -276,6 +288,7 @@ def summarize(records):
             "chronological_era_breadth": era_breadth,
             "chronological_era_market_regimes": era_market_regimes,
             "market_regime_cross_era_consistency": regime_consistency,
+            "chronological_era_factor_prevalence": era_factor_prevalence,
             "market_regime_summary": regime_summary, "symbol_dependence_unadjusted": True,
             "survivorship_free": False, "independent_holdout": False,
             "corporate_actions_verified": False, "trade_ready": False}
