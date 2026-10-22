@@ -130,6 +130,13 @@ def summarize(records):
             "symbols_with_both_groups": len(comparable),
             "symbols_selected_better": sum(x["selected_minus_rejected_mean_pct"] > 0 for x in comparable),
             "symbols_rejected_better": sum(x["selected_minus_rejected_mean_pct"] < 0 for x in comparable)})
+    era_breadth = [{"chronological_third": e["chronological_third"],
+                    "comparable_symbols": e["symbols_with_both_groups"],
+                    "filter_better_share_pct": round(100 * e["symbols_selected_better"] / e["symbols_with_both_groups"], 2)
+                        if e["symbols_with_both_groups"] else None,
+                    "majority_better": e["symbols_selected_better"] > e["symbols_with_both_groups"] / 2
+                        if e["symbols_with_both_groups"] else None}
+                   for e in era_symbol_coverage]
     era_deltas = [e["selected_minus_rejected_mean_pct"] for e in era_sensitivity]
     era_stability = {"all_eras_positive": all(x is not None and x > 0 for x in era_deltas),
                      "eras_positive": sum(x is not None and x > 0 for x in era_deltas),
@@ -236,6 +243,7 @@ def summarize(records):
             "chronological_era_sensitivity": era_sensitivity,
             "chronological_era_stability": era_stability,
             "chronological_era_symbol_coverage": era_symbol_coverage,
+            "chronological_era_breadth": era_breadth,
             "market_regime_summary": regime_summary, "symbol_dependence_unadjusted": True,
             "survivorship_free": False, "independent_holdout": False,
             "corporate_actions_verified": False, "trade_ready": False}
