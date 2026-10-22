@@ -41,9 +41,13 @@ def evaluate_cohorts():
                             for d in dates]
     with TemporaryDirectory() as folder:
         paths = [Path(folder) / x for x in ("raw.csv", "adjusted.csv", "spy.csv")]
-        for path, payload in zip(paths, ("\n".join(raw) + "\n",
+        for path, payload in zip(paths, ("
+".join(raw) + "
+",
                                          make_adjusted_apple_csv(apple),
-                                         "\n".join(benchmark) + "\n")):
+                                         "
+".join(benchmark) + "
+")):
             path.write_text(payload, encoding="utf-8")
         outputs = [evaluate_local_history(paths[i], paths[2]) for i in (0, 1)]
     report = {}
@@ -69,7 +73,9 @@ def evaluate_cohorts():
         # Fixed descriptive regimes: benchmark 5-day return, known at signal close.
         # Never tune thresholds on these observed outcomes.
         market_regimes = {}
-        for name, predicate in (("market_down_5d", lambda x: x < -2),\n                                ("market_flat_5d", lambda x: -2 <= x <= 2),\n                                ("market_up_5d", lambda x: x > 2)):
+        for name, predicate in (("market_down_5d", lambda x: x < -2),
+                                ("market_flat_5d", lambda x: -2 <= x <= 2),
+                                ("market_up_5d", lambda x: x > 2)):
             group = [r for r in result["rows"] if predicate(r["market_return_5d"])]
             yes = [r for r in group if r["score"] >= 5]
             no = [r for r in group if r["score"] < 5]
