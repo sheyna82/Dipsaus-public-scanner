@@ -59,25 +59,31 @@ def summarize(records):
         for i in range(len(ordered_days)) for j in range(i + 1, len(ordered_days))
         if (ordered_days[j] - ordered_days[i]).days < 14
     )
-    # Non-overlapping 14-calendar-day blocks anchored to the first signal date.
-    # Equal-weight block comparisons prevent crowded days from dominating the sign count.
+    # Predeclared calendar offsets: test sensitivity to arbitrary block boundaries.
+    # Descriptive only: the offset analyses reuse the same observations.
     anchor = ordered_days[0]
-    blocks = {}
-    for event in all_event_outcomes:
-        block = (date.fromisoformat(event["date"]) - anchor).days // 14
-        blocks.setdefault(block, []).append(event)
-    paired_block_deltas = []
-    for group in blocks.values():
-        selected = [e["net_return_pct"] for e in group if e["atr_structure_selected"]]
-        rejected = [e["net_return_pct"] for e in group if not e["atr_structure_selected"]]
-        if selected and rejected:
-            paired_block_deltas.append(sum(selected)/len(selected) - sum(rejected)/len(rejected))
-    time_block = {"calendar_days_per_block": 14, "total_blocks": len(blocks),
-                  "paired_blocks": len(paired_block_deltas),
-                  "selected_better_blocks": sum(d > 0 for d in paired_block_deltas),
-                  "selected_worse_blocks": sum(d < 0 for d in paired_block_deltas),
-                  "selected_equal_blocks": sum(d == 0 for d in paired_block_deltas),
-                  "mean_paired_block_delta_pct": round(sum(paired_block_deltas)/len(paired_block_deltas), 5) if paired_block_deltas else None,
+    offset_sensitivity = []
+    for offset in (0, 3, 7, 10):
+        blocks = {}
+        for event in all_event_outcomes:
+            block = ((date.fromisoformat(event["date"]) - anchor).days + offset) // 14
+            blocks.setdefault(block, []).append(event)
+        deltas = []
+        for group in blocks.values():
+            selected = [e["net_return_pct"] for e in group if e["atr_structure_selected"]]
+            rejected = [e["net_return_pct"] for e in group if not e["atr_structure_selected"]]
+            if selected and rejected:
+                deltas.append(sum(selected)/len(selected) - sum(rejected)/len(rejected))
+        offset_sensitivity.append({
+            "offset_calendar_days": offset, "total_blocks": len(blocks),
+            "paired_blocks": len(deltas),
+            "selected_better_blocks": sum(d > 0 for d in deltas),
+            "selected_worse_blocks": sum(d < 0 for d in deltas),
+            "selected_equal_blocks": sum(d == 0 for d in deltas),
+            "mean_paired_block_delta_pct": round(sum(deltas)/len(deltas), 5) if deltas else None})
+    time_block = {"calendar_days_per_block": 14,
+                  **{k: v for k, v in offset_sensitivity[0].items() if k != "offset_calendar_days"},
+                  "offset_sensitivity": offset_sensitivity,
                   "formal_significance_test": False}
     cross_symbol = {"distinct_signal_days": len(day_counts),
                     "cross_day_pairs_within_14_calendar_days": rolling_pairs_14_calendar_days,
