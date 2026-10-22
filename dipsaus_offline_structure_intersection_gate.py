@@ -31,7 +31,7 @@ def evaluate_structure_intersections(stock, benchmark, *, min_test=10):
         skipped = [r for r in rows if not all(r[field] for field in fields)]
         factors[name] = {"selected": metrics(selected), "skipped": metrics(skipped),
                          "missed_winning_events": sum(r["terminal_return_net_pct"] > 0 for r in skipped)}
-    return {"status": "EXPLORATORY_JOINT_FACTOR_DIAGNOSTIC",
+    regime_groups = {}\n    for label, market_up in (("market_20d_positive", True), ("market_20d_nonpositive", False)):\n        regime_rows = [r for r in rows if r["market_20d_positive"] is market_up]\n        atr_structure = [r for r in regime_rows if r["atr_expanding"] and r["structure_above_20d_mean"]]\n        rejected = [r for r in regime_rows if not (r["atr_expanding"] and r["structure_above_20d_mean"])]\n        regime_groups[label] = {"baseline": metrics(regime_rows),\n                                "atr_structure_selected": metrics(atr_structure),\n                                "atr_structure_rejected": metrics(rejected),\n                                "missed_winning_events": sum(r["terminal_return_net_pct"] > 0 for r in rejected)}\n    return {"status": "EXPLORATORY_JOINT_FACTOR_DIAGNOSTIC",\n            "market_regime_diagnostics": regime_groups,
             "test_events": len(rows), "baseline_test": metrics(rows), "factors": factors,
             "combinations_predeclared": True, "independent_untouched_holdout": False,
             "predictive_edge_proven": False, "trade_ready": False}
