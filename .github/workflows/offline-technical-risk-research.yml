@@ -49,6 +49,7 @@ on:
       - 'research_observe_apple_adjustment_factors.py'
       - 'research_aapl_adjustment_sensitivity.py'
       - 'research_aapl_spy_selected_skipped.py'
+      - 'research_diagnose_four_ticker_source.py'
       - 'research_probe_four_event_tickers.py'
       - 'dipsaus_offline_event_session_gate.py'
       - 'test_dipsaus_offline_event_session_gate.py'
@@ -191,4 +192,6 @@ jobs:
         with:
           python-version: '3.12'
       - name: Probe four free daily data endpoints (nonblocking research)
-        run: python research_probe_four_event_tickers.py
+        run: |
+          python research_probe_four_event_tickers.py
+          python research_diagnose_four_ticker_source.py
