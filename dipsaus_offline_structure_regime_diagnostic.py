@@ -58,5 +58,6 @@ def evaluate_structure_regime(stock, benchmark, *, horizon=10, train_fraction=0.
     return {"status": "EXPLORATORY_STRUCTURE_REGIME_DIAGNOSTIC",
             "train_events": len(train), "test_events": len(test),
             "baseline_test": metrics(test), "factors": factors,
+            "test_rows": test,
             "independent_untouched_holdout": False, "source_verified": False,
             "predictive_edge_proven": False, "trade_ready": False}
