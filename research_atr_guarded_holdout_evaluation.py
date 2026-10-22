@@ -12,6 +12,11 @@ def evaluate_guarded(training, holdout, sessions, *, embargo_sessions=10):
     if gate["status"] != "STRUCTURAL_REVIEW_ONLY":
         return {"status": "DATA_BLOCKED", "gate": gate,
                 "independent_holdout_verified": False, "trade_ready": False}
-    scores = evaluate(predict(fit(training), holdout))
+    try:
+        scores = evaluate(predict(fit(training), holdout))
+    except (ValueError, TypeError, KeyError, ZeroDivisionError):
+        return {"status": "DATA_BLOCKED", "gate": gate,
+                "reason": "invalid_scoring_events",
+                "independent_holdout_verified": False, "trade_ready": False}
     return {"status": "DESCRIPTIVE_ONLY", "gate": gate, "scores": scores,
             "independent_holdout_verified": False, "trade_ready": False}
