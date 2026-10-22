@@ -23,6 +23,18 @@ class IncrementalATRHoldoutScoringTests(unittest.TestCase):
         self.assertFalse(result["independent_holdout_verified"])
         self.assertFalse(result["trade_ready"])
 
+    def test_scored_and_prospective_forecasts_match(self):
+        model = fit([self.event(True, True, True, False),
+                     self.event(False, True, False, True)])
+        labelled = [self.event(True, True, True, True)]
+        without_label = [{k: v for k, v in labelled[0].items() if k != "severe"}]
+        scored = predict(model, labelled)[0]
+        prospective = forecast(model, without_label)[0]
+        for key in ("baseline_probability", "atr_probability",
+                    "baseline_fallback", "atr_fallback"):
+            self.assertEqual(scored[key], prospective[key])
+        self.assertEqual(scored["severe"], True)
+
     def test_forecast_does_not_require_future_outcomes(self):
         model = fit([self.event(True, True, True, False)])
         features = {"structure_above_20d_mean": True,
