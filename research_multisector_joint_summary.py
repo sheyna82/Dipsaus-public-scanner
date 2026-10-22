@@ -340,6 +340,40 @@ def summarize(records):
                                     for x in atr_block_sensitivity),
         "independence_established": False, "validated_predictor": False,
         "descriptive_only": True}
+    # Fixed strata test: does ATR add a descriptive severe-risk contrast within
+    # identical pre-signal price structure and SPY market regimes?
+    atr_conditional_cells = []
+    for structure in (False, True):
+        for market_up in (False, True):
+            subset = [e for e in all_event_outcomes
+                      if e["structure_above_20d_mean"] is structure
+                      and e["market_20d_positive"] is market_up]
+            groups = []
+            for atr in (False, True):
+                matching = [e for e in subset if e["atr_expanding"] is atr]
+                severe = sum(e["max_adverse_excursion_pct"] <= -3 for e in matching)
+                groups.append({"atr_expanding": atr, "events": len(matching),
+                               "severe_events": severe,
+                               "severe_rate_pct": round(100 * severe / len(matching), 3)
+                               if matching else None})
+            delta = (round(groups[1]["severe_rate_pct"] - groups[0]["severe_rate_pct"], 3)
+                     if all(g["events"] for g in groups) else None)
+            atr_conditional_cells.append({
+                "structure_above_20d_mean": structure,
+                "market_20d_positive": market_up,
+                "groups": groups, "atr_true_minus_false_severe_rate_pp": delta})
+    comparable_cells = [x for x in atr_conditional_cells
+                        if x["atr_true_minus_false_severe_rate_pp"] is not None]
+    atr_conditional_summary = {"cells": atr_conditional_cells,
+        "comparable_cells": len(comparable_cells),
+        "lower_risk_cells": sum(x["atr_true_minus_false_severe_rate_pp"] < 0
+                                for x in comparable_cells),
+        "higher_risk_cells": sum(x["atr_true_minus_false_severe_rate_pp"] > 0
+                                 for x in comparable_cells),
+        "equal_risk_cells": sum(x["atr_true_minus_false_severe_rate_pp"] == 0
+                                for x in comparable_cells),
+        "descriptive_only": True, "incremental_predictive_value_proven": False,
+        "independent_holdout": False}
     # Fixed-regime cross-era sign consistency, with no trading threshold inferred.
     regime_consistency = []
     for market_up in (True, False):
@@ -504,6 +538,7 @@ def summarize(records):
             "atr_sector_risk_heterogeneity": atr_sector_contrasts,
             "atr_same_day_cluster_sensitivity": atr_same_day,
             "atr_14_day_block_sensitivity": atr_block_summary,
+            "atr_conditional_structure_market_risk": atr_conditional_summary,
             "market_regime_summary": regime_summary, "symbol_dependence_unadjusted": True,
             "survivorship_free": False, "independent_holdout": False,
             "corporate_actions_verified": False, "trade_ready": False}
