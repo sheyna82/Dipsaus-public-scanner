@@ -61,7 +61,8 @@ def evaluate_structure_intersections(stock, benchmark, *, min_test=10):
             "dependence_diagnostic": {"test_signal_dates": [r["signal_date"] for r in rows],
                 "test_event_outcomes": [{"date": r["signal_date"],
                     "net_return_pct": r["terminal_return_net_pct"],
-                    "atr_structure_selected": bool(r["atr_expanding"] and r["structure_above_20d_mean"])}
+                    "atr_structure_selected": bool(r["atr_expanding"] and r["structure_above_20d_mean"]),
+                    "market_20d_positive": bool(r["market_20d_positive"])}
                     for r in rows],
                 "overlapping_event_pairs": overlap_pairs,
                 "greedy_nonoverlapping_event_count": nonoverlapping_greedy,
