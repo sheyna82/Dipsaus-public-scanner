@@ -106,6 +106,13 @@ def summarize(records):
             "selected_minus_rejected_mean_pct":
                 round(sum(selected)/len(selected) - sum(rejected)/len(rejected), 5)
                 if selected and rejected else None})
+    era_deltas = [e["selected_minus_rejected_mean_pct"] for e in era_sensitivity]
+    era_stability = {"all_eras_positive": all(x is not None and x > 0 for x in era_deltas),
+                     "eras_positive": sum(x is not None and x > 0 for x in era_deltas),
+                     "eras_negative": sum(x is not None and x < 0 for x in era_deltas),
+                     "era_range_pct_points": round(max(era_deltas) - min(era_deltas), 5)
+                         if all(x is not None for x in era_deltas) else None,
+                     "stable_across_eras_claimed": False}
     cross_symbol = {"distinct_signal_days": len(day_counts),
                     "cross_day_pairs_within_14_calendar_days": rolling_pairs_14_calendar_days,
                     "days_with_multiple_symbols": sum(n > 1 for n in day_counts.values()),
@@ -203,6 +210,7 @@ def summarize(records):
             "comparisons": comparisons, "cross_symbol_dependence": cross_symbol,
             "time_block_sensitivity": time_block,
             "chronological_era_sensitivity": era_sensitivity,
+            "chronological_era_stability": era_stability,
             "market_regime_summary": regime_summary, "symbol_dependence_unadjusted": True,
             "survivorship_free": False, "independent_holdout": False,
             "corporate_actions_verified": False, "trade_ready": False}
