@@ -41,7 +41,9 @@ def evaluate_local_history(stock_path, benchmark_path, *, horizon=10, fee_bps=10
         net_pct = 100 * (exit_price / entry - 1) - 2 * fee_bps / 100
         results.append({"signal_date": stock[signal]["date"],
                         "exit_date": stock[signal + horizon + 1]["date"],
-                        "score": points, "net_return_pct": round(net_pct, 6)})
+                        "score": points, "net_return_pct": round(net_pct, 6),
+                        "market_return_5d": features["market_return_5d"],
+                        "atr_pct": features["atr_pct"]})
     selected = [r["net_return_pct"] for r in results if r["score"] >= 5]
     all_returns = [r["net_return_pct"] for r in results]
     return {"status": "EXPLORATORY_ONLY",
