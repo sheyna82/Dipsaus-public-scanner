@@ -9,6 +9,7 @@ from datetime import date as calendar_date
 from pathlib import Path
 
 from dipsaus_offline_ohlcv_csv import load_local_ohlcv_csv
+from dipsaus_offline_history_quality import audit_price_history
 
 MAX_INPUT_BYTES = 10_000_000
 RAW = ("open", "high", "low", "close", "volume")
@@ -55,6 +56,11 @@ def convert_wiki_subset(input_path, output_path, *, symbol, adjusted=True):
     if len(parsed) < 32 or any(parsed[i][0] >= parsed[i+1][0]
                                for i in range(len(parsed)-1)):
         raise ValueError("invalid_date_order_or_coverage")
+    quality = audit_price_history([
+        {"date": day, "close": values[3]} for day, values in parsed
+    ])
+    if quality["findings"]:
+        raise ValueError("history_quality_review_required")
     # Validate without writing or replacing the destination on failure.
     import tempfile
     import os
