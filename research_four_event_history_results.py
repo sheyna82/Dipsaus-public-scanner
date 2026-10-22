@@ -10,6 +10,7 @@ from urllib.request import Request, urlopen
 from research_probe_alternative_daily_source import BASE, SYMBOLS
 from research_audit_four_event_ohlcv import audit_chart
 from dipsaus_offline_event_history_outcomes import evaluate_daily_event_history
+from dipsaus_offline_completed_daily_bar_gate import completed_daily_bars
 
 
 def evaluate_payload(symbol, payload):
@@ -23,6 +24,10 @@ def evaluate_payload(symbol, payload):
         bars.append({"date": datetime.fromtimestamp(ts, timezone.utc).date().isoformat(),
                      **{field: quote[field][i] for field in
                         ("open", "high", "low", "close", "volume")}})
+    gate = completed_daily_bars(bars, now_utc=datetime.now(timezone.utc))
+    if gate['status'] != 'PRIOR_DATE_ONLY':
+        return {'symbol': symbol, 'status': 'DATA_BLOCKED', 'reason': gate['reason']}
+    bars = gate['rows']
     outcomes = evaluate_daily_event_history(bars, horizon=10, fee_bps_each_side=10)
     return {"symbol": symbol, "status": outcomes["status"],
             "history_bars": len(bars), "signal_count": outcomes.get("sample_count"),
