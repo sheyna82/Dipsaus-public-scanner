@@ -23,6 +23,24 @@ def summarize(records):
     blocked = [s for s, row in by_symbol.items() if row.get("status") != "EXPLORATORY_JOINT_FACTOR_DIAGNOSTIC"]
     if not valid:
         return {"status": "DATA_BLOCKED", "reason": "no_valid_symbols", "trade_ready": False}
+    # Cross-symbol same-day clusters are not independent observations.
+    from collections import Counter
+    day_counts = Counter()
+    for row in valid:
+        dependency = row.get("dependence_diagnostic")
+        if not isinstance(dependency, dict):
+            return {"status": "DATA_BLOCKED", "reason": "missing_dependence_diagnostic", "trade_ready": False}
+        dates = dependency.get("test_signal_dates")
+        if (not isinstance(dates, list) or len(dates) != row["baseline_test"]["events"]
+                or len(set(dates)) != len(dates)
+                or any(not isinstance(day, str) or len(day) != 10 for day in dates)):
+            return {"status": "DATA_BLOCKED", "reason": "invalid_signal_dates", "trade_ready": False}
+        day_counts.update(dates)
+    cross_symbol = {"distinct_signal_days": len(day_counts),
+                    "days_with_multiple_symbols": sum(n > 1 for n in day_counts.values()),
+                    "signals_on_shared_days": sum(n for n in day_counts.values() if n > 1),
+                    "same_day_cross_symbol_pairs": sum(n * (n - 1) // 2 for n in day_counts.values()),
+                    "cross_day_market_dependence_unmeasured": True}
     comparisons = {}
     for key in ("atr_and_structure", "atr_and_market", "atr_structure_market"):
         better, worse, equal, empty, missed, evaluated = 0, 0, 0, 0, 0, 0
@@ -109,7 +127,8 @@ def summarize(records):
                 "trade_ready": False}
     return {"status": "EXPLORATORY_SECTOR_REPLICATION_SUMMARY",
             "symbols_evaluated": len(valid), "symbols_blocked": sorted(blocked),
-            "comparisons": comparisons, "market_regime_summary": regime_summary, "symbol_dependence_unadjusted": True,
+            "comparisons": comparisons, "cross_symbol_dependence": cross_symbol,
+            "market_regime_summary": regime_summary, "symbol_dependence_unadjusted": True,
             "survivorship_free": False, "independent_holdout": False,
             "corporate_actions_verified": False, "trade_ready": False}
 
