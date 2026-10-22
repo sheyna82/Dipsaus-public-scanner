@@ -53,6 +53,8 @@ class JointSummaryTests(unittest.TestCase):
         self.assertEqual(sum(x["events"] for x in result["chronological_era_sensitivity"]), 64)
         self.assertEqual(len(result["chronological_era_sensitivity"]), 3)
         self.assertEqual(len(result["chronological_era_symbol_coverage"]), 3)
+        self.assertEqual(len(result["chronological_era_breadth"]), 3)
+        self.assertTrue(all(x["comparable_symbols"] <= 16 for x in result["chronological_era_breadth"]))
         self.assertEqual(sum(x["symbols_with_both_groups"] for x in result["chronological_era_symbol_coverage"]), 16)
         self.assertFalse(result["chronological_era_stability"]["stable_across_eras_claimed"])
         self.assertEqual(result["chronological_era_stability"]["eras_positive"], sum(
