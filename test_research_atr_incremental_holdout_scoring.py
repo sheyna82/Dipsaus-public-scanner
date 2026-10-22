@@ -23,6 +23,17 @@ class IncrementalATRHoldoutScoringTests(unittest.TestCase):
         self.assertFalse(result["independent_holdout_verified"])
         self.assertFalse(result["trade_ready"])
 
+    def test_changing_holdout_outcome_cannot_change_forecast(self):
+        model = fit([self.event(True, True, True, False),
+                     self.event(True, True, False, True)])
+        negative = self.event(True, True, True, False)
+        positive = self.event(True, True, True, True)
+        a, b = predict(model, [negative])[0], predict(model, [positive])[0]
+        for key in ("baseline_probability", "atr_probability",
+                    "baseline_fallback", "atr_fallback"):
+            self.assertEqual(a[key], b[key])
+        self.assertNotEqual(a["severe"], b["severe"])
+
     def test_scored_and_prospective_forecasts_match(self):
         model = fit([self.event(True, True, True, False),
                      self.event(False, True, False, True)])
