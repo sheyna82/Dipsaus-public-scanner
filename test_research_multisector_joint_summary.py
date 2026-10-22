@@ -63,6 +63,9 @@ class JointSummaryTests(unittest.TestCase):
         self.assertEqual(len(result["joint_factor_era_stability"]), 4)
         self.assertEqual(len(result["chronological_era_risk_return_tradeoff"]), 3)
         self.assertEqual(len(result["early_risk_flag_discrimination"]), 3)
+        self.assertEqual(len(result["atr_symbol_risk_heterogeneity"]["symbols"]), 16)
+        self.assertEqual(result["atr_symbol_risk_heterogeneity"]["symbols_comparable"], 16)
+        self.assertFalse(result["atr_symbol_risk_heterogeneity"]["validated_predictor"])
         self.assertEqual(len(result["early_risk_flag_era_stability"]), 3)
         for factor in result["early_risk_flag_era_stability"]:
             self.assertFalse(factor["validated_predictor"])
