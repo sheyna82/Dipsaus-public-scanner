@@ -494,5 +494,6 @@ jobs:
           python-version: '3.12'
       - name: Replicate fixed joint factors across eight sectors
         run: |
+          set -o pipefail
           python research_multisector_five_year_joint_replication.py | tee multisector-joint-results.jsonl
           python research_multisector_joint_summary.py < multisector-joint-results.jsonl
