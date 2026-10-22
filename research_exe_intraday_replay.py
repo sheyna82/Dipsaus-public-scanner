@@ -2,7 +2,7 @@
 import argparse
 import csv
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from pathlib import Path
 from portfolio_downside_research import replay_intraday
@@ -40,8 +40,8 @@ def main():
     result=replay_intraday([bar for _,bar in rows],enabled=True)
     first=result['first_signal_index']
     print(json.dumps({'session':args.session,'bars':len(rows),'status':result['status'],
-                      'first_signal_utc':rows[first][0].isoformat() if first is not None else None,
-                      'first_signal_available_utc':(rows[first][0] + timedelta(minutes=1)).isoformat() if first is not None else None,
+                      'first_signal_utc':rows[first][0].astimezone(timezone.utc).isoformat() if first is not None else None,
+                      'first_signal_available_utc':(rows[first][0] + timedelta(minutes=1)).astimezone(timezone.utc).isoformat() if first is not None else None,
                       'first_signal_is_completed_bar_only':True,
                       'signal_bar_count':result['signal_count'],
                       'signal_minutes':result['signal_count'],
