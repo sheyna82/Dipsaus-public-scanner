@@ -58,6 +58,8 @@ class JointSummaryTests(unittest.TestCase):
         self.assertEqual(len(result["chronological_era_market_regimes"]), 3)
         self.assertEqual(len(result["market_regime_cross_era_consistency"]), 2)
         self.assertEqual(len(result["chronological_era_factor_prevalence"]), 3)
+        self.assertEqual(len(result["chronological_era_joint_factor_composition"]), 3)
+        self.assertEqual(sum(cell["events"] for era in result["chronological_era_joint_factor_composition"] for cell in era["cells"]), 64)
         self.assertEqual(sum(x["factor_true_counts"]["atr_expanding"] for x in result["chronological_era_factor_prevalence"]), 32)
         self.assertFalse(result["market_regime_cross_era_consistency"][1]["all_three_eras_comparable"])
         self.assertEqual(sum(z["events"] for x in result["chronological_era_market_regimes"] for z in x["regimes"]), 64)
