@@ -149,6 +149,25 @@ def summarize(records):
                     "mean_net_return_pct": round(sum(e["net_return_pct"] for e in subset)/len(subset), 5)
                         if subset else None})
         era_joint_factor_composition.append({"chronological_third": era + 1, "cells": cells})
+    # Flag sparse 2x2 cells and sign instability without selecting a winner.
+    cell_stability = []
+    for atr in (False, True):
+        for structure in (False, True):
+            groups = [next(cell for cell in era["cells"]
+                           if cell["atr_expanding"] is atr and
+                           cell["structure_above_20d_mean"] is structure)
+                      for era in era_joint_factor_composition]
+            cell_stability.append({
+                "atr_expanding": atr, "structure_above_20d_mean": structure,
+                "era_event_counts": [g["events"] for g in groups],
+                "eras_with_at_least_20_events": sum(g["events"] >= 20 for g in groups),
+                "positive_mean_eras": sum(g["mean_net_return_pct"] is not None and
+                                          g["mean_net_return_pct"] > 0 for g in groups),
+                "negative_mean_eras": sum(g["mean_net_return_pct"] is not None and
+                                          g["mean_net_return_pct"] < 0 for g in groups),
+                "all_eras_positive": all(g["mean_net_return_pct"] is not None and
+                                         g["mean_net_return_pct"] > 0 for g in groups),
+                "predictive_edge_proven": False})
     # Fixed-regime cross-era sign consistency, with no trading threshold inferred.
     regime_consistency = []
     for market_up in (True, False):
@@ -305,6 +324,7 @@ def summarize(records):
             "market_regime_cross_era_consistency": regime_consistency,
             "chronological_era_factor_prevalence": era_factor_prevalence,
             "chronological_era_joint_factor_composition": era_joint_factor_composition,
+            "joint_factor_era_stability": cell_stability,
             "market_regime_summary": regime_summary, "symbol_dependence_unadjusted": True,
             "survivorship_free": False, "independent_holdout": False,
             "corporate_actions_verified": False, "trade_ready": False}
