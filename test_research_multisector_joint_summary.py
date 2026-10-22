@@ -9,6 +9,7 @@ def valid_row(symbol, sector):
     return {"symbol": symbol, "sector": sector,
             "status": "EXPLORATORY_JOINT_FACTOR_DIAGNOSTIC",
             "baseline_test": metric,
+            "dependence_diagnostic": {"test_signal_dates": ["2026-01-01", "2026-01-12", "2026-01-23", "2026-02-04"]},
             "market_regime_diagnostics": {
                 "market_20d_positive": {"baseline": {"events": 4, "mean_net_return_pct": 1.0, "mean_adverse_excursion_pct": -5.0, "severe_adverse_rate_pct": 75.0},
                     "atr_structure_selected": {"events": 2, "winning_events": 1,
@@ -28,6 +29,8 @@ class JointSummaryTests(unittest.TestCase):
         result = summarize(rows)
         self.assertEqual(result["status"], "EXPLORATORY_SECTOR_REPLICATION_SUMMARY")
         self.assertEqual(result["symbols_evaluated"], 16)
+        self.assertEqual(result["cross_symbol_dependence"]["same_day_cross_symbol_pairs"], 480)
+        self.assertEqual(result["cross_symbol_dependence"]["signals_on_shared_days"], 64)
         self.assertEqual(result["comparisons"]["atr_and_structure"]["symbols_better"], 16)
         self.assertEqual(result["market_regime_summary"]["market_20d_positive"]["events"], 64)
         self.assertEqual(result["market_regime_summary"]["market_20d_positive"]["selected_events"], 32)
