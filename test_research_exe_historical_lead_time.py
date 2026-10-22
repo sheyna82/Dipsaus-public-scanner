@@ -21,5 +21,19 @@ class ExeHistoricalDiagnosticTests(unittest.TestCase):
         self.assertIn("09:47:00", result["minute_audit"]["missing_minutes_ny"][0])
 
 
+    def test_null_ohlc_reports_exact_minute(self):
+        start = datetime(2026, 10, 21, 9, 30, tzinfo=ZoneInfo("America/New_York"))
+        stamps = [int((start + timedelta(minutes=i)).timestamp()) for i in range(390)]
+        quote = {"open": [100.] * 390, "high": [101.] * 390,
+                 "low": [99.] * 390, "close": [100.] * 390}
+        quote["close"][17] = None
+        payload = {"chart": {"result": [{"timestamp": stamps,
+                                         "indicators": {"quote": [quote]}}]}}
+        result = evaluate_payload(payload)
+        self.assertEqual(result["reason"], "missing_or_invalid_ohlc")
+        self.assertEqual(result["invalid_ohlc_count"], 1)
+        self.assertIn("09:47:00", result["invalid_ohlc_minutes_ny"][0])
+
+
 if __name__ == "__main__":
     unittest.main()
