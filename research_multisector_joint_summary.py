@@ -147,6 +147,10 @@ def summarize(records):
                 cells.append({"atr_expanding": atr, "structure_above_20d_mean": structure,
                     "events": len(subset),
                     "mean_net_return_pct": round(sum(e["net_return_pct"] for e in subset)/len(subset), 5)
+                        if subset else None,
+                    "mean_adverse_excursion_pct": round(sum(e["max_adverse_excursion_pct"] for e in subset)/len(subset), 5)
+                        if subset else None,
+                    "severe_adverse_rate_pct": round(100 * sum(e["max_adverse_excursion_pct"] <= -3 for e in subset)/len(subset), 3)
                         if subset else None})
         era_joint_factor_composition.append({"chronological_third": era + 1, "cells": cells})
     # Flag sparse 2x2 cells and sign instability without selecting a winner.
