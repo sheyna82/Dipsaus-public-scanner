@@ -49,6 +49,7 @@ on:
       - 'research_observe_apple_adjustment_factors.py'
       - 'research_aapl_adjustment_sensitivity.py'
       - 'research_aapl_spy_selected_skipped.py'
+      - 'research_audit_four_event_ohlcv.py'
       - 'research_probe_alternative_daily_source.py'
       - 'research_diagnose_four_ticker_source.py'
       - 'research_probe_four_event_tickers.py'
@@ -210,4 +211,6 @@ jobs:
         with:
           python-version: '3.12'
       - name: Probe alternate daily market data structure (research only)
-        run: python research_probe_alternative_daily_source.py
+        run: |
+          python research_probe_alternative_daily_source.py
+          python research_audit_four_event_ohlcv.py
