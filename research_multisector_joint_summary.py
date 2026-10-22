@@ -43,9 +43,51 @@ def summarize(records):
                             "symbols_equal": equal, "symbols_without_selected": empty,
                             "missed_winning_events_sum": missed,
                             "test_events_sum": evaluated}
+    regime_summary = {}
+    for label in ("market_20d_positive", "market_20d_nonpositive"):
+        totals = {"events": 0, "selected_events": 0, "rejected_events": 0,
+                  "missed_winning_events": 0, "selected_winning_events": 0,
+                  "selected_severe_adverse_events_estimate": None}
+        selected_return_weighted = 0.0
+        selected_adverse_weighted = 0.0
+        selected_severe_weighted = 0.0
+        for row in valid:
+            regime = row.get("market_regime_diagnostics", {}).get(label)
+            if not isinstance(regime, dict):
+                return {"status": "DATA_BLOCKED", "reason": "missing_regime_diagnostic",
+                        "trade_ready": False}
+            base = regime.get("baseline")
+            selected = regime.get("atr_structure_selected")
+            rejected = regime.get("atr_structure_rejected")
+            n = (base or {}).get("events", 0)
+            ns = (selected or {}).get("events", 0)
+            nr = (rejected or {}).get("events", 0)
+            missed = regime.get("missed_winning_events")
+            if ns + nr != n or type(missed) is not int or not 0 <= missed <= nr:
+                return {"status": "DATA_BLOCKED", "reason": "regime_count_inconsistent",
+                        "trade_ready": False}
+            totals["events"] += n
+            totals["selected_events"] += ns
+            totals["rejected_events"] += nr
+            totals["missed_winning_events"] += missed
+            if selected:
+                totals["selected_winning_events"] += selected["winning_events"]
+                selected_return_weighted += ns * selected["mean_net_return_pct"]
+                selected_adverse_weighted += ns * selected["mean_adverse_excursion_pct"]
+                selected_severe_weighted += ns * selected["severe_adverse_rate_pct"]
+        ns = totals["selected_events"]
+        totals["selected_mean_net_return_pct"] = round(selected_return_weighted / ns, 5) if ns else None
+        totals["selected_mean_adverse_excursion_pct"] = round(selected_adverse_weighted / ns, 5) if ns else None
+        totals["selected_severe_adverse_rate_pct"] = round(selected_severe_weighted / ns, 3) if ns else None
+        totals.pop("selected_severe_adverse_events_estimate")
+        regime_summary[label] = totals
+    if sum(x["events"] for x in regime_summary.values()) != sum(
+            row["baseline_test"]["events"] for row in valid):
+        return {"status": "DATA_BLOCKED", "reason": "regime_total_mismatch",
+                "trade_ready": False}
     return {"status": "EXPLORATORY_SECTOR_REPLICATION_SUMMARY",
             "symbols_evaluated": len(valid), "symbols_blocked": sorted(blocked),
-            "comparisons": comparisons, "symbol_dependence_unadjusted": True,
+            "comparisons": comparisons, "market_regime_summary": regime_summary, "symbol_dependence_unadjusted": True,
             "survivorship_free": False, "independent_holdout": False,
             "corporate_actions_verified": False, "trade_ready": False}
 
