@@ -11,6 +11,7 @@ from research_probe_alternative_daily_source import BASE, SYMBOLS
 from research_audit_four_event_ohlcv import audit_chart
 from dipsaus_offline_event_history_outcomes import evaluate_daily_event_history
 from dipsaus_offline_event_calendar_baseline import compare_calendar_baseline
+from dipsaus_offline_event_execution_costs import compare_execution_costs
 from dipsaus_offline_event_calendar_phases import compare_calendar_phases
 from dipsaus_offline_event_chronological_holdout import chronological_holdout
 from dipsaus_offline_completed_daily_bar_gate import completed_daily_bars
@@ -41,6 +42,7 @@ def evaluate_payload(symbol, payload):
             "mean_terminal_net_pct": outcomes.get("mean_terminal_net_pct"),
             "signal_dates": [x["signal_date"] for x in outcomes.get("outcomes", [])],
             "calendar_baseline": baseline,
+            "execution_cost_sensitivity": compare_execution_costs(bars, horizon=10),
             "chronological_holdout": chronological_holdout(
                 bars, horizon=10, fee_bps_each_side=10),
             "calendar_phase_comparison": compare_calendar_phases(
