@@ -70,7 +70,7 @@ def inspect_candidate(symbol, sector, listing_status, fetch=None):
         return {"symbol": symbol, "sector": sector, "listing_status": listing_status,
                 "status": "DATA_BLOCKED", "reason": "http_error",
                 "http_status": exc.code, "trade_ready": False}
-    except (OSError, URLError, TimeoutError, UnicodeError, ValueError, TypeError):
+    except (OSError, URLError, TimeoutError, UnicodeError, ValueError, TypeError, KeyError, IndexError, AttributeError):
         return {"symbol": symbol, "sector": sector, "listing_status": listing_status,
                 "status": "DATA_BLOCKED", "reason": "request_or_schema_failure",
                 "trade_ready": False}
