@@ -60,6 +60,7 @@ on:
       - 'test_research_exe_intraday_replay.py'
       - 'dipsaus_offline_exe_lead_time_audit.py'
       - 'test_dipsaus_offline_exe_lead_time_audit.py'
+      - 'research_exe_historical_lead_time.py'
       - 'dipsaus_offline_event_holdout_risk_summary.py'
       - 'test_dipsaus_offline_event_holdout_risk_summary.py'
       - 'dipsaus_offline_event_calendar_phases.py'
@@ -268,4 +269,6 @@ jobs:
         with:
           python-version: '3.12'
       - name: Check EXE minute history availability once (research only)
-        run: python research_probe_exe_minute_source.py
+        run: |
+          python research_probe_exe_minute_source.py
+          python research_exe_historical_lead_time.py
