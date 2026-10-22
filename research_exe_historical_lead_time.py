@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 from research_probe_exe_minute_source import URL
 from dipsaus_offline_exe_lead_time_audit import audit_downside_lead_time
 from dipsaus_offline_exe_missing_minutes import audit_regular_session_timestamps
+from dipsaus_offline_exe_contiguous_spans import valid_contiguous_spans
 
 NY = ZoneInfo("America/New_York")
 TARGET = "2026-10-21"
@@ -41,6 +42,7 @@ def evaluate_payload(payload, session=TARGET):
                     "reason": "missing_or_invalid_ohlc", "minute_audit": grid,
                     "invalid_ohlc_minutes_ny": invalid_quote_minutes[:25],
                     "invalid_ohlc_count": len(invalid_quote_minutes),
+                    "valid_span_diagnostic": valid_contiguous_spans(times, quote, session),
                     "source_independently_verified": False, "trade_ready": False}
         rows = []
         for i, stamp in enumerate(times):
