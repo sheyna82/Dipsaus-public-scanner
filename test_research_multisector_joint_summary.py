@@ -63,6 +63,16 @@ class JointSummaryTests(unittest.TestCase):
         self.assertEqual(len(result["joint_factor_era_stability"]), 4)
         self.assertEqual(len(result["chronological_era_risk_return_tradeoff"]), 3)
         self.assertEqual(len(result["early_risk_flag_discrimination"]), 3)
+        self.assertEqual(len(result["early_risk_flag_era_stability"]), 3)
+        for factor in result["early_risk_flag_era_stability"]:
+            self.assertFalse(factor["validated_predictor"])
+            self.assertTrue(factor["descriptive_only"])
+            self.assertEqual(len(factor["eras"]), 3)
+            self.assertEqual(sum(g["events"] for era in factor["eras"]
+                                 for g in era["groups"]), 64)
+            self.assertEqual(factor["comparable_eras"], sum(
+                era["rate_difference_true_minus_false_pct_points"] is not None
+                for era in factor["eras"]))
         self.assertTrue(all(not x["validated_predictor"] for x in result["early_risk_flag_discrimination"]))
         self.assertTrue(all(sum(g["events"] for g in x["groups"]) == 64 for x in result["early_risk_flag_discrimination"]))
         self.assertTrue(all(era["descriptive_only"] for era in result["chronological_era_risk_return_tradeoff"]))
