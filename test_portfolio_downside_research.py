@@ -4,9 +4,9 @@ from portfolio_downside_research import evaluate_intraday_downside as check
 class DownsideTests(unittest.TestCase):
     def test_detect(self):
         c=[100.]*30+[98.5,98.3,98.1,97.9,97.7]
-        h=[100.2]*35
+        h=[100.2]*30+[99.0,98.8,98.6,98.4,98.2]
         l=[99.5]*30+[98.4,98.2,98.,97.8,97.6]
-        o=[100.]*35
+        o=[100.]*30+[98.8,98.6,98.4,98.2,98.0]
         self.assertTrue(check(c,h,l,o,enabled=True)['trigger'])
     def test_disabled(self):
         self.assertEqual(check([],[],[],[])['status'],'DISABLED')
