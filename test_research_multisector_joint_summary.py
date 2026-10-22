@@ -68,6 +68,13 @@ class JointSummaryTests(unittest.TestCase):
         self.assertEqual(sum(g["events"] for x in sector_rows
                              for g in x["groups"]), 64)
         self.assertTrue(all(x["descriptive_only"] for x in sector_rows))
+        blocks = result["atr_14_day_block_sensitivity"]
+        self.assertEqual([x["offset_calendar_days"] for x in blocks["offsets"]],
+                         [0, 3, 7, 10])
+        self.assertTrue(all(x["paired_blocks"] <= x["total_blocks"]
+                            for x in blocks["offsets"]))
+        self.assertFalse(blocks["independence_established"])
+        self.assertFalse(blocks["validated_predictor"])
         same_day = result["atr_same_day_cluster_sensitivity"]
         self.assertEqual(same_day["distinct_days"], 4)
         self.assertEqual(same_day["days_with_multiple_symbols"], 4)
