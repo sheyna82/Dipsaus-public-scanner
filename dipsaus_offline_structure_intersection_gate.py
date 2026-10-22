@@ -40,8 +40,27 @@ def evaluate_structure_intersections(stock, benchmark, *, min_test=10):
                                 "atr_structure_selected": metrics(atr_structure),
                                 "atr_structure_rejected": metrics(rejected),
                                 "missed_winning_events": sum(r["terminal_return_net_pct"] > 0 for r in rejected)}
+    # Ten-session outcomes overlap when signals occur fewer than ten sessions apart.
+    # This is a dependence diagnostic, not an independence correction.
+    index = {bar["date"]: i for i, bar in enumerate(stock)}
+    positions = sorted(index[r["signal_date"]] for r in rows)
+    overlap_pairs = sum(
+        positions[j] - positions[i] < 10
+        for i in range(len(positions))
+        for j in range(i + 1, len(positions))
+        if positions[j] - positions[i] < 10
+    )
+    nonoverlapping_greedy = 0
+    last = -10
+    for position in positions:
+        if position - last >= 10:
+            nonoverlapping_greedy += 1
+            last = position
     return {"status": "EXPLORATORY_JOINT_FACTOR_DIAGNOSTIC",
             "market_regime_diagnostics": regime_groups,
+            "dependence_diagnostic": {"overlapping_event_pairs": overlap_pairs,
+                "greedy_nonoverlapping_event_count": nonoverlapping_greedy,
+                "horizon_sessions": 10, "independent_observations_claimed": False},
             "test_events": len(rows), "baseline_test": metrics(rows), "factors": factors,
             "combinations_predeclared": True, "independent_untouched_holdout": False,
             "predictive_edge_proven": False, "trade_ready": False}
