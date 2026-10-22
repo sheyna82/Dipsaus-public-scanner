@@ -12,6 +12,7 @@ from research_audit_four_event_ohlcv import audit_chart
 from dipsaus_offline_completed_daily_bar_gate import completed_daily_bars
 from dipsaus_offline_frozen_event_market_bridge import evaluate_frozen_events_against_market
 from dipsaus_offline_chronological_matched_risk import chronological_matched_risk
+from dipsaus_offline_pooled_chronological_risk import summarize_chronological_cohorts
 
 
 def bars_from_payload(symbol, payload, *, now_utc=None):
@@ -58,6 +59,7 @@ if __name__ == "__main__":
         spy = fetch_payload("SPY")
     except (OSError, ValueError, TimeoutError, UnicodeError):
         spy = None
+    all_results = []
     for symbol in SYMBOLS:
         try:
             if spy is None:
@@ -66,4 +68,6 @@ if __name__ == "__main__":
         except (OSError, ValueError, TimeoutError, UnicodeError, TypeError):
             result = {"symbol": symbol, "status": "DATA_BLOCKED", "reason": "fetch_failed"}
         result.pop("rows", None)
+        all_results.append(result)
         print(json.dumps(result, sort_keys=True))
+    print(json.dumps({"pooled_chronological_risk": summarize_chronological_cohorts(all_results)}, sort_keys=True))
