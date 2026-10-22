@@ -3,7 +3,7 @@
 Each gap resets the indicator history. Signals never borrow observations from
 a previous span. No inference about full-session warning lead time.
 """
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from portfolio_downside_research import replay_intraday
 
@@ -47,7 +47,7 @@ def replay_isolated_spans(timestamps, quote, session):
                             "end_ny": span[-1][0].astimezone(NY).isoformat(),
                             "bars": len(span), "status": replay["status"],
                             "first_signal_available_utc":
-                                (span[idx][0].isoformat() if idx is not None else None),
+                                ((span[idx][0] + timedelta(minutes=1)).isoformat() if idx is not None else None),
                             "signal_bar_count": replay["signal_count"]})
         return {"status": "ISOLATED_SPANS_RESEARCH", "session": session,
                 "spans": results, "rejected_bars": rejected,
