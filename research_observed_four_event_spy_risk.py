@@ -11,6 +11,7 @@ from research_probe_alternative_daily_source import SYMBOLS
 from research_audit_four_event_ohlcv import audit_chart
 from dipsaus_offline_completed_daily_bar_gate import completed_daily_bars
 from dipsaus_offline_frozen_event_market_bridge import evaluate_frozen_events_against_market
+from dipsaus_offline_chronological_matched_risk import chronological_matched_risk
 
 
 def bars_from_payload(symbol, payload, *, now_utc=None):
@@ -37,6 +38,7 @@ def evaluate_observed_pair(symbol, stock_payload, spy_payload, *, now_utc=None):
         return {"symbol": symbol, "status": "DATA_BLOCKED", "reason": "unaligned_sessions",
                 "stock_bars": len(stock), "spy_bars": len(spy)}
     result = evaluate_frozen_events_against_market(stock, spy)
+    result['chronological_diagnostic'] = chronological_matched_risk(stock, spy)
     return {"symbol": symbol, **result, "observed_source": "unverified_yahoo_daily",
             "corporate_actions_verified": False, "earnings_asof_verified": False,
             "survivorship_free": False, "trade_ready": False}
