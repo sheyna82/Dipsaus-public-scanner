@@ -52,6 +52,10 @@ class JointSummaryTests(unittest.TestCase):
             for x in result["time_block_sensitivity"]["offset_sensitivity"]))
         self.assertEqual(sum(x["events"] for x in result["chronological_era_sensitivity"]), 64)
         self.assertEqual(len(result["chronological_era_sensitivity"]), 3)
+        self.assertFalse(result["chronological_era_stability"]["stable_across_eras_claimed"])
+        self.assertEqual(result["chronological_era_stability"]["eras_positive"], sum(
+            x["selected_minus_rejected_mean_pct"] is not None and x["selected_minus_rejected_mean_pct"] > 0
+            for x in result["chronological_era_sensitivity"]))
         self.assertEqual(result["time_block_sensitivity"]["paired_blocks"], 1)
         self.assertEqual(result["time_block_sensitivity"]["selected_better_blocks"], 1)
         self.assertEqual(result["time_block_sensitivity"]["mean_paired_block_delta_pct"], 2.0)
