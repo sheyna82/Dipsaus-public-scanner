@@ -34,7 +34,7 @@ class FrozenRSATRTests(unittest.TestCase):
 
     def test_unaligned_dates_are_blocked(self):
         spy = bars(0.2)
-        spy[30]["date"] = "2025-01-31"
+        spy[30]["date"] = "2025-02-01"
         self.assertEqual(annotate_frozen_events_rs_atr(bars(), spy)["status"], "DATA_BLOCKED")
 
 
