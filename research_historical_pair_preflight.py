@@ -42,7 +42,11 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
         return set(zip(dates, dates[1:]))
 
     comparable_pairs = adjacent_pairs(stock_closes) & adjacent_pairs(benchmark_closes)
-    skipped_shared_date_gaps = max(0, len(ordered_shared) - 1) - len(comparable_pairs)
+    possible_shared_intervals = max(0, len(ordered_shared) - 1)
+    skipped_shared_date_gaps = possible_shared_intervals - len(comparable_pairs)
+    comparable_interval_coverage = (
+        len(comparable_pairs) / possible_shared_intervals
+        if possible_shared_intervals else None)
     comparable_return_intervals = 0
     matching_return_intervals = 0
     for previous, current in sorted(comparable_pairs):
@@ -74,6 +78,8 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
         "shared_price_dates": len(shared_dates),
         "comparable_shared_return_intervals": comparable_return_intervals,
         "skipped_nonadjacent_shared_intervals": skipped_shared_date_gaps,
+        "possible_shared_return_intervals": possible_shared_intervals,
+        "comparable_interval_coverage_fraction": comparable_interval_coverage,
         "minimum_comparable_return_intervals": minimum_comparable_intervals,
         "return_overlap_sufficient_for_screening": return_overlap_sufficient,
         "insufficient_return_overlap": not return_overlap_sufficient,
