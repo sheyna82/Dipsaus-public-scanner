@@ -76,6 +76,27 @@ class CalendarBlockBootstrapTests(unittest.TestCase):
                             for x in result["exploratory_log_loss_interval"]))
         self.assertEqual(result["log_loss_probability_clip"], .01)
 
+
+    def test_bootstrap_scores_match_existing_evaluator(self):
+        from research_atr_incremental_holdout_scoring import evaluate
+        sample = rows()
+        sample[0]["baseline_probability"] = 0.0
+        sample[0]["atr_probability"] = 1.0
+        predictions = [
+            {**row, "baseline_fallback": False, "atr_fallback": False}
+            for row in sample
+        ]
+        scores = evaluate(predictions)
+        result = paired_calendar_block_bootstrap(
+            sample, block_days=2, replicates=30, seed=3)
+        self.assertAlmostEqual(
+            result["observed_atr_minus_baseline_brier"],
+            scores["atr_minus_baseline_brier"], places=7)
+        self.assertAlmostEqual(
+            result["observed_atr_minus_baseline_log_loss"],
+            scores["atr_log_loss"] - scores["baseline_log_loss"],
+            places=7)
+
     def test_invalid_block_rejected(self):
         with self.assertRaisesRegex(ValueError, "insufficient_calendar_dates"):
             paired_calendar_block_bootstrap(rows(), block_days=20)
