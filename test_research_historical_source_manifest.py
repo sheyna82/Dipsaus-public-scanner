@@ -30,6 +30,27 @@ class SourceManifestTests(unittest.TestCase):
         self.assertFalse(result["point_in_time_verified"])
         self.assertFalse(result["trade_ready"])
 
+
+    def test_publication_after_retrieval_rejected(self):
+        record = manifest()
+        record["published_at"] = "2026-10-24T10:00:00+00:00"
+        with self.assertRaisesRegex(ValueError, "publication_after_retrieval"):
+            audit_historical_source_manifest(record, PAYLOAD)
+
+    def test_naive_publication_time_rejected(self):
+        record = manifest()
+        record["published_at"] = "2026-10-22T10:00:00"
+        with self.assertRaisesRegex(ValueError, "publication_timezone_required"):
+            audit_historical_source_manifest(record, PAYLOAD)
+
+    def test_valid_publication_time_is_not_proof_of_authenticity(self):
+        record = manifest()
+        record["published_at"] = "2026-10-22T10:00:00+00:00"
+        result = audit_historical_source_manifest(record, PAYLOAD)
+        self.assertTrue(result["publication_time_structurally_valid"])
+        self.assertFalse(result["publication_time_authenticity_verified"])
+        self.assertFalse(result["point_in_time_verified"])
+
     def test_modified_payload_rejected(self):
         with self.assertRaisesRegex(ValueError, "payload_hash_mismatch"):
             audit_historical_source_manifest(manifest(), PAYLOAD + b"tamper")
