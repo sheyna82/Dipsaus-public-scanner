@@ -22,6 +22,8 @@ on:
       - 'test_research_kaggle_local_convert_cli.py'
       - 'research_daily_atr_feature_extractor.py'
       - 'test_research_daily_atr_feature_extractor.py'
+      - 'research_forward_drawdown_labels.py'
+      - 'test_research_forward_drawdown_labels.py'
       - '.github/workflows/atr-hypothesis-research.yml'
 
 permissions:
@@ -40,6 +42,10 @@ jobs:
           python-version: '3.11'
       - name: Install test dependencies
         run: python -m pip install 'pytest>=8,<9' 'hypothesis>=6,<7'
+      - name: Run forward drawdown outcome tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_forward_drawdown_labels
       - name: Run causal daily ATR feature tests
         env:
           PYTHONPATH: ${{ github.workspace }}
