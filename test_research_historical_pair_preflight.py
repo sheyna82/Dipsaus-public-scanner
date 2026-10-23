@@ -365,6 +365,35 @@ class HistoricalPairPreflightTests(unittest.TestCase):
                              expected_screen)
             self.assertFalse(result["trade_ready"])
 
+    def test_missing_run_position_at_start_middle_and_end(self):
+        from datetime import date, timedelta
+
+        origin = date(2025, 1, 1)
+        def payload(extra_gaps, scale):
+            lines = ["date,open,high,low,close,volume"]
+            for index in range(10):
+                day = (origin + timedelta(days=index * 2)).isoformat()
+                close = (100 + index) * scale
+                lines.append(f"{day},{close},{close+scale},{close-scale},{close},100")
+                if index in extra_gaps:
+                    gap_day = (origin + timedelta(days=index * 2 + 1)).isoformat()
+                    lines.append(f"{gap_day},{close},{close+scale},{close-scale},{close},100")
+            return ("\n".join(lines) + "\n").encode()
+
+        benchmark = payload([], 2)
+        for gaps, start_count, end_count in (
+            ([0, 1], 2, 0),
+            ([4, 5], 0, 0),
+            ([7, 8], 0, 2),
+        ):
+            stock = payload(gaps, 1)
+            result = prepare_historical_research_pair(
+                manifest(stock), stock, manifest(benchmark), benchmark)
+            self.assertEqual(result["longest_nonadjacent_shared_interval_run"], 2)
+            self.assertEqual(result["missing_shared_intervals_at_start"], start_count)
+            self.assertEqual(result["missing_shared_intervals_at_end"], end_count)
+            self.assertEqual(result["skipped_nonadjacent_shared_intervals"], 2)
+
     def test_identical_payloads_rejected(self):
         data = payload(0)
         with self.assertRaisesRegex(ValueError, "identical_stock_and_benchmark"):
