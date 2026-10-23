@@ -81,6 +81,29 @@ class HistoricalPairPreflightTests(unittest.TestCase):
         self.assertTrue(result["no_overlapping_price_dates"])
         self.assertFalse(result["all_shared_close_values_match"])
 
+    def test_partial_overlap_is_reported_asymmetric(self):
+        stock = payload(0)
+        benchmark = payload(10).replace(b"2025-01-02", b"2025-02-02")
+        result = prepare_historical_research_pair(
+            manifest(stock), stock, manifest(benchmark), benchmark)
+        self.assertEqual(result["shared_price_dates"], 1)
+        self.assertEqual(result["stock_only_price_dates"], 1)
+        self.assertEqual(result["benchmark_only_price_dates"], 1)
+        self.assertEqual(result["stock_date_overlap_fraction"], 0.5)
+        self.assertEqual(result["benchmark_date_overlap_fraction"], 0.5)
+        self.assertTrue(result["partial_price_date_overlap"])
+        self.assertFalse(result["benchmark_independence_verified"])
+
+    def test_disjoint_calendar_has_zero_overlap_fractions(self):
+        stock = payload(0)
+        benchmark = payload(10).replace(b"2025-01-02", b"2025-02-02").replace(
+            b"2025-01-03", b"2025-02-03")
+        result = prepare_historical_research_pair(
+            manifest(stock), stock, manifest(benchmark), benchmark)
+        self.assertEqual(result["stock_date_overlap_fraction"], 0)
+        self.assertEqual(result["benchmark_date_overlap_fraction"], 0)
+        self.assertFalse(result["partial_price_date_overlap"])
+
     def test_identical_payloads_rejected(self):
         data = payload(0)
         with self.assertRaisesRegex(ValueError, "identical_stock_and_benchmark"):
