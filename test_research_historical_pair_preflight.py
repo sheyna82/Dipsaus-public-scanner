@@ -277,7 +277,7 @@ class HistoricalPairPreflightTests(unittest.TestCase):
         # has an additional session in selected gaps; benchmark does not.
         shared = list(range(0, 52, 2))
         for skipped_gaps, expected_pass in ((4, True), (5, True), (6, False)):
-            extra = [shared[index] + 1 for index in range(skipped_gaps)]
+            extra = [shared[index] + 1 for index in range(0, skipped_gaps * 3, 3)]
             stock = payload(shared + extra, 1)
             benchmark = payload(shared, 2)
             result = prepare_historical_research_pair(
