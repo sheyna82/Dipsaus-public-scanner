@@ -437,6 +437,23 @@ class HistoricalPairPreflightTests(unittest.TestCase):
                 as_of_date="2025-01-07",
                 exchange_session_dates=["2025-01-07", "2025-01-07"])
 
+    def test_unsorted_supplied_session_dates_rejected(self):
+        stock, benchmark = payload(0), payload(10)
+        with self.assertRaisesRegex(ValueError, "exchange_session_dates_not_sorted"):
+            prepare_historical_research_pair(
+                manifest(stock), stock, manifest(benchmark), benchmark,
+                as_of_date="2025-01-07",
+                exchange_session_dates=["2025-01-07", "2025-01-03"])
+
+    def test_unanchored_supplied_session_calendar_rejected(self):
+        stock, benchmark = payload(0), payload(10)
+        with self.assertRaisesRegex(
+                ValueError, "exchange_session_calendar_missing_price_anchor"):
+            prepare_historical_research_pair(
+                manifest(stock), stock, manifest(benchmark), benchmark,
+                as_of_date="2025-01-07",
+                exchange_session_dates=["2025-01-06", "2025-01-07"])
+
     def test_identical_payloads_rejected(self):
         data = payload(0)
         with self.assertRaisesRegex(ValueError, "identical_stock_and_benchmark"):
