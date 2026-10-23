@@ -8,8 +8,8 @@ No live workflow integration or data download.
 """
 import math
 
-import pytest
 from hypothesis import given, settings, strategies as st
+import pytest
 
 from research_atr_incremental_holdout_scoring import evaluate, fit, forecast, predict
 
