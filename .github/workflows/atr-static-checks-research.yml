@@ -23,6 +23,8 @@ on:
       - 'research_asof_revision_selector.py'
       - 'test_research_asof_revision_selector.py'
       - 'test_research_historical_gate_integration.py'
+      - 'research_historical_eligibility_gate.py'
+      - 'test_research_historical_eligibility_gate.py'
       - '.github/workflows/atr-static-checks-research.yml'
 
 permissions:
@@ -171,6 +173,23 @@ jobs:
           python-version: '3.11'
       - name: Test combined historical leakage defenses
         run: python -m unittest -v test_research_historical_gate_integration
+
+  historical-eligibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test centralized historical eligibility
+        run: python -m unittest -v test_research_historical_eligibility_gate
+      - name: Security audit of eligibility gate
+        run: |
+          python -m pip install 'bandit>=1.7,<2'
+          python -m bandit -q -f txt research_historical_eligibility_gate.py
 
   negative-control:
     runs-on: ubuntu-latest
