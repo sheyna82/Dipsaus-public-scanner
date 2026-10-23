@@ -24,6 +24,8 @@ on:
       - 'test_research_daily_atr_feature_extractor.py'
       - 'research_forward_drawdown_labels.py'
       - 'test_research_forward_drawdown_labels.py'
+      - 'research_daily_feature_label_join.py'
+      - 'test_research_daily_feature_label_join.py'
       - '.github/workflows/atr-hypothesis-research.yml'
 
 permissions:
@@ -42,6 +44,10 @@ jobs:
           python-version: '3.11'
       - name: Install test dependencies
         run: python -m pip install 'pytest>=8,<9' 'hypothesis>=6,<7'
+      - name: Run causal feature label join tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_daily_feature_label_join
       - name: Run forward drawdown outcome tests
         env:
           PYTHONPATH: ${{ github.workspace }}
