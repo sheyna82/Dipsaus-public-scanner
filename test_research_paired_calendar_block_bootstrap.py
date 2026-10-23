@@ -16,6 +16,8 @@ class CalendarBlockBootstrapTests(unittest.TestCase):
         result = paired_calendar_block_bootstrap(rows(), block_days=3,
                                                  replicates=40, seed=7)
         self.assertEqual(result["exploratory_interval"], [0, 0])
+        self.assertEqual(result["exploratory_log_loss_interval"], [0, 0])
+        self.assertEqual(result["observed_atr_minus_baseline_log_loss"], 0)
         self.assertEqual(result["observed_atr_minus_baseline_brier"], 0)
         self.assertFalse(result["interval_validated_for_inference"])
         self.assertFalse(result["trade_ready"])
