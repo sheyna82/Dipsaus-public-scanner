@@ -52,6 +52,9 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
     return_overlap_sufficient = comparable_return_intervals >= minimum_comparable_intervals
     # Distinguish a diagnostic match from a sufficiently long screening match.
     # Neither outcome verifies provenance or independence.
+    return_match_fraction = (
+        matching_return_intervals / comparable_return_intervals
+        if comparable_return_intervals else None)
     return_pattern_screening_match = (
         return_overlap_sufficient and
         matching_return_intervals == comparable_return_intervals)
@@ -69,6 +72,7 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
         "insufficient_return_overlap": not return_overlap_sufficient,
         "return_pattern_screening_match": return_pattern_screening_match,
         "matching_shared_return_intervals": matching_return_intervals,
+        "matching_shared_return_fraction": return_match_fraction,
         "all_comparable_shared_returns_match": (
             comparable_return_intervals > 0 and
             matching_return_intervals == comparable_return_intervals),
