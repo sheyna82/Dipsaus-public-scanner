@@ -6,6 +6,9 @@ on:
     paths:
       - 'research_atr_incremental_holdout_scoring.py'
       - 'research/test_atr_hypothesis_research.py'
+      - 'dipsaus_offline_technical_risk.py'
+      - 'dipsaus_offline_lookahead_audit.py'
+      - 'dipsaus_offline_dataset_manifest.py'
       - '.github/workflows/atr-static-checks-research.yml'
 
 permissions:
@@ -24,12 +27,12 @@ jobs:
           python-version: '3.11'
       - name: Install bounded analysis dependencies
         run: python -m pip install 'bandit>=1.7,<2' 'ruff>=0.9,<1'
-      - name: Bandit report-only
+      - name: Bandit required
         run: |
           # Keep assert checks enabled for model code; B101 in pytest is expected.
           python -m bandit -q -f txt research_atr_incremental_holdout_scoring.py
           python -m bandit -q -s B101 -f txt research/test_atr_hypothesis_research.py
-      - name: Ruff report-only
+      - name: Ruff import gate and compatibility notes
         run: |
           ruff check --select I001 --output-format concise research_atr_incremental_holdout_scoring.py research/test_atr_hypothesis_research.py
           echo '--- Non-blocking compatibility notes (TRY004) ---'
@@ -47,7 +50,7 @@ jobs:
           python-version: '3.11'
       - name: Install bounded security analyzer
         run: python -m pip install 'bandit>=1.7,<2'
-      - name: Audit additional offline research modules (report-only)
+      - name: Enforce Bandit on additional offline research modules
         run: |
           python -m bandit -q -f txt dipsaus_offline_technical_risk.py dipsaus_offline_lookahead_audit.py dipsaus_offline_dataset_manifest.py
 
