@@ -60,6 +60,10 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
             raise ValueError("duplicate_exchange_session_date")
         if any(day > reference for day in sessions):
             raise ValueError("exchange_session_after_as_of_date")
+        if sessions != sorted(sessions):
+            raise ValueError("exchange_session_dates_not_sorted")
+        if not sessions or sessions[0] > last:
+            raise ValueError("exchange_session_calendar_missing_price_anchor")
         # A caller-provided session list is unverified and can omit sessions.
         return sum(last < day <= reference for day in sessions)
 
@@ -166,6 +170,7 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
         "stock_last_price_supplied_session_age": stock_supplied_session_age,
         "benchmark_last_price_supplied_session_age": benchmark_supplied_session_age,
         "supplied_exchange_calendar_authenticated": False,
+        "supplied_exchange_calendar_completeness_verified": False,
         "exchange_session_freshness_verified": False,
         "stock_price_dates": len(stock_closes),
         "benchmark_price_dates": len(benchmark_closes),
