@@ -145,7 +145,7 @@ class HistoricalPairPreflightTests(unittest.TestCase):
             for index, date in enumerate(dates):
                 close = (100 + index) * scale
                 lines.append(f"{date},{close},{close+scale},{close-scale},{close},100")
-            return ("\\n".join(lines) + "\\n").encode()
+            return ("\n".join(lines) + "\n").encode()
         stock, benchmark = series(1), series(2)
         result = prepare_historical_research_pair(
             manifest(stock), stock, manifest(benchmark), benchmark)
