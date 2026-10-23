@@ -51,6 +51,19 @@ class SourceManifestTests(unittest.TestCase):
         self.assertFalse(result["publication_time_authenticity_verified"])
         self.assertFalse(result["point_in_time_verified"])
 
+
+    def test_publication_and_retrieval_compared_as_instants(self):
+        record = manifest()
+        # 12:00+02:00 equals the 10:00+00:00 retrieval instant.
+        record["published_at"] = "2026-10-23T12:00:00+02:00"
+        result = audit_historical_source_manifest(record, PAYLOAD)
+        self.assertTrue(result["publication_time_structurally_valid"])
+        self.assertFalse(result["publication_time_authenticity_verified"])
+        # 12:01+02:00 is one minute after retrieval, despite the same date.
+        record["published_at"] = "2026-10-23T12:01:00+02:00"
+        with self.assertRaisesRegex(ValueError, "publication_after_retrieval"):
+            audit_historical_source_manifest(record, PAYLOAD)
+
     def test_modified_payload_rejected(self):
         with self.assertRaisesRegex(ValueError, "payload_hash_mismatch"):
             audit_historical_source_manifest(manifest(), PAYLOAD + b"tamper")
