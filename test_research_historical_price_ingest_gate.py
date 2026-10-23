@@ -49,6 +49,21 @@ class HistoricalPriceIngestTests(unittest.TestCase):
                 self.assertTrue(result[check])
 
 
+
+    def test_publication_timestamp_propagates_without_authenticity_claim(self):
+        record = manifest()
+        record["published_at"] = "2026-10-22T10:00:00+00:00"
+        result = audit_historical_price_dataset(record, PAYLOAD)
+        self.assertTrue(result["publication_time_structurally_valid"])
+        self.assertFalse(result["publication_time_authenticity_verified"])
+        self.assertFalse(result["feature_publication_times_verified"])
+        self.assertTrue(result["requires_feature_publication_time_review"])
+
+    def test_missing_publication_timestamp_remains_unverified(self):
+        result = audit_historical_price_dataset(manifest(), PAYLOAD)
+        self.assertFalse(result["publication_time_structurally_valid"])
+        self.assertFalse(result["publication_time_authenticity_verified"])
+
     def test_long_calendar_gap_is_reported_not_misclassified(self):
         payload = (b"date,open,high,low,close,volume\n"
                    b"2026-01-02,10,12,9,11,100\n"
