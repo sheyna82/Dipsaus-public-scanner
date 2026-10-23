@@ -138,6 +138,25 @@ class HistoricalPairPreflightTests(unittest.TestCase):
         self.assertFalse(result["return_pattern_screening_match"])
         self.assertFalse(result["research_data_ready"])
 
+    def test_long_scaled_series_passes_diagnostic_only(self):
+        dates = [f"2025-01-{day:02d}" for day in range(1, 23)]
+        def series(scale):
+            lines = ["date,open,high,low,close,volume"]
+            for index, date in enumerate(dates):
+                close = (100 + index) * scale
+                lines.append(f"{date},{close},{close+scale},{close-scale},{close},100")
+            return ("\\n".join(lines) + "\\n").encode()
+        stock, benchmark = series(1), series(2)
+        result = prepare_historical_research_pair(
+            manifest(stock), stock, manifest(benchmark), benchmark)
+        self.assertEqual(result["comparable_shared_return_intervals"], 21)
+        self.assertEqual(result["matching_shared_return_intervals"], 21)
+        self.assertTrue(result["return_overlap_sufficient_for_screening"])
+        self.assertTrue(result["return_pattern_screening_match"])
+        self.assertFalse(result["all_shared_close_values_match"])
+        self.assertFalse(result["benchmark_independence_verified"])
+        self.assertFalse(result["trade_ready"])
+
     def test_identical_payloads_rejected(self):
         data = payload(0)
         with self.assertRaisesRegex(ValueError, "identical_stock_and_benchmark"):
