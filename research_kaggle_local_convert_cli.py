@@ -22,7 +22,10 @@ def main(argv=None):
             raise ValueError("invalid_source")
         if source.stat().st_size > MAX_CSV_BYTES:
             raise ValueError("input_too_large")
-        if output.parent.resolve() == Path.cwd().resolve() or Path.cwd().resolve() in output.parent.resolve().parents:
+        # Guard the entire checked-out project tree, not merely the invocation directory.
+        repository_root = Path(__file__).resolve().parent
+        resolved_parent = output.parent.resolve()
+        if resolved_parent == repository_root or repository_root in resolved_parent.parents:
             raise ValueError("output_inside_repository")
         if output.exists() or output.is_symlink():
             raise ValueError("output_exists")
