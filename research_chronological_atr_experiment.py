@@ -9,6 +9,7 @@ from research_benchmark_market_trend import attach_market_trend, eligible_model_
 from research_walk_forward_split_gate import validate_walk_forward_split
 from research_atr_incremental_holdout_scoring import fit, predict, evaluate
 from research_paired_holdout_diagnostics import paired_holdout_diagnostics
+from research_paired_calendar_block_bootstrap import paired_calendar_block_bootstrap
 
 
 def _timestamp(day):
@@ -18,7 +19,9 @@ def _timestamp(day):
 
 def evaluate_chronological_csv(stock_payload, benchmark_payload, *,
                                split_date, horizon=10, threshold=0.08,
-                               embargo_seconds=0, holdout_end_date=None):
+                               embargo_seconds=0, holdout_end_date=None,
+                               exploratory_bootstrap=False, bootstrap_block_days=14,
+                               bootstrap_replicates=500, bootstrap_seed=20261023):
     """Use training labels known by first holdout event; refuse invalid splits.
 
     Split is predetermined by caller, not chosen from holdout results.
@@ -58,7 +61,12 @@ def evaluate_chronological_csv(stock_payload, benchmark_payload, *,
                           "label_available_date": row["label_available_date"]}
                          for prediction, row in zip(predictions, holdout)]
     paired = paired_holdout_diagnostics(dated_predictions)
-    return {**metrics, "paired_diagnostics": paired, "split_date": split_date,
+    bootstrap = (paired_calendar_block_bootstrap(
+        dated_predictions, block_days=bootstrap_block_days,
+        replicates=bootstrap_replicates, seed=bootstrap_seed)
+        if exploratory_bootstrap else None)
+    return {**metrics, "paired_diagnostics": paired,
+            "exploratory_bootstrap": bootstrap, "split_date": split_date,
             "holdout_end_date": holdout_end_date,
             "training_events": gate["training_events"],
             "holdout_events": gate["holdout_events"],
