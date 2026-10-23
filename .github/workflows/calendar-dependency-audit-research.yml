@@ -97,7 +97,12 @@ jobs:
               ("XAMS", "2025-04-16", "2025-04-23"),
           ):
               result = export_sessions(exchange, start, end)
-              print(exchange, result)
+              dates = result["session_dates"]
+              audited = audit_calendar_export(dates, result)
+              assert audited["calendar_export_digest_verified"] is True
+              assert audited["calendar_provenance_verified"] is False
+              assert audited["trade_ready"] is False
+              print(exchange, {"dates": dates, "checksum_verified": True, "trade_ready": False})
           PY
       - name: Upload dependency evidence
         if: always()
