@@ -40,3 +40,16 @@ Hergebruik van bestaande broncode heeft expliciet de voorkeur boven onnodig opni
 **Besluit voor een geïsoleerde DIPSAUS-proef:** bouw eerst een eigen, kleine execution-assumption-audit die scenario's vergelijkt (volgende opening versus slotkoers, spread, kosten, niet-uitgevoerde limietorders) op synthetische OHLCV. Dit is **niet** hetzelfde als een gevalideerde strategiebacktest en bewijst geen voorspellende waarde. Externe code mag worden geïntegreerd na controle van veiligheid, licentie, afhankelijkheden en aantoonbare meerwaarde.
 
 **Open punten:** testdekking van de twee upstream-projecten, actuele onderhoudsstatus, exacte order-fill-semantiek bij gaps en gedeeltelijke uitvoering, licentieadvies en realistische brokerdata. De vier overige projecten zijn nog niet inhoudelijk geaudit.
+
+## Licentie- en architectuurcontrole (23 oktober 2026)
+
+| Bron | Rechtstreeks gecontroleerd | Hergebruikadvies |
+|---|---|---|
+| lit26/Stock_Screener | LICENSE = MIT; README beschrijft Django + React; requirements.txt pint Django 3.2, pandas 1.2.3, yfinance 0.1.63, finvizfinance 0.11.1, ta 0.7.0 en DRF 3.12.4 | **Niet de oude stack integraal overnemen**; isoleer een specifieke screeningfunctie en test actuele dependencies, datarechten en veiligheid |
+| cbyhre/Stock-News-Scanner | LICENSE = MIT; README noemt het scrapen van StockTitan-headlines van afgelopen 30 minuten | Alleen ticker-/headline-extractie na broncode-audit overwegen; **scrapingvoorwaarden en tijdstempelbetrouwbaarheid** apart toetsen |
+| mementum/backtrader | LICENSE = GPL-3.0 | Eerst als referentie of afzonderlijk onderzoeksinstrument; compatibiliteit met distributie DIPSAUS beoordelen |
+| kernc/backtesting.py | LICENSE.md = AGPL-3.0 | Eerst als referentie of afzonderlijk onderzoeksinstrument; compatibiliteit met distributie DIPSAUS beoordelen |
+| AdamGetbags/breakoutScanner | README aanwezig; geen LICENSE of LICENSE.md aangetroffen op onderzochte paden | Geen code kopiëren zonder rechtenvaststelling |
+| bilalaslam28/Automated-VSA-Pre-Market-Stock-Scanner | README aanwezig; geen LICENSE of LICENSE.md aangetroffen op onderzochte paden | Geen code kopiëren zonder rechtenvaststelling |
+
+**Conclusie:** een MIT-licentie maakt hergebruik juridisch makkelijker, maar zegt niets over veiligheid, databronrechten, onderhoud of voorspellende waarde. Voorlopig geen externe code geïntegreerd. Eerst een specifieke MIT-component en diens tests en afhankelijkheden volledig inspecteren.
