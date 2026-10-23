@@ -65,8 +65,14 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
     return_match_fraction = (
         matching_return_intervals / comparable_return_intervals
         if comparable_return_intervals else None)
+    # Require substantial calendar coverage as well as enough observations.
+    # This 80% screening threshold is provisional and not calibrated.
+    minimum_comparable_interval_coverage = 0.8
+    return_coverage_sufficient = (
+        comparable_interval_coverage is not None and
+        comparable_interval_coverage >= minimum_comparable_interval_coverage)
     return_pattern_screening_match = (
-        return_overlap_sufficient and
+        return_overlap_sufficient and return_coverage_sufficient and
         matching_return_intervals == comparable_return_intervals)
     same_provider_claim = (stock_manifest["provider"].strip().casefold() ==
                            benchmark_manifest["provider"].strip().casefold())
@@ -84,6 +90,8 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
         "return_overlap_sufficient_for_screening": return_overlap_sufficient,
         "insufficient_return_overlap": not return_overlap_sufficient,
         "return_pattern_screening_match": return_pattern_screening_match,
+        "minimum_comparable_interval_coverage": minimum_comparable_interval_coverage,
+        "return_coverage_sufficient_for_screening": return_coverage_sufficient,
         "matching_shared_return_intervals": matching_return_intervals,
         "matching_shared_return_fraction": return_match_fraction,
         "all_comparable_shared_returns_match": (
