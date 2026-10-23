@@ -4,6 +4,7 @@ Offline causal lookahead audit. It tests the frozen signal predicate, NOT
 corporate-action or point-in-time fundamentals provenance.
 """
 from copy import deepcopy
+
 from dipsaus_offline_ohlcv_features import _valid
 
 
