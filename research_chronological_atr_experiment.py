@@ -37,8 +37,11 @@ def evaluate_chronological_csv(stock_payload, benchmark_payload, *,
     aligned = eligible_model_rows(attach_market_trend(joined, benchmark_payload))
     training = [r for r in aligned if r["date"] < split_date
                 and r["label_available_date"] < split_date]
+    # Only score outcomes matured before the next fold boundary. Otherwise
+    # adjacent fold scores silently use labels observed in later periods.
     holdout = [r for r in aligned if r["date"] >= split_date
-               and (holdout_end_date is None or r["date"] < holdout_end_date)]
+               and (holdout_end_date is None or r["date"] < holdout_end_date)
+               and (holdout_end_date is None or r["label_available_date"] < holdout_end_date)]
     train_gate = [{"event_at": _timestamp(r["date"]),
                    "label_available_at": _timestamp(r["label_available_date"])}
                   for r in training]
