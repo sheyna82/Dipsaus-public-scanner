@@ -62,6 +62,20 @@ class CalendarBlockBootstrapTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "invalid_bootstrap_settings"):
             paired_calendar_block_bootstrap(rows(), confidence="0.95")
 
+
+    def test_log_loss_extreme_probabilities_remain_finite(self):
+        import math
+        sample = rows()
+        sample[0]["baseline_probability"] = 0.0
+        sample[0]["atr_probability"] = 1.0
+        result = paired_calendar_block_bootstrap(
+            sample, block_days=2, replicates=40, seed=7)
+        self.assertTrue(math.isfinite(
+            result["observed_atr_minus_baseline_log_loss"]))
+        self.assertTrue(all(math.isfinite(x)
+                            for x in result["exploratory_log_loss_interval"]))
+        self.assertEqual(result["log_loss_probability_clip"], .01)
+
     def test_invalid_block_rejected(self):
         with self.assertRaisesRegex(ValueError, "insufficient_calendar_dates"):
             paired_calendar_block_bootstrap(rows(), block_days=20)
