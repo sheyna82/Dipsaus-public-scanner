@@ -111,6 +111,24 @@ class CalendarBlockBootstrapTests(unittest.TestCase):
                          "event_weighted_mean_loss_difference")
         self.assertFalse(result["interval_validated_for_inference"])
 
+
+    def test_equal_date_weighting_differs_from_event_weighting(self):
+        sample = rows()
+        # One extra favorable ATR event on the first date changes event
+        # weighting more than the mean of per-date differences.
+        sample.append({
+            "event_date": "2025-01-01", "severe": False,
+            "baseline_probability": .9, "atr_probability": .1,
+        })
+        result = paired_calendar_block_bootstrap(
+            sample, block_days=2, replicates=40, seed=9)
+        self.assertNotAlmostEqual(
+            result["observed_atr_minus_baseline_brier"],
+            result["equal_date_weighted_observed_brier"])
+        self.assertEqual(len(result["equal_date_weighted_brier_interval"]), 2)
+        self.assertEqual(len(result["equal_date_weighted_log_loss_interval"]), 2)
+        self.assertFalse(result["interval_validated_for_inference"])
+
     def test_invalid_block_rejected(self):
         with self.assertRaisesRegex(ValueError, "insufficient_calendar_dates"):
             paired_calendar_block_bootstrap(rows(), block_days=20)
