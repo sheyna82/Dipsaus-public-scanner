@@ -54,6 +54,8 @@ def paired_calendar_block_bootstrap(rows, *, block_days=14, replicates=500,
     rng = random.Random(seed)
     estimates = []
     log_estimates = []
+    equal_date_estimates = []
+    equal_date_log_estimates = []
     for _ in range(replicates):
         sampled = []
         while len(sampled) < len(dates):
@@ -64,13 +66,23 @@ def paired_calendar_block_bootstrap(rows, *, block_days=14, replicates=500,
         estimates.append(sum(values) / len(values))
         log_values = [difference for day in sampled for difference in grouped_log[day]]
         log_estimates.append(sum(log_values) / len(log_values))
+        equal_date_estimates.append(sum(
+            sum(grouped[day]) / len(grouped[day]) for day in sampled
+        ) / len(sampled))
+        equal_date_log_estimates.append(sum(
+            sum(grouped_log[day]) / len(grouped_log[day]) for day in sampled
+        ) / len(sampled))
     estimates.sort()
     log_estimates.sort()
+    equal_date_estimates.sort()
+    equal_date_log_estimates.sort()
     alpha = (1 - confidence) / 2
     lower = estimates[max(0, math.floor(alpha * replicates))]
     upper = estimates[min(replicates - 1, math.ceil((1 - alpha) * replicates) - 1)]
     log_lower = log_estimates[max(0, math.floor(alpha * replicates))]
     log_upper = log_estimates[min(replicates - 1, math.ceil((1 - alpha) * replicates) - 1)]
+    index_low = max(0, math.floor(alpha * replicates))
+    index_high = min(replicates - 1, math.ceil((1 - alpha) * replicates) - 1)
     observed = [difference for day in dates for difference in grouped[day]]
     observed_log = [difference for day in dates for difference in grouped_log[day]]
     event_counts = [len(grouped[day]) for day in dates]
@@ -81,6 +93,14 @@ def paired_calendar_block_bootstrap(rows, *, block_days=14, replicates=500,
         "maximum_events_per_observed_date": max(event_counts),
         "unequal_events_per_date": min(event_counts) != max(event_counts),
         "estimand": "event_weighted_mean_loss_difference",
+        "equal_date_weighted_observed_brier": sum(
+            sum(grouped[day]) / len(grouped[day]) for day in dates) / len(dates),
+        "equal_date_weighted_brier_interval": [
+            equal_date_estimates[index_low], equal_date_estimates[index_high]],
+        "equal_date_weighted_observed_log_loss": sum(
+            sum(grouped_log[day]) / len(grouped_log[day]) for day in dates) / len(dates),
+        "equal_date_weighted_log_loss_interval": [
+            equal_date_log_estimates[index_low], equal_date_log_estimates[index_high]],
         "calendar_gaps_present": any((right - left).days > 1
                                      for left, right in zip(dates, dates[1:])),
         "block_observed_dates": block_days,
