@@ -49,3 +49,50 @@ def test_invalid_flags_rejected(row, name, invalid):
     row[name] = invalid
     with pytest.raises(ValueError):
         fit([row])
+
+
+@settings(max_examples=70, deadline=None)
+@given(st.lists(event(), min_size=1, max_size=20),
+       st.sampled_from(FLAGS),
+       st.one_of(st.none(), st.floats(allow_nan=True, allow_infinity=True),
+                 st.text(), st.lists(st.integers(), max_size=2)))
+def test_forecast_rejects_corrupt_flags(training, name, invalid):
+    model = fit(training)
+    features = {key: True for key in FLAGS}
+    features[name] = invalid
+    with pytest.raises(ValueError):
+        forecast(model, [features])
+
+
+@settings(max_examples=70, deadline=None)
+@given(st.lists(event(), min_size=1, max_size=25),
+       st.lists(event(), min_size=1, max_size=25))
+def test_reordered_training_preserves_predictions(training, rows):
+    a = fit(training)
+    b = fit(list(reversed(training)))
+    features = [{name: row[name] for name in FLAGS} for row in rows]
+    assert forecast(a, features) == forecast(b, features)
+
+
+@settings(max_examples=70, deadline=None)
+@given(st.lists(event(), min_size=1, max_size=20),
+       st.one_of(st.none(), st.floats(allow_nan=True, allow_infinity=True),
+                 st.integers(), st.text()))
+def test_corrupt_model_prior_rejected(training, invalid):
+    model = fit(training)
+    model["pooled"] = invalid
+    with pytest.raises(ValueError):
+        forecast(model, [{name: True for name in FLAGS}])
+
+
+@settings(max_examples=60, deadline=None)
+@given(st.lists(event(), min_size=1, max_size=25),
+       st.lists(event(), min_size=1, max_size=25))
+def test_scores_are_bounded_and_not_trade_ready(training, rows):
+    scores = evaluate(predict(fit(training), rows))
+    for key in ("baseline_brier", "atr_brier"):
+        assert 0 <= scores[key] <= 1
+    for key in ("baseline_log_loss", "atr_log_loss"):
+        assert math.isfinite(scores[key]) and scores[key] >= 0
+    assert scores["descriptive_only"] is True
+    assert scores["trade_ready"] is False
