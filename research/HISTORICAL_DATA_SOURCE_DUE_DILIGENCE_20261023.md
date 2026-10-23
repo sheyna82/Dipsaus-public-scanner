@@ -23,3 +23,11 @@ No provider has been authenticated or downloaded in this research. This document
 ## Next executable research milestone
 
 First obtain a small **licensed and independently inspectable** historical sample (including at least one delisted security and corporate action), document exact data access terms and timestamps, and run a reproducible offline ingest audit. Do not introduce a network fetcher or claim out-of-sample predictive edge before those prerequisites are met.
+
+## Verified provider constraints (2026-10-23)
+
+Official Sharadar terms at https://sharadar.com/terms permit individual personal non-professional use, but **prohibit redistributing the data or derivatives permitting reconstruction**. Consequently, do not commit Sharadar sample OHLCV to this public repository, publish raw downloaded samples as GitHub Actions artifacts, or assume a personal API key may be used for a public shared data service. A private local, license-compliant test may be possible subject to account terms.
+
+Official Sharadar website at https://sharadar.com/ advertises a free entry-level dataset covering the Dow 30 and a sample at https://sharadar.com/sample. Nasdaq SEP documentation at https://data.nasdaq.com/databases/SEP/documentation specifies free example tickers for **2018-09-01 through 2018-12-31**, with API-key authentication; this is a limited example, not evidence of current market-wide coverage. Nasdaq states SEP OHLCV is split/stock-dividend adjusted and separately supplies unadjusted close, so any imported series must document its actual adjustment basis.
+
+**Current decision:** Do not download, publish, or claim validated historical predictions until legitimate access is established. The public repository may hold only the ingestion code, synthetic test fixtures and non-sensitive aggregate evaluation metrics that are permissible under the applicable license. A license-compliant local run can produce audit summaries without uploading licensed price rows.
