@@ -16,7 +16,34 @@ def bootstrap_block_sensitivity(rows, *, block_lengths=(10, 14, 20),
             rows, block_days=length, replicates=replicates, seed=seed)
         for length in block_lengths
     ]
+    def excludes_zero(interval):
+        low, high = interval
+        return low > 0 or high < 0
+
+    def sign(interval):
+        low, high = interval
+        return "positive" if low > 0 else ("negative" if high < 0 else "crosses_zero")
+
+    weight_sensitivity = [
+        {
+            "block_observed_dates": result["block_observed_dates"],
+            "event_weighted_brier_sign": sign(result["exploratory_interval"]),
+            "equal_date_brier_sign": sign(result["equal_date_weighted_brier_interval"]),
+            "event_weighted_log_loss_sign": sign(result["exploratory_log_loss_interval"]),
+            "equal_date_log_loss_sign": sign(result["equal_date_weighted_log_loss_interval"]),
+            "brier_weighting_agrees": sign(result["exploratory_interval"]) ==
+                                      sign(result["equal_date_weighted_brier_interval"]),
+            "log_loss_weighting_agrees": sign(result["exploratory_log_loss_interval"]) ==
+                                         sign(result["equal_date_weighted_log_loss_interval"]),
+        }
+        for result in results
+    ]
     return {
+        "weighting_sensitivity": weight_sensitivity,
+        "all_brier_weighting_agrees": all(
+            item["brier_weighting_agrees"] for item in weight_sensitivity),
+        "all_log_loss_weighting_agrees": all(
+            item["log_loss_weighting_agrees"] for item in weight_sensitivity),
         "block_lengths": list(block_lengths),
         "results": results,
         "all_intervals_exclude_zero": all(
