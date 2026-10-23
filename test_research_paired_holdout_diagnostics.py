@@ -26,6 +26,31 @@ class PairedHoldoutDiagnosticsTests(unittest.TestCase):
         self.assertFalse(result["uncertainty_interval_verified"])
         self.assertFalse(result["trade_ready"])
 
+
+    def test_overlapping_outcome_windows_reported(self):
+        rows = [
+            {"severe": False, "baseline_probability": .2,
+             "atr_probability": .3, "event_date": "2025-01-01",
+             "label_available_date": "2025-01-10"},
+            {"severe": True, "baseline_probability": .4,
+             "atr_probability": .5, "event_date": "2025-01-05",
+             "label_available_date": "2025-01-15"},
+            {"severe": False, "baseline_probability": .2,
+             "atr_probability": .3, "event_date": "2025-02-01",
+             "label_available_date": "2025-02-10"},
+        ]
+        result = paired_holdout_diagnostics(rows)
+        self.assertEqual(result["overlapping_outcome_window_pairs"], 1)
+        self.assertTrue(result["outcome_window_coverage_complete"])
+        self.assertFalse(result["independent_events_assumed"])
+
+    def test_incomplete_outcome_window_rejected(self):
+        with self.assertRaisesRegex(ValueError, "incomplete_outcome_window"):
+            paired_holdout_diagnostics([
+                {"severe": False, "baseline_probability": .2,
+                 "atr_probability": .3, "event_date": "2025-01-01"}
+            ])
+
     def test_invalid_probability_rejected(self):
         with self.assertRaisesRegex(ValueError, "invalid_probability"):
             paired_holdout_diagnostics([
