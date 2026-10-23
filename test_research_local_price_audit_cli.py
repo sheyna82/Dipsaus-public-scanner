@@ -41,6 +41,9 @@ class LocalAuditCliTests(unittest.TestCase):
             self.assertFalse(result["research_data_ready"])
             self.assertNotIn("2026-01-02", output.getvalue())
             self.assertNotIn("10,12,9,11", output.getvalue())
+            self.assertNotIn(str(root), output.getvalue())
+            self.assertNotIn("example.org", output.getvalue())
+            self.assertNotIn("synthetic fixture only", output.getvalue())
 
     def test_local_failure_does_not_expose_prices(self):
         with tempfile.TemporaryDirectory() as directory:
