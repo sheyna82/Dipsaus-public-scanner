@@ -7,10 +7,12 @@ from research_historical_price_ingest_gate import audit_historical_price_dataset
 import csv
 import io
 from decimal import Decimal, InvalidOperation
+from datetime import date
 
 
 def prepare_historical_research_pair(stock_manifest, stock_payload,
-                                     benchmark_manifest, benchmark_payload):
+                                     benchmark_manifest, benchmark_payload,
+                                     as_of_date=None):
     """Audit two independent input files without silently certifying either."""
     if stock_payload == benchmark_payload:
         raise ValueError("identical_stock_and_benchmark_payload")
@@ -27,7 +29,20 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
             raise ValueError("invalid_close_value") from exc
 
     stock_closes = close_by_date(stock_payload)
+    # Calendar age is descriptive only. Weekends, exchange holidays and
+    # vendor publication delays require an authenticated market calendar.
+    def calendar_age(closes):
+        if as_of_date is None:
+            return None
+        reference = date.fromisoformat(as_of_date)
+        last = date.fromisoformat(max(closes))
+        if last > reference:
+            raise ValueError("historical_last_date_after_as_of_date")
+        return (reference - last).days
+
+    stock_calendar_age = calendar_age(stock_closes)
     benchmark_closes = close_by_date(benchmark_payload)
+    benchmark_calendar_age = calendar_age(benchmark_closes)
     shared_dates = stock_closes.keys() & benchmark_closes.keys()
     matching_closes = sum(stock_closes[day] == benchmark_closes[day]
                           for day in shared_dates)
@@ -113,6 +128,12 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
     same_source_url_claim = (stock_manifest["source_url"].strip() ==
                              benchmark_manifest["source_url"].strip())
     return {
+        "stock_last_price_date": max(stock_closes),
+        "benchmark_last_price_date": max(benchmark_closes),
+        "as_of_date": as_of_date,
+        "stock_last_price_calendar_age_days": stock_calendar_age,
+        "benchmark_last_price_calendar_age_days": benchmark_calendar_age,
+        "exchange_session_freshness_verified": False,
         "stock_price_dates": len(stock_closes),
         "benchmark_price_dates": len(benchmark_closes),
         "shared_price_dates": len(shared_dates),
