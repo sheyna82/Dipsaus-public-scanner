@@ -22,16 +22,17 @@ def evaluate_fixed_splits(stock_payload, benchmark_payload, *, split_dates,
     if len(set(parsed)) != len(parsed) or parsed != sorted(parsed):
         raise ValueError("splits_must_be_unique_and_sorted")
     folds = []
-    for split in split_dates:
+    for index, split in enumerate(split_dates):
+        end = split_dates[index + 1] if index + 1 < len(split_dates) else None
         fold = evaluate_chronological_csv(
             stock_payload, benchmark_payload, split_date=split,
             horizon=horizon, threshold=threshold,
-            embargo_seconds=embargo_seconds)
+            embargo_seconds=embargo_seconds, holdout_end_date=end)
         folds.append(fold)
-    # Each fold uses a suffix holdout: fold scores overlap and must NOT
-    # be pooled as independent out-of-sample events.
+    # Fold holdouts are disjoint; overlapping outcome horizons still create
+    # dependent observations, so do not claim independent pooled evidence.
     return {"folds": folds, "fold_count": len(folds),
-            "overlapping_holdouts": True,
+            "overlapping_holdouts": False,
             "aggregate_independent_score": None,
             "independent_holdout_verified": False,
             "point_in_time_verified": False,
