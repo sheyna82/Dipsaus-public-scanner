@@ -45,6 +45,20 @@ class LocalAuditCliTests(unittest.TestCase):
             self.assertNotIn("example.org", output.getvalue())
             self.assertNotIn("synthetic fixture only", output.getvalue())
 
+    def test_oversized_csv_rejected_before_read(self):
+        from research_local_price_audit_cli import MAX_CSV_BYTES
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with (root / "bars.csv").open("wb") as handle:
+                handle.truncate(MAX_CSV_BYTES + 1)
+            (root / "manifest.json").write_text(json.dumps(metadata()), encoding="utf-8")
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                code = main(["--manifest", str(root / "manifest.json"),
+                             "--csv", str(root / "bars.csv")])
+            self.assertEqual(code, 1)
+            self.assertEqual(json.loads(output.getvalue())["error_type"], "ValueError")
+
     def test_symlink_input_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
