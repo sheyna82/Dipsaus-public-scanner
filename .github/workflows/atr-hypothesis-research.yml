@@ -47,6 +47,8 @@ on:
       - 'test_research_exchange_calendar_local_export.py'
       - 'test_research_recorded_exchange_calendar_sessions.py'
       - 'test_research_calendar_edge_coverage.py'
+      - 'research_calendar_wheel_integrity.py'
+      - 'test_research_calendar_wheel_integrity.py'
       - '.github/workflows/atr-hypothesis-research.yml'
 
 permissions:
@@ -65,6 +67,10 @@ jobs:
           python-version: '3.11'
       - name: Install test dependencies
         run: python -m pip install 'pytest>=8,<9' 'hypothesis>=6,<7'
+      - name: Run offline calendar wheel integrity tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_calendar_wheel_integrity
       - name: Run calendar boundary coverage tests
         env:
           PYTHONPATH: ${{ github.workspace }}
