@@ -27,6 +27,16 @@ class LocalConversionTests(unittest.TestCase):
             self.assertNotIn("2017-01-03", output.getvalue())
             self.assertFalse(json.loads(output.getvalue())["trade_ready"])
 
+    def test_refuses_repository_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "input.csv").write_bytes(SAMPLE)
+            with contextlib.redirect_stdout(io.StringIO()):
+                code = main(["--source", str(root / "input.csv"),
+                             "--output", str(Path.cwd() / "unsafe-private-bars.csv")])
+            self.assertEqual(code, 1)
+            self.assertFalse((Path.cwd() / "unsafe-private-bars.csv").exists())
+
     def test_refuses_overwrite(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
