@@ -216,6 +216,22 @@ class HistoricalPairPreflightTests(unittest.TestCase):
         self.assertEqual(result["matching_shared_return_fraction"], 1.0)
         self.assertFalse(result["return_pattern_screening_match"])
 
+    def test_low_coverage_blocks_matching_pattern_screening(self):
+        def series(days, scale):
+            lines = ["date,open,high,low,close,volume"]
+            for day in days:
+                close = (100 + day) * scale
+                lines.append(f"2025-01-{day:02d},{close},{close+scale},{close-scale},{close},100")
+            return ("\n".join(lines) + "\n").encode()
+        stock = series(range(1, 32), 1)
+        benchmark = series([day for day in range(1, 32) if day % 2], 2)
+        result = prepare_historical_research_pair(
+            manifest(stock), stock, manifest(benchmark), benchmark)
+        self.assertEqual(result["comparable_shared_return_intervals"], 0)
+        self.assertEqual(result["comparable_interval_coverage_fraction"], 0.0)
+        self.assertFalse(result["return_coverage_sufficient_for_screening"])
+        self.assertFalse(result["return_pattern_screening_match"])
+
     def test_identical_payloads_rejected(self):
         data = payload(0)
         with self.assertRaisesRegex(ValueError, "identical_stock_and_benchmark"):
