@@ -34,6 +34,7 @@ on:
       - 'test_research_chronological_atr_cli.py'
       - 'research_fixed_split_atr_experiment.py'
       - 'test_research_fixed_split_atr_experiment.py'
+      - 'test_research_sklearn_metric_reference.py'
       - '.github/workflows/atr-hypothesis-research.yml'
 
 permissions:
@@ -52,6 +53,10 @@ jobs:
           python-version: '3.11'
       - name: Install test dependencies
         run: python -m pip install 'pytest>=8,<9' 'hypothesis>=6,<7'
+      - name: Run sklearn metric formula reference tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_sklearn_metric_reference
       - name: Run fixed split ATR research tests
         env:
           PYTHONPATH: ${{ github.workspace }}
