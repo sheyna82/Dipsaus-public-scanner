@@ -1,0 +1,38 @@
+"""Research-only orchestration: structural gates before descriptive ATR scoring.
+
+No external source verification, trade execution, or live notifications.
+"""
+from research_walk_forward_split_gate import validate_walk_forward_split
+from research_atr_incremental_holdout_scoring import fit, predict, evaluate
+
+
+def evaluate_gated_atr_holdout(training, holdout, *, embargo_seconds=0):
+    """Require chronological label availability before fitting and scoring.
+
+    The structural gate cannot establish independent data provenance.
+    Results therefore remain descriptive and never trade-ready.
+    """
+    audit = validate_walk_forward_split(
+        training, holdout, embargo_seconds=embargo_seconds)
+    training_features = [
+        {key: row[key] for key in (
+            "structure_above_20d_mean", "market_20d_positive",
+            "atr_expanding", "severe")}
+        for row in training
+    ]
+    holdout_features = [
+        {key: row[key] for key in (
+            "structure_above_20d_mean", "market_20d_positive",
+            "atr_expanding", "severe")}
+        for row in holdout
+    ]
+    model = fit(training_features)
+    result = evaluate(predict(model, holdout_features))
+    return {
+        **result,
+        "structural_split_accepted": audit["accepted"],
+        "independent_source_verified": False,
+        "independent_holdout_verified": False,
+        "trade_ready": False,
+        "descriptive_only": True,
+    }
