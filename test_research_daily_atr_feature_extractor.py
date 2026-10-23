@@ -23,6 +23,20 @@ class FeatureExtractorTests(unittest.TestCase):
         new = extract_daily_structure(sample(25))
         self.assertEqual(old, new[:len(old)])
 
+
+    def test_changing_future_prices_cannot_rewrite_earlier_features(self):
+        original = sample(25)
+        lines = original.decode().splitlines()
+        # Keep the first 24 bars unchanged, but drastically perturb day 25.
+        lines[-1] = "2026-01-25,1000,1200,800,1100,999999"
+        altered = ("\\n".join(lines) + "\\n").encode()
+        earlier = extract_daily_structure(sample(24))
+        changed = extract_daily_structure(altered)
+        self.assertEqual(earlier, changed[:len(earlier)])
+        self.assertNotEqual(
+            extract_daily_structure(original)[-1]["atr_value"],
+            changed[-1]["atr_value"])
+
     def test_invalid_window(self):
         with self.assertRaises(ValueError):
             extract_daily_structure(sample(), atr_window=1)
