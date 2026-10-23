@@ -8,9 +8,8 @@ No live workflow integration or data download.
 """
 import math
 
-from hypothesis import given, settings, strategies as st
 import pytest
-
+from hypothesis import given, settings, strategies as st
 from research_atr_incremental_holdout_scoring import evaluate, fit, forecast, predict
 
 FLAGS = ("structure_above_20d_mean", "market_20d_positive", "atr_expanding")
