@@ -29,6 +29,9 @@ class HistoricalPairPreflightTests(unittest.TestCase):
             manifest(stock), stock, manifest(benchmark), benchmark)
         self.assertTrue(result["distinct_payloads"])
         self.assertTrue(result["same_declared_provider"])
+        self.assertEqual(result["shared_price_dates"], 2)
+        self.assertEqual(result["matching_close_values_on_shared_dates"], 0)
+        self.assertFalse(result["all_shared_close_values_match"])
         self.assertTrue(result["same_declared_source_url"])
         self.assertFalse(result["provider_claims_authenticated"])
         self.assertFalse(result["benchmark_independence_verified"])
@@ -47,6 +50,16 @@ class HistoricalPairPreflightTests(unittest.TestCase):
         self.assertFalse(result["same_declared_source_url"])
         self.assertTrue(result["provider_claims_independence"])
         self.assertFalse(result["distinct_providers_verified"])
+        self.assertFalse(result["benchmark_independence_verified"])
+
+
+    def test_different_payloads_with_identical_closes_are_flagged(self):
+        stock = payload(0)
+        benchmark = stock.replace(b",100\\n", b",200\\n")
+        result = prepare_historical_research_pair(
+            manifest(stock), stock, manifest(benchmark), benchmark)
+        self.assertTrue(result["all_shared_close_values_match"])
+        self.assertEqual(result["matching_close_values_on_shared_dates"], 2)
         self.assertFalse(result["benchmark_independence_verified"])
 
     def test_identical_payloads_rejected(self):
