@@ -3,7 +3,7 @@
 No networking, persistence, trading or live notification changes.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 
 
 REQUIRED_IDENTITY = (
