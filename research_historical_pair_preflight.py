@@ -46,6 +46,10 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
         if (stock_closes[current] / stock_closes[previous] ==
                 benchmark_closes[current] / benchmark_closes[previous]):
             matching_return_intervals += 1
+    # A short or sparse overlap cannot support a strong duplication inference.
+    # Thresholds are diagnostics, not a claim of statistically validated power.
+    minimum_comparable_intervals = 20
+    return_overlap_sufficient = comparable_return_intervals >= minimum_comparable_intervals
     same_provider_claim = (stock_manifest["provider"].strip().casefold() ==
                            benchmark_manifest["provider"].strip().casefold())
     same_source_url_claim = (stock_manifest["source_url"].strip() ==
@@ -55,6 +59,9 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
         "benchmark_price_dates": len(benchmark_closes),
         "shared_price_dates": len(shared_dates),
         "comparable_shared_return_intervals": comparable_return_intervals,
+        "minimum_comparable_return_intervals": minimum_comparable_intervals,
+        "return_overlap_sufficient_for_screening": return_overlap_sufficient,
+        "insufficient_return_overlap": not return_overlap_sufficient,
         "matching_shared_return_intervals": matching_return_intervals,
         "all_comparable_shared_returns_match": (
             comparable_return_intervals > 0 and
