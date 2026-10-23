@@ -35,6 +35,8 @@ jobs:
               print(f"{name}=={dist.version} license={dist.metadata.get('License-Expression', dist.metadata.get('License', 'UNKNOWN'))}")
           PY
       - name: Scan installed dependency versions for published advisories
+        id: vulnerability_audit
+        continue-on-error: true
         run: |
           python -m pip_audit --local --format json --output calendar-vulnerabilities.json
       - name: Verify real NYSE and Amsterdam exchange sessions
@@ -58,3 +60,9 @@ jobs:
             calendar-vulnerabilities.json
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Enforce vulnerability audit gate
+        if: steps.vulnerability_audit.outcome == 'failure'
+        run: |
+          echo 'Vulnerability found or scan failed: no production approval' >&2
+          exit 1
