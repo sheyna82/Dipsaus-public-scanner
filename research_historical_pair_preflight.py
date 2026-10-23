@@ -52,15 +52,29 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
     current_missing_run = 0
     longest_missing_run = 0
     missing_run_count = 0
-    for pair in zip(ordered_shared, ordered_shared[1:]):
+    missing_run_positions = []
+    current_run_start = None
+    for index, pair in enumerate(zip(ordered_shared, ordered_shared[1:])):
         if pair not in comparable_pairs:
+            if current_run_start is None:
+                current_run_start = index
             current_missing_run += 1
             longest_missing_run = max(longest_missing_run, current_missing_run)
         elif current_missing_run:
             missing_run_count += 1
+            missing_run_positions.append((current_run_start, index - 1))
             current_missing_run = 0
+            current_run_start = None
     if current_missing_run:
         missing_run_count += 1
+        missing_run_positions.append((current_run_start, possible_shared_intervals - 1))
+    missing_intervals_at_start = (
+        missing_run_positions[0][1] + 1
+        if missing_run_positions and missing_run_positions[0][0] == 0 else 0)
+    missing_intervals_at_end = (
+        possible_shared_intervals - missing_run_positions[-1][0]
+        if missing_run_positions and
+        missing_run_positions[-1][1] == possible_shared_intervals - 1 else 0)
     comparable_return_intervals = 0
     matching_return_intervals = 0
     for previous, current in sorted(comparable_pairs):
@@ -106,6 +120,8 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
         "skipped_nonadjacent_shared_intervals": skipped_shared_date_gaps,
         "longest_nonadjacent_shared_interval_run": longest_missing_run,
         "nonadjacent_shared_interval_run_count": missing_run_count,
+        "missing_shared_intervals_at_start": missing_intervals_at_start,
+        "missing_shared_intervals_at_end": missing_intervals_at_end,
         "possible_shared_return_intervals": possible_shared_intervals,
         "comparable_interval_coverage_fraction": comparable_interval_coverage,
         "minimum_comparable_return_intervals": minimum_comparable_intervals,
