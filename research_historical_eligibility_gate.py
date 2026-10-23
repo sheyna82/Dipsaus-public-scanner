@@ -11,7 +11,7 @@ def assess_historical_revision(versions, *, decision_at):
     """Select an as-of revision and require point-in-time metadata to pass."""
     # Audit every candidate first: an invalid latest revision must not hide a
     # valid earlier version, nor be silently selected as a valid snapshot.
-    eligible_records = []
+    if not isinstance(versions, (list, tuple)):\n        raise ValueError("invalid_versions")\n    eligible_records = []
     rejected = []
     seen_ids = set()
     for version in versions:
