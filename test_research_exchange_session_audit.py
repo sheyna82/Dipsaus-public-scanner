@@ -23,6 +23,16 @@ class ExchangeSessionAuditTests(unittest.TestCase):
             ["2024-12-31", "2025-01-02"])
         self.assertEqual(r["unexpected_price_dates"], ["2025-01-01"])
 
+
+    def test_rejects_calendar_without_sessions_in_observed_range(self):
+        # A calendar that spans the price dates but has no sessions inside
+        # must not accidentally count as complete.
+        with self.assertRaisesRegex(
+                ValueError, "calendar_has_no_sessions_in_price_range"):
+            audit_expected_sessions(
+                ["2025-01-04", "2025-01-05"],
+                ["2025-01-03", "2025-01-06"])
+
     def test_rejects_calendar_range_gap(self):
         with self.assertRaisesRegex(ValueError, "calendar_range"):
             audit_expected_sessions(
