@@ -45,6 +45,18 @@ class WalkForwardSplitTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "label_before_event"):
             validate_walk_forward_split([row(T1, T0)], [row(T2, T3)])
 
+
+    def test_feature_published_after_event_rejected(self):
+        late_feature = {**row(T0, T1), "feature_available_at": T1}
+        with self.assertRaisesRegex(ValueError, "feature_not_available_at_event"):
+            validate_walk_forward_split([late_feature], [row(T2, T3)])
+
+    def test_feature_available_at_event_accepted(self):
+        timely_feature = {**row(T0, T1), "feature_available_at": T0}
+        result = validate_walk_forward_split([timely_feature], [row(T2, T3)])
+        self.assertTrue(result["accepted"])
+        self.assertFalse(result["independent_source_verified"])
+
     def test_empty_split_rejected(self):
         with self.assertRaisesRegex(ValueError, "empty_split"):
             validate_walk_forward_split([], [row(T2, T3)])
