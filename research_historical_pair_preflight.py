@@ -33,6 +33,19 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
                           for day in shared_dates)
     stock_only_dates = len(stock_closes) - len(shared_dates)
     benchmark_only_dates = len(benchmark_closes) - len(shared_dates)
+    # Compare scale-invariant consecutive close returns only where both
+    # instruments have the same adjacent observed dates. This is a diagnostic,
+    # not proof of duplicate provenance or independent sources.
+    ordered_shared = sorted(shared_dates)
+    comparable_return_intervals = 0
+    matching_return_intervals = 0
+    for previous, current in zip(ordered_shared, ordered_shared[1:]):
+        if (stock_closes[previous] <= 0 or benchmark_closes[previous] <= 0):
+            continue
+        comparable_return_intervals += 1
+        if (stock_closes[current] / stock_closes[previous] ==
+                benchmark_closes[current] / benchmark_closes[previous]):
+            matching_return_intervals += 1
     same_provider_claim = (stock_manifest["provider"].strip().casefold() ==
                            benchmark_manifest["provider"].strip().casefold())
     same_source_url_claim = (stock_manifest["source_url"].strip() ==
@@ -41,6 +54,11 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
         "stock_price_dates": len(stock_closes),
         "benchmark_price_dates": len(benchmark_closes),
         "shared_price_dates": len(shared_dates),
+        "comparable_shared_return_intervals": comparable_return_intervals,
+        "matching_shared_return_intervals": matching_return_intervals,
+        "all_comparable_shared_returns_match": (
+            comparable_return_intervals > 0 and
+            matching_return_intervals == comparable_return_intervals),
         "stock_only_price_dates": stock_only_dates,
         "benchmark_only_price_dates": benchmark_only_dates,
         "stock_date_overlap_fraction": len(shared_dates) / len(stock_closes),
