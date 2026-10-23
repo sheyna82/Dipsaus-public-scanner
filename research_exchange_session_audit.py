@@ -30,6 +30,10 @@ def audit_expected_sessions(price_dates, expected_sessions):
     if prices[0] < sessions[0] or prices[-1] > sessions[-1]:
         raise ValueError("calendar_range_does_not_cover_prices")
     actual = set(prices)
+    # An empty intersection is not evidence of complete price coverage.
+    # A supplied calendar must contain at least one session in the price span.
+    if not any(prices[0] <= day <= prices[-1] for day in sessions):
+        raise ValueError("calendar_has_no_sessions_in_price_range")
     scheduled = set(sessions)
     missing = [d.isoformat() for d in sessions
                if prices[0] <= d <= prices[-1] and d not in actual]
