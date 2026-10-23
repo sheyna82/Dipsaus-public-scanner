@@ -20,6 +20,8 @@ on:
       - 'test_research_kaggle_daily_converter.py'
       - 'research_kaggle_local_convert_cli.py'
       - 'test_research_kaggle_local_convert_cli.py'
+      - 'research_daily_atr_feature_extractor.py'
+      - 'test_research_daily_atr_feature_extractor.py'
       - '.github/workflows/atr-hypothesis-research.yml'
 
 permissions:
@@ -38,6 +40,10 @@ jobs:
           python-version: '3.11'
       - name: Install test dependencies
         run: python -m pip install 'pytest>=8,<9' 'hypothesis>=6,<7'
+      - name: Run causal daily ATR feature tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_daily_atr_feature_extractor
       - name: Run local Kaggle conversion CLI tests
         env:
           PYTHONPATH: ${{ github.workspace }}
