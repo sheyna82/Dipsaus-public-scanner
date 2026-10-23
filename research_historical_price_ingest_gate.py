@@ -20,6 +20,8 @@ def audit_historical_price_dataset(manifest, payload):
         "provider_authenticity_verified": False,
         "license_verified": False,
         "point_in_time_verified": False,
+        "feature_publication_times_verified": False,
+        "requires_feature_publication_time_review": True,
         "corporate_actions_verified": False,
         "delisted_symbols_coverage_verified": False,
         "survivorship_bias_control_verified": False,
