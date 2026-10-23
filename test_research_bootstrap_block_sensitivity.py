@@ -30,6 +30,28 @@ class BootstrapBlockSensitivityTests(unittest.TestCase):
         self.assertFalse(result["intervals_validated_for_inference"])
         self.assertFalse(result["trade_ready"])
 
+
+    def test_opposite_weighting_conclusions_detected_on_synthetic_data(self):
+        # One high-volume date favors ATR; many low-volume dates favor baseline.
+        # Each forecast pair is kept together within its observed date.
+        sample = []
+        for day in range(1, 21):
+            count = 100 if day == 1 else 1
+            for _ in range(count):
+                sample.append({
+                    "event_date": f"2025-01-{day:02d}",
+                    "severe": False,
+                    "baseline_probability": .9 if day == 1 else .1,
+                    "atr_probability": .1 if day == 1 else .9,
+                })
+        result = bootstrap_block_sensitivity(
+            sample, block_lengths=(1,), replicates=1000, seed=13)
+        self.assertTrue(result["opposite_brier_weighting_conclusions"])
+        self.assertTrue(result["opposite_log_loss_weighting_conclusions"])
+        self.assertFalse(result["all_brier_weighting_agrees"])
+        self.assertFalse(result["all_log_loss_weighting_agrees"])
+        self.assertFalse(result["intervals_validated_for_inference"])
+
     def test_duplicate_block_lengths_rejected(self):
         with self.assertRaisesRegex(ValueError, "duplicate_block_lengths"):
             bootstrap_block_sensitivity(sample(), block_lengths=(3, 3),
