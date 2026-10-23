@@ -89,6 +89,24 @@ class IncrementalATRHoldoutScoringTests(unittest.TestCase):
         self.assertFalse(result[0]["trade_ready"])
         self.assertEqual(result[0]["atr_probability"], 1 / 3)
 
+
+    def test_future_holdout_events_cannot_rewrite_prior_forecasts(self):
+        """Metamorphic test: a later event cannot change an earlier forecast."""
+        model = fit([self.event(True, True, True, False),
+                     self.event(True, False, False, True),
+                     self.event(False, True, False, False)])
+        first = {"structure_above_20d_mean": True,
+                 "market_20d_positive": True, "atr_expanding": True}
+        later = {"structure_above_20d_mean": False,
+                 "market_20d_positive": False, "atr_expanding": False}
+        changed_later = {"structure_above_20d_mean": True,
+                         "market_20d_positive": False, "atr_expanding": True}
+        standalone = forecast(model, [first])[0]
+        with_later = forecast(model, [first, later])[0]
+        with_changed_later = forecast(model, [first, changed_later])[0]
+        self.assertEqual(standalone, with_later)
+        self.assertEqual(standalone, with_changed_later)
+
     def test_unknown_cells_use_training_prior(self):
         training = [self.event(True, True, True, True)]
         holdout = [self.event(False, False, False, False)]
