@@ -104,6 +104,27 @@ class HistoricalPairPreflightTests(unittest.TestCase):
         self.assertEqual(result["benchmark_date_overlap_fraction"], 0)
         self.assertFalse(result["partial_price_date_overlap"])
 
+    def test_scaled_closes_have_matching_returns(self):
+        stock = payload(0)
+        benchmark = ("date,open,high,low,close,volume\n"
+                     "2025-01-02,200,202,198,200,100\n"
+                     "2025-01-03,202,204,200,202,100\n").encode()
+        result = prepare_historical_research_pair(
+            manifest(stock), stock, manifest(benchmark), benchmark)
+        self.assertFalse(result["all_shared_close_values_match"])
+        self.assertEqual(result["comparable_shared_return_intervals"], 1)
+        self.assertEqual(result["matching_shared_return_intervals"], 1)
+        self.assertTrue(result["all_comparable_shared_returns_match"])
+        self.assertFalse(result["benchmark_independence_verified"])
+
+    def test_distinct_returns_do_not_match(self):
+        stock, benchmark = payload(0), payload(10)
+        result = prepare_historical_research_pair(
+            manifest(stock), stock, manifest(benchmark), benchmark)
+        self.assertEqual(result["comparable_shared_return_intervals"], 1)
+        self.assertEqual(result["matching_shared_return_intervals"], 0)
+        self.assertFalse(result["all_comparable_shared_returns_match"])
+
     def test_identical_payloads_rejected(self):
         data = payload(0)
         with self.assertRaisesRegex(ValueError, "identical_stock_and_benchmark"):
