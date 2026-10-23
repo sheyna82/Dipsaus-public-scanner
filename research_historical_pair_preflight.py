@@ -50,6 +50,11 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
     # Thresholds are diagnostics, not a claim of statistically validated power.
     minimum_comparable_intervals = 20
     return_overlap_sufficient = comparable_return_intervals >= minimum_comparable_intervals
+    # Distinguish a diagnostic match from a sufficiently long screening match.
+    # Neither outcome verifies provenance or independence.
+    return_pattern_screening_match = (
+        return_overlap_sufficient and
+        matching_return_intervals == comparable_return_intervals)
     same_provider_claim = (stock_manifest["provider"].strip().casefold() ==
                            benchmark_manifest["provider"].strip().casefold())
     same_source_url_claim = (stock_manifest["source_url"].strip() ==
@@ -62,6 +67,7 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
         "minimum_comparable_return_intervals": minimum_comparable_intervals,
         "return_overlap_sufficient_for_screening": return_overlap_sufficient,
         "insufficient_return_overlap": not return_overlap_sufficient,
+        "return_pattern_screening_match": return_pattern_screening_match,
         "matching_shared_return_intervals": matching_return_intervals,
         "all_comparable_shared_returns_match": (
             comparable_return_intervals > 0 and
