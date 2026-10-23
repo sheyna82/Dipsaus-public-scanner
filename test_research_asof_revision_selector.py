@@ -44,6 +44,16 @@ class AsOfRevisionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "ambiguous_revision_order"):
             select_asof_revision([EARLY, other], decision_at="2026-01-04T10:00:00+00:00")
 
+    def test_publication_before_observation_rejected(self):
+        bad = {**EARLY, "observed_at": "2026-01-02T09:00:00+00:00"}
+        with self.assertRaisesRegex(ValueError, "publication_before_observation"):
+            select_asof_revision([bad], decision_at="2026-01-04T10:00:00+00:00")
+
+    def test_observation_before_publication_accepted(self):
+        good = {**EARLY, "observed_at": "2026-01-01T08:00:00+00:00"}
+        result = select_asof_revision([good], decision_at="2026-01-02T10:00:00+00:00")
+        self.assertEqual(result["revision_id"], "original")
+
 
 if __name__ == "__main__":
     unittest.main()
