@@ -1,5 +1,6 @@
 """Descriptive paired comparison of frozen holdout forecasts; not a significance claim."""
 import math
+from datetime import date
 
 
 def paired_holdout_diagnostics(predictions):
@@ -26,6 +27,26 @@ def paired_holdout_diagnostics(predictions):
         losses = [-y * math.log(min(.99, max(.01, p))) -
                   (1 - y) * math.log(1 - min(.99, max(.01, p))) for p in probs]
         log_diffs.append(losses[1] - losses[0])
+    # Optional observation windows permit overlap auditing. Missing dates
+    # cannot be interpreted as evidence of independence.
+    windows = []
+    for row in predictions:
+        start, end = row.get("event_date"), row.get("label_available_date")
+        if start is None and end is None:
+            continue
+        if not isinstance(start, str) or not isinstance(end, str):
+            raise ValueError("incomplete_outcome_window")
+        try:
+            start_day, end_day = date.fromisoformat(start), date.fromisoformat(end)
+        except ValueError as exc:
+            raise ValueError("invalid_outcome_window") from exc
+        if end_day < start_day:
+            raise ValueError("invalid_outcome_window")
+        windows.append((start_day, end_day))
+    windows.sort()
+    overlapping_pairs = sum(
+        windows[i][0] <= windows[j][1] and windows[j][0] <= windows[i][1]
+        for i in range(len(windows)) for j in range(i + 1, len(windows)))
     n = len(predictions)
     # Direction counts are descriptive; dependent events invalidate a naive binomial test.
     improved = sum(d < 0 for d in brier_diffs)
@@ -44,6 +65,9 @@ def paired_holdout_diagnostics(predictions):
         "non_tied_events": improved + worsened,
         "event_level_brier_differences": brier_diffs,
         "event_level_log_loss_differences": log_diffs,
+        "outcome_windows_supplied": len(windows),
+        "overlapping_outcome_window_pairs": overlapping_pairs,
+        "outcome_window_coverage_complete": len(windows) == n,
         "independent_events_assumed": False,
         "uncertainty_interval_verified": False,
         "descriptive_only": True,
