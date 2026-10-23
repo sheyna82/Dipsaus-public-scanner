@@ -1,4 +1,5 @@
 """Pure offline technical risk research. No orders, alerts, or network access."""
+
 import math
 
 def _valid(x):
