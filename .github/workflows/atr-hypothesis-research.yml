@@ -26,6 +26,8 @@ on:
       - 'test_research_forward_drawdown_labels.py'
       - 'research_daily_feature_label_join.py'
       - 'test_research_daily_feature_label_join.py'
+      - 'research_benchmark_market_trend.py'
+      - 'test_research_benchmark_market_trend.py'
       - '.github/workflows/atr-hypothesis-research.yml'
 
 permissions:
@@ -44,6 +46,10 @@ jobs:
           python-version: '3.11'
       - name: Install test dependencies
         run: python -m pip install 'pytest>=8,<9' 'hypothesis>=6,<7'
+      - name: Run benchmark market trend alignment tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_benchmark_market_trend
       - name: Run causal feature label join tests
         env:
           PYTHONPATH: ${{ github.workspace }}
