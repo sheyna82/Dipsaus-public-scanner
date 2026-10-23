@@ -9,7 +9,23 @@ from research_point_in_time_availability_gate import assess_point_in_time_record
 
 def assess_historical_revision(versions, *, decision_at):
     """Select an as-of revision and require point-in-time metadata to pass."""
-    # Audit every candidate first: an invalid latest revision must not hide a\n    # valid earlier version, nor be silently selected as a valid snapshot.\n    eligible_records = []\n    rejected = []\n    for version in versions:\n        audit = assess_point_in_time_record(version, decision_at=decision_at)\n        if audit["accepted"]:\n            eligible_records.append(version)\n        else:\n            rejected.extend(audit["reasons"])\n    selection = select_asof_revision(eligible_records, decision_at=decision_at) if eligible_records else None\n    if selection is None:\n        return {\n            "accepted": False, "revision_id": None,\n            "reasons": sorted(set(rejected)) or ["no_version_available_asof"],\n            "source_authenticity_verified": False, "trade_ready": False,\n        }
+    # Audit every candidate first: an invalid latest revision must not hide a
+    # valid earlier version, nor be silently selected as a valid snapshot.
+    eligible_records = []
+    rejected = []
+    for version in versions:
+        audit = assess_point_in_time_record(version, decision_at=decision_at)
+        if audit["accepted"]:
+            eligible_records.append(version)
+        else:
+            rejected.extend(audit["reasons"])
+    selection = select_asof_revision(eligible_records, decision_at=decision_at) if eligible_records else None
+    if selection is None:
+        return {
+            "accepted": False, "revision_id": None,
+            "reasons": sorted(set(rejected)) or ["no_version_available_asof"],
+            "source_authenticity_verified": False, "trade_ready": False,
+        }
     if not selection["accepted"]:
         return {
             "accepted": False, "revision_id": None,
