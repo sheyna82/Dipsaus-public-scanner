@@ -51,6 +51,28 @@ class PointInTimeTests(unittest.TestCase):
         self.assertIn("ingestion_before_publication", self.check(
             {"ingested_at": "2026-01-04T09:30:00+00:00"})["reasons"])
 
+    def test_future_observation_rejected(self):
+        result = self.check({
+            "observed_at": "2026-01-06T09:00:00+00:00",
+            "published_at": "2026-01-06T10:00:00+00:00",
+            "ingested_at": "2026-01-06T11:00:00+00:00",
+            "revision_asof": "2026-01-06T12:00:00+00:00",
+        })
+        self.assertIn("future_observed_at", result["reasons"])
+
+    def test_revision_before_publication_rejected(self):
+        result = self.check({"revision_asof": "2026-01-04T09:30:00+00:00"})
+        self.assertIn("revision_before_publication", result["reasons"])
+
+    def test_timezone_equivalence(self):
+        result = self.check({
+            "observed_at": "2026-01-04T10:00:00+01:00",
+            "published_at": "2026-01-04T11:00:00+01:00",
+            "ingested_at": "2026-01-04T12:00:00+01:00",
+            "revision_asof": "2026-01-04T13:00:00+01:00",
+        })
+        self.assertTrue(result["accepted"])
+
 
 if __name__ == "__main__":
     unittest.main()
