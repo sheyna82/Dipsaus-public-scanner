@@ -5,7 +5,6 @@ import unittest
 from research_cache_provenance_gate import assess_cached_observation
 
 
-
 IDENTITY = {
     "security_id": "synthetic-issuer-1",
     "market": "EU",
