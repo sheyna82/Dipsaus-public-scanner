@@ -39,6 +39,8 @@ on:
       - 'test_research_paired_brier_hac.py'
       - 'research_session_aligned_hac.py'
       - 'test_research_session_aligned_hac.py'
+      - 'research_exchange_session_audit.py'
+      - 'test_research_exchange_session_audit.py'
       - '.github/workflows/atr-hypothesis-research.yml'
 
 permissions:
@@ -57,6 +59,10 @@ jobs:
           python-version: '3.11'
       - name: Install test dependencies
         run: python -m pip install 'pytest>=8,<9' 'hypothesis>=6,<7'
+      - name: Run expected exchange-session audit tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_exchange_session_audit
       - name: Run HAC session continuity disclosure tests
         env:
           PYTHONPATH: ${{ github.workspace }}
