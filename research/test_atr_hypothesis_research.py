@@ -76,8 +76,11 @@ def test_reordered_training_preserves_predictions(training, rows):
 
 @settings(max_examples=70, deadline=None)
 @given(st.lists(event(), min_size=1, max_size=20),
-       st.one_of(st.none(), st.floats(allow_nan=True, allow_infinity=True),
-                 st.integers(), st.text()))
+       st.one_of(st.none(), st.just(float("nan")),
+                 st.just(float("inf")), st.just(float("-inf")),
+                 st.floats(max_value=0, allow_nan=False, allow_infinity=False),
+                 st.floats(min_value=1, allow_nan=False, allow_infinity=False),
+                 st.text()))
 def test_corrupt_model_prior_rejected(training, invalid):
     model = fit(training)
     model["pooled"] = invalid
