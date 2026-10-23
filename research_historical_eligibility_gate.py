@@ -13,7 +13,16 @@ def assess_historical_revision(versions, *, decision_at):
     # valid earlier version, nor be silently selected as a valid snapshot.
     eligible_records = []
     rejected = []
+    seen_ids = set()
     for version in versions:
+        if not isinstance(version, dict):
+            raise ValueError("invalid_version")
+        revision_id = version.get("revision_id")
+        if not isinstance(revision_id, str) or not revision_id.strip():
+            raise ValueError("invalid_revision_id")
+        if revision_id in seen_ids:
+            raise ValueError("duplicate_revision_id")
+        seen_ids.add(revision_id)
         audit = assess_point_in_time_record(version, decision_at=decision_at)
         if audit["accepted"]:
             eligible_records.append(version)
