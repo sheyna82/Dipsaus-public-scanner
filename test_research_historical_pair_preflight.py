@@ -394,6 +394,25 @@ class HistoricalPairPreflightTests(unittest.TestCase):
             self.assertEqual(result["missing_shared_intervals_at_end"], end_count)
             self.assertEqual(result["skipped_nonadjacent_shared_intervals"], 2)
 
+    def test_explicit_as_of_calendar_age_does_not_certify_freshness(self):
+        stock, benchmark = payload(0), payload(10)
+        result = prepare_historical_research_pair(
+            manifest(stock), stock, manifest(benchmark), benchmark,
+            as_of_date="2025-01-06")
+        self.assertEqual(result["stock_last_price_date"], "2025-01-03")
+        self.assertEqual(result["stock_last_price_calendar_age_days"], 3)
+        self.assertEqual(result["benchmark_last_price_calendar_age_days"], 3)
+        self.assertFalse(result["exchange_session_freshness_verified"])
+        self.assertFalse(result["trade_ready"])
+
+    def test_future_last_price_relative_to_as_of_is_rejected(self):
+        stock, benchmark = payload(0), payload(10)
+        with self.assertRaisesRegex(
+                ValueError, "historical_last_date_after_as_of_date"):
+            prepare_historical_research_pair(
+                manifest(stock), stock, manifest(benchmark), benchmark,
+                as_of_date="2025-01-02")
+
     def test_identical_payloads_rejected(self):
         data = payload(0)
         with self.assertRaisesRegex(ValueError, "identical_stock_and_benchmark"):
