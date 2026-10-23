@@ -12,7 +12,7 @@ from datetime import date, timedelta
 
 def prepare_historical_research_pair(stock_manifest, stock_payload,
                                      benchmark_manifest, benchmark_payload,
-                                     as_of_date=None):
+                                     as_of_date=None, exchange_session_dates=None):
     """Audit two independent input files without silently certifying either."""
     if stock_payload == benchmark_payload:
         raise ValueError("identical_stock_and_benchmark_payload")
@@ -50,11 +50,26 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
         return sum((last + timedelta(days=step)).weekday() < 5
                    for step in range(1, (reference - last).days + 1))
 
+    def session_age(closes):
+        if as_of_date is None or exchange_session_dates is None:
+            return None
+        reference = date.fromisoformat(as_of_date)
+        last = date.fromisoformat(max(closes))
+        sessions = [date.fromisoformat(day) for day in exchange_session_dates]
+        if len(set(sessions)) != len(sessions):
+            raise ValueError("duplicate_exchange_session_date")
+        if any(day > reference for day in sessions):
+            raise ValueError("exchange_session_after_as_of_date")
+        # A caller-provided session list is unverified and can omit sessions.
+        return sum(last < day <= reference for day in sessions)
+
     stock_calendar_age = calendar_age(stock_closes)
     stock_weekday_age = weekday_age(stock_closes)
     benchmark_closes = close_by_date(benchmark_payload)
     benchmark_calendar_age = calendar_age(benchmark_closes)
     benchmark_weekday_age = weekday_age(benchmark_closes)
+    stock_supplied_session_age = session_age(stock_closes)
+    benchmark_supplied_session_age = session_age(benchmark_closes)
     shared_dates = stock_closes.keys() & benchmark_closes.keys()
     matching_closes = sum(stock_closes[day] == benchmark_closes[day]
                           for day in shared_dates)
@@ -148,6 +163,9 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
         "stock_last_price_weekday_age": stock_weekday_age,
         "benchmark_last_price_weekday_age": benchmark_weekday_age,
         "weekday_age_is_exchange_session_age": False,
+        "stock_last_price_supplied_session_age": stock_supplied_session_age,
+        "benchmark_last_price_supplied_session_age": benchmark_supplied_session_age,
+        "supplied_exchange_calendar_authenticated": False,
         "exchange_session_freshness_verified": False,
         "stock_price_dates": len(stock_closes),
         "benchmark_price_dates": len(benchmark_closes),
