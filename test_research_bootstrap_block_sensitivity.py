@@ -20,6 +20,11 @@ class BootstrapBlockSensitivityTests(unittest.TestCase):
         self.assertTrue(all(r["exploratory_interval"] == [0, 0]
                             for r in result["results"]))
         self.assertFalse(result["all_intervals_exclude_zero"])
+        self.assertTrue(result["all_brier_weighting_agrees"])
+        self.assertTrue(result["all_log_loss_weighting_agrees"])
+        self.assertEqual(len(result["weighting_sensitivity"]), 3)
+        self.assertEqual(result["weighting_sensitivity"][0]["event_weighted_brier_sign"],
+                         "crosses_zero")
         self.assertFalse(result["intervals_validated_for_inference"])
         self.assertFalse(result["trade_ready"])
 
