@@ -32,3 +32,5 @@ jobs:
       - name: Ruff report-only
         run: |
           ruff check --output-format concise research_atr_incremental_holdout_scoring.py research/test_atr_hypothesis_research.py || true
+          echo '--- Ruff exact import fix preview (no files modified) ---'
+          ruff check --select I001 --fix --diff research/test_atr_hypothesis_research.py || true
