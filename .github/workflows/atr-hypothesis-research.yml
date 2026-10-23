@@ -6,6 +6,8 @@ on:
     paths:
       - 'research/test_atr_hypothesis_research.py'
       - 'research_atr_incremental_holdout_scoring.py'
+      - 'research_atr_gated_holdout.py'
+      - 'test_research_atr_gated_holdout.py'
       - '.github/workflows/atr-hypothesis-research.yml'
 
 permissions:
@@ -24,6 +26,10 @@ jobs:
           python-version: '3.11'
       - name: Install test dependencies
         run: python -m pip install 'pytest>=8,<9' 'hypothesis>=6,<7'
+      - name: Run gated holdout regression tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_atr_gated_holdout
       - name: Run isolated property tests
         env:
           PYTHONPATH: ${{ github.workspace }}
