@@ -55,6 +55,18 @@ class HistoricalEligibilityTests(unittest.TestCase):
         self.assertTrue(result["accepted"])
         self.assertEqual(result["revision_id"], "original")
 
+    def test_duplicate_revision_id_rejected_even_if_one_invalid(self):
+        malformed = {**ORIGINAL, "revision_asof": "invalid"}
+        with self.assertRaisesRegex(ValueError, "duplicate_revision_id"):
+            assess_historical_revision(
+                [ORIGINAL, malformed], decision_at="2026-01-05T12:00:00+00:00")
+
+    def test_missing_revision_id_rejected(self):
+        missing = {key: value for key, value in ORIGINAL.items() if key != "revision_id"}
+        with self.assertRaisesRegex(ValueError, "invalid_revision_id"):
+            assess_historical_revision(
+                [missing], decision_at="2026-01-05T12:00:00+00:00")
+
 
 if __name__ == "__main__":
     unittest.main()
