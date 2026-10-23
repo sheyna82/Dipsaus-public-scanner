@@ -33,6 +33,18 @@ class HistoricalPriceIngestTests(unittest.TestCase):
         self.assertTrue(result["requires_external_license_review"])
         self.assertTrue(result["requires_external_provenance_review"])
         self.assertTrue(result["requires_point_in_time_reconstruction"])
+        for check in ("corporate_actions_verified",
+                      "delisted_symbols_coverage_verified",
+                      "survivorship_bias_control_verified",
+                      "benchmark_independence_verified"):
+            with self.subTest(check=check):
+                self.assertFalse(result[check])
+        for check in ("requires_corporate_action_review",
+                      "requires_delisting_coverage_review",
+                      "requires_survivorship_bias_review",
+                      "requires_independent_benchmark_review"):
+            with self.subTest(check=check):
+                self.assertTrue(result[check])
 
     def test_changed_bytes_rejected(self):
         with self.assertRaisesRegex(ValueError, "payload_hash_mismatch"):
