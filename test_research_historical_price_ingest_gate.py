@@ -30,6 +30,8 @@ class HistoricalPriceIngestTests(unittest.TestCase):
         self.assertFalse(result["license_verified"])
         self.assertFalse(result["trade_ready"])
         self.assertFalse(result["research_data_ready"])
+        self.assertFalse(result["feature_publication_times_verified"])
+        self.assertTrue(result["requires_feature_publication_time_review"])
         self.assertTrue(result["requires_external_license_review"])
         self.assertTrue(result["requires_external_provenance_review"])
         self.assertTrue(result["requires_point_in_time_reconstruction"])
