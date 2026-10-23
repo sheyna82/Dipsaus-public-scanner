@@ -85,8 +85,14 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
     return_coverage_sufficient = (
         comparable_interval_coverage is not None and
         comparable_interval_coverage >= minimum_comparable_interval_coverage)
+    # A long contiguous missing block can hide a regime shift despite
+    # adequate overall coverage. Threshold is provisional, research-only.
+    maximum_missing_interval_run_for_screening = 3
+    missing_run_sufficient_for_screening = (
+        longest_missing_run <= maximum_missing_interval_run_for_screening)
     return_pattern_screening_match = (
         return_overlap_sufficient and return_coverage_sufficient and
+        missing_run_sufficient_for_screening and
         matching_return_intervals == comparable_return_intervals)
     same_provider_claim = (stock_manifest["provider"].strip().casefold() ==
                            benchmark_manifest["provider"].strip().casefold())
@@ -108,6 +114,8 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
         "return_pattern_screening_match": return_pattern_screening_match,
         "minimum_comparable_interval_coverage": minimum_comparable_interval_coverage,
         "return_coverage_sufficient_for_screening": return_coverage_sufficient,
+        "maximum_missing_interval_run_for_screening": maximum_missing_interval_run_for_screening,
+        "missing_run_sufficient_for_screening": missing_run_sufficient_for_screening,
         "matching_shared_return_intervals": matching_return_intervals,
         "matching_shared_return_fraction": return_match_fraction,
         "all_comparable_shared_returns_match": (
