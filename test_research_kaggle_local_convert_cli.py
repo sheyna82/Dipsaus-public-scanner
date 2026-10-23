@@ -2,6 +2,7 @@
 import contextlib
 import io
 import json
+import hashlib
 import tempfile
 import os
 import unittest
@@ -26,7 +27,10 @@ class LocalConversionTests(unittest.TestCase):
                              b"date,open,high,low,close,volume\n2017-01-03,10,12,9,11,1000\n")
             self.assertEqual((root / "converted.csv").stat().st_mode & 0o777, 0o600)
             self.assertNotIn("2017-01-03", output.getvalue())
-            self.assertFalse(json.loads(output.getvalue())["trade_ready"])
+            report = json.loads(output.getvalue())
+            self.assertFalse(report["trade_ready"])
+            self.assertEqual(report["source_sha256"], hashlib.sha256(SAMPLE).hexdigest())
+            self.assertEqual(report["converted_sha256"], hashlib.sha256((root / "converted.csv").read_bytes()).hexdigest())
 
     def test_refuses_repository_output(self):
         with tempfile.TemporaryDirectory() as directory:
