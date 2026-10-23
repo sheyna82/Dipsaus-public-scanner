@@ -21,6 +21,8 @@ class BootstrapBlockSensitivityTests(unittest.TestCase):
                             for r in result["results"]))
         self.assertFalse(result["all_intervals_exclude_zero"])
         self.assertTrue(result["all_brier_weighting_agrees"])
+        self.assertFalse(result["opposite_brier_weighting_conclusions"])
+        self.assertFalse(result["opposite_log_loss_weighting_conclusions"])
         self.assertTrue(result["all_log_loss_weighting_agrees"])
         self.assertEqual(len(result["weighting_sensitivity"]), 3)
         self.assertEqual(result["weighting_sensitivity"][0]["event_weighted_brier_sign"],
