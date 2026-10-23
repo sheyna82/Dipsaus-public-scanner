@@ -21,6 +21,7 @@ def paired_calendar_block_bootstrap(rows, *, block_days=14, replicates=500,
             or not math.isfinite(confidence) or not 0 < confidence < 1):
         raise ValueError("invalid_bootstrap_settings")
     grouped = defaultdict(list)
+    # Both scoring rules must use the same paired resampling draws.
     grouped_log = defaultdict(list)
     for row in rows:
         if not isinstance(row, dict) or type(row.get("severe")) is not bool:
@@ -39,6 +40,7 @@ def paired_calendar_block_bootstrap(rows, *, block_days=14, replicates=500,
         grouped[day].append((probabilities[1] - y) ** 2 -
                             (probabilities[0] - y) ** 2)
         def log_loss(p):
+            # Explicit clipping avoids infinite loss at probability 0 or 1.
             p = min(.99, max(.01, p))
             return -y * math.log(p) - (1 - y) * math.log(1 - p)
         grouped_log[day].append(log_loss(probabilities[1]) -
@@ -80,6 +82,9 @@ def paired_calendar_block_bootstrap(rows, *, block_days=14, replicates=500,
         "replicates": replicates,
         "seed": seed,
         "confidence": confidence,
+        "log_loss_probability_clip": 0.01,
+        "interval_method": "empirical_order_statistic_exploratory",
+        "resampling_unit": "observed_date_all_events",
         "observed_atr_minus_baseline_brier": sum(observed) / len(observed),
         "exploratory_interval": [lower, upper],
         "observed_atr_minus_baseline_log_loss": sum(observed_log) / len(observed_log),
