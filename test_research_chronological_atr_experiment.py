@@ -26,10 +26,10 @@ class ExperimentTests(unittest.TestCase):
         self.assertFalse(result["independent_holdout_verified"])
         self.assertFalse(result["trade_ready"])
 
-    def test_rejects_overlapping_outcome_windows(self):
+    def test_rejects_insufficient_embargo(self):
         with self.assertRaisesRegex(ValueError, "training_labels_not_available"):
             evaluate_chronological_csv(sample(), sample(),
-                                       split_date="2025-03-27", horizon=10)
+                                       split_date="2025-03-27", horizon=10,\n                                       embargo_seconds=86400 * 20)
 
 
 if __name__ == "__main__":
