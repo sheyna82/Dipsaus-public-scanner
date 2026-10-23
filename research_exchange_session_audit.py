@@ -34,11 +34,16 @@ def audit_expected_sessions(price_dates, expected_sessions):
     missing = [d.isoformat() for d in sessions
                if prices[0] <= d <= prices[-1] and d not in actual]
     unexpected = [d.isoformat() for d in prices if d not in scheduled]
+    unobserved_edges = [d.isoformat() for d in sessions
+                        if d < prices[0] or d > prices[-1]]
     return {"missing_expected_sessions": missing,
             "unexpected_price_dates": unexpected,
             "price_rows": len(prices),
+            "calendar_sessions_outside_observed_prices": len(unobserved_edges),
+            "calendar_coverage_edges_unverified": bool(unobserved_edges),
             "calendar_sessions_in_range": sum(prices[0] <= d <= prices[-1]
                                               for d in sessions),
             "complete_against_supplied_calendar": not missing and not unexpected,
+            "complete_across_full_supplied_calendar": not missing and not unexpected and not unobserved_edges,
             "calendar_provenance_verified": False,
             "trade_ready": False}
