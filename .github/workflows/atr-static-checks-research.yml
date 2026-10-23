@@ -49,7 +49,7 @@ jobs:
         run: python -m pip install 'bandit>=1.7,<2'
       - name: Audit additional offline research modules (report-only)
         run: |
-          python -m bandit -q -f txt dipsaus_offline_technical_risk.py dipsaus_offline_lookahead_audit.py dipsaus_offline_dataset_manifest.py || true
+          python -m bandit -q -f txt dipsaus_offline_technical_risk.py dipsaus_offline_lookahead_audit.py dipsaus_offline_dataset_manifest.py
 
   negative-control:
     runs-on: ubuntu-latest
