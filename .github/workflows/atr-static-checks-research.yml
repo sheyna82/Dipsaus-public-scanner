@@ -34,3 +34,36 @@ jobs:
           ruff check --select I001 --output-format concise research_atr_incremental_holdout_scoring.py research/test_atr_hypothesis_research.py
           echo '--- Non-blocking compatibility notes (TRY004) ---'
           ruff check --select TRY004 --output-format concise research_atr_incremental_holdout_scoring.py research/test_atr_hypothesis_research.py || true
+
+  negative-control:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install bounded static checkers
+        run: python -m pip install 'bandit>=1.7,<2' 'ruff>=0.9,<1'
+      - name: Prove Bandit and Ruff reject synthetic bad code
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmpdir="$(mktemp -d)"
+          trap 'rm -rf "$tmpdir"' EXIT
+          cat > "$tmpdir/bad_security.py" <<'PY'
+          import subprocess
+          subprocess.run("echo unsafe", shell=True)
+          PY
+          cat > "$tmpdir/bad_imports.py" <<'PY'
+          import sys
+          import os
+          PY
+          if python -m bandit -q -f txt "$tmpdir/bad_security.py"; then
+            echo 'ERROR: Bandit accepted deliberately unsafe shell execution'
+            exit 1
+          fi
+          if ruff check --select I001 "$tmpdir/bad_imports.py"; then
+            echo 'ERROR: Ruff accepted deliberately unsorted imports'
+            exit 1
+          fi
+          echo 'Negative controls passed: both tools rejected known-bad fixtures'
