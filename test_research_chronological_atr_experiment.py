@@ -26,6 +26,29 @@ class ExperimentTests(unittest.TestCase):
         self.assertFalse(result["independent_holdout_verified"])
         self.assertFalse(result["trade_ready"])
 
+
+    def test_training_never_uses_labels_maturing_after_split(self):
+        """Inspect the rows actually supplied to fitting at the split."""
+        from unittest.mock import patch
+        from research_atr_incremental_holdout_scoring import fit as real_fit
+
+        captured = []
+
+        def capture(rows):
+            captured.extend(rows)
+            return real_fit(rows)
+
+        with patch("research_chronological_atr_experiment.fit",
+                   side_effect=capture):
+            evaluate_chronological_csv(
+                sample(n=150), sample(n=150),
+                split_date="2025-03-27", horizon=10)
+        self.assertTrue(captured, "test requires nonempty training data")
+        self.assertTrue(all(
+            row["date"] < "2025-03-27"
+            and row["label_available_date"] < "2025-03-27"
+            for row in captured))
+
     def test_rejects_insufficient_embargo(self):
         with self.assertRaisesRegex(ValueError, "training_labels_not_available"):
             evaluate_chronological_csv(sample(), sample(),
