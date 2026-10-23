@@ -94,6 +94,19 @@ class ExperimentTests(unittest.TestCase):
         self.assertFalse(boot["trade_ready"])
         self.assertFalse(result["independent_holdout_verified"])
 
+
+    def test_opt_in_block_sensitivity_uses_fixed_lengths(self):
+        result = evaluate_chronological_csv(
+            sample(n=150, shock=True), sample(n=150),
+            split_date="2025-03-27", horizon=3,
+            bootstrap_sensitivity_lengths=(3, 5),
+            bootstrap_replicates=20, bootstrap_seed=7)
+        sensitivity = result["bootstrap_sensitivity"]
+        self.assertEqual(sensitivity["block_lengths"], [3, 5])
+        self.assertEqual(len(sensitivity["results"]), 2)
+        self.assertFalse(sensitivity["intervals_validated_for_inference"])
+        self.assertFalse(result["trade_ready"])
+
     def test_bootstrap_disabled_by_default(self):
         result = evaluate_chronological_csv(
             sample(), sample(), split_date="2025-03-27", horizon=3)
