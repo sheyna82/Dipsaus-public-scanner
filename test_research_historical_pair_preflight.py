@@ -73,7 +73,7 @@ class HistoricalPairPreflightTests(unittest.TestCase):
 
     def test_disjoint_dates_do_not_count_as_matching(self):
         stock = payload(0)
-        benchmark = payload(10).replace(b"2025-01-02", b"2025-02-02").replace(
+        benchmark = payload(10).replace(b"2025-01-03", b"2025-02-03").replace(
             b"2025-01-03", b"2025-02-03")
         result = prepare_historical_research_pair(
             manifest(stock), stock, manifest(benchmark), benchmark)
