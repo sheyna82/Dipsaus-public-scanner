@@ -80,6 +80,25 @@ class ExperimentTests(unittest.TestCase):
         self.assertTrue(captured, "fixture requires holdout predictions")
         self.assertTrue(all(row["date"] >= split for row in captured))
 
+
+    def test_opt_in_exploratory_bootstrap_is_descriptive_only(self):
+        result = evaluate_chronological_csv(
+            sample(n=150, shock=True), sample(n=150),
+            split_date="2025-03-27", horizon=3,
+            exploratory_bootstrap=True, bootstrap_block_days=3,
+            bootstrap_replicates=30, bootstrap_seed=7)
+        boot = result["exploratory_bootstrap"]
+        self.assertIsNotNone(boot)
+        self.assertEqual(boot["events"], result["holdout_events"])
+        self.assertFalse(boot["interval_validated_for_inference"])
+        self.assertFalse(boot["trade_ready"])
+        self.assertFalse(result["independent_holdout_verified"])
+
+    def test_bootstrap_disabled_by_default(self):
+        result = evaluate_chronological_csv(
+            sample(), sample(), split_date="2025-03-27", horizon=3)
+        self.assertIsNone(result["exploratory_bootstrap"])
+
     def test_rejects_insufficient_embargo(self):
         with self.assertRaisesRegex(ValueError, "training_labels_not_available"):
             evaluate_chronological_csv(sample(), sample(),
