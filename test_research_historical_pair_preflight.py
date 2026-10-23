@@ -62,6 +62,25 @@ class HistoricalPairPreflightTests(unittest.TestCase):
         self.assertEqual(result["matching_close_values_on_shared_dates"], 2)
         self.assertFalse(result["benchmark_independence_verified"])
 
+
+    def test_numeric_close_formatting_does_not_hide_matches(self):
+        stock = payload(0)
+        benchmark = stock.replace(b",100,100\n", b",100.00,200\n")
+        result = prepare_historical_research_pair(
+            manifest(stock), stock, manifest(benchmark), benchmark)
+        self.assertEqual(result["matching_close_values_on_shared_dates"], 2)
+        self.assertTrue(result["all_shared_close_values_match"])
+
+    def test_disjoint_dates_do_not_count_as_matching(self):
+        stock = payload(0)
+        benchmark = payload(10).replace(b"2025-01-02", b"2025-02-02").replace(
+            b"2025-01-03", b"2025-02-03")
+        result = prepare_historical_research_pair(
+            manifest(stock), stock, manifest(benchmark), benchmark)
+        self.assertEqual(result["shared_price_dates"], 0)
+        self.assertTrue(result["no_overlapping_price_dates"])
+        self.assertFalse(result["all_shared_close_values_match"])
+
     def test_identical_payloads_rejected(self):
         data = payload(0)
         with self.assertRaisesRegex(ValueError, "identical_stock_and_benchmark"):
