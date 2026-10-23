@@ -40,6 +40,11 @@ def select_asof_revision(versions, *, decision_at):
         ingested = _aware(version.get("ingested_at"))
         if ingested < published:
             raise ValueError("ingestion_before_publication")
+        observed_raw = version.get("observed_at")
+        if observed_raw is not None:
+            observed = _aware(observed_raw)
+            if published < observed:
+                raise ValueError("publication_before_observation")
         if published <= decision and ingested <= decision:
             eligible.append((published, ingested, identifier))
     if not eligible:
