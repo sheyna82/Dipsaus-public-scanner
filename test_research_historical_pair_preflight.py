@@ -402,6 +402,9 @@ class HistoricalPairPreflightTests(unittest.TestCase):
         self.assertEqual(result["stock_last_price_date"], "2025-01-03")
         self.assertEqual(result["stock_last_price_calendar_age_days"], 3)
         self.assertEqual(result["benchmark_last_price_calendar_age_days"], 3)
+        self.assertEqual(result["stock_last_price_weekday_age"], 1)
+        self.assertEqual(result["benchmark_last_price_weekday_age"], 1)
+        self.assertFalse(result["weekday_age_is_exchange_session_age"])
         self.assertFalse(result["exchange_session_freshness_verified"])
         self.assertFalse(result["trade_ready"])
 
