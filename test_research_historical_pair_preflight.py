@@ -157,6 +157,31 @@ class HistoricalPairPreflightTests(unittest.TestCase):
         self.assertFalse(result["benchmark_independence_verified"])
         self.assertFalse(result["trade_ready"])
 
+    def test_partial_return_match_fraction(self):
+        stock = ("date,open,high,low,close,volume\n"
+                 "2025-01-02,100,101,99,100,100\n"
+                 "2025-01-03,101,102,100,101,100\n"
+                 "2025-01-04,102,103,101,102,100\n").encode()
+        benchmark = ("date,open,high,low,close,volume\n"
+                     "2025-01-02,200,201,199,200,100\n"
+                     "2025-01-03,202,203,201,202,100\n"
+                     "2025-01-04,205,206,204,205,100\n").encode()
+        result = prepare_historical_research_pair(
+            manifest(stock), stock, manifest(benchmark), benchmark)
+        self.assertEqual(result["comparable_shared_return_intervals"], 2)
+        self.assertEqual(result["matching_shared_return_intervals"], 1)
+        self.assertEqual(result["matching_shared_return_fraction"], 0.5)
+        self.assertFalse(result["return_pattern_screening_match"])
+
+    def test_disjoint_dates_have_undefined_return_match_fraction(self):
+        stock = payload(0)
+        benchmark = payload(10).replace(b"2025-01-02", b"2025-02-02").replace(
+            b"2025-01-03", b"2025-02-03")
+        result = prepare_historical_research_pair(
+            manifest(stock), stock, manifest(benchmark), benchmark)
+        self.assertIsNone(result["matching_shared_return_fraction"])
+        self.assertFalse(result["return_pattern_screening_match"])
+
     def test_identical_payloads_rejected(self):
         data = payload(0)
         with self.assertRaisesRegex(ValueError, "identical_stock_and_benchmark"):
