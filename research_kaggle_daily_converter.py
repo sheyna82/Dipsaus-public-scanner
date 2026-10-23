@@ -28,6 +28,8 @@ def convert_kaggle_daily_csv(payload):
     for row in reader:
         if None in row or any(row.get(column) is None for column in SOURCE_COLUMNS):
             raise ValueError("malformed_kaggle_row")
+        if any(not row[column].strip() for column in SOURCE_COLUMNS):
+            raise ValueError("blank_kaggle_value")
         # OpenInt is discarded only after verifying the field is numeric.
         try:
             open_interest = float(row["OpenInt"])
@@ -35,8 +37,6 @@ def convert_kaggle_daily_csv(payload):
             raise ValueError("invalid_open_interest") from exc
         if not math.isfinite(open_interest) or open_interest < 0:
             raise ValueError("invalid_open_interest")
-        if any(not row[column].strip() for column in SOURCE_COLUMNS):
-            raise ValueError("blank_kaggle_value")
         writer.writerow([row[column] for column in SOURCE_COLUMNS[:-1]])
     converted = output.getvalue().encode("utf-8")
     audit_daily_price_csv(converted)
