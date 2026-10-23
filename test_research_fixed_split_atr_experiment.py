@@ -65,6 +65,35 @@ class FixedSplitTests(unittest.TestCase):
             self.assertGreaterEqual(row["date"], "2025-03-20")
             self.assertLess(row["date"], "2025-04-05")
 
+
+    def test_exact_boundary_maturity_is_excluded(self):
+        """The next fold's opening date is not part of the prior fold."""
+        from unittest.mock import patch
+        from research_chronological_atr_experiment import evaluate_chronological_csv
+        from research_daily_feature_label_join import join_features_and_labels
+        from research_atr_incremental_holdout_scoring import predict as real_predict
+
+        data = prices()
+        boundary = "2025-04-05"
+        candidates = join_features_and_labels(data, horizon=10)
+        exact = [row for row in candidates
+                 if row["date"] >= "2025-03-20"
+                 and row["label_available_date"] == boundary]
+        self.assertTrue(exact, "fixture must contain an exact-boundary label")
+        scored_dates = []
+
+        def capture(model, rows):
+            scored_dates.extend(row["date"] for row in rows)
+            return real_predict(model, rows)
+
+        with patch("research_chronological_atr_experiment.predict",
+                   side_effect=capture):
+            evaluate_chronological_csv(
+                data, data, split_date="2025-03-20",
+                holdout_end_date=boundary, horizon=10)
+        self.assertTrue(scored_dates)
+        self.assertTrue(all(row["date"] not in scored_dates for row in exact))
+
     def test_rejects_reordered_splits(self):
         with self.assertRaisesRegex(ValueError, "sorted"):
             evaluate_fixed_splits(prices(), prices(),
