@@ -46,6 +46,20 @@ class HistoricalPriceIngestTests(unittest.TestCase):
             with self.subTest(check=check):
                 self.assertTrue(result[check])
 
+
+    def test_long_calendar_gap_is_reported_not_misclassified(self):
+        payload = (b"date,open,high,low,close,volume\\n"
+                   b"2026-01-02,10,12,9,11,100\\n"
+                   b"2026-01-20,11,13,10,12,110\\n")
+        # Gap size is descriptive: holidays, halts, and missing bars
+        # require an independently checked exchange session calendar.
+        payload = payload.replace(b"\\\\n", b"\\n")
+        result = audit_historical_price_dataset(manifest(payload), payload)
+        self.assertEqual(result["largest_calendar_gap_days"], 18)
+        self.assertEqual(result["gaps_over_seven_days"], 1)
+        self.assertFalse(result["exchange_session_completeness_verified"])
+        self.assertTrue(result["requires_exchange_session_completeness_review"])
+
     def test_changed_bytes_rejected(self):
         with self.assertRaisesRegex(ValueError, "payload_hash_mismatch"):
             audit_historical_price_dataset(manifest(), PAYLOAD + b"\n")
