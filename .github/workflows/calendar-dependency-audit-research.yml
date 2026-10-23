@@ -1,0 +1,60 @@
+name: DIPSAUS calendar dependency audit (research only)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/calendar-dependency-audit-research.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install isolated pinned calendar and auditing tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install 'exchange_calendars==4.13.2' 'pip-audit==2.9.0'
+      - name: Record exact installed dependency versions
+        run: |
+          python -m pip freeze --all > calendar-dependencies-freeze.txt
+          python -m pip check
+          python - <<'PY'
+          from importlib.metadata import distribution
+          for name in ("exchange_calendars", "numpy", "pandas", "pyluach", "toolz", "tzdata", "korean_lunar_calendar"):
+              dist = distribution(name)
+              print(f"{name}=={dist.version} license={dist.metadata.get('License-Expression', dist.metadata.get('License', 'UNKNOWN'))}")
+          PY
+      - name: Scan installed dependency versions for published advisories
+        run: |
+          python -m pip_audit --local --format json --output calendar-vulnerabilities.json
+      - name: Verify real NYSE and Amsterdam exchange sessions
+        run: |
+          python - <<'PY'
+          import exchange_calendars as xc
+          assert xc.__version__ == "4.13.2", xc.__version__
+          ny = [d.date().isoformat() for d in xc.get_calendar("XNYS").sessions_in_range("2025-01-16", "2025-01-23")]
+          ams = [d.date().isoformat() for d in xc.get_calendar("XAMS").sessions_in_range("2025-04-16", "2025-04-23")]
+          assert ny == ["2025-01-16", "2025-01-17", "2025-01-21", "2025-01-22", "2025-01-23"], ny
+          assert ams == ["2025-04-16", "2025-04-17", "2025-04-22", "2025-04-23"], ams
+          print("Exchange sessions match recorded reference dates")
+          PY
+      - name: Upload dependency evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: calendar-dependency-research-evidence
+          path: |
+            calendar-dependencies-freeze.txt
+            calendar-vulnerabilities.json
+          if-no-files-found: warn
+          retention-days: 14
