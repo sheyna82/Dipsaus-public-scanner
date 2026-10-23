@@ -23,6 +23,12 @@ class ExperimentTests(unittest.TestCase):
         self.assertGreater(result["training_events"], 0)
         self.assertGreater(result["holdout_events"], 0)
         self.assertIn("atr_minus_baseline_brier", result)
+        self.assertEqual(result["paired_diagnostics"]["events"], result["holdout_events"])
+        self.assertFalse(result["paired_diagnostics"]["independent_events_assumed"])
+        self.assertFalse(result["paired_diagnostics"]["uncertainty_interval_verified"])
+        self.assertEqual(sum(result["paired_diagnostics"][key] for key in
+                             ("atr_brier_better_events", "atr_brier_worse_events",
+                              "equal_brier_events")), result["holdout_events"])
         self.assertFalse(result["independent_holdout_verified"])
         self.assertFalse(result["trade_ready"])
 
