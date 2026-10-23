@@ -21,6 +21,7 @@ def paired_calendar_block_bootstrap(rows, *, block_days=14, replicates=500,
             or not math.isfinite(confidence) or not 0 < confidence < 1):
         raise ValueError("invalid_bootstrap_settings")
     grouped = defaultdict(list)
+    grouped_log = defaultdict(list)
     for row in rows:
         if not isinstance(row, dict) or type(row.get("severe")) is not bool:
             raise ValueError("invalid_event")
@@ -37,6 +38,11 @@ def paired_calendar_block_bootstrap(rows, *, block_days=14, replicates=500,
         y = int(row["severe"])
         grouped[day].append((probabilities[1] - y) ** 2 -
                             (probabilities[0] - y) ** 2)
+        def log_loss(p):
+            p = min(.99, max(.01, p))
+            return -y * math.log(p) - (1 - y) * math.log(1 - p)
+        grouped_log[day].append(log_loss(probabilities[1]) -
+                                log_loss(probabilities[0]))
     dates = sorted(grouped)
     if len(dates) < 2 or block_days > len(dates):
         raise ValueError("insufficient_calendar_dates")
@@ -45,6 +51,7 @@ def paired_calendar_block_bootstrap(rows, *, block_days=14, replicates=500,
     starts = list(range(len(dates) - block_days + 1))
     rng = random.Random(seed)
     estimates = []
+    log_estimates = []
     for _ in range(replicates):
         sampled = []
         while len(sampled) < len(dates):
@@ -53,11 +60,17 @@ def paired_calendar_block_bootstrap(rows, *, block_days=14, replicates=500,
         sampled = sampled[:len(dates)]
         values = [difference for day in sampled for difference in grouped[day]]
         estimates.append(sum(values) / len(values))
+        log_values = [difference for day in sampled for difference in grouped_log[day]]
+        log_estimates.append(sum(log_values) / len(log_values))
     estimates.sort()
+    log_estimates.sort()
     alpha = (1 - confidence) / 2
     lower = estimates[max(0, math.floor(alpha * replicates))]
     upper = estimates[min(replicates - 1, math.ceil((1 - alpha) * replicates) - 1)]
+    log_lower = log_estimates[max(0, math.floor(alpha * replicates))]
+    log_upper = log_estimates[min(replicates - 1, math.ceil((1 - alpha) * replicates) - 1)]
     observed = [difference for day in dates for difference in grouped[day]]
+    observed_log = [difference for day in dates for difference in grouped_log[day]]
     return {
         "events": len(observed),
         "observed_calendar_dates": len(dates),
@@ -69,6 +82,8 @@ def paired_calendar_block_bootstrap(rows, *, block_days=14, replicates=500,
         "confidence": confidence,
         "observed_atr_minus_baseline_brier": sum(observed) / len(observed),
         "exploratory_interval": [lower, upper],
+        "observed_atr_minus_baseline_log_loss": sum(observed_log) / len(observed_log),
+        "exploratory_log_loss_interval": [log_lower, log_upper],
         "exchange_sessions_verified": False,
         "independent_holdout_verified": False,
         "interval_validated_for_inference": False,
