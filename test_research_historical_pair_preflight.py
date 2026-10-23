@@ -28,9 +28,26 @@ class HistoricalPairPreflightTests(unittest.TestCase):
         result = prepare_historical_research_pair(
             manifest(stock), stock, manifest(benchmark), benchmark)
         self.assertTrue(result["distinct_payloads"])
+        self.assertTrue(result["same_declared_provider"])
+        self.assertTrue(result["same_declared_source_url"])
+        self.assertFalse(result["provider_claims_authenticated"])
         self.assertFalse(result["benchmark_independence_verified"])
         self.assertFalse(result["research_data_ready"])
         self.assertFalse(result["trade_ready"])
+
+
+    def test_different_declared_providers_are_not_verified_independent(self):
+        stock, benchmark = payload(0), payload(10)
+        benchmark_manifest = manifest(benchmark)
+        benchmark_manifest["provider"] = "another_synthetic_provider"
+        benchmark_manifest["source_url"] = "https://other.example.invalid/offline"
+        result = prepare_historical_research_pair(
+            manifest(stock), stock, benchmark_manifest, benchmark)
+        self.assertFalse(result["same_declared_provider"])
+        self.assertFalse(result["same_declared_source_url"])
+        self.assertTrue(result["provider_claims_independence"])
+        self.assertFalse(result["distinct_providers_verified"])
+        self.assertFalse(result["benchmark_independence_verified"])
 
     def test_identical_payloads_rejected(self):
         data = payload(0)
