@@ -53,3 +53,14 @@ Hergebruik van bestaande broncode heeft expliciet de voorkeur boven onnodig opni
 | bilalaslam28/Automated-VSA-Pre-Market-Stock-Scanner | README aanwezig; geen LICENSE of LICENSE.md aangetroffen op onderzochte paden | Geen code kopiëren zonder rechtenvaststelling |
 
 **Conclusie:** een MIT-licentie maakt hergebruik juridisch makkelijker, maar zegt niets over veiligheid, databronrechten, onderhoud of voorspellende waarde. Voorlopig geen externe code geïntegreerd. Eerst een specifieke MIT-component en diens tests en afhankelijkheden volledig inspecteren.
+
+## Code-audit: lit26/Stock_Screener (23 oktober 2026)
+
+Bestanden direct gelezen: `api/screener.py`, `api/cache.py`, `api/technical.py` (upstream MIT; copyright Tianning Li, 2021).
+
+- `api/screener.py`: valideert filterlabels tegen `finvizfinance.util.util_dict` en construeert een Finviz-URL. Het parseert vervolgens vaste HTML-tabelindices (17/18) en gebruikt `DataFrame.append`. **Niet rechtstreeks integreren:** kwetsbaar voor sitewijzigingen, versiebreuk en externe scraping-/gebruiksvoorwaarden; ook geen point-in-time databewijs.
+- `api/cache.py`: eenvoudige ticker/interval/periode-cache; een andere cache gebruikt `datetime.now()` en een TTL van 15 minuten. **Wel nuttig als architectuuridee**, maar bij DIPSAUS moet de cache key ook provider, as-of tijd, markt, adjustment en data-versie omvatten; stale data mag geen live alert opleveren.
+- `api/technical.py`: berekent EMA, Bollinger Bands, MACD, RSI en stochastic via de `ta`-bibliotheek, voornamelijk voor grafiekweergave. **Interessant als indicator-controlegroep**, niet als zelfstandig bewezen herstelmodel; vermijd afronding vóór scoreberekening.
+- De MIT-licentie staat hergebruik met licentiebehoud toe, maar geeft geen toestemming voor het scrapen van Finviz of toegang tot marktdatabronnen.
+
+**Besluit:** geen volledige stack of Finviz-scraper overnemen. Eerst een eigen, offline cache-key- en freshness-gate onderzoeken; pas na controle van de concrete bestaande DIPSAUS-cache integreren. Technische indicatoren vergelijken met bestaande signalen via causale holdout. Er is nog geen externe code gekopieerd.
