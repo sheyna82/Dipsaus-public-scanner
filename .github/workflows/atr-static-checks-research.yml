@@ -27,10 +27,10 @@ jobs:
       - name: Bandit report-only
         run: |
           # Keep assert checks enabled for model code; B101 in pytest is expected.
-          python -m bandit -q -f txt research_atr_incremental_holdout_scoring.py || true
-          python -m bandit -q -s B101 -f txt research/test_atr_hypothesis_research.py || true
+          python -m bandit -q -f txt research_atr_incremental_holdout_scoring.py
+          python -m bandit -q -s B101 -f txt research/test_atr_hypothesis_research.py
       - name: Ruff report-only
         run: |
-          ruff check --output-format concise research_atr_incremental_holdout_scoring.py research/test_atr_hypothesis_research.py || true
-          echo '--- Ruff exact import fix preview (no files modified) ---'
-          ruff check --select I001 --fix --diff research/test_atr_hypothesis_research.py || true
+          ruff check --select I001 --output-format concise research_atr_incremental_holdout_scoring.py research/test_atr_hypothesis_research.py
+          echo '--- Non-blocking compatibility notes (TRY004) ---'
+          ruff check --select TRY004 --output-format concise research_atr_incremental_holdout_scoring.py research/test_atr_hypothesis_research.py || true
