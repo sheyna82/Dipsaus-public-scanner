@@ -54,7 +54,10 @@ def evaluate_chronological_csv(stock_payload, benchmark_payload, *,
     model = fit(training)
     predictions = predict(model, holdout)
     metrics = evaluate(predictions)
-    paired = paired_holdout_diagnostics(predictions)
+    dated_predictions = [{**prediction, "event_date": row["date"],
+                          "label_available_date": row["label_available_date"]}
+                         for prediction, row in zip(predictions, holdout)]
+    paired = paired_holdout_diagnostics(dated_predictions)
     return {**metrics, "paired_diagnostics": paired, "split_date": split_date,
             "holdout_end_date": holdout_end_date,
             "training_events": gate["training_events"],
