@@ -8,6 +8,7 @@ from research_daily_feature_label_join import join_features_and_labels
 from research_benchmark_market_trend import attach_market_trend, eligible_model_rows
 from research_walk_forward_split_gate import validate_walk_forward_split
 from research_atr_incremental_holdout_scoring import fit, predict, evaluate
+from research_paired_holdout_diagnostics import paired_holdout_diagnostics
 
 
 def _timestamp(day):
@@ -51,8 +52,10 @@ def evaluate_chronological_csv(stock_payload, benchmark_payload, *,
     gate = validate_walk_forward_split(train_gate, holdout_gate,
                                        embargo_seconds=embargo_seconds)
     model = fit(training)
-    metrics = evaluate(predict(model, holdout))
-    return {**metrics, "split_date": split_date,
+    predictions = predict(model, holdout)
+    metrics = evaluate(predictions)
+    paired = paired_holdout_diagnostics(predictions)
+    return {**metrics, "paired_diagnostics": paired, "split_date": split_date,
             "holdout_end_date": holdout_end_date,
             "training_events": gate["training_events"],
             "holdout_events": gate["holdout_events"],
