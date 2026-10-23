@@ -49,6 +49,27 @@ class ExperimentTests(unittest.TestCase):
             and row["label_available_date"] < "2025-03-27"
             for row in captured))
 
+
+    def test_prediction_never_scores_pre_split_events(self):
+        """Inspect actual rows reaching prediction, not just reported counts."""
+        from unittest.mock import patch
+        from research_atr_incremental_holdout_scoring import predict as real_predict
+
+        captured = []
+
+        def capture(model, rows):
+            captured.extend(rows)
+            return real_predict(model, rows)
+
+        split = "2025-03-27"
+        with patch("research_chronological_atr_experiment.predict",
+                   side_effect=capture):
+            evaluate_chronological_csv(
+                sample(n=150), sample(n=150),
+                split_date=split, horizon=10)
+        self.assertTrue(captured, "fixture requires holdout predictions")
+        self.assertTrue(all(row["date"] >= split for row in captured))
+
     def test_rejects_insufficient_embargo(self):
         with self.assertRaisesRegex(ValueError, "training_labels_not_available"):
             evaluate_chronological_csv(sample(), sample(),
