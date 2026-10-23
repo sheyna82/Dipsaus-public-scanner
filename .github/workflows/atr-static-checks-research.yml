@@ -35,6 +35,22 @@ jobs:
           echo '--- Non-blocking compatibility notes (TRY004) ---'
           ruff check --select TRY004 --output-format concise research_atr_incremental_holdout_scoring.py research/test_atr_hypothesis_research.py || true
 
+  expanded-offline-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install bounded security analyzer
+        run: python -m pip install 'bandit>=1.7,<2'
+      - name: Audit additional offline research modules (report-only)
+        run: |
+          python -m bandit -q -f txt dipsaus_offline_technical_risk.py dipsaus_offline_lookahead_audit.py dipsaus_offline_dataset_manifest.py || true
+
   negative-control:
     runs-on: ubuntu-latest
     timeout-minutes: 10
