@@ -107,6 +107,19 @@ class IncrementalATRHoldoutScoringTests(unittest.TestCase):
         self.assertEqual(standalone, with_later)
         self.assertEqual(standalone, with_changed_later)
 
+
+    def test_future_outcomes_of_later_events_do_not_affect_prior_probability(self):
+        """Changing later evaluation labels must not affect earlier probabilities."""
+        model = fit([self.event(True, True, True, False),
+                     self.event(False, False, False, True)])
+        first = self.event(True, True, True, False)
+        later_negative = self.event(False, False, False, False)
+        later_positive = self.event(False, False, False, True)
+        a = predict(model, [first, later_negative])[0]
+        b = predict(model, [first, later_positive])[0]
+        self.assertEqual(a, b)
+        self.assertEqual(a["severe"], False)
+
     def test_unknown_cells_use_training_prior(self):
         training = [self.event(True, True, True, True)]
         holdout = [self.event(False, False, False, False)]
