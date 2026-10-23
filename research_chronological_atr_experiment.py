@@ -29,7 +29,8 @@ def evaluate_chronological_csv(stock_payload, benchmark_payload, *,
     joined = join_features_and_labels(stock_payload, horizon=horizon,
                                       threshold=threshold)
     aligned = eligible_model_rows(attach_market_trend(joined, benchmark_payload))
-    training = [r for r in aligned if r["date"] < split_date\n                and r["label_available_date"] < split_date]
+    training = [r for r in aligned if r["date"] < split_date
+                and r["label_available_date"] < split_date]
     holdout = [r for r in aligned if r["date"] >= split_date]
     train_gate = [{"event_at": _timestamp(r["date"]),
                    "label_available_at": _timestamp(r["label_available_date"])}
