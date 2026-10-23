@@ -125,6 +125,16 @@ class HistoricalPairPreflightTests(unittest.TestCase):
         self.assertEqual(result["matching_shared_return_intervals"], 0)
         self.assertFalse(result["all_comparable_shared_returns_match"])
 
+    def test_short_return_history_is_explicitly_insufficient(self):
+        stock, benchmark = payload(0), payload(10)
+        result = prepare_historical_research_pair(
+            manifest(stock), stock, manifest(benchmark), benchmark)
+        self.assertEqual(result["comparable_shared_return_intervals"], 1)
+        self.assertEqual(result["minimum_comparable_return_intervals"], 20)
+        self.assertFalse(result["return_overlap_sufficient_for_screening"])
+        self.assertTrue(result["insufficient_return_overlap"])
+        self.assertFalse(result["research_data_ready"])
+
     def test_identical_payloads_rejected(self):
         data = payload(0)
         with self.assertRaisesRegex(ValueError, "identical_stock_and_benchmark"):
