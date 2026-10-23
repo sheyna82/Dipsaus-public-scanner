@@ -41,6 +41,11 @@ def validate_walk_forward_split(training, holdout, *, embargo_seconds=0):
                 raise ValueError("invalid_row")
             event = _timestamp(row.get("event_at"))
             available = _timestamp(row.get("label_available_at"))
+            feature_available_raw = row.get("feature_available_at")
+            if feature_available_raw is not None:
+                feature_available = _timestamp(feature_available_raw)
+                if feature_available > event:
+                    raise ValueError("feature_not_available_at_event")
             if available < event:
                 raise ValueError("label_before_event")
             if previous is not None and event <= previous:
