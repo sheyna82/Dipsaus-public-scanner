@@ -16,5 +16,9 @@ def audit_historical_price_dataset(manifest, payload):
         "provider_authenticity_verified": False,
         "license_verified": False,
         "point_in_time_verified": False,
+        "research_data_ready": False,
+        "requires_external_license_review": True,
+        "requires_external_provenance_review": True,
+        "requires_point_in_time_reconstruction": True,
         "trade_ready": False,
     }
