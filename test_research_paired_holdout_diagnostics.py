@@ -43,6 +43,9 @@ class PairedHoldoutDiagnosticsTests(unittest.TestCase):
         self.assertEqual(result["overlapping_outcome_window_pairs"], 1)
         self.assertEqual(result["overlap_connected_groups"], 2)
         self.assertFalse(result["overlap_group_count_is_effective_sample_size"])
+        self.assertTrue(result["overlap_detected"])
+        self.assertFalse(result["naive_independent_event_ci_permitted"])
+        self.assertTrue(result["requires_dependence_aware_uncertainty_method"])
         self.assertTrue(result["outcome_window_coverage_complete"])
         self.assertFalse(result["independent_events_assumed"])
 
