@@ -1,0 +1,225 @@
+name: DIPSAUS research static security checks
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'research_atr_incremental_holdout_scoring.py'
+      - 'research/test_atr_hypothesis_research.py'
+      - 'dipsaus_offline_technical_risk.py'
+      - 'dipsaus_offline_lookahead_audit.py'
+      - 'dipsaus_offline_dataset_manifest.py'
+      - 'dipsaus_offline_security_master_gate.py'
+      - 'dipsaus_offline_earnings_asof_gate.py'
+      - 'dipsaus_offline_adjustment_gate.py'
+      - 'research_execution_assumptions.py'
+      - 'test_research_execution_assumptions.py'
+      - 'research_cache_provenance_gate.py'
+      - 'test_research_cache_provenance_gate.py'
+      - 'research_walk_forward_split_gate.py'
+      - 'test_research_walk_forward_split_gate.py'
+      - 'research_point_in_time_availability_gate.py'
+      - 'test_research_point_in_time_availability_gate.py'
+      - 'research_asof_revision_selector.py'
+      - 'test_research_asof_revision_selector.py'
+      - 'test_research_historical_gate_integration.py'
+      - 'research_historical_eligibility_gate.py'
+      - 'test_research_historical_eligibility_gate.py'
+      - '.github/workflows/atr-static-checks-research.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  static-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install bounded analysis dependencies
+        run: python -m pip install 'bandit>=1.7,<2' 'ruff>=0.9,<1'
+      - name: Bandit required
+        run: |
+          # Keep assert checks enabled for model code; B101 in pytest is expected.
+          python -m bandit -q -f txt research_atr_incremental_holdout_scoring.py
+          python -m bandit -q -s B101 -f txt research/test_atr_hypothesis_research.py
+      - name: Ruff import gate and compatibility notes
+        run: |
+          ruff check --select I001 --output-format concise research_atr_incremental_holdout_scoring.py research/test_atr_hypothesis_research.py
+          echo '--- Non-blocking compatibility notes (TRY004) ---'
+          ruff check --select TRY004 --output-format concise research_atr_incremental_holdout_scoring.py research/test_atr_hypothesis_research.py || true
+
+  expanded-offline-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install bounded security analyzer
+        run: python -m pip install 'bandit>=1.7,<2'
+      - name: Enforce Bandit on additional offline research modules
+        run: |
+          python -m bandit -q -f txt dipsaus_offline_technical_risk.py dipsaus_offline_lookahead_audit.py dipsaus_offline_dataset_manifest.py dipsaus_offline_security_master_gate.py dipsaus_offline_earnings_asof_gate.py dipsaus_offline_adjustment_gate.py
+      - name: Enforce offline module import hygiene
+        run: |
+          python -m pip install 'ruff>=0.9,<1'
+          ruff check --select I001 --output-format concise dipsaus_offline_technical_risk.py dipsaus_offline_lookahead_audit.py dipsaus_offline_dataset_manifest.py dipsaus_offline_security_master_gate.py dipsaus_offline_earnings_asof_gate.py dipsaus_offline_adjustment_gate.py
+
+  execution-scenarios:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run isolated execution regression tests
+        run: python -m unittest -v test_research_execution_assumptions
+      - name: Security and import checks for execution research
+        run: |
+          python -m pip install 'bandit>=1.7,<2' 'ruff>=0.9,<1'
+          python -m bandit -q -f txt research_execution_assumptions.py
+          ruff check --select I001 research_execution_assumptions.py test_research_execution_assumptions.py
+
+  cache-provenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test cache provenance and freshness
+        run: python -m unittest -v test_research_cache_provenance_gate
+      - name: Audit cache gate security and imports
+        run: |
+          python -m pip install 'bandit>=1.7,<2' 'ruff>=0.9,<1'
+          python -m bandit -q -f txt research_cache_provenance_gate.py
+          ruff check --isolated --select I001 research_cache_provenance_gate.py test_research_cache_provenance_gate.py
+
+  walk-forward-leakage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run structural leakage and embargo tests
+        run: python -m unittest -v test_research_walk_forward_split_gate
+      - name: Security audit of walk-forward gate
+        run: |
+          python -m pip install 'bandit>=1.7,<2'
+          python -m bandit -q -f txt research_walk_forward_split_gate.py
+
+  point-in-time-availability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test point-in-time availability and revisions
+        run: python -m unittest -v test_research_point_in_time_availability_gate
+      - name: Audit point-in-time gate security
+        run: |
+          python -m pip install 'bandit>=1.7,<2'
+          python -m bandit -q -f txt research_point_in_time_availability_gate.py
+
+  asof-revision-selection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test historical revision selection
+        run: python -m unittest -v test_research_asof_revision_selector
+      - name: Security audit of revision selector
+        run: |
+          python -m pip install 'bandit>=1.7,<2'
+          python -m bandit -q -f txt research_asof_revision_selector.py
+
+  historical-gate-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test combined historical leakage defenses
+        run: python -m unittest -v test_research_historical_gate_integration
+
+  historical-eligibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test centralized historical eligibility
+        run: python -m unittest -v test_research_historical_eligibility_gate
+      - name: Security audit of eligibility gate
+        run: |
+          python -m pip install 'bandit>=1.7,<2'
+          python -m bandit -q -f txt research_historical_eligibility_gate.py
+
+  negative-control:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install bounded static checkers
+        run: python -m pip install 'bandit>=1.7,<2' 'ruff>=0.9,<1'
+      - name: Prove Bandit and Ruff reject synthetic bad code
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmpdir="$(mktemp -d)"
+          trap 'rm -rf "$tmpdir"' EXIT
+          cat > "$tmpdir/bad_security.py" <<'PY'
+          import subprocess
+          subprocess.run("echo unsafe", shell=True)
+          PY
+          cat > "$tmpdir/bad_imports.py" <<'PY'
+          import sys
+          import os
+          PY
+          if python -m bandit -q -f txt "$tmpdir/bad_security.py"; then
+            echo 'ERROR: Bandit accepted deliberately unsafe shell execution'
+            exit 1
+          fi
+          if ruff check --select I001 "$tmpdir/bad_imports.py"; then
+            echo 'ERROR: Ruff accepted deliberately unsorted imports'
+            exit 1
+          fi
+          echo 'Negative controls passed: both tools rejected known-bad fixtures'

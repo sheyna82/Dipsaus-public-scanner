@@ -1,0 +1,122 @@
+name: DIPSAUS calendar dependency audit (research only)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/calendar-dependency-audit-research.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install isolated pinned calendar and auditing tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install 'setuptools==83.0.0'
+          python -m pip install 'exchange_calendars==4.13.2' 'pip-audit==2.9.0'
+      - name: Verify published calendar wheel SHA256 and wheel metadata
+        run: |
+          python - <<'PY'
+          import hashlib
+          import io
+          import json
+          import urllib.request
+          import zipfile
+          from email.parser import Parser
+
+          url = "https://pypi.org/pypi/exchange-calendars/4.13.2/json"
+          with urllib.request.urlopen(url, timeout=20) as response:
+              release = json.load(response)
+          wheels = [item for item in release["urls"] if item["filename"].endswith(".whl")]
+          assert len(wheels) == 1, "Expected exactly one published wheel"
+          wheel = wheels[0]
+          assert wheel["filename"].startswith("exchange_calendars-4.13.2-")
+          expected = wheel["digests"]["sha256"]
+          with urllib.request.urlopen(wheel["url"], timeout=30) as response:
+              payload = response.read(5_000_001)
+          assert len(payload) <= 5_000_000, "Unexpected wheel size"
+          actual = hashlib.sha256(payload).hexdigest()
+          assert actual == expected, "Published wheel digest mismatch"
+          with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+              metadata_files = [name for name in archive.namelist() if name.endswith(".dist-info/METADATA")]
+              assert len(metadata_files) == 1, "Unexpected wheel metadata layout"
+              metadata = Parser().parsestr(archive.read(metadata_files[0]).decode("utf-8"))
+              assert metadata["Name"].replace("_", "-").lower() == "exchange-calendars"
+              assert metadata["Version"] == "4.13.2"
+          print(json.dumps({"package": "exchange-calendars", "version": "4.13.2",
+                            "wheel": wheel["filename"], "sha256": actual,
+                            "digest_matches_pypi": True,
+                            "independent_source_attestation": False}, sort_keys=True))
+          PY
+      - name: Record exact installed dependency versions
+        run: |
+          python -m pip freeze --all > calendar-dependencies-freeze.txt
+          python -m pip check
+          python - <<'PY'
+          from importlib.metadata import distribution
+          for name in ("exchange_calendars", "numpy", "pandas", "pyluach", "toolz", "tzdata", "korean_lunar_calendar"):
+              dist = distribution(name)
+              print(f"{name}=={dist.version} license={dist.metadata.get('License-Expression', dist.metadata.get('License', 'UNKNOWN'))}")
+          PY
+      - name: Scan installed dependency versions for published advisories
+        id: vulnerability_audit
+        continue-on-error: true
+        run: |
+          python -m pip_audit --local --format json --output calendar-vulnerabilities.json
+      - name: Verify real NYSE and Amsterdam exchange sessions
+        run: |
+          python - <<'PY'
+          import exchange_calendars as xc
+          assert xc.__version__ == "4.13.2", xc.__version__
+          ny = [d.date().isoformat() for d in xc.get_calendar("XNYS").sessions_in_range("2025-01-16", "2025-01-23")]
+          ams = [d.date().isoformat() for d in xc.get_calendar("XAMS").sessions_in_range("2025-04-16", "2025-04-23")]
+          assert ny == ["2025-01-16", "2025-01-17", "2025-01-21", "2025-01-22", "2025-01-23"], ny
+          assert ams == ["2025-04-16", "2025-04-17", "2025-04-22", "2025-04-23"], ams
+          print("Exchange sessions match recorded reference dates")
+          PY
+      - name: Export and audit actual exchange sessions through research adapter
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python - <<'PY'
+          from research_exchange_calendar_local_export import export_sessions
+          from research_exchange_calendar_adapter import audit_calendar_export
+          for exchange, start, end in (
+              ("XNYS", "2025-01-16", "2025-01-23"),
+              ("XAMS", "2025-04-16", "2025-04-23"),
+          ):
+              result = export_sessions(exchange, start, end)
+              dates = result["session_dates"]
+              audited = audit_calendar_export(dates, result)
+              assert audited["calendar_export_digest_verified"] is True
+              assert audited["calendar_provenance_verified"] is False
+              assert audited["trade_ready"] is False
+              print(exchange, {"dates": dates, "checksum_verified": True, "trade_ready": False})
+          PY
+      - name: Upload dependency evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: calendar-dependency-research-evidence
+          path: |
+            calendar-dependencies-freeze.txt
+            calendar-vulnerabilities.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Enforce vulnerability audit gate
+        if: steps.vulnerability_audit.outcome == 'failure'
+        run: |
+          echo 'Vulnerability found or scan failed: no production approval' >&2
+          exit 1

@@ -1,0 +1,189 @@
+name: DIPSAUS ATR Hypothesis research tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'research/test_atr_hypothesis_research.py'
+      - 'research_atr_incremental_holdout_scoring.py'
+      - 'research_atr_gated_holdout.py'
+      - 'test_research_atr_gated_holdout.py'
+      - 'research_historical_source_manifest.py'
+      - 'test_research_historical_source_manifest.py'
+      - 'research_daily_price_csv_audit.py'
+      - 'test_research_daily_price_csv_audit.py'
+      - 'research_historical_pair_preflight.py'
+      - 'test_research_historical_pair_preflight.py'
+      - 'research_historical_price_ingest_gate.py'
+      - 'test_research_historical_price_ingest_gate.py'
+      - 'research_local_price_audit_cli.py'
+      - 'test_research_local_price_audit_cli.py'
+      - 'research_kaggle_daily_converter.py'
+      - 'test_research_kaggle_daily_converter.py'
+      - 'research_kaggle_local_convert_cli.py'
+      - 'test_research_kaggle_local_convert_cli.py'
+      - 'research_daily_atr_feature_extractor.py'
+      - 'test_research_daily_atr_feature_extractor.py'
+      - 'research_forward_drawdown_labels.py'
+      - 'test_research_forward_drawdown_labels.py'
+      - 'research_daily_feature_label_join.py'
+      - 'test_research_daily_feature_label_join.py'
+      - 'research_benchmark_market_trend.py'
+      - 'test_research_benchmark_market_trend.py'
+      - 'research_paired_holdout_diagnostics.py'
+      - 'test_research_paired_holdout_diagnostics.py'
+      - 'research_paired_calendar_block_bootstrap.py'
+      - 'test_research_paired_calendar_block_bootstrap.py'
+      - 'research_bootstrap_block_sensitivity.py'
+      - 'test_research_bootstrap_block_sensitivity.py'
+      - 'research_chronological_atr_experiment.py'
+      - 'test_research_chronological_atr_experiment.py'
+      - 'research_chronological_atr_cli.py'
+      - 'test_research_chronological_atr_cli.py'
+      - 'research_fixed_split_atr_experiment.py'
+      - 'test_research_fixed_split_atr_experiment.py'
+      - 'test_research_sklearn_metric_reference.py'
+      - 'research_paired_brier_hac.py'
+      - 'test_research_paired_brier_hac.py'
+      - 'research_session_aligned_hac.py'
+      - 'test_research_session_aligned_hac.py'
+      - 'research_exchange_session_audit.py'
+      - 'test_research_exchange_session_audit.py'
+      - 'research_exchange_calendar_adapter.py'
+      - 'test_research_exchange_calendar_adapter.py'
+      - 'research_exchange_calendar_local_export.py'
+      - 'test_research_exchange_calendar_local_export.py'
+      - 'test_research_recorded_exchange_calendar_sessions.py'
+      - 'test_research_calendar_edge_coverage.py'
+      - 'research_calendar_wheel_integrity.py'
+      - 'test_research_calendar_wheel_integrity.py'
+      - '.github/workflows/atr-hypothesis-research.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  atr-hypothesis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install test dependencies
+        run: python -m pip install 'pytest>=8,<9' 'hypothesis>=6,<7'
+      - name: Run offline calendar wheel integrity tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_calendar_wheel_integrity
+      - name: Run calendar boundary coverage tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_calendar_edge_coverage
+      - name: Run recorded real exchange-session regression tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_recorded_exchange_calendar_sessions
+      - name: Run pinned calendar export and checksum tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_exchange_calendar_local_export
+      - name: Run calendar export adapter tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_exchange_calendar_adapter
+      - name: Run expected exchange-session audit tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_exchange_session_audit
+      - name: Run HAC session continuity disclosure tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_session_aligned_hac
+      - name: Run paired Brier HAC uncertainty tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_paired_brier_hac
+      - name: Run sklearn metric formula reference tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_sklearn_metric_reference
+      - name: Run fixed split ATR research tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_fixed_split_atr_experiment
+      - name: Run local chronological ATR CLI tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_chronological_atr_cli
+      - name: Run paired holdout diagnostics tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_paired_holdout_diagnostics
+      - name: Run paired calendar block bootstrap tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_paired_calendar_block_bootstrap
+      - name: Run bootstrap block sensitivity tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_bootstrap_block_sensitivity
+      - name: Run chronological ATR experiment integration tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_chronological_atr_experiment
+      - name: Run benchmark market trend alignment tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_benchmark_market_trend
+      - name: Run causal feature label join tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_daily_feature_label_join
+      - name: Run forward drawdown outcome tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_forward_drawdown_labels
+      - name: Run causal daily ATR feature tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_daily_atr_feature_extractor
+      - name: Run local Kaggle conversion CLI tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_kaggle_local_convert_cli
+      - name: Run Kaggle historical CSV converter tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_kaggle_daily_converter
+      - name: Run offline local price audit CLI tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_local_price_audit_cli
+      - name: Run historical stock benchmark pair preflight tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_historical_pair_preflight
+      - name: Run combined historical price ingest tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_historical_price_ingest_gate
+      - name: Run historical OHLCV CSV audit tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_daily_price_csv_audit
+      - name: Run historical manifest integrity tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_historical_source_manifest
+      - name: Run gated holdout regression tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_atr_gated_holdout
+      - name: Run isolated property tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m pytest -q research/test_atr_hypothesis_research.py
