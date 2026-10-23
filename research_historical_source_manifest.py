@@ -23,6 +23,18 @@ def audit_historical_source_manifest(manifest, payload):
         raise ValueError("invalid_retrieval_time") from exc
     if timestamp.tzinfo is None or timestamp.utcoffset() is None:
         raise ValueError("timezone_required")
+    published_raw = manifest.get("published_at")
+    if published_raw is not None:
+        if not isinstance(published_raw, str):
+            raise ValueError("invalid_publication_time")
+        try:
+            published = datetime.fromisoformat(published_raw)
+        except ValueError as exc:
+            raise ValueError("invalid_publication_time") from exc
+        if published.tzinfo is None or published.utcoffset() is None:
+            raise ValueError("publication_timezone_required")
+        if published > timestamp:
+            raise ValueError("publication_after_retrieval")
     if len(manifest["sha256"]) != 64 or any(
             character not in "0123456789abcdef" for character in manifest["sha256"]):
         raise ValueError("invalid_sha256")
@@ -37,5 +49,7 @@ def audit_historical_source_manifest(manifest, payload):
         "license_verified": False,
         "provider_authenticity_verified": False,
         "point_in_time_verified": False,
+        "publication_time_structurally_valid": published_raw is not None,
+        "publication_time_authenticity_verified": False,
         "trade_ready": False,
     }
