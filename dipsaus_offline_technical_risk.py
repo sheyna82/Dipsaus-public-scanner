@@ -2,6 +2,7 @@
 
 import math
 
+
 def _valid(x):
     return type(x) in (int, float) and math.isfinite(x) and x > 0
 
