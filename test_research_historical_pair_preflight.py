@@ -198,6 +198,20 @@ class HistoricalPairPreflightTests(unittest.TestCase):
         self.assertIsNone(result["matching_shared_return_fraction"])
         self.assertFalse(result["return_pattern_screening_match"])
 
+    def test_missing_session_in_both_series_preserves_adjacency(self):
+        stock = ("date,open,high,low,close,volume\n"
+                 "2025-01-02,100,101,99,100,100\n"
+                 "2025-01-04,102,103,101,102,100\n").encode()
+        benchmark = ("date,open,high,low,close,volume\n"
+                     "2025-01-02,200,201,199,200,100\n"
+                     "2025-01-04,204,205,203,204,100\n").encode()
+        result = prepare_historical_research_pair(
+            manifest(stock), stock, manifest(benchmark), benchmark)
+        self.assertEqual(result["comparable_shared_return_intervals"], 1)
+        self.assertEqual(result["skipped_nonadjacent_shared_intervals"], 0)
+        self.assertEqual(result["matching_shared_return_fraction"], 1.0)
+        self.assertFalse(result["return_pattern_screening_match"])
+
     def test_identical_payloads_rejected(self):
         data = payload(0)
         with self.assertRaisesRegex(ValueError, "identical_stock_and_benchmark"):
