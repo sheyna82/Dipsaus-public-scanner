@@ -10,12 +10,17 @@ from pathlib import Path
 
 from research_historical_price_ingest_gate import audit_historical_price_dataset
 
+MAX_MANIFEST_BYTES = 65536
+MAX_CSV_BYTES = 25 * 1024 * 1024
+
 
 def audit_local_files(manifest_path, csv_path):
     for name in (manifest_path, csv_path):
         path = Path(name)
         if path.is_symlink() or not stat.S_ISREG(path.stat().st_mode):
             raise ValueError("not_regular_local_file")
+    if Path(manifest_path).stat().st_size > MAX_MANIFEST_BYTES or Path(csv_path).stat().st_size > MAX_CSV_BYTES:
+        raise ValueError("input_too_large")
     manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
     payload = Path(csv_path).read_bytes()
     return audit_historical_price_dataset(manifest, payload)
