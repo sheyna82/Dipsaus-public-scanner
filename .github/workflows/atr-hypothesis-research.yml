@@ -12,6 +12,8 @@ on:
       - 'test_research_historical_source_manifest.py'
       - 'research_daily_price_csv_audit.py'
       - 'test_research_daily_price_csv_audit.py'
+      - 'research_historical_price_ingest_gate.py'
+      - 'test_research_historical_price_ingest_gate.py'
       - '.github/workflows/atr-hypothesis-research.yml'
 
 permissions:
@@ -30,6 +32,10 @@ jobs:
           python-version: '3.11'
       - name: Install test dependencies
         run: python -m pip install 'pytest>=8,<9' 'hypothesis>=6,<7'
+      - name: Run combined historical price ingest tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_historical_price_ingest_gate
       - name: Run historical OHLCV CSV audit tests
         env:
           PYTHONPATH: ${{ github.workspace }}
