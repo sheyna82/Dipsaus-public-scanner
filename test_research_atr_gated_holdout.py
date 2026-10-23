@@ -47,7 +47,7 @@ class GatedATRHoldoutTests(unittest.TestCase):
                 ValueError, "training_labels_not_available_before_holdout"):
             evaluate_gated_atr_holdout(
                 [row(1, False, False), delayed],
-                [row(4, False, False)])
+                [row(4, False, False)], evaluation_at=EVALUATION_AT)
 
     def test_future_feature_publication_rejected(self):
         bad = {**row(4, False, False),
