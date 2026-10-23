@@ -28,6 +28,8 @@ on:
       - 'test_research_daily_feature_label_join.py'
       - 'research_benchmark_market_trend.py'
       - 'test_research_benchmark_market_trend.py'
+      - 'research_chronological_atr_experiment.py'
+      - 'test_research_chronological_atr_experiment.py'
       - '.github/workflows/atr-hypothesis-research.yml'
 
 permissions:
@@ -46,6 +48,10 @@ jobs:
           python-version: '3.11'
       - name: Install test dependencies
         run: python -m pip install 'pytest>=8,<9' 'hypothesis>=6,<7'
+      - name: Run chronological ATR experiment integration tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_chronological_atr_experiment
       - name: Run benchmark market trend alignment tests
         env:
           PYTHONPATH: ${{ github.workspace }}
