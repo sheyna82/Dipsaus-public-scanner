@@ -37,9 +37,15 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
     # instruments have the same adjacent observed dates. This is a diagnostic,
     # not proof of duplicate provenance or independent sources.
     ordered_shared = sorted(shared_dates)
+    def adjacent_pairs(closes):
+        dates = sorted(closes)
+        return set(zip(dates, dates[1:]))
+
+    comparable_pairs = adjacent_pairs(stock_closes) & adjacent_pairs(benchmark_closes)
+    skipped_shared_date_gaps = max(0, len(ordered_shared) - 1) - len(comparable_pairs)
     comparable_return_intervals = 0
     matching_return_intervals = 0
-    for previous, current in zip(ordered_shared, ordered_shared[1:]):
+    for previous, current in sorted(comparable_pairs):
         if (stock_closes[previous] <= 0 or benchmark_closes[previous] <= 0):
             continue
         comparable_return_intervals += 1
@@ -67,6 +73,7 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
         "benchmark_price_dates": len(benchmark_closes),
         "shared_price_dates": len(shared_dates),
         "comparable_shared_return_intervals": comparable_return_intervals,
+        "skipped_nonadjacent_shared_intervals": skipped_shared_date_gaps,
         "minimum_comparable_return_intervals": minimum_comparable_intervals,
         "return_overlap_sufficient_for_screening": return_overlap_sufficient,
         "insufficient_return_overlap": not return_overlap_sufficient,
