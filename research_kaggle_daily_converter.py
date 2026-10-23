@@ -5,6 +5,7 @@ upstream rights, adjustment policies, or point-in-time availability.
 """
 import csv
 import io
+import math
 from research_daily_price_csv_audit import audit_daily_price_csv
 
 SOURCE_COLUMNS = ("Date", "Open", "High", "Low", "Close", "Volume", "OpenInt")
@@ -32,9 +33,10 @@ def convert_kaggle_daily_csv(payload):
             open_interest = float(row["OpenInt"])
         except (ValueError, TypeError) as exc:
             raise ValueError("invalid_open_interest") from exc
-        import math
         if not math.isfinite(open_interest) or open_interest < 0:
             raise ValueError("invalid_open_interest")
+        if any(not row[column].strip() for column in SOURCE_COLUMNS):
+            raise ValueError("blank_kaggle_value")
         writer.writerow([row[column] for column in SOURCE_COLUMNS[:-1]])
     converted = output.getvalue().encode("utf-8")
     audit_daily_price_csv(converted)
