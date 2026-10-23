@@ -17,7 +17,8 @@ def paired_calendar_block_bootstrap(rows, *, block_days=14, replicates=500,
         raise ValueError("invalid_block_days")
     if type(replicates) is not int or replicates < 2 or replicates > 10000:
         raise ValueError("invalid_replicates")
-    if type(seed) is not int or not 0 < confidence < 1:
+    if (type(seed) is not int or type(confidence) not in (float, int)
+            or not math.isfinite(confidence) or not 0 < confidence < 1):
         raise ValueError("invalid_bootstrap_settings")
     grouped = defaultdict(list)
     for row in rows:
@@ -60,6 +61,8 @@ def paired_calendar_block_bootstrap(rows, *, block_days=14, replicates=500,
     return {
         "events": len(observed),
         "observed_calendar_dates": len(dates),
+        "calendar_gaps_present": any((right - left).days > 1
+                                     for left, right in zip(dates, dates[1:])),
         "block_observed_dates": block_days,
         "replicates": replicates,
         "seed": seed,
