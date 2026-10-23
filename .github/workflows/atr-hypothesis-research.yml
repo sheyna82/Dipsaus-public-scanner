@@ -12,6 +12,8 @@ on:
       - 'test_research_historical_source_manifest.py'
       - 'research_daily_price_csv_audit.py'
       - 'test_research_daily_price_csv_audit.py'
+      - 'research_historical_pair_preflight.py'
+      - 'test_research_historical_pair_preflight.py'
       - 'research_historical_price_ingest_gate.py'
       - 'test_research_historical_price_ingest_gate.py'
       - 'research_local_price_audit_cli.py'
@@ -161,6 +163,10 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: python -m unittest -v test_research_local_price_audit_cli
+      - name: Run historical stock benchmark pair preflight tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_historical_pair_preflight
       - name: Run combined historical price ingest tests
         env:
           PYTHONPATH: ${{ github.workspace }}
