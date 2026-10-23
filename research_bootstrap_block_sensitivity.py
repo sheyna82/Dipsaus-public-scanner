@@ -38,7 +38,15 @@ def bootstrap_block_sensitivity(rows, *, block_lengths=(10, 14, 20),
         }
         for result in results
     ]
+    opposite_brier = any(
+        {item["event_weighted_brier_sign"], item["equal_date_brier_sign"]} ==
+        {"positive", "negative"} for item in weight_sensitivity)
+    opposite_log_loss = any(
+        {item["event_weighted_log_loss_sign"], item["equal_date_log_loss_sign"]} ==
+        {"positive", "negative"} for item in weight_sensitivity)
     return {
+        "opposite_brier_weighting_conclusions": opposite_brier,
+        "opposite_log_loss_weighting_conclusions": opposite_log_loss,
         "weighting_sensitivity": weight_sensitivity,
         "all_brier_weighting_agrees": all(
             item["brier_weighting_agrees"] for item in weight_sensitivity),
