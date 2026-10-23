@@ -295,6 +295,43 @@ class HistoricalPairPreflightTests(unittest.TestCase):
             self.assertEqual(result["return_pattern_screening_match"],
                              expected_pass)
 
+    def test_clustered_and_scattered_missing_intervals_are_distinguished(self):
+        from datetime import date, timedelta
+
+        origin = date(2025, 1, 1)
+        def payload(indices, multiplier):
+            lines = ["date,open,high,low,close,volume"]
+            for index in sorted(indices):
+                day = (origin + timedelta(days=2 * index)).isoformat()
+                close = (100 + index) * multiplier
+                lines.append(f"{day},{close},{close+multiplier},{close-multiplier},{close},100")
+            return ("\n".join(lines) + "\n").encode()
+
+        shared = list(range(12))
+        benchmark = payload(shared, 2)
+        for gap_indices, expected_longest, expected_runs in (
+            ([2, 3, 4], 3, 1),
+            ([2, 5, 8], 1, 3),
+        ):
+            # Stock-only observations between adjacent shared dates.
+            lines = ["date,open,high,low,close,volume"]
+            for index in shared:
+                day = (origin + timedelta(days=2 * index)).isoformat()
+                close = 100 + index
+                lines.append(f"{day},{close},{close+1},{close-1},{close},100")
+                if index in gap_indices:
+                    gap_day = (origin + timedelta(days=2 * index + 1)).isoformat()
+                    lines.append(f"{gap_day},{close},{close+1},{close-1},{close},100")
+            stock = ("\n".join(lines) + "\n").encode()
+            result = prepare_historical_research_pair(
+                manifest(stock), stock, manifest(benchmark), benchmark)
+            self.assertEqual(result["skipped_nonadjacent_shared_intervals"], 3)
+            self.assertEqual(result["longest_nonadjacent_shared_interval_run"],
+                             expected_longest)
+            self.assertEqual(result["nonadjacent_shared_interval_run_count"],
+                             expected_runs)
+            self.assertFalse(result["trade_ready"])
+
     def test_identical_payloads_rejected(self):
         data = payload(0)
         with self.assertRaisesRegex(ValueError, "identical_stock_and_benchmark"):
