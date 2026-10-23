@@ -29,6 +29,10 @@ class HistoricalPriceIngestTests(unittest.TestCase):
         self.assertFalse(result["provider_authenticity_verified"])
         self.assertFalse(result["license_verified"])
         self.assertFalse(result["trade_ready"])
+        self.assertFalse(result["research_data_ready"])
+        self.assertTrue(result["requires_external_license_review"])
+        self.assertTrue(result["requires_external_provenance_review"])
+        self.assertTrue(result["requires_point_in_time_reconstruction"])
 
     def test_changed_bytes_rejected(self):
         with self.assertRaisesRegex(ValueError, "payload_hash_mismatch"):
