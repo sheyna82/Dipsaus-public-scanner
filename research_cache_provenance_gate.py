@@ -6,7 +6,6 @@ No networking, persistence, trading or live notification changes.
 from datetime import datetime
 
 
-
 REQUIRED_IDENTITY = (
     "security_id", "market", "provider", "interval",
     "adjustment", "dataset_version",
