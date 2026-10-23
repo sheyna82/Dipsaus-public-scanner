@@ -22,7 +22,7 @@ class KaggleConverterTests(unittest.TestCase):
 
     def test_rejects_blank_values(self):
         with self.assertRaisesRegex(ValueError, "blank_kaggle_value"):
-            convert_kaggle_daily_csv(HEADER + b"2017-01-03,10,12,9,11,1000,   \\n".replace(b"\\\\n", b"\\n"))
+            convert_kaggle_daily_csv(HEADER + b"2017-01-03,10,12,9,11,1000,   \n")
 
     def test_rejects_invalid_prices(self):
         with self.assertRaisesRegex(ValueError, "invalid_ohlcv"):
