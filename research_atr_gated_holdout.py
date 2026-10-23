@@ -4,6 +4,7 @@ No external source verification, trade execution, or live notifications.
 """
 from research_walk_forward_split_gate import validate_walk_forward_split
 from research_atr_incremental_holdout_scoring import fit, predict, evaluate
+from research_point_in_time_availability_gate import assess_point_in_time_record
 
 
 def evaluate_gated_atr_holdout(training, holdout, *, embargo_seconds=0):
@@ -14,6 +15,11 @@ def evaluate_gated_atr_holdout(training, holdout, *, embargo_seconds=0):
     """
     audit = validate_walk_forward_split(
         training, holdout, embargo_seconds=embargo_seconds)
+    for row in (*training, *holdout):
+        point_in_time = assess_point_in_time_record(
+            row, decision_at=row["event_at"])
+        if not point_in_time["accepted"]:
+            raise ValueError("point_in_time_rejected:" + ",".join(point_in_time["reasons"]))
     training_features = [
         {key: row[key] for key in (
             "structure_above_20d_mean", "market_20d_positive",
