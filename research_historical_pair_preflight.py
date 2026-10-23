@@ -31,6 +31,8 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
     shared_dates = stock_closes.keys() & benchmark_closes.keys()
     matching_closes = sum(stock_closes[day] == benchmark_closes[day]
                           for day in shared_dates)
+    stock_only_dates = len(stock_closes) - len(shared_dates)
+    benchmark_only_dates = len(benchmark_closes) - len(shared_dates)
     same_provider_claim = (stock_manifest["provider"].strip().casefold() ==
                            benchmark_manifest["provider"].strip().casefold())
     same_source_url_claim = (stock_manifest["source_url"].strip() ==
@@ -39,6 +41,11 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
         "stock_price_dates": len(stock_closes),
         "benchmark_price_dates": len(benchmark_closes),
         "shared_price_dates": len(shared_dates),
+        "stock_only_price_dates": stock_only_dates,
+        "benchmark_only_price_dates": benchmark_only_dates,
+        "stock_date_overlap_fraction": len(shared_dates) / len(stock_closes),
+        "benchmark_date_overlap_fraction": len(shared_dates) / len(benchmark_closes),
+        "partial_price_date_overlap": bool(shared_dates) and (stock_only_dates > 0 or benchmark_only_dates > 0),
         "no_overlapping_price_dates": not bool(shared_dates),
         "matching_close_values_on_shared_dates": matching_closes,
         "all_shared_close_values_match": bool(shared_dates) and matching_closes == len(shared_dates),
