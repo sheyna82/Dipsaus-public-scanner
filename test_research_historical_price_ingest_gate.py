@@ -48,12 +48,10 @@ class HistoricalPriceIngestTests(unittest.TestCase):
 
 
     def test_long_calendar_gap_is_reported_not_misclassified(self):
-        payload = (b"date,open,high,low,close,volume\\n"
-                   b"2026-01-02,10,12,9,11,100\\n"
-                   b"2026-01-20,11,13,10,12,110\\n")
-        # Gap size is descriptive: holidays, halts, and missing bars
-        # require an independently checked exchange session calendar.
-        payload = payload.replace(b"\\\\n", b"\\n")
+        payload = (b"date,open,high,low,close,volume\n"
+                   b"2026-01-02,10,12,9,11,100\n"
+                   b"2026-01-20,11,13,10,12,110\n")
+        # Calendar gaps are descriptive, not proof of missing sessions.
         result = audit_historical_price_dataset(manifest(payload), payload)
         self.assertEqual(result["largest_calendar_gap_days"], 18)
         self.assertEqual(result["gaps_over_seven_days"], 1)
