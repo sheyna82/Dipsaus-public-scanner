@@ -61,6 +61,24 @@ class HistoricalEligibilityTests(unittest.TestCase):
             assess_historical_revision(
                 [ORIGINAL, malformed], decision_at="2026-01-05T12:00:00+00:00")
 
+    def test_generator_input_rejected_explicitly(self):
+        versions = (version for version in [ORIGINAL])
+        with self.assertRaisesRegex(ValueError, "invalid_versions"):
+            assess_historical_revision(
+                versions, decision_at="2026-01-05T12:00:00+00:00")
+
+    def test_empty_list_rejected_with_reason(self):
+        result = assess_historical_revision(
+            [], decision_at="2026-01-05T12:00:00+00:00")
+        self.assertFalse(result["accepted"])
+        self.assertIn("no_version_available_asof", result["reasons"])
+
+    def test_tuple_input_remains_supported(self):
+        result = assess_historical_revision(
+            (ORIGINAL,), decision_at="2026-01-05T12:00:00+00:00")
+        self.assertTrue(result["accepted"])
+        self.assertEqual(result["revision_id"], "original")
+
     def test_missing_revision_id_rejected(self):
         missing = {key: value for key, value in ORIGINAL.items() if key != "revision_id"}
         with self.assertRaisesRegex(ValueError, "invalid_revision_id"):
