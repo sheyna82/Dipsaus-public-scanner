@@ -4,6 +4,7 @@ Never uploads input prices, prints rows, or claims independent validation.
 Output is descriptive until source, PIT, and corporate-action checks pass.
 """
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from research_chronological_atr_experiment import evaluate_chronological_csv
@@ -22,10 +23,22 @@ def main(argv=None):
         parser.error("stock and benchmark must be separate files")
     if args.embargo_days < 0:
         parser.error("embargo days must be nonnegative")
+    stock_bytes = args.stock_csv.read_bytes()
+    benchmark_bytes = args.benchmark_csv.read_bytes()
     result = evaluate_chronological_csv(
-        args.stock_csv.read_bytes(), args.benchmark_csv.read_bytes(),
+        stock_bytes, benchmark_bytes,
         split_date=args.split_date, horizon=args.horizon,
         threshold=args.threshold, embargo_seconds=args.embargo_days * 86400)
+    result.update({
+        "stock_sha256": hashlib.sha256(stock_bytes).hexdigest(),
+        "benchmark_sha256": hashlib.sha256(benchmark_bytes).hexdigest(),
+        "source_license_verified": False,
+        "source_provenance_verified": False,
+        "adjustments_verified": False,
+        "survivorship_bias_cleared": False,
+        "point_in_time_verified": False,
+        "trade_ready": False,
+    })
     print(json.dumps(result, sort_keys=True))
     return result
 
