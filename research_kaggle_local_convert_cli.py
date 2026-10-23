@@ -4,6 +4,7 @@ No network calls; never writes source price data into the repository.
 """
 import argparse
 import json
+import hashlib
 from pathlib import Path
 
 from research_kaggle_daily_converter import convert_kaggle_daily_csv
@@ -29,7 +30,10 @@ def main(argv=None):
             raise ValueError("output_inside_repository")
         if output.exists() or output.is_symlink():
             raise ValueError("output_exists")
-        converted = convert_kaggle_daily_csv(source.read_bytes())
+        source_bytes = source.read_bytes()
+        source_sha256 = hashlib.sha256(source_bytes).hexdigest()
+        converted = convert_kaggle_daily_csv(source_bytes)
+        converted_sha256 = hashlib.sha256(converted).hexdigest()
         with output.open("xb") as handle:
             handle.write(converted)
         output.chmod(0o600)
@@ -37,6 +41,8 @@ def main(argv=None):
         print(json.dumps({"converted": False, "error_type": type(exc).__name__}))
         return 1
     print(json.dumps({"converted": True, "bytes_written": len(converted),
+                      "source_sha256": source_sha256,
+                      "converted_sha256": converted_sha256,
                       "provenance_verified": False, "trade_ready": False}))
     return 0
 
