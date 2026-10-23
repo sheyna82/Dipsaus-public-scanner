@@ -22,6 +22,8 @@ def audit_calendar_export(price_dates, calendar_export):
     if not isinstance(digest, str) or len(digest) != 64 or any(
             char not in "0123456789abcdef" for char in digest):
         raise ValueError("invalid_calendar_digest")
+    if calendar_export.get("digest_scope") != "canonical_session_dates_json":
+        raise ValueError("unverified_calendar_digest_scope")
     if calendar_export.get("digest_scope") == "canonical_session_dates_json":
         canonical = json.dumps(calendar_export["session_dates"], separators=(",", ":"), ensure_ascii=True)
         if hashlib.sha256(canonical.encode("ascii")).hexdigest() != digest:
@@ -32,7 +34,7 @@ def audit_calendar_export(price_dates, calendar_export):
                    "calendar_version": calendar_export["calendar_version"],
                    "calendar_source_sha256": digest,
                    "calendar_provenance_recorded": True,
-                   "calendar_export_digest_verified": calendar_export.get("digest_scope") == "canonical_session_dates_json",
+                   "calendar_export_digest_verified": True,
                    "calendar_provenance_verified": False,
                    "trade_ready": False})
     return result
