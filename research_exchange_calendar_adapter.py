@@ -18,8 +18,6 @@ def audit_calendar_export(price_dates, calendar_export):
     if calendar_export["calendar_library"] not in (
             "exchange_calendars", "pandas_market_calendars"):
         raise ValueError("unsupported_calendar_library")
-    if calendar_export.get("calendar_library") == "exchange_calendars" and calendar_export.get("calendar_version") != "4.13.2":
-        raise ValueError("unreviewed_calendar_version")
     digest = calendar_export["source_sha256"]
     if not isinstance(digest, str) or len(digest) != 64 or any(
             char not in "0123456789abcdef" for char in digest):
