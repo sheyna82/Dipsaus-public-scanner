@@ -25,6 +25,40 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install 'setuptools==83.0.0'
           python -m pip install 'exchange_calendars==4.13.2' 'pip-audit==2.9.0'
+      - name: Verify published calendar wheel SHA256 and wheel metadata
+        run: |
+          python - <<'PY'
+          import hashlib
+          import io
+          import json
+          import urllib.request
+          import zipfile
+          from email.parser import Parser
+
+          url = "https://pypi.org/pypi/exchange-calendars/4.13.2/json"
+          with urllib.request.urlopen(url, timeout=20) as response:
+              release = json.load(response)
+          wheels = [item for item in release["urls"] if item["filename"].endswith(".whl")]
+          assert len(wheels) == 1, "Expected exactly one published wheel"
+          wheel = wheels[0]
+          assert wheel["filename"].startswith("exchange_calendars-4.13.2-")
+          expected = wheel["digests"]["sha256"]
+          with urllib.request.urlopen(wheel["url"], timeout=30) as response:
+              payload = response.read(5_000_001)
+          assert len(payload) <= 5_000_000, "Unexpected wheel size"
+          actual = hashlib.sha256(payload).hexdigest()
+          assert actual == expected, "Published wheel digest mismatch"
+          with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+              metadata_files = [name for name in archive.namelist() if name.endswith(".dist-info/METADATA")]
+              assert len(metadata_files) == 1, "Unexpected wheel metadata layout"
+              metadata = Parser().parsestr(archive.read(metadata_files[0]).decode("utf-8"))
+              assert metadata["Name"].replace("_", "-").lower() == "exchange-calendars"
+              assert metadata["Version"] == "4.13.2"
+          print(json.dumps({"package": "exchange-calendars", "version": "4.13.2",
+                            "wheel": wheel["filename"], "sha256": actual,
+                            "digest_matches_pypi": True,
+                            "independent_source_attestation": False}, sort_keys=True))
+          PY
       - name: Record exact installed dependency versions
         run: |
           python -m pip freeze --all > calendar-dependencies-freeze.txt
