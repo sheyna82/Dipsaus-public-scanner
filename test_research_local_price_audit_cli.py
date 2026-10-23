@@ -45,6 +45,19 @@ class LocalAuditCliTests(unittest.TestCase):
             self.assertNotIn("example.org", output.getvalue())
             self.assertNotIn("synthetic fixture only", output.getvalue())
 
+    def test_symlink_input_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "bars.csv").write_bytes(DATA)
+            (root / "alias.csv").symlink_to(root / "bars.csv")
+            (root / "manifest.json").write_text(json.dumps(metadata()), encoding="utf-8")
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                code = main(["--manifest", str(root / "manifest.json"),
+                             "--csv", str(root / "alias.csv")])
+            self.assertEqual(code, 1)
+            self.assertEqual(json.loads(output.getvalue())["error_type"], "ValueError")
+
     def test_local_failure_does_not_expose_prices(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
