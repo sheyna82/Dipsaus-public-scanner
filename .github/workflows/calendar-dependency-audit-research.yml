@@ -85,6 +85,20 @@ jobs:
           assert ams == ["2025-04-16", "2025-04-17", "2025-04-22", "2025-04-23"], ams
           print("Exchange sessions match recorded reference dates")
           PY
+      - name: Export and audit actual exchange sessions through research adapter
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python - <<'PY'
+          from research_exchange_calendar_local_export import export_sessions
+          from research_exchange_calendar_adapter import audit_calendar_export
+          for exchange, start, end in (
+              ("XNYS", "2025-01-16", "2025-01-23"),
+              ("XAMS", "2025-04-16", "2025-04-23"),
+          ):
+              result = export_sessions(exchange, start, end)
+              print(exchange, result)
+          PY
       - name: Upload dependency evidence
         if: always()
         uses: actions/upload-artifact@v4
