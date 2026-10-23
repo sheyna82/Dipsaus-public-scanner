@@ -28,6 +28,12 @@ on:
       - 'test_research_daily_feature_label_join.py'
       - 'research_benchmark_market_trend.py'
       - 'test_research_benchmark_market_trend.py'
+      - 'research_paired_holdout_diagnostics.py'
+      - 'test_research_paired_holdout_diagnostics.py'
+      - 'research_paired_calendar_block_bootstrap.py'
+      - 'test_research_paired_calendar_block_bootstrap.py'
+      - 'research_bootstrap_block_sensitivity.py'
+      - 'test_research_bootstrap_block_sensitivity.py'
       - 'research_chronological_atr_experiment.py'
       - 'test_research_chronological_atr_experiment.py'
       - 'research_chronological_atr_cli.py'
@@ -111,6 +117,18 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: python -m unittest -v test_research_chronological_atr_cli
+      - name: Run paired holdout diagnostics tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_paired_holdout_diagnostics
+      - name: Run paired calendar block bootstrap tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_paired_calendar_block_bootstrap
+      - name: Run bootstrap block sensitivity tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_bootstrap_block_sensitivity
       - name: Run chronological ATR experiment integration tests
         env:
           PYTHONPATH: ${{ github.workspace }}
