@@ -3,6 +3,7 @@ import contextlib
 import io
 import json
 import tempfile
+import os
 import unittest
 from pathlib import Path
 
@@ -36,6 +37,22 @@ class LocalConversionTests(unittest.TestCase):
                              "--output", str(Path.cwd() / "unsafe-private-bars.csv")])
             self.assertEqual(code, 1)
             self.assertFalse((Path.cwd() / "unsafe-private-bars.csv").exists())
+
+    def test_refuses_repository_output_when_called_elsewhere(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "input.csv").write_bytes(SAMPLE)
+            repository_root = Path(__file__).resolve().parent
+            previous = Path.cwd()
+            try:
+                os.chdir(root)
+                with contextlib.redirect_stdout(io.StringIO()):
+                    code = main(["--source", str(root / "input.csv"),
+                                 "--output", str(repository_root / "unsafe-private-bars.csv")])
+            finally:
+                os.chdir(previous)
+            self.assertEqual(code, 1)
+            self.assertFalse((repository_root / "unsafe-private-bars.csv").exists())
 
     def test_refuses_overwrite(self):
         with tempfile.TemporaryDirectory() as directory:
