@@ -6,6 +6,7 @@ historical point-in-time availability, or survivorship-bias control.
 from research_historical_price_ingest_gate import audit_historical_price_dataset
 import csv
 import io
+from decimal import Decimal, InvalidOperation
 
 
 def prepare_historical_research_pair(stock_manifest, stock_payload,
@@ -20,7 +21,10 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
     def close_by_date(payload):
         text = payload.decode("utf-8-sig")
         rows = csv.DictReader(io.StringIO(text))
-        return {row["date"]: row["close"].strip() for row in rows}
+        try:
+            return {row["date"]: Decimal(row["close"].strip()) for row in rows}
+        except (InvalidOperation, TypeError) as exc:
+            raise ValueError("invalid_close_value") from exc
 
     stock_closes = close_by_date(stock_payload)
     benchmark_closes = close_by_date(benchmark_payload)
@@ -32,7 +36,10 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
     same_source_url_claim = (stock_manifest["source_url"].strip() ==
                              benchmark_manifest["source_url"].strip())
     return {
+        "stock_price_dates": len(stock_closes),
+        "benchmark_price_dates": len(benchmark_closes),
         "shared_price_dates": len(shared_dates),
+        "no_overlapping_price_dates": not bool(shared_dates),
         "matching_close_values_on_shared_dates": matching_closes,
         "all_shared_close_values_match": bool(shared_dates) and matching_closes == len(shared_dates),
         "same_declared_provider": same_provider_claim,
