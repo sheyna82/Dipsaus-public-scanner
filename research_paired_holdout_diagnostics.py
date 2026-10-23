@@ -27,13 +27,21 @@ def paired_holdout_diagnostics(predictions):
                   (1 - y) * math.log(1 - min(.99, max(.01, p))) for p in probs]
         log_diffs.append(losses[1] - losses[0])
     n = len(predictions)
+    # Direction counts are descriptive; dependent events invalidate a naive binomial test.
+    improved = sum(d < 0 for d in brier_diffs)
+    worsened = sum(d > 0 for d in brier_diffs)
+    ties = n - improved - worsened
     return {
         "events": n,
         "atr_minus_baseline_brier_unrounded": sum(brier_diffs) / n,
         "atr_minus_baseline_log_loss_unrounded": sum(log_diffs) / n,
-        "atr_brier_better_events": sum(d < 0 for d in brier_diffs),
-        "atr_brier_worse_events": sum(d > 0 for d in brier_diffs),
-        "equal_brier_events": sum(d == 0 for d in brier_diffs),
+        "atr_brier_better_events": improved,
+        "atr_brier_worse_events": worsened,
+        "equal_brier_events": ties,
+        "atr_brier_better_fraction": improved / n,
+        "atr_brier_worse_fraction": worsened / n,
+        "atr_brier_tie_fraction": ties / n,
+        "non_tied_events": improved + worsened,
         "event_level_brier_differences": brier_diffs,
         "event_level_log_loss_differences": log_diffs,
         "independent_events_assumed": False,
