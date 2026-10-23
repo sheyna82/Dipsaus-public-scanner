@@ -29,7 +29,8 @@ class ExperimentTests(unittest.TestCase):
     def test_rejects_insufficient_embargo(self):
         with self.assertRaisesRegex(ValueError, "training_labels_not_available"):
             evaluate_chronological_csv(sample(), sample(),
-                                       split_date="2025-03-27", horizon=10,\n                                       embargo_seconds=86400 * 20)
+                                       split_date="2025-03-27", horizon=10,
+                                       embargo_seconds=86400 * 20)
 
 
 if __name__ == "__main__":
