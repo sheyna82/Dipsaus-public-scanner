@@ -19,6 +19,8 @@ def audit_daily_price_csv(payload):
         raise ValueError("invalid_columns")
     previous = None
     count = 0
+    largest_calendar_gap_days = 0
+    gaps_over_seven_days = 0
     for row in reader:
         if None in row or any(row.get(key) is None for key in REQUIRED):
             raise ValueError("malformed_row")
@@ -29,6 +31,11 @@ def audit_daily_price_csv(payload):
             raise ValueError("invalid_price_row") from exc
         if previous is not None and day <= previous:
             raise ValueError("unordered_or_duplicate_dates")
+        if previous is not None:
+            gap = (day - previous).days
+            largest_calendar_gap_days = max(largest_calendar_gap_days, gap)
+            if gap > 7:
+                gaps_over_seven_days += 1
         previous = day
         opening, high, low, close, volume = values
         if (not all(math.isfinite(value) for value in values)
@@ -42,6 +49,9 @@ def audit_daily_price_csv(payload):
     return {
         "accepted": True,
         "rows": count,
+        "largest_calendar_gap_days": largest_calendar_gap_days,
+        "gaps_over_seven_days": gaps_over_seven_days,
+        "exchange_session_completeness_verified": False,
         "first_date": None,  # No source timestamp guarantees are inferred.
         "provenance_verified": False,
         "adjustments_verified": False,
