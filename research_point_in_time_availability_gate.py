@@ -40,6 +40,8 @@ def assess_point_in_time_record(record, *, decision_at):
             reasons.append("revision_before_observation")
         if timestamps["revision_asof"] < timestamps["published_at"]:
             reasons.append("revision_before_publication")
+        if timestamps["revision_asof"] > timestamps["ingested_at"]:
+            reasons.append("revision_not_yet_ingested")
         if timestamps["observed_at"] > decision:
             reasons.append("future_observed_at")
         for key in ("published_at", "ingested_at", "revision_asof"):
