@@ -73,9 +73,14 @@ def paired_calendar_block_bootstrap(rows, *, block_days=14, replicates=500,
     log_upper = log_estimates[min(replicates - 1, math.ceil((1 - alpha) * replicates) - 1)]
     observed = [difference for day in dates for difference in grouped[day]]
     observed_log = [difference for day in dates for difference in grouped_log[day]]
+    event_counts = [len(grouped[day]) for day in dates]
     return {
         "events": len(observed),
         "observed_calendar_dates": len(dates),
+        "minimum_events_per_observed_date": min(event_counts),
+        "maximum_events_per_observed_date": max(event_counts),
+        "unequal_events_per_date": min(event_counts) != max(event_counts),
+        "estimand": "event_weighted_mean_loss_difference",
         "calendar_gaps_present": any((right - left).days > 1
                                      for left, right in zip(dates, dates[1:])),
         "block_observed_dates": block_days,
