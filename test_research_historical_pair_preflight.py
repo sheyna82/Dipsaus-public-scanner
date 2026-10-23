@@ -332,6 +332,39 @@ class HistoricalPairPreflightTests(unittest.TestCase):
                              expected_runs)
             self.assertFalse(result["trade_ready"])
 
+    def test_equal_coverage_clustered_gaps_fail_screening(self):
+        from datetime import date, timedelta
+
+        origin = date(2025, 1, 1)
+        shared = list(range(31))  # 30 potential shared return intervals
+        def payload(extra_gaps, scale):
+            lines = ["date,open,high,low,close,volume"]
+            for index in shared:
+                day = (origin + timedelta(days=2 * index)).isoformat()
+                close = (100 + index) * scale
+                lines.append(f"{day},{close},{close+scale},{close-scale},{close},100")
+                if index in extra_gaps:
+                    extra_day = (origin + timedelta(days=2 * index + 1)).isoformat()
+                    lines.append(f"{extra_day},{close},{close+scale},{close-scale},{close},100")
+            return ("\n".join(lines) + "\n").encode()
+
+        benchmark = payload([], 2)
+        cases = (
+            ([1, 2, 3, 4, 5, 6], 6, False),
+            ([1, 5, 9, 13, 17, 21], 1, True),
+        )
+        for gaps, longest, expected_screen in cases:
+            stock = payload(gaps, 1)
+            result = prepare_historical_research_pair(
+                manifest(stock), stock, manifest(benchmark), benchmark)
+            self.assertEqual(result["comparable_shared_return_intervals"], 24)
+            self.assertEqual(result["comparable_interval_coverage_fraction"], 0.8)
+            self.assertEqual(result["longest_nonadjacent_shared_interval_run"],
+                             longest)
+            self.assertEqual(result["return_pattern_screening_match"],
+                             expected_screen)
+            self.assertFalse(result["trade_ready"])
+
     def test_identical_payloads_rejected(self):
         data = payload(0)
         with self.assertRaisesRegex(ValueError, "identical_stock_and_benchmark"):
