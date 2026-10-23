@@ -20,6 +20,10 @@ class KaggleConverterTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "invalid_open_interest"):
             convert_kaggle_daily_csv(HEADER + b"2017-01-03,10,12,9,11,1000,not-a-number\n")
 
+    def test_rejects_blank_values(self):
+        with self.assertRaisesRegex(ValueError, "blank_kaggle_value"):
+            convert_kaggle_daily_csv(HEADER + b"2017-01-03,10,12,9,11,1000,   \\n".replace(b"\\\\n", b"\\n"))
+
     def test_rejects_invalid_prices(self):
         with self.assertRaisesRegex(ValueError, "invalid_ohlcv"):
             convert_kaggle_daily_csv(HEADER + b"2017-01-03,10,8,9,11,1000,0\n")
