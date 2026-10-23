@@ -17,7 +17,7 @@ def _timestamp(day):
 
 def evaluate_chronological_csv(stock_payload, benchmark_payload, *,
                                split_date, horizon=10, threshold=0.08,
-                               embargo_seconds=0):
+                               embargo_seconds=0, holdout_end_date=None):
     """Use training labels known by first holdout event; refuse invalid splits.
 
     Split is predetermined by caller, not chosen from holdout results.
@@ -26,12 +26,19 @@ def evaluate_chronological_csv(stock_payload, benchmark_payload, *,
     if not isinstance(split_date, str):
         raise ValueError("invalid_split_date")
     datetime.strptime(split_date, "%Y-%m-%d")
+    if holdout_end_date is not None:
+        if not isinstance(holdout_end_date, str):
+            raise ValueError("invalid_holdout_end_date")
+        datetime.strptime(holdout_end_date, "%Y-%m-%d")
+        if holdout_end_date <= split_date:
+            raise ValueError("holdout_end_must_follow_split")
     joined = join_features_and_labels(stock_payload, horizon=horizon,
                                       threshold=threshold)
     aligned = eligible_model_rows(attach_market_trend(joined, benchmark_payload))
     training = [r for r in aligned if r["date"] < split_date
                 and r["label_available_date"] < split_date]
-    holdout = [r for r in aligned if r["date"] >= split_date]
+    holdout = [r for r in aligned if r["date"] >= split_date
+               and (holdout_end_date is None or r["date"] < holdout_end_date)]
     train_gate = [{"event_at": _timestamp(r["date"]),
                    "label_available_at": _timestamp(r["label_available_date"])}
                   for r in training]
@@ -43,6 +50,7 @@ def evaluate_chronological_csv(stock_payload, benchmark_payload, *,
     model = fit(training)
     metrics = evaluate(predict(model, holdout))
     return {**metrics, "split_date": split_date,
+            "holdout_end_date": holdout_end_date,
             "training_events": gate["training_events"],
             "holdout_events": gate["holdout_events"],
             "independent_holdout_verified": False,
