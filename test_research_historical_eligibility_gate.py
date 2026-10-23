@@ -46,7 +46,14 @@ class HistoricalEligibilityTests(unittest.TestCase):
         result = assess_historical_revision(
             [REVISED], decision_at="2026-01-05T12:00:00+00:00")
         self.assertFalse(result["accepted"])
-        self.assertIn("no_version_available_asof", result["reasons"])
+        self.assertIn("future_published_at", result["reasons"])
+
+    def test_invalid_newer_version_does_not_hide_valid_original(self):
+        malformed = {**REVISED, "revision_asof": "not-a-timestamp"}
+        result = assess_historical_revision(
+            [ORIGINAL, malformed], decision_at="2026-01-07T12:00:00+00:00")
+        self.assertTrue(result["accepted"])
+        self.assertEqual(result["revision_id"], "original")
 
 
 if __name__ == "__main__":
