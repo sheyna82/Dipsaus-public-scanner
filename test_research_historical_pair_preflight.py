@@ -261,6 +261,40 @@ class HistoricalPairPreflightTests(unittest.TestCase):
         self.assertFalse(result["return_pattern_screening_match"])
         self.assertFalse(result["trade_ready"])
 
+    def test_coverage_threshold_boundary_with_long_matching_returns(self):
+        from datetime import date, timedelta
+
+        start = date(2025, 1, 1)
+        def payload(indices, multiplier):
+            lines = ["date,open,high,low,close,volume"]
+            for index in sorted(indices):
+                close = (100 + index) * multiplier
+                day = (start + timedelta(days=index)).isoformat()
+                lines.append(f"{day},{close},{close+multiplier},{close-multiplier},{close},100")
+            return ("\n".join(lines) + "\n").encode()
+
+        # 26 shared sessions yield 25 possible intervals. The stock
+        # has an additional session in selected gaps; benchmark does not.
+        shared = list(range(0, 52, 2))
+        for skipped_gaps, expected_pass in ((4, True), (5, True), (6, False)):
+            extra = [shared[index] + 1 for index in range(skipped_gaps)]
+            stock = payload(shared + extra, 1)
+            benchmark = payload(shared, 2)
+            result = prepare_historical_research_pair(
+                manifest(stock), stock, manifest(benchmark), benchmark)
+            expected_coverage = (25 - skipped_gaps) / 25
+            self.assertAlmostEqual(
+                result["comparable_interval_coverage_fraction"],
+                expected_coverage)
+            self.assertEqual(
+                result["comparable_shared_return_intervals"], 25 - skipped_gaps)
+            self.assertTrue(result["all_comparable_shared_returns_match"])
+            self.assertEqual(
+                result["return_coverage_sufficient_for_screening"],
+                expected_pass)
+            self.assertEqual(result["return_pattern_screening_match"],
+                             expected_pass)
+
     def test_identical_payloads_rejected(self):
         data = payload(0)
         with self.assertRaisesRegex(ValueError, "identical_stock_and_benchmark"):
