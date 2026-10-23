@@ -416,6 +416,27 @@ class HistoricalPairPreflightTests(unittest.TestCase):
                 manifest(stock), stock, manifest(benchmark), benchmark,
                 as_of_date="2025-01-02")
 
+    def test_supplied_session_calendar_excludes_holiday_without_verification(self):
+        stock, benchmark = payload(0), payload(10)
+        result = prepare_historical_research_pair(
+            manifest(stock), stock, manifest(benchmark), benchmark,
+            as_of_date="2025-01-07",
+            exchange_session_dates=["2025-01-02", "2025-01-03", "2025-01-07"])
+        self.assertEqual(result["stock_last_price_calendar_age_days"], 4)
+        self.assertEqual(result["stock_last_price_weekday_age"], 2)
+        self.assertEqual(result["stock_last_price_supplied_session_age"], 1)
+        self.assertFalse(result["supplied_exchange_calendar_authenticated"])
+        self.assertFalse(result["exchange_session_freshness_verified"])
+        self.assertFalse(result["trade_ready"])
+
+    def test_duplicate_supplied_sessions_are_rejected(self):
+        stock, benchmark = payload(0), payload(10)
+        with self.assertRaisesRegex(ValueError, "duplicate_exchange_session_date"):
+            prepare_historical_research_pair(
+                manifest(stock), stock, manifest(benchmark), benchmark,
+                as_of_date="2025-01-07",
+                exchange_session_dates=["2025-01-07", "2025-01-07"])
+
     def test_identical_payloads_rejected(self):
         data = payload(0)
         with self.assertRaisesRegex(ValueError, "identical_stock_and_benchmark"):
