@@ -29,7 +29,7 @@ def main(argv=None):
                           "research_data_ready": False, "trade_ready": False},
                          sort_keys=True))
         return 1
-    print(json.dumps(result, sort_keys=True))
+    # No source path, raw bars, provider URL, or license text is printed.\n    print(json.dumps(result, sort_keys=True))
     return 0
 
 
