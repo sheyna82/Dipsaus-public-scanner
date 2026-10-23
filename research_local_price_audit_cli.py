@@ -5,12 +5,17 @@ Never treat structural acceptance as source authentication.
 """
 import argparse
 import json
+import stat
 from pathlib import Path
 
 from research_historical_price_ingest_gate import audit_historical_price_dataset
 
 
 def audit_local_files(manifest_path, csv_path):
+    for name in (manifest_path, csv_path):
+        path = Path(name)
+        if path.is_symlink() or not stat.S_ISREG(path.stat().st_mode):
+            raise ValueError("not_regular_local_file")
     manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
     payload = Path(csv_path).read_bytes()
     return audit_historical_price_dataset(manifest, payload)
