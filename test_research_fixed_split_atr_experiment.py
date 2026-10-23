@@ -24,6 +24,22 @@ class FixedSplitTests(unittest.TestCase):
         self.assertIsNone(result["aggregate_independent_score"])
         self.assertFalse(result["trade_ready"])
 
+    def test_first_fold_scores_only_labels_matured_before_next_split(self):
+        from research_chronological_atr_experiment import evaluate_chronological_csv
+        data = prices()
+        split = "2025-03-20"
+        boundary = "2025-04-05"
+        bounded = evaluate_chronological_csv(
+            data, data, split_date=split, holdout_end_date=boundary, horizon=10)
+        # A 10-row forward outcome near the boundary matures after the fold.
+        # All included labels must be known strictly before the next split.
+        earlier = evaluate_chronological_csv(
+            data, data, split_date=split, holdout_end_date="2025-04-02",
+            horizon=10)
+        self.assertGreaterEqual(bounded["events"], earlier["events"])
+        self.assertLess(bounded["events"], 16)
+        self.assertFalse(bounded["trade_ready"])
+
     def test_rejects_reordered_splits(self):
         with self.assertRaisesRegex(ValueError, "sorted"):
             evaluate_fixed_splits(prices(), prices(),
