@@ -10,6 +10,10 @@ def audit_historical_price_dataset(manifest, payload):
     return {
         "accepted": source["accepted"] and prices["accepted"],
         "rows": prices["rows"],
+        "largest_calendar_gap_days": prices["largest_calendar_gap_days"],
+        "gaps_over_seven_days": prices["gaps_over_seven_days"],
+        "exchange_session_completeness_verified": False,
+        "requires_exchange_session_completeness_review": True,
         "payload_sha256": source["payload_sha256"],
         "manifest_consistent": source["manifest_consistent"],
         "ohlcv_structure_valid": prices["accepted"],
