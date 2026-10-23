@@ -115,6 +115,8 @@ class HistoricalPairPreflightTests(unittest.TestCase):
         self.assertEqual(result["comparable_shared_return_intervals"], 1)
         self.assertEqual(result["matching_shared_return_intervals"], 1)
         self.assertTrue(result["all_comparable_shared_returns_match"])
+        self.assertFalse(result["return_pattern_screening_match"])
+        self.assertTrue(result["insufficient_return_overlap"])
         self.assertFalse(result["benchmark_independence_verified"])
 
     def test_distinct_returns_do_not_match(self):
@@ -133,6 +135,7 @@ class HistoricalPairPreflightTests(unittest.TestCase):
         self.assertEqual(result["minimum_comparable_return_intervals"], 20)
         self.assertFalse(result["return_overlap_sufficient_for_screening"])
         self.assertTrue(result["insufficient_return_overlap"])
+        self.assertFalse(result["return_pattern_screening_match"])
         self.assertFalse(result["research_data_ready"])
 
     def test_identical_payloads_rejected(self):
