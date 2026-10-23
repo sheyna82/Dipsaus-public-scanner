@@ -180,6 +180,7 @@ class HistoricalPairPreflightTests(unittest.TestCase):
         result = prepare_historical_research_pair(
             manifest(stock), stock, manifest(benchmark), benchmark)
         self.assertIsNone(result["matching_shared_return_fraction"])
+        self.assertIsNone(result["comparable_interval_coverage_fraction"])
         self.assertFalse(result["return_pattern_screening_match"])
 
     def test_nonadjacent_shared_dates_do_not_form_returns(self):
@@ -195,6 +196,8 @@ class HistoricalPairPreflightTests(unittest.TestCase):
         self.assertEqual(result["shared_price_dates"], 2)
         self.assertEqual(result["comparable_shared_return_intervals"], 0)
         self.assertEqual(result["skipped_nonadjacent_shared_intervals"], 1)
+        self.assertEqual(result["possible_shared_return_intervals"], 1)
+        self.assertEqual(result["comparable_interval_coverage_fraction"], 0.0)
         self.assertIsNone(result["matching_shared_return_fraction"])
         self.assertFalse(result["return_pattern_screening_match"])
 
@@ -209,6 +212,7 @@ class HistoricalPairPreflightTests(unittest.TestCase):
             manifest(stock), stock, manifest(benchmark), benchmark)
         self.assertEqual(result["comparable_shared_return_intervals"], 1)
         self.assertEqual(result["skipped_nonadjacent_shared_intervals"], 0)
+        self.assertEqual(result["comparable_interval_coverage_fraction"], 1.0)
         self.assertEqual(result["matching_shared_return_fraction"], 1.0)
         self.assertFalse(result["return_pattern_screening_match"])
 
