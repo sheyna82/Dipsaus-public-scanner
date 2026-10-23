@@ -40,6 +40,31 @@ class FixedSplitTests(unittest.TestCase):
         self.assertLess(bounded["events"], 16)
         self.assertFalse(bounded["trade_ready"])
 
+
+    def test_fold_excludes_unmatured_labels_at_boundary(self):
+        """Inspect the actual scored events, not only their total count."""
+        from unittest.mock import patch
+        from research_chronological_atr_experiment import evaluate_chronological_csv
+        from research_atr_incremental_holdout_scoring import predict as real_predict
+
+        observed = []
+
+        def capture(model, rows):
+            observed.extend(rows)
+            return real_predict(model, rows)
+
+        data = prices()
+        with patch("research_chronological_atr_experiment.predict",
+                   side_effect=capture):
+            evaluate_chronological_csv(
+                data, data, split_date="2025-03-20",
+                holdout_end_date="2025-04-05", horizon=10)
+        self.assertTrue(observed, "test requires actual scored holdout rows")
+        for row in observed:
+            self.assertLess(row["label_available_date"], "2025-04-05")
+            self.assertGreaterEqual(row["date"], "2025-03-20")
+            self.assertLess(row["date"], "2025-04-05")
+
     def test_rejects_reordered_splits(self):
         with self.assertRaisesRegex(ValueError, "sorted"):
             evaluate_fixed_splits(prices(), prices(),
