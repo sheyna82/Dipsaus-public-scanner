@@ -7,7 +7,7 @@ DECISION = "2026-01-05T10:00:00+00:00"
 RECORD = {
     "observed_at": "2026-01-04T09:00:00+00:00",
     "published_at": "2026-01-04T10:00:00+00:00",
-    "ingested_at": "2026-01-04T11:00:00+00:00",
+    "ingested_at": "2026-01-04T13:00:00+00:00",
     "revision_asof": "2026-01-04T12:00:00+00:00",
 }
 
@@ -55,7 +55,7 @@ class PointInTimeTests(unittest.TestCase):
         result = self.check({
             "observed_at": "2026-01-06T09:00:00+00:00",
             "published_at": "2026-01-06T10:00:00+00:00",
-            "ingested_at": "2026-01-06T11:00:00+00:00",
+            "ingested_at": "2026-01-06T13:00:00+00:00",
             "revision_asof": "2026-01-06T12:00:00+00:00",
         })
         self.assertIn("future_observed_at", result["reasons"])
@@ -68,10 +68,14 @@ class PointInTimeTests(unittest.TestCase):
         result = self.check({
             "observed_at": "2026-01-04T10:00:00+01:00",
             "published_at": "2026-01-04T11:00:00+01:00",
-            "ingested_at": "2026-01-04T12:00:00+01:00",
+            "ingested_at": "2026-01-04T14:00:00+01:00",
             "revision_asof": "2026-01-04T13:00:00+01:00",
         })
         self.assertTrue(result["accepted"])
+
+    def test_revision_not_yet_ingested_rejected(self):
+        result = self.check({"revision_asof": "2026-01-04T14:00:00+00:00"})
+        self.assertIn("revision_not_yet_ingested", result["reasons"])
 
 
 if __name__ == "__main__":
