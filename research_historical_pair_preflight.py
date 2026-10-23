@@ -7,7 +7,7 @@ from research_historical_price_ingest_gate import audit_historical_price_dataset
 import csv
 import io
 from decimal import Decimal, InvalidOperation
-from datetime import date
+from datetime import date, timedelta
 
 
 def prepare_historical_research_pair(stock_manifest, stock_payload,
@@ -40,9 +40,21 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
             raise ValueError("historical_last_date_after_as_of_date")
         return (reference - last).days
 
+    def weekday_age(closes):
+        if as_of_date is None:
+            return None
+        reference = date.fromisoformat(as_of_date)
+        last = date.fromisoformat(max(closes))
+        # Weekday count is only a rough diagnostic; holidays are excluded
+        # only after an independently verified exchange calendar is supplied.
+        return sum((last + timedelta(days=step)).weekday() < 5
+                   for step in range(1, (reference - last).days + 1))
+
     stock_calendar_age = calendar_age(stock_closes)
+    stock_weekday_age = weekday_age(stock_closes)
     benchmark_closes = close_by_date(benchmark_payload)
     benchmark_calendar_age = calendar_age(benchmark_closes)
+    benchmark_weekday_age = weekday_age(benchmark_closes)
     shared_dates = stock_closes.keys() & benchmark_closes.keys()
     matching_closes = sum(stock_closes[day] == benchmark_closes[day]
                           for day in shared_dates)
@@ -133,6 +145,9 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
         "as_of_date": as_of_date,
         "stock_last_price_calendar_age_days": stock_calendar_age,
         "benchmark_last_price_calendar_age_days": benchmark_calendar_age,
+        "stock_last_price_weekday_age": stock_weekday_age,
+        "benchmark_last_price_weekday_age": benchmark_weekday_age,
+        "weekday_age_is_exchange_session_age": False,
         "exchange_session_freshness_verified": False,
         "stock_price_dates": len(stock_closes),
         "benchmark_price_dates": len(benchmark_closes),
