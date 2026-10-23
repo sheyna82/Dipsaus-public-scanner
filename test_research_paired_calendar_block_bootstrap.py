@@ -29,6 +29,19 @@ class CalendarBlockBootstrapTests(unittest.TestCase):
                                             replicates=40, seed=7)
         self.assertEqual(a, b)
 
+
+    def test_missing_calendar_dates_are_reported(self):
+        sample = rows()
+        sample.pop(3)
+        result = paired_calendar_block_bootstrap(sample, block_days=2,
+                                                 replicates=20, seed=1)
+        self.assertTrue(result["calendar_gaps_present"])
+        self.assertFalse(result["exchange_sessions_verified"])
+
+    def test_invalid_confidence_rejected(self):
+        with self.assertRaisesRegex(ValueError, "invalid_bootstrap_settings"):
+            paired_calendar_block_bootstrap(rows(), confidence="0.95")
+
     def test_invalid_block_rejected(self):
         with self.assertRaisesRegex(ValueError, "insufficient_calendar_dates"):
             paired_calendar_block_bootstrap(rows(), block_days=20)
