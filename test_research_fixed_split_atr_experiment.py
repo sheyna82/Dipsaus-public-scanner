@@ -13,12 +13,14 @@ def prices():
 
 
 class FixedSplitTests(unittest.TestCase):
-    def test_reports_overlapping_holdouts_without_pooled_score(self):
+    def test_disjoint_holdouts_without_unjustified_pooled_score(self):
         result = evaluate_fixed_splits(prices(), prices(),
                                        split_dates=["2025-03-20", "2025-04-05"],
                                        horizon=3)
         self.assertEqual(result["fold_count"], 2)
-        self.assertTrue(result["overlapping_holdouts"])
+        self.assertFalse(result["overlapping_holdouts"])
+        self.assertEqual(result["folds"][0]["holdout_end_date"], "2025-04-05")
+        self.assertIsNone(result["folds"][1]["holdout_end_date"])
         self.assertIsNone(result["aggregate_independent_score"])
         self.assertFalse(result["trade_ready"])
 
