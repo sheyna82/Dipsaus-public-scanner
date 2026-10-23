@@ -44,6 +44,16 @@ def paired_holdout_diagnostics(predictions):
             raise ValueError("invalid_outcome_window")
         windows.append((start_day, end_day))
     windows.sort()
+    # Connected components of overlapping outcome windows. This is a
+    # descriptive dependence warning, NOT an effective sample-size estimate.
+    clusters = 0
+    active_end = None
+    for start_day, end_day in windows:
+        if active_end is None or start_day > active_end:
+            clusters += 1
+            active_end = end_day
+        else:
+            active_end = max(active_end, end_day)
     overlapping_pairs = sum(
         windows[i][0] <= windows[j][1] and windows[j][0] <= windows[i][1]
         for i in range(len(windows)) for j in range(i + 1, len(windows)))
@@ -67,6 +77,8 @@ def paired_holdout_diagnostics(predictions):
         "event_level_log_loss_differences": log_diffs,
         "outcome_windows_supplied": len(windows),
         "overlapping_outcome_window_pairs": overlapping_pairs,
+        "overlap_connected_groups": clusters,
+        "overlap_group_count_is_effective_sample_size": False,
         "outcome_window_coverage_complete": len(windows) == n,
         "independent_events_assumed": False,
         "uncertainty_interval_verified": False,
