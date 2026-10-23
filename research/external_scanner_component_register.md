@@ -1,6 +1,6 @@
 # DIPSAUS — externe scannercomponenten: onderzoeksregister
 
-Status: verkenning op 23 oktober 2026. **Geen broncode overgenomen.** Dit register onderscheidt vindbaarheid van daadwerkelijke code-audit. Repositories zijn zoekresultaten; functionaliteit, onderhoud, licentie en prestaties moeten per bron nog afzonderlijk worden geverifieerd.
+Status: verkenning op 23 oktober 2026. **Nog geen broncode overgenomen.** Dit register onderscheidt vindbaarheid van daadwerkelijke code-audit. Repositories zijn zoekresultaten; functionaliteit, onderhoud, licentie en prestaties moeten per bron nog afzonderlijk worden geverifieerd.
 
 | Externe bron | Onderzoekbare bouwsteen | Potentieel nut DIPSAUS | Verificatie |
 |---|---|---|---|
@@ -29,7 +29,7 @@ Status: verkenning op 23 oktober 2026. **Geen broncode overgenomen.** Dit regist
 
 ## Beslisregel
 
-Niet overnemen op basis van populariteit, marketing of een aantrekkelijke backtest. Eerst component isoleren, baseline formuleren, falsificatietest bouwen, daarna alleen bij aantoonbare meerwaarde integreren. Geen automatische handel; geen wijzigingen aan de productiebranch zonder expliciete toestemming.
+Hergebruik van bestaande broncode heeft expliciet de voorkeur boven onnodig opnieuw bouwen wanneer de code veilig, betrouwbaar, kosteloos beschikbaar en juridisch herbruikbaar is. MIT/BSD/Apache-licenties vragen behoud van toepasselijke kennisgevingen; GPL/AGPL vereisen extra beoordeling van verplichtingen; zonder licentie niet kopiëren. Beoordeel per component directe overname, aangepaste integratie of zelfstandige implementatie. Niet overnemen op basis van populariteit, marketing of een aantrekkelijke backtest. Eerst component isoleren, baseline formuleren, falsificatietest bouwen, daarna alleen bij aantoonbare meerwaarde integreren. Geen automatische handel; geen wijzigingen aan de productiebranch zonder expliciete toestemming.
 
 ## Eerste broninspectie: backtest-uitvoering (23 oktober 2026)
 
@@ -37,6 +37,6 @@ Niet overnemen op basis van populariteit, marketing of een aantrekkelijke backte
 
 **Backtesting.py**: publieke API en implementatie beschrijven spread, vaste/procentuele commissies, standaarduitvoering van marktorders op de volgende candle-open, optionele trade_on_close en limietorders. Bij DIPSAUS moeten de hypothetische limietverkopen en gemiste fills expliciet worden meegenomen, ook als de scanner zelf geen orders plaatst. Project meldt AGPL-3.0; code niet kopiëren zonder licentiebeoordeling. Bronnen: https://kernc.github.io/backtesting.py/doc/backtesting/backtesting.html en https://github.com/kernc/backtesting.py/blob/master/backtesting/backtesting.py
 
-**Besluit voor een geïsoleerde DIPSAUS-proef:** bouw eerst een eigen, kleine execution-assumption-audit die scenario's vergelijkt (volgende opening versus slotkoers, spread, kosten, niet-uitgevoerde limietorders) op synthetische OHLCV. Dit is **niet** hetzelfde als een gevalideerde strategiebacktest en bewijst geen voorspellende waarde. Geen externe code of afhankelijkheid importeren.
+**Besluit voor een geïsoleerde DIPSAUS-proef:** bouw eerst een eigen, kleine execution-assumption-audit die scenario's vergelijkt (volgende opening versus slotkoers, spread, kosten, niet-uitgevoerde limietorders) op synthetische OHLCV. Dit is **niet** hetzelfde als een gevalideerde strategiebacktest en bewijst geen voorspellende waarde. Externe code mag worden geïntegreerd na controle van veiligheid, licentie, afhankelijkheden en aantoonbare meerwaarde.
 
 **Open punten:** testdekking van de twee upstream-projecten, actuele onderhoudsstatus, exacte order-fill-semantiek bij gaps en gedeeltelijke uitvoering, licentieadvies en realistische brokerdata. De vier overige projecten zijn nog niet inhoudelijk geaudit.
