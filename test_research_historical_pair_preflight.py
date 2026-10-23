@@ -55,7 +55,7 @@ class HistoricalPairPreflightTests(unittest.TestCase):
 
     def test_different_payloads_with_identical_closes_are_flagged(self):
         stock = payload(0)
-        benchmark = stock.replace(b",100\\n", b",200\\n")
+        benchmark = stock.replace(b",100\n", b",200\n")
         result = prepare_historical_research_pair(
             manifest(stock), stock, manifest(benchmark), benchmark)
         self.assertTrue(result["all_shared_close_values_match"])
