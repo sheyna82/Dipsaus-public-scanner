@@ -29,7 +29,7 @@ class FeatureExtractorTests(unittest.TestCase):
         lines = original.decode().splitlines()
         # Keep the first 24 bars unchanged, but drastically perturb day 25.
         lines[-1] = "2026-01-25,1000,1200,800,1100,999999"
-        altered = ("\\n".join(lines) + "\\n").encode()
+        altered = ("\n".join(lines) + "\n").encode()
         earlier = extract_daily_structure(sample(24))
         changed = extract_daily_structure(altered)
         self.assertEqual(earlier, changed[:len(earlier)])
