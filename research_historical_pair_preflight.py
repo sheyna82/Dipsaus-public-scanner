@@ -47,6 +47,20 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
     comparable_interval_coverage = (
         len(comparable_pairs) / possible_shared_intervals
         if possible_shared_intervals else None)
+    # Count consecutive unavailable shared intervals; clustering is diagnostic
+    # only and does not certify any price source.
+    current_missing_run = 0
+    longest_missing_run = 0
+    missing_run_count = 0
+    for pair in zip(ordered_shared, ordered_shared[1:]):
+        if pair not in comparable_pairs:
+            current_missing_run += 1
+            longest_missing_run = max(longest_missing_run, current_missing_run)
+        elif current_missing_run:
+            missing_run_count += 1
+            current_missing_run = 0
+    if current_missing_run:
+        missing_run_count += 1
     comparable_return_intervals = 0
     matching_return_intervals = 0
     for previous, current in sorted(comparable_pairs):
@@ -84,6 +98,8 @@ def prepare_historical_research_pair(stock_manifest, stock_payload,
         "shared_price_dates": len(shared_dates),
         "comparable_shared_return_intervals": comparable_return_intervals,
         "skipped_nonadjacent_shared_intervals": skipped_shared_date_gaps,
+        "longest_nonadjacent_shared_interval_run": longest_missing_run,
+        "nonadjacent_shared_interval_run_count": missing_run_count,
         "possible_shared_return_intervals": possible_shared_intervals,
         "comparable_interval_coverage_fraction": comparable_interval_coverage,
         "minimum_comparable_return_intervals": minimum_comparable_intervals,
