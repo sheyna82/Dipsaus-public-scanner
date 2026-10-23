@@ -43,6 +43,8 @@ on:
       - 'test_research_exchange_session_audit.py'
       - 'research_exchange_calendar_adapter.py'
       - 'test_research_exchange_calendar_adapter.py'
+      - 'research_exchange_calendar_local_export.py'
+      - 'test_research_exchange_calendar_local_export.py'
       - '.github/workflows/atr-hypothesis-research.yml'
 
 permissions:
@@ -61,6 +63,10 @@ jobs:
           python-version: '3.11'
       - name: Install test dependencies
         run: python -m pip install 'pytest>=8,<9' 'hypothesis>=6,<7'
+      - name: Run pinned calendar export and checksum tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m unittest -v test_research_exchange_calendar_local_export
       - name: Run calendar export adapter tests
         env:
           PYTHONPATH: ${{ github.workspace }}
