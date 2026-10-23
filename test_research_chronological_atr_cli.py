@@ -1,5 +1,6 @@
 """Synthetic local CLI smoke and guard tests."""
 import contextlib
+import hashlib
 import io
 import tempfile
 import unittest
@@ -28,6 +29,11 @@ class CliTests(unittest.TestCase):
                 result = main(["--stock-csv", str(stock), "--benchmark-csv", str(market),
                                "--split-date", "2025-03-27", "--horizon", "3"])
             self.assertFalse(result["trade_ready"])
+            self.assertEqual(result["stock_sha256"], hashlib.sha256(data()).hexdigest())
+            self.assertEqual(result["benchmark_sha256"], hashlib.sha256(data()).hexdigest())
+            self.assertFalse(result["source_license_verified"])
+            self.assertFalse(result["source_provenance_verified"])
+            self.assertFalse(result["survivorship_bias_cleared"])
             self.assertIn("atr_minus_baseline_brier", out.getvalue())
 
     def test_rejects_same_file(self):
