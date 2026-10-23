@@ -232,6 +232,35 @@ class HistoricalPairPreflightTests(unittest.TestCase):
         self.assertFalse(result["return_coverage_sufficient_for_screening"])
         self.assertFalse(result["return_pattern_screening_match"])
 
+    def test_many_matching_returns_with_low_coverage_are_blocked(self):
+        from datetime import date, timedelta
+
+        start = date(2025, 1, 1)
+        def series(indices, scale):
+            lines = ["date,open,high,low,close,volume"]
+            for index in indices:
+                day = (start + timedelta(days=index)).isoformat()
+                close = (100 + index) * scale
+                lines.append(f"{day},{close},{close+scale},{close-scale},{close},100")
+            return ("\n".join(lines) + "\n").encode()
+
+        # Twenty-two shared sessions in a row, then one extra stock-only
+        # session before each subsequent shared session.
+        shared = list(range(22)) + list(range(24, 64, 2))
+        stock_only = [index for index in range(23, 64, 2)]
+        stock = series(sorted(shared + stock_only), 1)
+        benchmark = series(shared, 2)
+        result = prepare_historical_research_pair(
+            manifest(stock), stock, manifest(benchmark), benchmark)
+        self.assertEqual(result["comparable_shared_return_intervals"], 21)
+        self.assertEqual(result["matching_shared_return_intervals"], 21)
+        self.assertTrue(result["return_overlap_sufficient_for_screening"])
+        self.assertLess(result["comparable_interval_coverage_fraction"], 0.8)
+        self.assertFalse(result["return_coverage_sufficient_for_screening"])
+        self.assertTrue(result["all_comparable_shared_returns_match"])
+        self.assertFalse(result["return_pattern_screening_match"])
+        self.assertFalse(result["trade_ready"])
+
     def test_identical_payloads_rejected(self):
         data = payload(0)
         with self.assertRaisesRegex(ValueError, "identical_stock_and_benchmark"):
