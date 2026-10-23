@@ -97,6 +97,20 @@ class CalendarBlockBootstrapTests(unittest.TestCase):
             scores["atr_log_loss"] - scores["baseline_log_loss"],
             places=7)
 
+
+    def test_unequal_daily_event_counts_are_disclosed(self):
+        sample = rows()
+        sample.append({**sample[0], "ticker": "SECOND"})
+        result = paired_calendar_block_bootstrap(
+            sample, block_days=2, replicates=30, seed=4)
+        self.assertEqual(result["events"], 9)
+        self.assertEqual(result["minimum_events_per_observed_date"], 1)
+        self.assertEqual(result["maximum_events_per_observed_date"], 2)
+        self.assertTrue(result["unequal_events_per_date"])
+        self.assertEqual(result["estimand"],
+                         "event_weighted_mean_loss_difference")
+        self.assertFalse(result["interval_validated_for_inference"])
+
     def test_invalid_block_rejected(self):
         with self.assertRaisesRegex(ValueError, "insufficient_calendar_dates"):
             paired_calendar_block_bootstrap(rows(), block_days=20)
