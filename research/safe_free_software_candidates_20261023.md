@@ -20,3 +20,16 @@ Status: RESEARCH CANDIDATES ONLY. No installation, live alerts, model promotion,
 - No paid services, API keys in public repository, private holdings, automatic orders, stoploss execution, or changes to production scanner.
 - Keep all work on research branch and do not merge PR #62 without explicit approval.
 - Research priorities: (1) data validation/journal (2) truly independent point-in-time data (3) holdout scoring (4) experimental model comparisons.
+
+
+## Additional free software shortlist (2026-10-23; research only)
+- **exchange_calendars** (Apache-2.0): first priority. Test EU/US holidays, early closes, daylight-saving transitions and expected session gaps against existing market-hour logic. Confirm supported exchange calendar identifiers and timezone handling before adoption.
+- **pip-audit** (Apache-2.0): read-only Python dependency vulnerability audit; never use --fix automatically. Audit only a pinned environment and review findings before upgrades. Not a malware scanner.
+- **uv** (MIT/Apache-2.0): isolated reproducibility experiment with lockfile, without replacing production dependency installation. Review lock changes and supply-chain provenance.
+- **talipp** (MIT): benchmark incremental ATR/RSI/SMA calculations against existing implementations, including warm-up windows and missing data. Only adopt if measurable runtime benefit and exact agreed semantics.
+- **ta.py** (MIT): lightweight alternative comparator for indicator calculations; avoid duplicate libraries.
+- **TA-Lib**: reserve unless profiling establishes a need; native dependency and indicator semantic differences require review.
+- **Stock Indicators for Python**: defer because of .NET runtime operational complexity.
+- **eventstudy**: study event-study methodology but avoid importing GPL-licensed package without explicit license review.
+
+Acceptance tests: dependency license and security review, pinned versions, reproducible tests, no secrets/network credentials in public repo, no paid APIs, no change to live scanner or alerts, no automated orders, no PR merge without approval.
