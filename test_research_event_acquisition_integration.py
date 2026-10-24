@@ -3,6 +3,7 @@
 Mocks HTTP entirely: no network, secrets, or real-market assertions.
 """
 import hashlib
+from datetime import datetime, timezone
 import json
 import tempfile
 import unittest
@@ -53,6 +54,11 @@ class AcquisitionIntegrationTests(unittest.TestCase):
             self.assertEqual(result["content_sha256"], expected)
             self.assertEqual(stored["content_sha256"], expected)
             self.assertEqual(result["row_count"], 2)
+            self.assertEqual(result["first_observation_date"], "2026-10-20")
+            self.assertEqual(result["last_observation_date"], "2026-10-21")
+            self.assertLessEqual(datetime.fromisoformat(result["retrieved_at_utc"]),
+                                 datetime.now(timezone.utc))
+            self.assertEqual(stored["retrieved_at_utc"], result["retrieved_at_utc"])
             self.assertFalse(result["trade_ready"])
 
     def test_redirect_outside_allowlist_is_rejected(self):
