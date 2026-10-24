@@ -35,6 +35,8 @@ on:
       - 'test_research_event_acquisition_integration.py'
       - 'research_event_baseline_comparison.py'
       - 'test_research_event_baseline_comparison.py'
+      - 'research_market_provider_catalog.py'
+      - 'test_research_market_provider_catalog.py'
       - 'research_event_download_cli.py'
       - '.github/workflows/manual-event-price-evidence-research.yml'
       - 'test_company_event_watch.py'
@@ -73,6 +75,8 @@ on:
       - 'test_research_event_acquisition_integration.py'
       - 'research_event_baseline_comparison.py'
       - 'test_research_event_baseline_comparison.py'
+      - 'research_market_provider_catalog.py'
+      - 'test_research_market_provider_catalog.py'
       - 'research_event_download_cli.py'
       - '.github/workflows/manual-event-price-evidence-research.yml'
       - 'test_company_event_watch.py'
@@ -93,6 +97,6 @@ jobs:
       - name: Install tested pinned dependencies
         run: python -m pip install --require-hashes -r requirements.lock
       - name: Compile event code
-        run: python -m py_compile company_event_watch.py test_company_event_watch.py event_opportunity_engine.py test_event_opportunity_engine.py research_event_opportunity_cohort.py test_research_event_opportunity_cohort.py research_event_snapshot_gate.py test_research_event_snapshot_gate.py research_event_outcome_score.py test_research_event_outcome_score.py research_event_release_timing.py test_research_event_release_timing.py research_event_market_provenance.py test_research_event_market_provenance.py research_event_payload_integrity.py test_research_event_payload_integrity.py research_event_data_manifest.py test_research_event_data_manifest.py research_event_stooq_acquisition.py test_research_event_stooq_acquisition.py test_research_event_acquisition_integration.py research_event_baseline_comparison.py test_research_event_baseline_comparison.py research_event_download_cli.py silent_macro_context.py test_silent_macro_context.py macro_market_confirmation.py test_macro_market_confirmation.py macro_index_quotes.py macro_risk_watch.py test_macro_risk_watch.py dipsaus_unified_research.py test_dipsaus_unified_research.py safe_runner.py
+        run: python -m py_compile company_event_watch.py test_company_event_watch.py event_opportunity_engine.py test_event_opportunity_engine.py research_event_opportunity_cohort.py test_research_event_opportunity_cohort.py research_event_snapshot_gate.py test_research_event_snapshot_gate.py research_event_outcome_score.py test_research_event_outcome_score.py research_event_release_timing.py test_research_event_release_timing.py research_event_market_provenance.py test_research_event_market_provenance.py research_event_payload_integrity.py test_research_event_payload_integrity.py research_event_data_manifest.py test_research_event_data_manifest.py research_event_stooq_acquisition.py test_research_event_stooq_acquisition.py test_research_event_acquisition_integration.py research_event_baseline_comparison.py test_research_event_baseline_comparison.py research_market_provider_catalog.py test_research_market_provider_catalog.py research_event_download_cli.py silent_macro_context.py test_silent_macro_context.py macro_market_confirmation.py test_macro_market_confirmation.py macro_index_quotes.py macro_risk_watch.py test_macro_risk_watch.py dipsaus_unified_research.py test_dipsaus_unified_research.py safe_runner.py
       - name: Test entire scanner regression suite without secrets or push delivery
         run: python -m unittest discover -p 'test*.py'
