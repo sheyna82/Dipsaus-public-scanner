@@ -3,7 +3,7 @@
 An event date alone is never evidence of an investment opportunity.
 This cohort is frozen from the 2026-10-24 user-observed notifications.
 """
-from datetime import date, timedelta
+from datetime import date, datetime, timezone
 from event_opportunity_engine import classify_event_opportunities
 
 EVENT_COHORT = (
@@ -37,7 +37,24 @@ def build_event_study(as_of_date="2026-10-24", evidence_by_symbol=None):
         evidence = supplied.get(symbol, {})
         if not isinstance(evidence, dict):
             raise ValueError("event_evidence_must_be_mapping")
-        missing = [field for field in REQUIRED_EVIDENCE if field not in evidence]
+        # A populated key is not evidence when its value is empty or unusable.
+        missing = [field for field in REQUIRED_EVIDENCE
+                   if field not in evidence or evidence[field] is None or
+                   isinstance(evidence[field], (str, list, dict, tuple)) and
+                   not evidence[field]]
+        # A dated, UTC-aware snapshot is essential for future point-in-time
+        # checks; do not infer its validity from a nonempty string.
+        timestamp = evidence.get("quote_timestamp_utc")
+        if timestamp is not None:
+            try:
+                parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                if parsed.tzinfo is None or parsed.utcoffset() is None:
+                    raise ValueError("timezone_required")
+                if parsed.astimezone(timezone.utc).date() > today:
+                    raise ValueError("future_quote_timestamp")
+            except (ValueError, TypeError, AttributeError):
+                if "quote_timestamp_utc" not in missing:
+                    missing.append("quote_timestamp_utc")
         stages = [item["stage"] for item in classify_event_opportunities(iso, today)]
         records.append({
             "symbol": symbol,
