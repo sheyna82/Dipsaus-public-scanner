@@ -61,3 +61,29 @@ def parse_alpha_vantage_daily(payload):
             raise ValueError("invalid_daily_record")
         records.append({"date": session, "close": prices.get("4. close")})
     return _normalize(records, "date", "close")
+
+
+
+def parse_finnhub_candles(payload):
+    """Finnhub stock/candle response: t Unix seconds, c close, s status.
+
+    Historical availability and free-tier entitlement must be verified.
+    """
+    from datetime import datetime, timezone
+    if not isinstance(payload, dict) or payload.get("s") != "ok":
+        raise ValueError("vendor_error")
+    timestamps, closes = payload.get("t"), payload.get("c")
+    if not isinstance(timestamps, list) or not isinstance(closes, list):
+        raise ValueError("invalid_candle_arrays")
+    if not timestamps or len(timestamps) != len(closes):
+        raise ValueError("invalid_candle_arrays")
+    records = []
+    for stamp, close in zip(timestamps, closes):
+        if isinstance(stamp, bool) or not isinstance(stamp, int):
+            raise ValueError("invalid_candle_timestamp")
+        try:
+            session = datetime.fromtimestamp(stamp, tz=timezone.utc).date().isoformat()
+        except (OverflowError, ValueError, OSError) as exc:
+            raise ValueError("invalid_candle_timestamp") from exc
+        records.append({"date": session, "close": close})
+    return _normalize(records, "date", "close")
