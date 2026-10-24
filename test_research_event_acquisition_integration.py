@@ -8,6 +8,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from urllib.error import HTTPError, URLError
 from unittest.mock import patch
 
 from research_event_stooq_acquisition import acquire_stooq_history
@@ -60,6 +61,18 @@ class AcquisitionIntegrationTests(unittest.TestCase):
                                  datetime.now(timezone.utc))
             self.assertEqual(stored["retrieved_at_utc"], result["retrieved_at_utc"])
             self.assertFalse(result["trade_ready"])
+
+    def test_vendor_failures_are_classified_without_artifacts(self):
+        for error, expected in (
+            (HTTPError("https://stooq.com/", 429, "rate limited", {}, None), "vendor_http_error:429"),
+            (URLError("network down"), "vendor_connection_unavailable"),
+        ):
+            with self.subTest(expected=expected), tempfile.TemporaryDirectory() as folder:
+                with patch("research_event_stooq_acquisition.urlopen", side_effect=error):
+                    with self.assertRaisesRegex(ValueError, expected):
+                        acquire_stooq_history("AMD", "2026-10-20", "2026-10-21", folder,
+                                              allow_network=True)
+                self.assertEqual(list(Path(folder).iterdir()), [])
 
     def test_redirect_outside_allowlist_is_rejected(self):
         with tempfile.TemporaryDirectory() as folder:
