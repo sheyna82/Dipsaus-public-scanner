@@ -67,8 +67,27 @@ jobs:
                   req = Request(url, headers={"User-Agent": "DIPSAUS-research-probe/1.0"})
                   with urlopen(req, timeout=8) as response:
                       record["http_status"] = response.status
-                      record["bytes_sampled"] = len(response.read(2048))
+                      sample = response.read(2048)
+                      record["bytes_sampled"] = len(sample)
                       record["outcome"] = "response_received_not_validated"
+                      try:
+                          body = json.loads(sample)
+                          if isinstance(body, dict):
+                              keys = set(body)
+                              if "Time Series (Daily)" in keys:
+                                  record["payload_class"] = "daily_series_unverified"
+                              elif keys & {"Error Message", "Note", "Information"}:
+                                  record["payload_class"] = "vendor_message_not_prices"
+                              elif body.get("status") == "error":
+                                  record["payload_class"] = "vendor_error_not_prices"
+                              else:
+                                  record["payload_class"] = "unrecognized_json"
+                          elif isinstance(body, list):
+                              record["payload_class"] = "json_list_unverified"
+                          else:
+                              record["payload_class"] = "unexpected_json"
+                      except (ValueError, UnicodeDecodeError):
+                          record["payload_class"] = "non_json_response"
               except HTTPError as exc:
                   record.update(http_status=exc.code, outcome="http_error")
               except (URLError, TimeoutError, OSError) as exc:
