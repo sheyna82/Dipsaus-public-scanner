@@ -120,3 +120,21 @@ def parse_massive_daily_aggregates(payload, *, adjusted):
             raise ValueError("invalid_candle_timestamp") from exc
         records.append({"date": session, "close": bar.get("c")})
     return _normalize(records, "date", "close")
+
+
+
+def parse_alpaca_daily_bars(payload, *, symbol):
+    """Alpaca historical stock bars for one requested symbol, offline only.
+
+    Does not assert feed entitlement, split adjustment or source authenticity.
+    """
+    if not isinstance(symbol, str) or not symbol.strip():
+        raise ValueError("symbol_required")
+    if not isinstance(payload, dict):
+        raise ValueError("vendor_error")
+    bars = payload.get("bars")
+    if isinstance(bars, dict):
+        bars = bars.get(symbol)
+    if not isinstance(bars, list) or not bars:
+        raise ValueError("missing_daily_prices")
+    return _normalize(bars, "t", "c")
