@@ -58,6 +58,7 @@ jobs:
               "twelve_data": "https://api.twelvedata.com/time_series?symbol=AMD&interval=1day&outputsize=5",
               "alpha_vantage": "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=AMD",
               "tiingo": "https://api.tiingo.com/tiingo/daily/amd/prices?startDate=2026-10-01&endDate=2026-10-23",
+              "yahoo_chart": "https://query1.finance.yahoo.com/v8/finance/chart/AMD?range=1mo&interval=1d",
           }
           results = []
           for name, url in targets.items():
@@ -74,7 +75,13 @@ jobs:
                           body = json.loads(sample)
                           if isinstance(body, dict):
                               keys = set(body)
-                              if "Time Series (Daily)" in keys:
+                              if name == "yahoo_chart" and isinstance(body.get("chart"), dict):
+                                  chart = body["chart"]
+                                  if isinstance(chart.get("result"), list) and chart["result"]:
+                                      record["payload_class"] = "chart_result_unverified"
+                                  else:
+                                      record["payload_class"] = "chart_error_or_empty"
+                              elif "Time Series (Daily)" in keys:
                                   record["payload_class"] = "daily_series_unverified"
                               elif keys & {"Error Message", "Note", "Information"}:
                                   record["payload_class"] = "vendor_message_not_prices"
