@@ -45,3 +45,19 @@ def parse_twelve_data_daily(payload):
     if not isinstance(payload, dict) or payload.get("status") == "error":
         raise ValueError("vendor_error")
     return _normalize(payload.get("values"), "datetime", "close")
+
+
+
+def parse_alpha_vantage_daily(payload):
+    """Alpha Vantage TIME_SERIES_DAILY raw close; quota notices fail closed."""
+    if not isinstance(payload, dict):
+        raise ValueError("vendor_error")
+    series = payload.get("Time Series (Daily)")
+    if not isinstance(series, dict) or not series:
+        raise ValueError("vendor_error")
+    records = []
+    for session, prices in series.items():
+        if not isinstance(prices, dict):
+            raise ValueError("invalid_daily_record")
+        records.append({"date": session, "close": prices.get("4. close")})
+    return _normalize(records, "date", "close")
