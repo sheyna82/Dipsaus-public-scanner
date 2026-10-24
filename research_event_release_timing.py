@@ -4,6 +4,7 @@ Event dates alone cannot identify the first tradable post-release close.
 No network access, live alerts, or trading decisions.
 """
 from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo
 
 
 def audit_event_release_timing(event_date, release_timestamp, market_close_timestamp,
@@ -25,16 +26,23 @@ def audit_event_release_timing(event_date, release_timestamp, market_close_times
     close = parse(market_close_timestamp)
     followup = parse(first_followup_close_timestamp)
     expected_date = date.fromisoformat(event_date)
-    if release.date() != expected_date:
+    # US issuer calendar dates must be evaluated in the exchange timezone;
+    # an after-hours release can cross midnight in UTC.
+    exchange_zone = ZoneInfo("America/New_York")
+    release_local = release.astimezone(exchange_zone)
+    close_local = close.astimezone(exchange_zone)
+    followup_local = followup.astimezone(exchange_zone)
+    if release_local.date() != expected_date:
         raise ValueError("release_date_mismatch")
     if release <= close:
         raise ValueError("not_after_market_close")
-    if followup <= release or followup.date() <= close.date():
+    if followup <= release or followup_local.date() <= close_local.date():
         raise ValueError("followup_not_after_release")
-    if close.date() != expected_date:
+    if close_local.date() != expected_date:
         raise ValueError("market_close_event_date_mismatch")
     return {
         "event_date": event_date,
+        "exchange_timezone": "America/New_York",
         "release_timestamp_utc": release.isoformat(),
         "market_close_timestamp_utc": close.isoformat(),
         "first_followup_close_timestamp_utc": followup.isoformat(),
