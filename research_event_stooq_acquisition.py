@@ -58,6 +58,8 @@ def parse_stooq_csv(payload):
         previous = session
     if not rows:
         raise ValueError("empty_csv_history")
+    if len(rows) > 10000:
+        raise ValueError("too_many_csv_observations")
     return rows
 
 
