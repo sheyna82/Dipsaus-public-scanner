@@ -27,10 +27,10 @@ class HistoricalCsvTests(unittest.TestCase):
 
     def test_impossible_ohlc_rows_rejected(self):
         for line in (
-            b"2026-10-20,100,99,98,101,1000\\n",
-            b"2026-10-20,100,102,101,101,1000\\n",
-            b"2026-10-20,100,102,98,-1,1000\\n",
-            b"2026-10-20,100,102,98,101,-1\\n",
+            b"2026-10-20,100,99,98,101,1000\n",
+            b"2026-10-20,100,102,101,101,1000\n",
+            b"2026-10-20,100,102,98,-1,1000\n",
+            b"2026-10-20,100,102,98,101,-1\n",
         ):
             with self.subTest(line=line):
                 with self.assertRaisesRegex(ValueError, "invalid_csv_observation"):
