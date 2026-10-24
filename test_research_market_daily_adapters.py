@@ -1,6 +1,6 @@
 """Offline synthetic vendor adapter tests."""
 import unittest
-from research_market_daily_adapters import parse_tiingo_daily, parse_twelve_data_daily
+from research_market_daily_adapters import parse_tiingo_daily, parse_twelve_data_daily, parse_alpha_vantage_daily
 
 
 class VendorAdapterTests(unittest.TestCase):
@@ -18,6 +18,17 @@ class VendorAdapterTests(unittest.TestCase):
             {"datetime": "2026-10-22", "close": "102"},
             {"datetime": "2026-10-21", "close": "100"}]}
         self.assertEqual(parse_twelve_data_daily(payload)[0]["close"], "100")
+
+    def test_alpha_vantage_daily_raw_and_quota_failure(self):
+        payload = {"Time Series (Daily)": {
+            "2026-10-22": {"4. close": "102.5"},
+            "2026-10-21": {"4. close": "100.0"}}}
+        self.assertEqual(parse_alpha_vantage_daily(payload)[0]["close"], "100.0")
+        with self.assertRaisesRegex(ValueError, "vendor_error"):
+            parse_alpha_vantage_daily({"Note": "API call frequency limit"})
+        with self.assertRaisesRegex(ValueError, "invalid_daily_record"):
+            parse_alpha_vantage_daily({"Time Series (Daily)": {
+                "2026-10-21": {"4. close": None}}})
 
     def test_fail_closed_on_error_and_duplicate(self):
         with self.assertRaisesRegex(ValueError, "vendor_error"):
