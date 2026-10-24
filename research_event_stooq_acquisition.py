@@ -8,7 +8,7 @@ import csv
 import hashlib
 import io
 import json
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from urllib.parse import urlencode, urlparse
 from urllib.request import urlopen
@@ -86,6 +86,9 @@ def acquire_stooq_history(symbol, start, end, output_dir, *, allow_network=False
     filename = f"{symbol}_{start}_{end}"
     (root / (filename + ".csv")).write_bytes(payload)
     metadata = {"symbol": symbol, "requested_start": start, "requested_end": end,
+                "retrieved_at_utc": datetime.now(timezone.utc).isoformat(),
+                "first_observation_date": rows[0]["date"],
+                "last_observation_date": rows[-1]["date"],
                 "source_url": url, "content_sha256": hashlib.sha256(payload).hexdigest(),
                 "row_count": len(rows), "source_authenticity_verified": False,
                 "exchange_calendar_verified": False, "trade_ready": False}
