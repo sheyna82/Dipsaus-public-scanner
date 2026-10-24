@@ -1,6 +1,6 @@
 """Offline synthetic vendor adapter tests."""
 import unittest
-from research_market_daily_adapters import parse_tiingo_daily, parse_twelve_data_daily, parse_alpha_vantage_daily
+from research_market_daily_adapters import parse_tiingo_daily, parse_twelve_data_daily, parse_alpha_vantage_daily, parse_finnhub_candles
 
 
 class VendorAdapterTests(unittest.TestCase):
@@ -29,6 +29,20 @@ class VendorAdapterTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "invalid_daily_record"):
             parse_alpha_vantage_daily({"Time Series (Daily)": {
                 "2026-10-21": {"4. close": None}}})
+
+    def test_finnhub_candles_and_missing_entitlement(self):
+        from datetime import datetime, timezone
+        def ts(day):
+            return int(datetime(2026, 10, day, tzinfo=timezone.utc).timestamp())
+        result = parse_finnhub_candles({"s": "ok", "t": [ts(22), ts(21)],
+                                         "c": [102, 100]})
+        self.assertEqual(result[0], {"date": "2026-10-21", "close": "100"})
+        with self.assertRaisesRegex(ValueError, "vendor_error"):
+            parse_finnhub_candles({"s": "no_data"})
+        with self.assertRaisesRegex(ValueError, "invalid_candle_arrays"):
+            parse_finnhub_candles({"s": "ok", "t": [ts(21)], "c": []})
+        with self.assertRaisesRegex(ValueError, "invalid_candle_timestamp"):
+            parse_finnhub_candles({"s": "ok", "t": [True], "c": [100]})
 
     def test_fail_closed_on_error_and_duplicate(self):
         with self.assertRaisesRegex(ValueError, "vendor_error"):
