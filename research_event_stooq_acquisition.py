@@ -31,6 +31,7 @@ def parse_stooq_csv(payload):
         raise ValueError("unexpected_csv_columns")
     rows = []
     previous = None
+    direction = None
     from decimal import Decimal, InvalidOperation
     for row in reader:
         if None in row or any(value is None for value in row.values()):
@@ -44,8 +45,14 @@ def parse_stooq_csv(payload):
             volume = Decimal(row["Volume"])
         except (ValueError, InvalidOperation, TypeError) as exc:
             raise ValueError("invalid_csv_observation") from exc
-        if previous is not None and session <= previous:
-            raise ValueError("csv_dates_not_strictly_increasing")
+        if previous is not None:
+            if session == previous:
+                raise ValueError("csv_dates_not_strictly_monotonic")
+            step = 1 if session > previous else -1
+            if direction is None:
+                direction = step
+            elif direction != step:
+                raise ValueError("csv_dates_not_strictly_monotonic")
         prices = (opened, high, low, close)
         if (any(not price.is_finite() or price <= 0 for price in prices)
                 or low > min(opened, close)
@@ -60,6 +67,8 @@ def parse_stooq_csv(payload):
         raise ValueError("empty_csv_history")
     if len(rows) > 10000:
         raise ValueError("too_many_csv_observations")
+    if direction == -1:
+        rows.reverse()
     return rows
 
 
