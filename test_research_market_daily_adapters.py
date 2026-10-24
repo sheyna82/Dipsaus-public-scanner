@@ -1,6 +1,6 @@
 """Offline synthetic vendor adapter tests."""
 import unittest
-from research_market_daily_adapters import parse_tiingo_daily, parse_twelve_data_daily, parse_alpha_vantage_daily, parse_finnhub_candles
+from research_market_daily_adapters import parse_tiingo_daily, parse_twelve_data_daily, parse_alpha_vantage_daily, parse_finnhub_candles, parse_massive_daily_aggregates
 
 
 class VendorAdapterTests(unittest.TestCase):
@@ -43,6 +43,24 @@ class VendorAdapterTests(unittest.TestCase):
             parse_finnhub_candles({"s": "ok", "t": [ts(21)], "c": []})
         with self.assertRaisesRegex(ValueError, "invalid_candle_timestamp"):
             parse_finnhub_candles({"s": "ok", "t": [True], "c": [100]})
+
+    def test_massive_adjustment_mode_and_millisecond_timestamps(self):
+        from datetime import datetime, timezone
+        def millis(day):
+            return int(datetime(2026, 10, day, tzinfo=timezone.utc).timestamp() * 1000)
+        payload = {"status": "OK", "adjusted": True,
+                   "results": [{"t": millis(22), "c": 102},
+                               {"t": millis(21), "c": 100}]}
+        self.assertEqual(parse_massive_daily_aggregates(payload, adjusted=True)[0],
+                         {"date": "2026-10-21", "close": "100"})
+        with self.assertRaisesRegex(ValueError, "adjustment_mode_mismatch"):
+            parse_massive_daily_aggregates(payload, adjusted=False)
+        with self.assertRaisesRegex(ValueError, "vendor_error"):
+            parse_massive_daily_aggregates({"status": "NOT_AUTHORIZED"}, adjusted=True)
+        with self.assertRaisesRegex(ValueError, "invalid_candle_timestamp"):
+            parse_massive_daily_aggregates({"status": "OK", "adjusted": True,
+                                            "results": [{"t": True, "c": 100}]},
+                                           adjusted=True)
 
     def test_fail_closed_on_error_and_duplicate(self):
         with self.assertRaisesRegex(ValueError, "vendor_error"):
