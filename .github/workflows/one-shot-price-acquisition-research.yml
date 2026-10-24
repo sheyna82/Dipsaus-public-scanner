@@ -68,8 +68,14 @@ jobs:
                   req = Request(url, headers={"User-Agent": "DIPSAUS-research-probe/1.0"})
                   with urlopen(req, timeout=8) as response:
                       record["http_status"] = response.status
-                      sample = response.read(2048)
+                      sample = response.read(262145)
                       record["bytes_sampled"] = len(sample)
+                      if len(sample) > 262144:
+                          record["payload_class"] = "response_too_large"
+                          record["outcome"] = "unvalidated_size_limit"
+                          results.append(record)
+                          print(json.dumps(record))
+                          continue
                       record["outcome"] = "response_received_not_validated"
                       try:
                           body = json.loads(sample)
