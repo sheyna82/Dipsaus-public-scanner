@@ -29,7 +29,7 @@ def audit_event_release_timing(event_date, release_timestamp, market_close_times
         raise ValueError("release_date_mismatch")
     if release <= close:
         raise ValueError("not_after_market_close")
-    if followup <= release:
+    if followup <= release or followup.date() <= close.date():
         raise ValueError("followup_not_after_release")
     if close.date() != expected_date:
         raise ValueError("market_close_event_date_mismatch")
