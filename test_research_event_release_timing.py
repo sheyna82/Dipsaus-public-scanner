@@ -20,13 +20,19 @@ class EventTimingTests(unittest.TestCase):
         self.assertFalse(result["issuer_release_source_authenticated"])
         self.assertFalse(result["event_window_trade_ready"])
 
+    def test_midnight_utc_rollover_stays_same_new_york_event_day(self):
+        result = run(release_timestamp="2026-11-04T00:30:00Z")
+        self.assertEqual(result["exchange_timezone"], "America/New_York")
+        self.assertTrue(result["temporal_order_verified"])
+        self.assertFalse(result["issuer_release_source_authenticated"])
+
     def test_reject_before_close_and_same_day_followup(self):
         for changes, expected in (
             ({"release_timestamp": "2026-11-03T20:00:00Z"},
              "not_after_market_close"),
             ({"first_followup_close_timestamp": "2026-11-03T21:10:00Z"},
              "followup_not_after_release"),
-            ({"release_timestamp": "2026-11-04T01:00:00Z"},
+            ({"release_timestamp": "2026-11-04T06:00:00Z"},
              "release_date_mismatch"),
             ({"first_followup_close_timestamp": "2026-11-03T22:00:00Z"},
              "followup_not_after_release"),
