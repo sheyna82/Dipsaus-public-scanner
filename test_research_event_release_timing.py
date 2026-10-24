@@ -28,6 +28,8 @@ class EventTimingTests(unittest.TestCase):
              "followup_not_after_release"),
             ({"release_timestamp": "2026-11-04T01:00:00Z"},
              "release_date_mismatch"),
+            ({"first_followup_close_timestamp": "2026-11-03T22:00:00Z"},
+             "followup_not_after_release"),
             ({"market_close_timestamp": "2026-11-02T21:00:00Z"},
              "market_close_event_date_mismatch"),
         ):
