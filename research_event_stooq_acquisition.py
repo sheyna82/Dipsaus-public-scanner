@@ -99,6 +99,9 @@ def acquire_stooq_history(symbol, start, end, output_dir, *, allow_network=False
                 "source_url": url, "content_sha256": hashlib.sha256(payload).hexdigest(),
                 "row_count": len(rows), "source_authenticity_verified": False,
                 "exchange_calendar_verified": False, "trade_ready": False}
+    # Refuse overwrite: previously collected research evidence must remain immutable.
+    if (root / (filename + ".csv")).exists() or (root / (filename + ".json")).exists():
+        raise ValueError("research_evidence_already_exists")
     # Write both files through temporary paths and rename only when complete.
     # The raw CSV is never presented as independently authenticated evidence.
     csv_path = root / (filename + ".csv")
