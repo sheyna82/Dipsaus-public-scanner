@@ -25,6 +25,17 @@ class HistoricalCsvTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     parse_stooq_csv(payload)
 
+    def test_impossible_ohlc_rows_rejected(self):
+        for line in (
+            b"2026-10-20,100,99,98,101,1000\\n",
+            b"2026-10-20,100,102,101,101,1000\\n",
+            b"2026-10-20,100,102,98,-1,1000\\n",
+            b"2026-10-20,100,102,98,101,-1\\n",
+        ):
+            with self.subTest(line=line):
+                with self.assertRaisesRegex(ValueError, "invalid_csv_observation"):
+                    parse_stooq_csv(HEADER + line)
+
     def test_network_is_opt_in(self):
         with self.assertRaisesRegex(ValueError, "explicit_network_opt_in_required"):
             acquire_stooq_history("AMD", "2026-10-01", "2026-10-23", "/tmp/unused")
