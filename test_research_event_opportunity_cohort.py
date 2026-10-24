@@ -33,6 +33,27 @@ class EventCohortTests(unittest.TestCase):
         self.assertFalse(record["pre_event_snapshot_verified"])
         self.assertFalse(record["exchange_calendar_verified"])
 
+    def test_empty_evidence_not_counted_as_present(self):
+        record = build_event_study(evidence_by_symbol={
+            "AMD": {"fresh_quote": None, "price_history": [],
+                    "quote_source": ""}
+        })["records"][-1]
+        for field in ("fresh_quote", "price_history", "quote_source"):
+            self.assertIn(field, record["missing_evidence"])
+
+    def test_timestamp_requires_timezone_and_cannot_be_future(self):
+        for timestamp in ("2026-10-24T12:00:00",
+                          "2026-10-25T12:00:00Z", "not-a-date"):
+            with self.subTest(timestamp=timestamp):
+                record = build_event_study(evidence_by_symbol={
+                    "AMD": {"quote_timestamp_utc": timestamp}
+                })["records"][-1]
+                self.assertIn("quote_timestamp_utc", record["missing_evidence"])
+        record = build_event_study(evidence_by_symbol={
+            "AMD": {"quote_timestamp_utc": "2026-10-24T12:00:00Z"}
+        })["records"][-1]
+        self.assertNotIn("quote_timestamp_utc", record["missing_evidence"])
+
     def test_invalid_evidence_rejected(self):
         with self.assertRaisesRegex(ValueError, "event_evidence_must_be_mapping"):
             build_event_study(evidence_by_symbol={"AMD": [1, 2]})
