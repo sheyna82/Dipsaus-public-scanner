@@ -43,6 +43,8 @@ jobs:
           Path("research-price-probe/result.json").write_text(
               json.dumps(outcome, indent=2) + "\n", encoding="utf-8")
           print(json.dumps(outcome))
+          if outcome["status"] != "downloaded_unverified":
+              print("RESEARCH DATA NOT ACQUIRED: workflow job succeeded only as diagnostic")
           PY
       - name: Upload experiment evidence
         if: always()
