@@ -25,8 +25,7 @@ def audit_event_release_timing(event_date, release_timestamp, market_close_times
     close = parse(market_close_timestamp)
     followup = parse(first_followup_close_timestamp)
     expected_date = date.fromisoformat(event_date)
-    if release.date() not in (expected_date, expected_date.replace(day=expected_date.day)):
-        # Kept below for explicit date consistency checks.
+    if release.date() != expected_date:
         raise ValueError("release_date_mismatch")
     if release <= close:
         raise ValueError("not_after_market_close")
