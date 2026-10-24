@@ -100,7 +100,9 @@ def parse_massive_daily_aggregates(payload, *, adjusted):
         raise ValueError("adjustment_mode_required")
     if not isinstance(payload, dict) or payload.get("status") != "OK":
         raise ValueError("vendor_error")
-    if payload.get("adjusted") is not adjusted:
+    # The API request controls adjustment; responses need not echo that flag.
+    # Reject an explicit contradictory field, but never infer verification from its absence.
+    if "adjusted" in payload and payload["adjusted"] is not adjusted:
         raise ValueError("adjustment_mode_mismatch")
     bars = payload.get("results")
     if not isinstance(bars, list) or not bars:
