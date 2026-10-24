@@ -20,6 +20,25 @@ on:
       - 'test_research_event_opportunity_cohort.py'
       - 'test_company_event_watch.py'
       - '.github/workflows/test-company-events.yml'
+  pull_request:
+    paths:
+      - 'company_event_watch.py'
+      - 'safe_runner.py'
+      - 'silent_macro_context.py'
+      - 'macro_market_confirmation.py'
+      - 'macro_index_quotes.py'
+      - 'macro_risk_watch.py'
+      - 'dipsaus_unified_research.py'
+      - 'test_dipsaus_unified_research.py'
+      - 'test_macro_risk_watch.py'
+      - 'test_silent_macro_context.py'
+      - 'test_macro_market_confirmation.py'
+      - 'event_opportunity_engine.py'
+      - 'test_event_opportunity_engine.py'
+      - 'research_event_opportunity_cohort.py'
+      - 'test_research_event_opportunity_cohort.py'
+      - 'test_company_event_watch.py'
+      - '.github/workflows/test-company-events.yml'
 permissions:
   contents: read
 jobs:
