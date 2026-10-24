@@ -36,13 +36,21 @@ def parse_stooq_csv(payload):
             raise ValueError("malformed_csv_row")
         try:
             session = date.fromisoformat(row["Date"])
+            opened = Decimal(row["Open"])
+            high = Decimal(row["High"])
+            low = Decimal(row["Low"])
             close = Decimal(row["Close"])
             volume = Decimal(row["Volume"])
         except (ValueError, InvalidOperation, TypeError) as exc:
             raise ValueError("invalid_csv_observation") from exc
         if previous is not None and session <= previous:
             raise ValueError("csv_dates_not_strictly_increasing")
-        if not close.is_finite() or close <= 0 or not volume.is_finite() or volume < 0:
+        prices = (opened, high, low, close)
+        if (any(not price.is_finite() or price <= 0 for price in prices)
+                or low > min(opened, close)
+                or high < max(opened, close)
+                or low > high
+                or not volume.is_finite() or volume < 0):
             raise ValueError("invalid_csv_observation")
         rows.append({"date": session.isoformat(), "close": str(close),
                      "volume": str(volume)})
