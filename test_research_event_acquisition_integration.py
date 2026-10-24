@@ -61,6 +61,7 @@ class AcquisitionIntegrationTests(unittest.TestCase):
                                  datetime.now(timezone.utc))
             self.assertEqual(stored["retrieved_at_utc"], result["retrieved_at_utc"])
             self.assertFalse(result["trade_ready"])
+            self.assertEqual(list(Path(folder).glob("*.tmp")), [])
 
     def test_vendor_failures_are_classified_without_artifacts(self):
         for error, expected in (
