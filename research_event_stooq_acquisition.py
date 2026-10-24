@@ -90,7 +90,6 @@ def acquire_stooq_history(symbol, start, end, output_dir, *, allow_network=False
     root = Path(output_dir)
     root.mkdir(parents=True, exist_ok=True)
     filename = f"{symbol}_{start}_{end}"
-    (root / (filename + ".csv")).write_bytes(payload)
     metadata = {"symbol": symbol, "requested_start": start, "requested_end": end,
                 "retrieved_at_utc": datetime.now(timezone.utc).isoformat(),
                 "first_observation_date": rows[0]["date"],
@@ -98,5 +97,18 @@ def acquire_stooq_history(symbol, start, end, output_dir, *, allow_network=False
                 "source_url": url, "content_sha256": hashlib.sha256(payload).hexdigest(),
                 "row_count": len(rows), "source_authenticity_verified": False,
                 "exchange_calendar_verified": False, "trade_ready": False}
-    (root / (filename + ".json")).write_text(json.dumps(metadata, indent=2) + "\n")
+    # Write both files through temporary paths and rename only when complete.
+    # The raw CSV is never presented as independently authenticated evidence.
+    csv_path = root / (filename + ".csv")
+    meta_path = root / (filename + ".json")
+    csv_tmp = root / (filename + ".csv.tmp")
+    meta_tmp = root / (filename + ".json.tmp")
+    try:
+        csv_tmp.write_bytes(payload)
+        meta_tmp.write_text(json.dumps(metadata, indent=2) + "\n")
+        csv_tmp.replace(csv_path)
+        meta_tmp.replace(meta_path)
+    finally:
+        csv_tmp.unlink(missing_ok=True)
+        meta_tmp.unlink(missing_ok=True)
     return metadata
