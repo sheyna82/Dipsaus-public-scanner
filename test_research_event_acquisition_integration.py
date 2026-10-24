@@ -61,6 +61,10 @@ class AcquisitionIntegrationTests(unittest.TestCase):
                                  datetime.now(timezone.utc))
             self.assertEqual(stored["retrieved_at_utc"], result["retrieved_at_utc"])
             self.assertFalse(result["trade_ready"])
+            with patch("research_event_stooq_acquisition.urlopen", fake_open):
+                with self.assertRaisesRegex(ValueError, "research_evidence_already_exists"):
+                    acquire_stooq_history("AMD", "2026-10-20", "2026-10-21", folder,
+                                          allow_network=True)
             self.assertEqual(list(Path(folder).glob("*.tmp")), [])
 
     def test_vendor_failures_are_classified_without_artifacts(self):
