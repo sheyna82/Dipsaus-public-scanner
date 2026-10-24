@@ -23,7 +23,7 @@ jobs:
       - name: Install isolated pinned calendar and auditing tools
         run: |
           python -m pip install --upgrade pip
-          python -m pip install 'setuptools==83.0.0'
+          python -m pip install 'setuptools==84.1.0'
           python -m pip install 'exchange_calendars==4.13.2' 'pip-audit==2.9.0'
       - name: Verify published calendar wheel SHA256 and wheel metadata
         run: |
