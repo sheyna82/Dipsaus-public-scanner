@@ -87,3 +87,34 @@ def parse_finnhub_candles(payload):
             raise ValueError("invalid_candle_timestamp") from exc
         records.append({"date": session, "close": close})
     return _normalize(records, "date", "close")
+
+
+
+def parse_massive_daily_aggregates(payload, *, adjusted):
+    """Massive daily aggregates; enforce requested split-adjustment mode.
+
+    Timestamps are Unix milliseconds. This adapter does not fetch or authenticate.
+    """
+    from datetime import datetime, timezone
+    if not isinstance(adjusted, bool):
+        raise ValueError("adjustment_mode_required")
+    if not isinstance(payload, dict) or payload.get("status") != "OK":
+        raise ValueError("vendor_error")
+    if payload.get("adjusted") is not adjusted:
+        raise ValueError("adjustment_mode_mismatch")
+    bars = payload.get("results")
+    if not isinstance(bars, list) or not bars:
+        raise ValueError("missing_daily_prices")
+    records = []
+    for bar in bars:
+        if not isinstance(bar, dict):
+            raise ValueError("invalid_daily_record")
+        stamp = bar.get("t")
+        if isinstance(stamp, bool) or not isinstance(stamp, int):
+            raise ValueError("invalid_candle_timestamp")
+        try:
+            session = datetime.fromtimestamp(stamp / 1000, tz=timezone.utc).date().isoformat()
+        except (ValueError, OverflowError, OSError) as exc:
+            raise ValueError("invalid_candle_timestamp") from exc
+        records.append({"date": session, "close": bar.get("c")})
+    return _normalize(records, "date", "close")
