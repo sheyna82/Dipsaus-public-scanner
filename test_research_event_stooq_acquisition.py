@@ -13,13 +13,21 @@ class HistoricalCsvTests(unittest.TestCase):
         self.assertEqual(rows[1]["close"], "102")
         self.assertEqual(rows[0]["date"], "2026-10-20")
 
+    def test_vendor_descending_order_is_normalized(self):
+        rows = parse_stooq_csv(HEADER +
+            b"2026-10-21,101,103,100,102,1500\n" +
+            b"2026-10-20,100,102,99,101,1000\n")
+        self.assertEqual([row["date"] for row in rows],
+                         ["2026-10-20", "2026-10-21"])
+
     def test_malformed_and_unsorted_csv_rejected(self):
         for payload in (
             b"Error: data unavailable",
             HEADER,
             HEADER + b"2026-10-20,1,2,1,NaN,10\n",
             HEADER + b"2026-10-21,1,2,1,2,10\n"
-                     b"2026-10-20,1,2,1,2,10\n",
+                     b"2026-10-20,1,2,1,2,10\n"
+                     b"2026-10-22,1,2,1,2,10\n",
         ):
             with self.subTest(payload=payload):
                 with self.assertRaises(ValueError):
