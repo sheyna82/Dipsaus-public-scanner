@@ -12,6 +12,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from urllib.parse import urlencode, urlparse
 from urllib.request import urlopen
+from urllib.error import HTTPError, URLError
 
 ALLOWED_HOST = "stooq.com"
 SYMBOLS = {"TSLA", "META", "COHU", "AMZN", "PLTR", "AMD", "SPY"}
@@ -74,10 +75,15 @@ def acquire_stooq_history(symbol, start, end, output_dir, *, allow_network=False
     url = "https://stooq.com/q/d/l/?" + query
     if urlparse(url).hostname != ALLOWED_HOST:
         raise ValueError("source_host_not_allowed")
-    with urlopen(url, timeout=15) as response:
-        if urlparse(response.geturl()).hostname != ALLOWED_HOST:
-            raise ValueError("unexpected_redirect_host")
-        payload = response.read(MAX_BYTES + 1)
+    try:
+        with urlopen(url, timeout=15) as response:
+            if urlparse(response.geturl()).hostname != ALLOWED_HOST:
+                raise ValueError("unexpected_redirect_host")
+            payload = response.read(MAX_BYTES + 1)
+    except HTTPError as exc:
+        raise ValueError(f"vendor_http_error:{exc.code}") from exc
+    except URLError as exc:
+        raise ValueError("vendor_connection_unavailable") from exc
     rows = parse_stooq_csv(payload)
     if any(not start <= row["date"] <= end for row in rows):
         raise ValueError("csv_date_outside_requested_range")
