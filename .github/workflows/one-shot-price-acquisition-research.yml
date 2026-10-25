@@ -266,6 +266,28 @@ jobs:
               json.dumps(report, indent=2) + "\n")
           print(json.dumps(report))
           PY
+      - name: Test chronological holdout research module
+        run: python -m unittest -v test_research_chronological_momentum_holdout
+      - name: Evaluate chronological momentum holdout on observed prices
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_chronological_momentum_holdout import chronological_momentum_holdout
+          root = Path("research-price-probe")
+          spy = json.loads((root / "yahoo-SPY-normalized.json").read_text())
+          report = {"research_only": True, "independently_verified": False,
+                    "predictive_skill_established": False, "trade_ready": False,
+                    "results": []}
+          for symbol in ("TSLA", "META", "COHU", "AMZN", "PLTR", "AMD"):
+              stock = json.loads((root / f"yahoo-{symbol}-normalized.json").read_text())
+              result = chronological_momentum_holdout(stock, spy)
+              report["results"].append({"symbol": symbol, **result})
+          (root / "yahoo-chronological-momentum-holdout.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
       - name: Upload experiment evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
