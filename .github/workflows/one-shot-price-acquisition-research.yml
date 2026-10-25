@@ -191,6 +191,30 @@ jobs:
           if report["status"] != "computed_unverified":
               raise SystemExit("descriptive_comparison_failed")
           PY
+      - name: Calculate observed rolling forward excess returns
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_rolling_excess_returns import rolling_excess_returns
+          root = Path("research-price-probe")
+          symbols = ("TSLA", "META", "COHU", "AMZN", "PLTR", "AMD")
+          spy = json.loads((root / "yahoo-SPY-normalized.json").read_text())
+          summary = {"status": "descriptive_only", "predictive_skill_established": False,
+                     "independently_verified": False, "trade_ready": False, "symbols": {}}
+          for symbol in symbols:
+              stock = json.loads((root / f"yahoo-{symbol}-normalized.json").read_text())
+              result = rolling_excess_returns(stock, spy)
+              summary["symbols"][symbol] = {
+                  "observations": len(result["observations"]),
+                  "horizons": [1, 3, 5]}
+              (root / f"yahoo-{symbol}-rolling-excess.json").write_text(
+                  json.dumps(result, indent=2) + "\n")
+          (root / "yahoo-rolling-summary.json").write_text(
+              json.dumps(summary, indent=2) + "\n")
+          print(json.dumps(summary))
+          PY
       - name: Upload experiment evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
