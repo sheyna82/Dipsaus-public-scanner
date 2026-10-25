@@ -13,6 +13,11 @@ class DownsideEvidenceGateTests(unittest.TestCase):
         self.assertFalse(result["sample_size_sufficient"])
         self.assertFalse(result["descriptive_evidence_sufficient"])
         self.assertIn("insufficient_group_samples", result["reasons"])
+        self.assertEqual(result["additional_positive_windows_needed"],
+                         30 - result["positive_count"])
+        self.assertEqual(result["additional_negative_windows_needed"],
+                         30 - result["negative_count"])
+        self.assertTrue(result["sample_target_is_heuristic_not_power_analysis"])
         self.assertFalse(result["trade_ready"])
 
     def test_invalid_minimum(self):
