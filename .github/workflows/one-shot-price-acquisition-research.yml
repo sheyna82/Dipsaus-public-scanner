@@ -260,6 +260,37 @@ jobs:
               json.dumps(report, indent=2) + "\n")
           print(json.dumps(report))
           PY
+      - name: Summarize five-year split instability without selecting a winner
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from decimal import Decimal
+          from pathlib import Path
+          root = Path("research-price-probe")
+          source = json.loads((root / "yahoo-5y-split-sensitivity.json").read_text())
+          results = []
+          for symbol in ("COHU", "AMD", "META"):
+              rows = [r for r in source["results"] if r["symbol"] == symbol]
+              values = [Decimal(r["positive_minus_negative_excess_pp"])
+                        for r in rows if r["positive_minus_negative_excess_pp"] is not None]
+              if len(values) != 3:
+                  results.append({"symbol": symbol, "status": "insufficient_splits"})
+                  continue
+              signs = ["positive" if v > 0 else "negative" if v < 0 else "zero"
+                       for v in values]
+              results.append({"symbol": symbol, "status": "exploratory_only",
+                              "positive_minus_negative_pp": [str(v) for v in values],
+                              "signs": signs, "sign_changes_across_splits": len(set(signs)) > 1,
+                              "range_pp": str(max(values) - min(values)),
+                              "predictive_skill_established": False})
+          report = {"research_only": True, "overlapping_splits": True,
+                    "independent_validation": False, "trade_ready": False,
+                    "results": results}
+          (root / "yahoo-5y-split-stability-summary.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
       - name: Compare observed seven-symbol returns against SPY
         shell: bash
         run: |
