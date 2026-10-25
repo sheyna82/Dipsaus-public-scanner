@@ -1,6 +1,6 @@
 import unittest
 from decimal import Decimal
-from research_momentum_forward_downside import momentum_forward_downside
+from research_momentum_forward_downside import momentum_forward_downside, chronological_forward_downside
 
 
 class ForwardDownsideTests(unittest.TestCase):
@@ -25,6 +25,13 @@ class ForwardDownsideTests(unittest.TestCase):
         revised = momentum_forward_downside(changed, self.spy)
         self.assertEqual(original["observations"][0]["positive_momentum"],
                          revised["observations"][0]["positive_momentum"])
+
+    def test_chronological_downside_purges_boundary(self):
+        result = chronological_forward_downside(self.stock, self.spy)
+        self.assertEqual(result["method"], "chronological_forward_downside_diagnostic")
+        self.assertGreater(result["training"]["count"], 0)
+        self.assertGreater(result["holdout"]["count"], 0)
+        self.assertFalse(result["predictive_skill_established"])
 
     def test_invalid_horizon(self):
         with self.assertRaisesRegex(ValueError, "invalid_windows"):
