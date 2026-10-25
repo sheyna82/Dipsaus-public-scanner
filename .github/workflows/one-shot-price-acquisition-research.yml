@@ -312,6 +312,26 @@ jobs:
               json.dumps(report, indent=2) + "\n")
           print(json.dumps(report))
           PY
+      - name: Evaluate chronological forward downside cohorts
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_momentum_forward_downside import chronological_forward_downside
+          root = Path("research-price-probe")
+          spy = json.loads((root / "yahoo-SPY-normalized.json").read_text())
+          report = {"research_only": True, "independently_verified": False,
+                    "predictive_skill_established": False, "trade_ready": False,
+                    "results": []}
+          for symbol in ("TSLA", "META", "COHU", "AMZN", "PLTR", "AMD"):
+              stock = json.loads((root / f"yahoo-{symbol}-normalized.json").read_text())
+              report["results"].append({"symbol": symbol,
+                                        **chronological_forward_downside(stock, spy)})
+          (root / "yahoo-chronological-forward-downside.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
       - name: Upload experiment evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
