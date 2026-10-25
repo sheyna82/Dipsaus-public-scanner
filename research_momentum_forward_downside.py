@@ -54,6 +54,15 @@ def chronological_forward_downside(stock_rows, spy_rows, *, lookback=3, horizon=
     training = [r for r in outcome["observations"] if r["future_end_session"] < boundary]
     holdout = [r for r in outcome["observations"] if r["signal_session"] >= boundary]
     def summarize(rows):
+        def median(group):
+            values = sorted(Decimal(r["worst_forward_stock_return_pp"]) for r in group)
+            if not values:
+                return None
+            mid = len(values) // 2
+            return str(values[mid] if len(values) % 2 else
+                       (values[mid - 1] + values[mid]) / 2)
+        def minimum(group):
+            return str(min(Decimal(r["worst_forward_stock_return_pp"]) for r in group)) if group else None
         def mean(group, field):
             return (str(sum((Decimal(r[field]) for r in group), Decimal(0)) / len(group))
                     if group else None)
@@ -63,7 +72,15 @@ def chronological_forward_downside(stock_rows, spy_rows, *, lookback=3, horizon=
                 "positive_mean_worst_stock_pp": mean(
                     [r for r in rows if r["positive_momentum"]], "worst_forward_stock_return_pp"),
                 "negative_mean_worst_stock_pp": mean(
-                    [r for r in rows if not r["positive_momentum"]], "worst_forward_stock_return_pp")}
+                    [r for r in rows if not r["positive_momentum"]], "worst_forward_stock_return_pp"),
+                "positive_median_worst_stock_pp": median(
+                    [r for r in rows if r["positive_momentum"]]),
+                "negative_median_worst_stock_pp": median(
+                    [r for r in rows if not r["positive_momentum"]]),
+                "positive_worst_single_window_pp": minimum(
+                    [r for r in rows if r["positive_momentum"]]),
+                "negative_worst_single_window_pp": minimum(
+                    [r for r in rows if not r["positive_momentum"]])}
     return {"method": "chronological_forward_downside_diagnostic",
             "holdout_start": boundary, "training": summarize(training),
             "holdout": summarize(holdout),
