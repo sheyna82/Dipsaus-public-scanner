@@ -408,6 +408,8 @@ jobs:
           PY
       - name: Validate frozen prospective momentum research protocol
         run: python research_validate_prospective_protocol.py
+      - name: Test prospective signal ledger safety
+        run: python -m unittest -v test_research_prospective_signal_ledger
       - name: Compare observed seven-symbol returns against SPY
         shell: bash
         run: |
