@@ -291,6 +291,36 @@ jobs:
               json.dumps(report, indent=2) + "\n")
           print(json.dumps(report))
           PY
+      - name: Test calendar-year momentum diagnostics
+        run: python -m unittest -v test_research_calendar_year_momentum
+      - name: Evaluate five-year nonoverlapping calendar cohorts
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_calendar_year_momentum import calendar_year_momentum
+          root = Path("research-price-probe")
+          statuses = {r["symbol"]: r["status"] for r in
+                      json.loads((root / "yahoo-5y-probe-summary.json").read_text())["symbols"]}
+          report = {"research_only": True, "independently_verified": False,
+                    "predictive_skill_established": False, "trade_ready": False,
+                    "results": [], "skipped": []}
+          if statuses.get("SPY") != "normalized_unverified":
+              report["skipped"].append("SPY")
+          else:
+              spy = json.loads((root / "yahoo-5y-SPY-normalized.json").read_text())
+              for symbol in ("COHU", "AMD", "META"):
+                  if statuses.get(symbol) != "normalized_unverified":
+                      report["skipped"].append(symbol)
+                      continue
+                  stock = json.loads((root / f"yahoo-5y-{symbol}-normalized.json").read_text())
+                  report["results"].append({"symbol": symbol,
+                                            **calendar_year_momentum(stock, spy)})
+          (root / "yahoo-5y-calendar-year-momentum.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
       - name: Compare observed seven-symbol returns against SPY
         shell: bash
         run: |
