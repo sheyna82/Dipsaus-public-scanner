@@ -494,6 +494,7 @@ jobs:
           root.mkdir(parents=True, exist_ok=True)
           report = {"research_only": True, "trade_ready": False,
                     "prior_run_archive_verified": False}
+          eligible_archive_found = False
           try:
               selection = discover_previous_archive(
                   os.environ["GH_RESEARCH_REPO"],
@@ -504,6 +505,7 @@ jobs:
                   max_pages=3)
               report["selection_status"] = selection["selection_status"]
               if selection["selected_artifact_id"] is not None:
+                  eligible_archive_found = True
                   download = download_previous_archive(
                       os.environ["GH_RESEARCH_REPO"],
                       os.environ["GH_RESEARCH_TOKEN"],
@@ -523,8 +525,10 @@ jobs:
                             error=str(exc)[:180])
           (root / "result.json").write_text(json.dumps(report, indent=2) + "\n")
           print(json.dumps(report))
+          if eligible_archive_found and not report["prior_run_archive_verified"]:
+              raise SystemExit("eligible prior-run archive failed integrity restoration")
           if not report["prior_run_archive_verified"]:
-              print("PRIOR RUN ARCHIVE NOT VERIFIED; research-only diagnostic")
+              print("NO ELIGIBLE PRIOR-RUN ARCHIVE; research-only diagnostic")
           PY
       - name: Compare observed seven-symbol returns against SPY
         shell: bash
