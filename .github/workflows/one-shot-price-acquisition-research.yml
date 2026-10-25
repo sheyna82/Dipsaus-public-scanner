@@ -473,6 +473,8 @@ jobs:
         run: python -m unittest -v test_research_prospective_previous_run_selection
       - name: Test read-only prior-run GitHub artifact discovery
         run: python -m unittest -v test_research_prospective_artifact_discovery
+      - name: Test bounded prior-run GitHub artifact download
+        run: python -m unittest -v test_research_prospective_artifact_download
       - name: Compare observed seven-symbol returns against SPY
         shell: bash
         run: |
