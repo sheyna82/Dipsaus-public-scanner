@@ -406,6 +406,8 @@ jobs:
               json.dumps(report, indent=2) + "\n")
           print(json.dumps(report))
           PY
+      - name: Validate frozen prospective momentum research protocol
+        run: python research_validate_prospective_protocol.py
       - name: Compare observed seven-symbol returns against SPY
         shell: bash
         run: |
