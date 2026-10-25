@@ -288,6 +288,30 @@ jobs:
               json.dumps(report, indent=2) + "\n")
           print(json.dumps(report))
           PY
+      - name: Test forward downside research module
+        run: python -m unittest -v test_research_momentum_forward_downside
+      - name: Evaluate forward downside of momentum cohorts
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_momentum_forward_downside import momentum_forward_downside
+          root = Path("research-price-probe")
+          spy = json.loads((root / "yahoo-SPY-normalized.json").read_text())
+          report = {"research_only": True, "independently_verified": False,
+                    "predictive_skill_established": False, "trade_ready": False,
+                    "results": []}
+          for symbol in ("TSLA", "META", "COHU", "AMZN", "PLTR", "AMD"):
+              stock = json.loads((root / f"yahoo-{symbol}-normalized.json").read_text())
+              result = momentum_forward_downside(stock, spy)
+              report["results"].append({"symbol": symbol,
+                                        "positive": result["positive"],
+                                        "negative": result["negative"]})
+          (root / "yahoo-momentum-forward-downside.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
       - name: Upload experiment evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
