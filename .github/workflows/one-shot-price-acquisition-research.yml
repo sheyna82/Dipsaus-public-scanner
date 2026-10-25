@@ -469,6 +469,8 @@ jobs:
                             "cross_run_persistence_tested": False,
                             "research_only": True, "trade_ready": False}))
           PY
+      - name: Test prior-run artifact metadata selection
+        run: python -m unittest -v test_research_prospective_previous_run_selection
       - name: Compare observed seven-symbol returns against SPY
         shell: bash
         run: |
