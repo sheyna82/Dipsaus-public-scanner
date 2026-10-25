@@ -41,3 +41,32 @@ def momentum_forward_downside(stock_rows, spy_rows, *, lookback=3, horizon=3):
             "observations": result, "future_prices_used_only_as_labels": True,
             "research_only": True, "independently_verified": False,
             "predictive_skill_established": False, "trade_ready": False}
+
+
+def chronological_forward_downside(stock_rows, spy_rows, *, lookback=3, horizon=3, train_fraction=0.7):
+    """Evaluate downside in a chronological holdout, purging boundary-crossing labels."""
+    from research_chronological_momentum_holdout import chronological_momentum_holdout
+    split = chronological_momentum_holdout(stock_rows, spy_rows, lookback=lookback,
+                                           horizon=horizon, train_fraction=train_fraction)
+    boundary = split["holdout_start"]
+    outcome = momentum_forward_downside(stock_rows, spy_rows, lookback=lookback, horizon=horizon)
+    # Select non-overlapping windows separately per partition; preserve the boundary purge.
+    training = [r for r in outcome["observations"] if r["future_end_session"] < boundary]
+    holdout = [r for r in outcome["observations"] if r["signal_session"] >= boundary]
+    def summarize(rows):
+        def mean(group, field):
+            return (str(sum((Decimal(r[field]) for r in group), Decimal(0)) / len(group))
+                    if group else None)
+        return {"count": len(rows),
+                "positive_count": sum(r["positive_momentum"] for r in rows),
+                "negative_count": sum(not r["positive_momentum"] for r in rows),
+                "positive_mean_worst_stock_pp": mean(
+                    [r for r in rows if r["positive_momentum"]], "worst_forward_stock_return_pp"),
+                "negative_mean_worst_stock_pp": mean(
+                    [r for r in rows if not r["positive_momentum"]], "worst_forward_stock_return_pp")}
+    return {"method": "chronological_forward_downside_diagnostic",
+            "holdout_start": boundary, "training": summarize(training),
+            "holdout": summarize(holdout),
+            "note": "descriptive fixed-window cohort comparison; no model fitted",
+            "research_only": True, "independently_verified": False,
+            "predictive_skill_established": False, "trade_ready": False}
