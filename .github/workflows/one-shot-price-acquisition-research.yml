@@ -321,6 +321,33 @@ jobs:
               json.dumps(report, indent=2) + "\n")
           print(json.dumps(report))
           PY
+      - name: Inspect yearly momentum cohort sample sizes and stability
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from decimal import Decimal
+          from pathlib import Path
+          root = Path("research-price-probe")
+          source = json.loads((root / "yahoo-5y-calendar-year-momentum.json").read_text())
+          report = {"research_only": True, "descriptive_only": True,
+                    "predictive_skill_established": False, "trade_ready": False,
+                    "results": []}
+          for stock in source["results"]:
+              years = []
+              for year in stock["years"]:
+                  n = min(year["positive_count"], year["negative_count"])
+                  value = year["positive_minus_negative_pp"]
+                  years.append({"year": year["year"], "minimum_group_count": n,
+                                "both_groups_at_least_30": n >= 30,
+                                "positive_minus_negative_pp": value,
+                                "interpretation": "insufficient_samples" if n < 30
+                                    else "descriptive_only_not_predictive"})
+              report["results"].append({"symbol": stock["symbol"], "years": years})
+          (root / "yahoo-5y-yearly-sample-check.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
       - name: Compare observed seven-symbol returns against SPY
         shell: bash
         run: |
