@@ -424,6 +424,51 @@ jobs:
         run: python -m unittest -v test_research_prospective_archive
       - name: Test prospective archive restoration and overwrite protection
         run: python -m unittest -v test_research_prospective_archive_restore
+      - name: Build synthetic prospective archive transport fixture
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_prospective_archive import archive_ledger, verify_archive
+          root = Path("research-price-probe/prospective-transport")
+          (root / "candidates").mkdir(parents=True, exist_ok=True)
+          (root / "outcomes").mkdir(exist_ok=True)
+          (root / "candidates" / "synthetic.json").write_text(
+              json.dumps({"synthetic_data_only": True, "research_only": True,
+                          "trade_ready": False}) + "\n")
+          output = root / "synthetic-prospective-ledger.zip"
+          archive_ledger(root / "candidates", root / "outcomes", output)
+          assert verify_archive(output)["valid"]
+          PY
+      - name: Upload synthetic prospective transport fixture
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: dipsaus-prospective-transport-synthetic
+          path: research-price-probe/prospective-transport/synthetic-prospective-ledger.zip
+          if-no-files-found: error
+          retention-days: 7
+      - name: Download synthetic prospective transport fixture
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: dipsaus-prospective-transport-synthetic
+          path: research-price-probe/prospective-transport/downloaded
+      - name: Verify GitHub artifact roundtrip and restore
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_prospective_archive_restore import restore_archive
+          root = Path("research-price-probe/prospective-transport")
+          result = restore_archive(root / "downloaded" / "synthetic-prospective-ledger.zip",
+                                   root / "restored")
+          assert result["restored_files"] == 1
+          assert json.loads((root / "restored" / "candidates" / "synthetic.json").read_text())["synthetic_data_only"]
+          print(json.dumps({"github_artifact_roundtrip": True,
+                            "cross_run_persistence_tested": False,
+                            "research_only": True, "trade_ready": False}))
+          PY
       - name: Compare observed seven-symbol returns against SPY
         shell: bash
         run: |
