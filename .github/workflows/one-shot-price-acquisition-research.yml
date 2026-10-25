@@ -192,6 +192,37 @@ jobs:
           (root / "yahoo-5y-probe-summary.json").write_text(
               json.dumps(report, indent=2) + "\n")
           PY
+      - name: Compare five-year historical downside cohorts with chronological holdout
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_downside_evidence_gate import downside_evidence_gate
+          from research_chronological_momentum_holdout import chronological_momentum_holdout
+          root = Path("research-price-probe")
+          summary = json.loads((root / "yahoo-5y-probe-summary.json").read_text())
+          status = {r["symbol"]: r["status"] for r in summary["symbols"]}
+          report = {"period": "5y", "research_only": True,
+                    "independently_verified": False, "predictive_skill_established": False,
+                    "trade_ready": False, "results": [], "skipped": []}
+          if status.get("SPY") != "normalized_unverified":
+              report["skipped"].append("benchmark_unavailable")
+          else:
+              spy = json.loads((root / "yahoo-5y-SPY-normalized.json").read_text())
+              for symbol in ("COHU", "AMD", "META"):
+                  if status.get(symbol) != "normalized_unverified":
+                      report["skipped"].append(symbol)
+                      continue
+                  stock = json.loads((root / f"yahoo-5y-{symbol}-normalized.json").read_text())
+                  report["results"].append({
+                      "symbol": symbol,
+                      "momentum": chronological_momentum_holdout(stock, spy),
+                      "downside_evidence": downside_evidence_gate(stock, spy)})
+          (root / "yahoo-5y-chronological-evaluation.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
       - name: Compare observed seven-symbol returns against SPY
         shell: bash
         run: |
