@@ -215,6 +215,38 @@ jobs:
               json.dumps(summary, indent=2) + "\n")
           print(json.dumps(summary))
           PY
+      - name: Evaluate simple past-return signal on observed data
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from decimal import Decimal
+          from pathlib import Path
+          from research_past_return_signal_baseline import evaluate_past_return_signal
+          root = Path("research-price-probe")
+          spy = json.loads((root / "yahoo-SPY-normalized.json").read_text())
+          report = {"baseline": "past_relative_momentum", "lookback": 3, "horizon": 3,
+                    "in_sample_only": True, "predictive_skill_established": False,
+                    "trade_ready": False, "results": []}
+          for symbol in ("TSLA", "META", "COHU", "AMZN", "PLTR", "AMD"):
+              stock = json.loads((root / f"yahoo-{symbol}-normalized.json").read_text())
+              evaluation = evaluate_past_return_signal(stock, spy, lookback=3, horizon=3)
+              rows = evaluation["observations"]
+              positive = [row for row in rows if row["signal_positive_past_excess"]]
+              negative = [row for row in rows if not row["signal_positive_past_excess"]]
+              def mean(group):
+                  if not group:
+                      return None
+                  return str(sum(Decimal(row["future_excess_percentage_points"]) for row in group) / len(group))
+              report["results"].append({
+                  "symbol": symbol, "observations": len(rows),
+                  "positive_signals": len(positive), "negative_signals": len(negative),
+                  "mean_future_excess_positive_pp": mean(positive),
+                  "mean_future_excess_negative_pp": mean(negative)})
+          (root / "yahoo-momentum-baseline.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
       - name: Upload experiment evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
