@@ -471,6 +471,8 @@ jobs:
           PY
       - name: Test prior-run artifact metadata selection
         run: python -m unittest -v test_research_prospective_previous_run_selection
+      - name: Test read-only prior-run GitHub artifact discovery
+        run: python -m unittest -v test_research_prospective_artifact_discovery
       - name: Compare observed seven-symbol returns against SPY
         shell: bash
         run: |
