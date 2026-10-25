@@ -247,6 +247,25 @@ jobs:
               json.dumps(report, indent=2) + "\n")
           print(json.dumps(report))
           PY
+      - name: Check nonoverlapping momentum outcome windows
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_nonoverlapping_momentum import nonoverlapping_momentum_summary
+          root = Path("research-price-probe")
+          spy = json.loads((root / "yahoo-SPY-normalized.json").read_text())
+          report = {"method": "nonoverlapping_momentum", "in_sample_only": True,
+                    "predictive_skill_established": False, "trade_ready": False, "results": []}
+          for symbol in ("TSLA", "META", "COHU", "AMZN", "PLTR", "AMD"):
+              stock = json.loads((root / f"yahoo-{symbol}-normalized.json").read_text())
+              result = nonoverlapping_momentum_summary(stock, spy)
+              report["results"].append({"symbol": symbol, **result})
+          (root / "yahoo-nonoverlapping-momentum.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
       - name: Upload experiment evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
