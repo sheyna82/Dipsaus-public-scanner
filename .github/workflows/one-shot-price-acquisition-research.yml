@@ -475,6 +475,57 @@ jobs:
         run: python -m unittest -v test_research_prospective_artifact_discovery
       - name: Test bounded prior-run GitHub artifact download
         run: python -m unittest -v test_research_prospective_artifact_download
+      - name: Download and verify archive from a previous GitHub run
+        env:
+          GH_RESEARCH_TOKEN: ${{ github.token }}
+          GH_RESEARCH_REPO: ${{ github.repository }}
+          GH_RESEARCH_RUN_ID: ${{ github.run_id }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          from research_prospective_artifact_discovery import discover_previous_archive
+          from research_prospective_artifact_download import download_previous_archive
+          from research_prospective_archive_restore import restore_archive
+          root = Path("research-price-probe/previous-run-artifact-check")
+          root.mkdir(parents=True, exist_ok=True)
+          report = {"research_only": True, "trade_ready": False,
+                    "prior_run_archive_verified": False}
+          try:
+              selection = discover_previous_archive(
+                  os.environ["GH_RESEARCH_REPO"],
+                  os.environ["GH_RESEARCH_TOKEN"],
+                  int(os.environ["GH_RESEARCH_RUN_ID"]),
+                  "dipsaus-prospective-transport-synthetic",
+                  datetime.now(timezone.utc).isoformat(),
+                  max_pages=3)
+              report["selection_status"] = selection["selection_status"]
+              if selection["selected_artifact_id"] is not None:
+                  download = download_previous_archive(
+                      os.environ["GH_RESEARCH_REPO"],
+                      os.environ["GH_RESEARCH_TOKEN"],
+                      selection["selected_artifact_id"],
+                      root / "downloaded.zip")
+                  restore = restore_archive(root / "downloaded.zip", root / "restored")
+                  assert restore["restored_files"] == 1
+                  payload = json.loads(
+                      (root / "restored" / "candidates" / "synthetic.json").read_text())
+                  assert payload["synthetic_data_only"] is True
+                  report.update(prior_run_archive_verified=True,
+                                source_run_id=selection["selected_source_run_id"],
+                                artifact_id=selection["selected_artifact_id"],
+                                verified_files=download["verified_files"])
+          except Exception as exc:
+              report.update(error_type=type(exc).__name__,
+                            error=str(exc)[:180])
+          (root / "result.json").write_text(json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          if not report["prior_run_archive_verified"]:
+              print("PRIOR RUN ARCHIVE NOT VERIFIED; research-only diagnostic")
+          PY
       - name: Compare observed seven-symbol returns against SPY
         shell: bash
         run: |
