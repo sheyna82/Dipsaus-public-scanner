@@ -348,6 +348,32 @@ jobs:
               json.dumps(report, indent=2) + "\n")
           print(json.dumps(report))
           PY
+      - name: Test annual momentum outlier sensitivity
+        run: python -m unittest -v test_research_yearly_momentum_outliers
+      - name: Inspect annual momentum mean versus median and trimmed mean
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_yearly_momentum_outliers import yearly_momentum_outlier_sensitivity
+          root = Path("research-price-probe")
+          statuses = {r["symbol"]: r["status"] for r in
+                      json.loads((root / "yahoo-5y-probe-summary.json").read_text())["symbols"]}
+          report = {"research_only": True, "independently_verified": False,
+                    "trade_ready": False, "results": []}
+          if statuses.get("SPY") == "normalized_unverified":
+              spy = json.loads((root / "yahoo-5y-SPY-normalized.json").read_text())
+              for symbol in ("COHU", "AMD", "META"):
+                  if statuses.get(symbol) != "normalized_unverified":
+                      continue
+                  stock = json.loads((root / f"yahoo-5y-{symbol}-normalized.json").read_text())
+                  report["results"].append({"symbol": symbol,
+                                            **yearly_momentum_outlier_sensitivity(stock, spy)})
+          (root / "yahoo-5y-yearly-outlier-sensitivity.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
       - name: Compare observed seven-symbol returns against SPY
         shell: bash
         run: |
