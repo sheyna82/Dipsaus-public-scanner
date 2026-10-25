@@ -223,6 +223,43 @@ jobs:
               json.dumps(report, indent=2) + "\n")
           print(json.dumps(report))
           PY
+      - name: Five-year chronological split sensitivity (exploratory)
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from decimal import Decimal
+          from research_chronological_momentum_holdout import chronological_momentum_holdout
+          root = Path("research-price-probe")
+          status = {r["symbol"]: r["status"] for r in
+                    json.loads((root / "yahoo-5y-probe-summary.json").read_text())["symbols"]}
+          report = {"research_only": True, "exploratory_multiple_splits": True,
+                    "not_independent_validation": True, "trade_ready": False,
+                    "results": []}
+          if status.get("SPY") == "normalized_unverified":
+              spy = json.loads((root / "yahoo-5y-SPY-normalized.json").read_text())
+              for symbol in ("COHU", "AMD", "META"):
+                  if status.get(symbol) != "normalized_unverified":
+                      continue
+                  stock = json.loads((root / f"yahoo-5y-{symbol}-normalized.json").read_text())
+                  for fraction in (0.6, 0.7, 0.8):
+                      result = chronological_momentum_holdout(
+                          stock, spy, train_fraction=fraction)
+                      h = result["holdout"]
+                      difference = (str(Decimal(h["mean_positive_excess_pp"]) -
+                                        Decimal(h["mean_negative_excess_pp"]))
+                                    if h["mean_positive_excess_pp"] is not None and
+                                       h["mean_negative_excess_pp"] is not None else None)
+                      report["results"].append({
+                          "symbol": symbol, "train_fraction": fraction,
+                          "holdout_start": result["holdout_start"],
+                          "holdout_observations": h["observations"],
+                          "positive_minus_negative_excess_pp": difference})
+          (root / "yahoo-5y-split-sensitivity.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
       - name: Compare observed seven-symbol returns against SPY
         shell: bash
         run: |
