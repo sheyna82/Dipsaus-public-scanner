@@ -414,6 +414,8 @@ jobs:
         run: python -m unittest -v test_research_prospective_batch
       - name: Test prospective ledger immutability and replay safety
         run: python -m unittest -v test_research_prospective_ledger_writer
+      - name: Test delayed immutable prospective outcomes
+        run: python -m unittest -v test_research_prospective_outcome_writer
       - name: Compare observed seven-symbol returns against SPY
         shell: bash
         run: |
