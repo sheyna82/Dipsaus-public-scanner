@@ -151,6 +151,44 @@ jobs:
           (root / "yahoo-cohort-summary.json").write_text(
               json.dumps(results, indent=2) + "\\n", encoding="utf-8")
           PY
+      - name: Compare observed seven-symbol returns against SPY
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from decimal import Decimal
+          root = Path("research-price-probe")
+          symbols = ("TSLA", "META", "COHU", "AMZN", "PLTR", "AMD")
+          report = {"status": "descriptive_only", "predictive_skill_established": False,
+                    "independently_verified": False, "trade_ready": False, "comparisons": []}
+          try:
+              data = {}
+              for symbol in (*symbols, "SPY"):
+                  data[symbol] = json.loads((root / f"yahoo-{symbol}-normalized.json").read_text())
+              dates = sorted(set.intersection(*(set(row["date"] for row in series) for series in data.values())))
+              if len(dates) < 6:
+                  raise ValueError("fewer_than_six_shared_sessions")
+              by_symbol = {symbol: {row["date"]: Decimal(row["close"]) for row in rows}
+                           for symbol, rows in data.items()}
+              first, last = dates[0], dates[-1]
+              for symbol in symbols:
+                  stock = by_symbol[symbol]
+                  spy = by_symbol["SPY"]
+                  stock_return = (stock[last] / stock[first] - 1) * 100
+                  spy_return = (spy[last] / spy[first] - 1) * 100
+                  report["comparisons"].append({
+                      "symbol": symbol, "first_session": first, "last_session": last,
+                      "shared_sessions": len(dates),
+                      "stock_return_pct": str(stock_return),
+                      "spy_return_pct": str(spy_return),
+                      "excess_percentage_points": str(stock_return - spy_return)})
+              report["status"] = "computed_unverified"
+          except Exception as exc:
+              report.update(status="unavailable", error_type=type(exc).__name__, error=str(exc)[:180])
+          (root / "yahoo-cohort-vs-spy.json").write_text(json.dumps(report, indent=2) + "\\n")
+          print(json.dumps(report))
+          PY
       - name: Upload experiment evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
