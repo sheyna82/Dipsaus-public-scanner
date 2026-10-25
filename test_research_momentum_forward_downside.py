@@ -32,6 +32,10 @@ class ForwardDownsideTests(unittest.TestCase):
         self.assertGreater(result["training"]["count"], 0)
         self.assertGreater(result["holdout"]["count"], 0)
         self.assertFalse(result["predictive_skill_established"])
+        for period in ("training", "holdout"):
+            group = result[period]
+            self.assertLessEqual(group["positive_windows_down_5pct"], group["positive_count"])
+            self.assertLessEqual(group["negative_windows_down_5pct"], group["negative_count"])
 
     def test_invalid_horizon(self):
         with self.assertRaisesRegex(ValueError, "invalid_windows"):
