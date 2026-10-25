@@ -54,6 +54,19 @@ def chronological_forward_downside(stock_rows, spy_rows, *, lookback=3, horizon=
     training = [r for r in outcome["observations"] if r["future_end_session"] < boundary]
     holdout = [r for r in outcome["observations"] if r["signal_session"] >= boundary]
     def summarize(rows):
+        def wilson_95(events, count):
+            # Descriptive interval only: time-series events may not be independent.
+            if count == 0:
+                return None
+            from math import sqrt
+            z = 1.959963984540054
+            p = events / count
+            denominator = 1 + z * z / count
+            center = (p + z * z / (2 * count)) / denominator
+            radius = z * sqrt(p * (1 - p) / count + z * z / (4 * count * count)) / denominator
+            return {"lower": round(max(0, center - radius), 4),
+                    "upper": round(min(1, center + radius), 4),
+                    "assumes_independent_events": True}
         def median(group):
             values = sorted(Decimal(r["worst_forward_stock_return_pp"]) for r in group)
             if not values:
@@ -86,7 +99,15 @@ def chronological_forward_downside(stock_rows, spy_rows, *, lookback=3, horizon=
                     for r in rows if r["positive_momentum"]),
                 "negative_windows_down_5pct": sum(
                     Decimal(r["worst_forward_stock_return_pp"]) <= -5
-                    for r in rows if not r["positive_momentum"])}
+                    for r in rows if not r["positive_momentum"]),
+                "positive_down_5pct_wilson95": wilson_95(
+                    sum(Decimal(r["worst_forward_stock_return_pp"]) <= -5
+                        for r in rows if r["positive_momentum"]),
+                    sum(r["positive_momentum"] for r in rows)),
+                "negative_down_5pct_wilson95": wilson_95(
+                    sum(Decimal(r["worst_forward_stock_return_pp"]) <= -5
+                        for r in rows if not r["positive_momentum"]),
+                    sum(not r["positive_momentum"] for r in rows))}
     return {"method": "chronological_forward_downside_diagnostic",
             "holdout_start": boundary, "training": summarize(training),
             "holdout": summarize(holdout),
