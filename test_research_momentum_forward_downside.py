@@ -36,6 +36,13 @@ class ForwardDownsideTests(unittest.TestCase):
             group = result[period]
             self.assertLessEqual(group["positive_windows_down_5pct"], group["positive_count"])
             self.assertLessEqual(group["negative_windows_down_5pct"], group["negative_count"])
+            for sign in ("positive", "negative"):
+                interval = group[f"{sign}_down_5pct_wilson95"]
+                if interval is not None:
+                    self.assertLessEqual(0, interval["lower"])
+                    self.assertLessEqual(interval["lower"], interval["upper"])
+                    self.assertLessEqual(interval["upper"], 1)
+                    self.assertTrue(interval["assumes_independent_events"])
 
     def test_invalid_horizon(self):
         with self.assertRaisesRegex(ValueError, "invalid_windows"):
