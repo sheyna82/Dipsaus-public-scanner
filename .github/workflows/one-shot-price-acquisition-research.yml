@@ -390,6 +390,22 @@ jobs:
               json.dumps(report, indent=2) + "\n")
           print(json.dumps(report))
           PY
+      - name: Test yearly outlier evidence qualification
+        run: python -m unittest -v test_research_yearly_outlier_evidence_review
+      - name: Qualify yearly outlier findings by group size
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_yearly_outlier_evidence_review import yearly_outlier_evidence_review
+          root = Path("research-price-probe")
+          source = json.loads((root / "yahoo-5y-yearly-outlier-dependence.json").read_text())
+          report = yearly_outlier_evidence_review(source)
+          (root / "yahoo-5y-yearly-outlier-evidence-review.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
       - name: Compare observed seven-symbol returns against SPY
         shell: bash
         run: |
