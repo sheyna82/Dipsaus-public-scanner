@@ -374,6 +374,22 @@ jobs:
               json.dumps(report, indent=2) + "\n")
           print(json.dumps(report))
           PY
+      - name: Test outlier dependence classification
+        run: python -m unittest -v test_research_yearly_outlier_dependence
+      - name: Classify annual mean versus robust return disagreement
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_yearly_outlier_dependence import summarize_yearly_outlier_dependence
+          root = Path("research-price-probe")
+          source = json.loads((root / "yahoo-5y-yearly-outlier-sensitivity.json").read_text())
+          report = summarize_yearly_outlier_dependence(source)
+          (root / "yahoo-5y-yearly-outlier-dependence.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
       - name: Compare observed seven-symbol returns against SPY
         shell: bash
         run: |
