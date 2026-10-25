@@ -110,6 +110,41 @@ jobs:
           Path("research-price-probe/provider-access.json").write_text(
               json.dumps(results, indent=2) + "\n", encoding="utf-8")
           PY
+      - name: Acquire and validate actual Yahoo AMD daily observations
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from datetime import datetime, timezone
+          from pathlib import Path
+          from urllib.request import Request, urlopen
+          from research_yahoo_chart_daily import parse_yahoo_chart_daily
+          root = Path("research-price-probe")
+          url = "https://query1.finance.yahoo.com/v8/finance/chart/AMD?range=1mo&interval=1d"
+          outcome = {"provider": "yahoo_chart", "symbol": "AMD",
+                     "trade_ready": False, "source_authenticated_independently": False}
+          try:
+              with urlopen(Request(url, headers={"User-Agent": "DIPSAUS-research-probe/1.0"}), timeout=12) as response:
+                  if response.geturl().split("/")[2] != "query1.finance.yahoo.com":
+                      raise ValueError("unexpected_redirect")
+                  raw = response.read(262145)
+              if len(raw) > 262144:
+                  raise ValueError("payload_too_large")
+              rows = parse_yahoo_chart_daily(json.loads(raw), expected_symbol="AMD")
+              digest = hashlib.sha256(raw).hexdigest()
+              (root / "yahoo-amd-raw.json").write_bytes(raw)
+              (root / "yahoo-amd-normalized.json").write_text(
+                  json.dumps(rows, indent=2) + "\n", encoding="utf-8")
+              outcome.update(status="normalized_unverified", observations=len(rows),
+                             first_date=rows[0]["date"], last_date=rows[-1]["date"],
+                             raw_sha256=digest, retrieved_at_utc=datetime.now(timezone.utc).isoformat())
+          except Exception as exc:
+              outcome.update(status="failed", error_type=type(exc).__name__, error=str(exc)[:180])
+          (root / "yahoo-amd-validation.json").write_text(
+              json.dumps(outcome, indent=2) + "\n", encoding="utf-8")
+          print(json.dumps(outcome))
+          PY
       - name: Upload experiment evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
