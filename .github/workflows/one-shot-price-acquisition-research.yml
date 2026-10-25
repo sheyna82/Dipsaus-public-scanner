@@ -58,7 +58,7 @@ jobs:
               "twelve_data": "https://api.twelvedata.com/time_series?symbol=AMD&interval=1day&outputsize=5",
               "alpha_vantage": "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=AMD",
               "tiingo": "https://api.tiingo.com/tiingo/daily/amd/prices?startDate=2026-10-01&endDate=2026-10-23",
-              "yahoo_chart": "https://query1.finance.yahoo.com/v8/finance/chart/AMD?range=1mo&interval=1d",
+              "yahoo_chart": "https://query1.finance.yahoo.com/v8/finance/chart/AMD?range=1y&interval=1d",
           }
           results = []
           for name, url in targets.items():
@@ -124,7 +124,7 @@ jobs:
           symbols = ("TSLA", "META", "COHU", "AMZN", "PLTR", "AMD", "SPY")
           results = []
           for symbol in symbols:
-              url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=1mo&interval=1d"
+              url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=1y&interval=1d"
               outcome = {"provider": "yahoo_chart", "symbol": symbol,
                          "trade_ready": False, "source_authenticated_independently": False}
               try:
