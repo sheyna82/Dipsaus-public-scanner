@@ -332,6 +332,26 @@ jobs:
               json.dumps(report, indent=2) + "\n")
           print(json.dumps(report))
           PY
+      - name: Test conservative downside evidence gate
+        run: python -m unittest -v test_research_downside_evidence_gate
+      - name: Evaluate downside evidence sufficiency
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_downside_evidence_gate import downside_evidence_gate
+          root = Path("research-price-probe")
+          spy = json.loads((root / "yahoo-SPY-normalized.json").read_text())
+          report = {"research_only": True, "predictive_skill_established": False,
+                    "trade_ready": False, "results": []}
+          for symbol in ("TSLA", "META", "COHU", "AMZN", "PLTR", "AMD"):
+              stock = json.loads((root / f"yahoo-{symbol}-normalized.json").read_text())
+              report["results"].append({"symbol": symbol, **downside_evidence_gate(stock, spy)})
+          (root / "yahoo-downside-evidence-gate.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
       - name: Upload experiment evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
