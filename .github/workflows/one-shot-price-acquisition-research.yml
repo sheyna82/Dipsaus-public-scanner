@@ -138,18 +138,18 @@ jobs:
                   digest = hashlib.sha256(raw).hexdigest()
                   (root / f"yahoo-{symbol}-raw.json").write_bytes(raw)
                   (root / f"yahoo-{symbol}-normalized.json").write_text(
-                      json.dumps(rows, indent=2) + "\\n", encoding="utf-8")
+                      json.dumps(rows, indent=2) + "\n", encoding="utf-8")
                   outcome.update(status="normalized_unverified", observations=len(rows),
                                  first_date=rows[0]["date"], last_date=rows[-1]["date"],
                                  raw_sha256=digest, retrieved_at_utc=datetime.now(timezone.utc).isoformat())
               except Exception as exc:
                   outcome.update(status="failed", error_type=type(exc).__name__, error=str(exc)[:180])
               (root / f"yahoo-{symbol}-validation.json").write_text(
-                  json.dumps(outcome, indent=2) + "\\n", encoding="utf-8")
+                  json.dumps(outcome, indent=2) + "\n", encoding="utf-8")
               results.append(outcome)
               print(json.dumps(outcome))
           (root / "yahoo-cohort-summary.json").write_text(
-              json.dumps(results, indent=2) + "\\n", encoding="utf-8")
+              json.dumps(results, indent=2) + "\n", encoding="utf-8")
           PY
       - name: Compare observed seven-symbol returns against SPY
         shell: bash
@@ -186,8 +186,10 @@ jobs:
               report["status"] = "computed_unverified"
           except Exception as exc:
               report.update(status="unavailable", error_type=type(exc).__name__, error=str(exc)[:180])
-          (root / "yahoo-cohort-vs-spy.json").write_text(json.dumps(report, indent=2) + "\\n")
+          (root / "yahoo-cohort-vs-spy.json").write_text(json.dumps(report, indent=2) + "\n")
           print(json.dumps(report))
+          if report["status"] != "computed_unverified":
+              raise SystemExit("descriptive_comparison_failed")
           PY
       - name: Upload experiment evidence
         if: always()
