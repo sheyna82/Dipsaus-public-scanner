@@ -16,9 +16,9 @@ def individual_risk_at_close(rows, t, *, lookback=20):
     returns=[closes[i]/closes[i-1]-1 for i in range(1,len(closes))]
     daily_vol_pct=100*pstdev(returns)
     worst_day_pct=100*min(returns)
-    gap_pct=100*min(float(window[i]["open"])/closes[i-1]-1 for i in range(1,len(window)))
     if not all(isfinite(float(x["open"])) and float(x["open"])>0 for x in window):
         raise ValueError("invalid_open")
+    gap_pct=100*min(float(window[i]["open"])/closes[i-1]-1 for i in range(1,len(window)))
     # Pre-registered candidate thresholds, NOT fitted/validated.
     extreme=daily_vol_pct>=5 or worst_day_pct<=-10 or gap_pct<=-8
     elevated=daily_vol_pct>=3 or worst_day_pct<=-6 or gap_pct<=-5
