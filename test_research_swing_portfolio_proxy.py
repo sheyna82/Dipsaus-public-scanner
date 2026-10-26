@@ -9,6 +9,7 @@ class PortfolioProxyTests(unittest.TestCase):
     def test_cash_and_slot_limit(self):
         result=portfolio_swing_proxy(self.panel(),horizon=5,slots=3)
         self.assertLessEqual(result["max_simultaneous_positions"],3)
+        self.assertLessEqual(result["peak_committed_capital_pct"],100.0001)
         self.assertAlmostEqual(result["total_net_return_pct"],-.3,delta=1.5)
         self.assertFalse(result["trade_ready"])
 
