@@ -7,6 +7,9 @@ warning exits at the next open, with no stop order or same-bar fill.
 from math import isfinite
 from statistics import mean
 from research_swing_failure_warning import failure_warning_at_close
+from research_swing_diversified_universe import UNIVERSE_V1
+
+SECTOR_BY_SYMBOL=dict(UNIVERSE_V1)
 
 def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
                           warning_exits=False, starting_cash=21000, max_exposure_fraction=1.0):
@@ -48,6 +51,7 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
     regime_loss_days_below_4pct={"uptrend":0,"downtrend":0,"unknown":0}
     regime_loss_days_below_2pct_with_majority={"uptrend":0,"downtrend":0,"unknown":0}
     severe_day_details=[]
+    severe_day_sector_counts=[]
     worst_trade_pct=0.0
     loss_buckets={"minus_5_to_minus_8":0,"minus_8_to_minus_15":0,"below_minus_15":0}
     severe_loss_by_symbol={}
@@ -117,10 +121,15 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
             regime_loss_days_below_2pct_with_majority[regime]+=(daily_move<=-2 and majority_declining)
             regime_loss_days_below_4pct[regime]+=daily_move<=-4
             if daily_move<=-2:
+                sector_counts={}
+                for held_symbol in positions:
+                    sector=SECTOR_BY_SYMBOL.get(held_symbol,"unmapped")
+                    sector_counts[sector]=sector_counts.get(sector,0)+1
+                severe_day_sector_counts.append(sector_counts)
                 severe_day_details.append({"index":t,"equity_change_pct":round(daily_move,4),
                                            "regime":regime,"open_positions":len(positions),
                                            "declining_positions":declining if positions else 0,
-                                           "symbols":sorted(positions)})
+                                           "symbols":sorted(positions),"sector_counts":sector_counts})
             regime_worst_day[regime]=daily_move if regime_worst_day[regime] is None else min(regime_worst_day[regime],daily_move)
             (majority_day_equity_changes if majority_declining else other_day_equity_changes).append(daily_move)
         prior_equity=marked
