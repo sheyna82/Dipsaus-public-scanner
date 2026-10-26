@@ -13,6 +13,8 @@ on:
       - 'test_research_notification_signal_stage.py'
       - 'research_notification_outcome_readiness.py'
       - 'test_research_notification_outcome_readiness.py'
+      - 'research_notification_forward_returns.py'
+      - 'test_research_notification_forward_returns.py'
   pull_request:
     branches:
       - main
