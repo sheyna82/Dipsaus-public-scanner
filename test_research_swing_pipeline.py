@@ -4,7 +4,15 @@ from research_swing_pipeline import evaluate_research_batch
 
 
 def candidate(ticker, score, end=105, recorded="2026-11-02", eligible=True):
+    provenance = {"ticker": ticker, "score": score,
+                  "source_id": "synthetic-fixture", "strategy_version": "test-v1",
+                  "signal_id": "fixture-" + ticker,
+                  "score_source_available_at": recorded + "T14:00:00Z",
+                  "signal_created_at": recorded + "T14:01:00Z",
+                  "entry_at": "2026-11-02T14:05:00Z",
+                  "outcome_source_available_at": "2026-11-10T21:00:00Z"}
     return {"ticker": ticker, "score": score, "entry_price": 100,
+            "provenance": provenance,
             "daily_closes": [101, 102, 103, 104, end],
             "recorded_day": recorded, "eligible": eligible}
 
@@ -28,8 +36,20 @@ class PipelineTests(unittest.TestCase):
                                  candidate("LOW", 1, eligible=False)])
         self.assertEqual(result["ranking"]["eligible_rows"], 1)
 
+    def test_missing_provenance_rejected(self):
+        item = candidate("A", 1)
+        del item["provenance"]
+        with self.assertRaisesRegex(ValueError, "missing_candidate_provenance"):
+            self.run_batch([item])
+
+    def test_provenance_score_mismatch_rejected(self):
+        item = candidate("A", 1)
+        item["provenance"]["score"] = 2
+        with self.assertRaisesRegex(ValueError, "provenance_candidate_mismatch"):
+            self.run_batch([item])
+
     def test_future_recorded_score_rejected(self):
-        with self.assertRaisesRegex(ValueError, "score_recorded_after_entry"):
+        with self.assertRaisesRegex(ValueError, "future_information_or_invalid_order"):
             self.run_batch([candidate("A", 1, recorded="2026-11-03")])
 
     def test_invalid_outcome_order_rejected(self):
