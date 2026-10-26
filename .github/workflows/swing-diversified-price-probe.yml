@@ -164,7 +164,11 @@ jobs:
               result={'status':'computed','benchmark':{'symbol':'SPY','buy_hold_net_pct':benchmark_net_pct,'cost_assumption_bps':30,'dividends_modelled':False},'comparisons':[
                   {'horizon':h,'warning_exits':w,'exposure_cap':cap,
                    **portfolio_swing_proxy(bars,horizon=h,warning_exits=w,max_exposure_fraction=cap)}
-                  for h in (5,10,15) for w in (False,True) for cap in (.5,.75,1.0)]}
+                  for h in (5,10,15) for w in (False,True) for cap in (.5,.75,1.0)],
+                  'sector_cap_ab':[{'horizon':h,'warning_exits':w,'max_positions_per_sector':sector_cap,
+                    **portfolio_swing_proxy(bars,horizon=h,warning_exits=w,max_exposure_fraction=.5,
+                                           max_positions_per_sector=sector_cap)}
+                    for h in (10,15) for w in (False,True) for sector_cap in (None,1)]}
           except (ValueError,KeyError,FileNotFoundError) as exc:
               result={'status':'blocked','reason':type(exc).__name__+': '+str(exc)[:240]}
           result.update(research_only=True,trade_ready=False)
