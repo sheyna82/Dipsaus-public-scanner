@@ -8,6 +8,7 @@ def cohort():
     base = {
         "eligible": True, "entry_price": 100,
         "entry_open_price": 100,
+        "opening_auction_volume": 10000,
         "entry_open_timestamp": "2026-10-02T13:30:00+00:00",
         "daily_closes": [101, 102, 103, 104, 105],
         "next_opens": [101, 102, 103, 104, 105],
@@ -59,6 +60,22 @@ class GatedPortfolioBenchmarkTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "entry_price_not_next_open"):
             evaluate_gated_portfolio_benchmark(
                 x, 3500, evaluation_cutoff="2026-10-09T00:00:00+00:00")
+
+    def test_auction_volume_too_low_rejected(self):
+        x = cohort()
+        x[0]["opening_auction_volume"] = 100
+        with self.assertRaisesRegex(ValueError, "exceeds_auction_capacity"):
+            evaluate_gated_portfolio_benchmark(
+                x, 3500, max_positions=1,
+                evaluation_cutoff="2026-10-09T00:00:00+00:00")
+
+    def test_missing_selected_auction_volume_rejected(self):
+        x = cohort()
+        del x[0]["opening_auction_volume"]
+        with self.assertRaisesRegex(ValueError, "invalid_liquidity_input"):
+            evaluate_gated_portfolio_benchmark(
+                x, 3500, max_positions=1,
+                evaluation_cutoff="2026-10-09T00:00:00+00:00")
 
     def test_ineligible_cohort_rejected(self):
         x = cohort()
