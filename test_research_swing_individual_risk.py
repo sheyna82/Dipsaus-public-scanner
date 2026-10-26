@@ -15,6 +15,11 @@ class RiskTests(unittest.TestCase):
         self.assertEqual(r["risk_band"],"extreme")
         self.assertEqual(allocation_fraction(r,"screen"),0)
         self.assertEqual(allocation_fraction(r,"scaled"),0)
+    def test_invalid_open_is_rejected(self):
+        bars=[{"open":100,"close":100} for _ in range(21)]
+        bars[10]["open"]=0
+        with self.assertRaisesRegex(ValueError,"invalid_open"):
+            individual_risk_at_close(bars,20)
     def test_no_lookahead(self):
         bars=[{"open":100,"close":100} for _ in range(21)]
         first=individual_risk_at_close(bars,20)
