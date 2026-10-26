@@ -1,6 +1,11 @@
 name: DIPSAUS Europe isolated price research
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - research/offline-technical-risk-20261021
+    paths:
+      - '.github/workflows/swing-european-price-research.yml'
 permissions:
   contents: read
 jobs:
