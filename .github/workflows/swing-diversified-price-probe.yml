@@ -172,6 +172,7 @@ jobs:
                   'chronological_holdout':[
                     {'horizon':h,'warning_exits':w,'max_positions_per_sector':sector_cap,
                      'holdout_start_index':int(len(next(iter(bars.values())))*.7),
+                     'holdout_spy_buy_hold_net_pct':round(100*(benchmark_rows[-1]['close']/benchmark_rows[int(len(benchmark_rows)*.7)+1]['open']-1)-.3,4),
                      **portfolio_swing_proxy(bars,horizon=h,warning_exits=w,max_exposure_fraction=.5,
                                             max_positions_per_sector=sector_cap,
                                             entry_start_index=int(len(next(iter(bars.values())))*.7))}
