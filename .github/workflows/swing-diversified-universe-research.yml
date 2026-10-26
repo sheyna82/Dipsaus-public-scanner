@@ -8,6 +8,8 @@ on:
       - 'test_research_swing_coverage_gated_benchmark.py'
       - 'research_swing_broad_us_eu_universe.py'
       - 'test_research_swing_broad_us_eu_universe.py'
+      - 'research_swing_short_regime_gate.py'
+      - 'test_research_swing_short_regime_gate.py'
       - 'research_swing_international_candidates.py'
       - 'test_research_swing_international_candidates.py'
       - 'research_swing_historical_panel_coverage.py'
