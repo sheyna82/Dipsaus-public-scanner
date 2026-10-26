@@ -53,7 +53,7 @@ jobs:
                   if len(rows)<200:raise ValueError("insufficient_ohlcv")
                   validate_daily_rows(rows)
                   (root/(symbol+".json")).write_text(json.dumps({"instrument":instrument,"rows":rows}))
-                  record.update(status="normalized_unverified",corporate_actions_verified=False,calendar_aligned=False,listing_history_review_required=(symbol=="URW.AS"),,raw_rows=len(raw),accepted_rows=len(rows),rejected_rows=len(raw)-len(rows),first_timestamp=rows[0]["timestamp"],last_timestamp=rows[-1]["timestamp"])
+                  record.update(status="normalized_unverified",corporate_actions_verified=False,calendar_aligned=False,listing_history_review_required=(symbol=="URW.AS"),raw_rows=len(raw),accepted_rows=len(rows),rejected_rows=len(raw)-len(rows),first_timestamp=rows[0]["timestamp"],last_timestamp=rows[-1]["timestamp"])
               except Exception as exc:
                   record.update(status="unavailable",error_type=type(exc).__name__,error=str(exc)[:160])
               statuses[symbol]=record["status"];results.append(record)
