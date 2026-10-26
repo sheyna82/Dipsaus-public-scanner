@@ -54,6 +54,8 @@ def run_regime_ab_archive(path, *, costs_bps=30, step=15):
                         "mean_benchmark_net_pct":round(mean(r["benchmark_net_pct"] for r in subset),4),
                         "mean_exposure":round(mean(r["exposure"] for r in subset),4),
                         "mean_trade_mae_pct":round(mean(r["mean_mae_pct"] for r in subset),4),
+                        "mean_accepted_trade_mae_pct":round(mean(r["mean_mae_pct"] for r in subset if r["accepted"]),4) if any(r["accepted"] for r in subset) else None,
+                        "mean_rejected_trade_mae_pct":round(mean(r["mean_mae_pct"] for r in subset if not r["accepted"]),4) if any(not r["accepted"] for r in subset) else None,
                         "worst_trade_mae_pct":round(min(r["worst_mae_pct"] for r in subset),4),
                         "mean_trade_mfe_pct":round(mean(r["mean_mfe_pct"] for r in subset),4),
                         "risk_off_cohorts":sum(r["state"]=="risk_off" for r in subset),
