@@ -61,9 +61,17 @@ def compare_exit_policies(bars, *, horizon=10, step=15, round_trip_cost_bps=30):
             record.update(symbol=symbol,decision_timestamp=rows[t]["timestamp"])
             observations.append(record)
     names=("baseline","warning_exit","partial_profit")
+    cutoffs={s:sorted(x["decision_timestamp"] for x in observations if x["symbol"]==s)[int(.7*(sum(x["symbol"]==s for x in observations)-1))] for s in bars if any(x["symbol"]==s for x in observations)}
+    early=[x for x in observations if x["decision_timestamp"]<=cutoffs[x["symbol"]]]
+    late=[x for x in observations if x["decision_timestamp"]>cutoffs[x["symbol"]]]
+    def period_mean(items,name):
+        return round(mean(x[name+"_net_pct"] for x in items),4) if items else None
     return {"horizon":horizon,"observations":len(observations),
+            "early_observations":len(early),"late_observations":len(late),
             "policies":{name:{"mean_net_pct":round(mean(x[name+"_net_pct"] for x in observations),4) if observations else None,
                               "negative_outcomes":sum(x[name+"_net_pct"]<0 for x in observations),
+                              "early_mean_net_pct":period_mean(early,name),
+                              "late_mean_net_pct":period_mean(late,name),
                               "worst_net_pct":round(min(x[name+"_net_pct"] for x in observations),4) if observations else None}
                         for name in names},
             "warning_exits":sum(x["warning_exit_index"] is not None for x in observations),
