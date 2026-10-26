@@ -44,6 +44,8 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
     regime_days={"uptrend":0,"downtrend":0,"unknown":0}
     regime_negative_days={"uptrend":0,"downtrend":0,"unknown":0}
     regime_worst_day={"uptrend":None,"downtrend":None,"unknown":None}
+    regime_loss_days_below_2pct={"uptrend":0,"downtrend":0,"unknown":0}
+    regime_loss_days_below_4pct={"uptrend":0,"downtrend":0,"unknown":0}
     worst_trade_pct=0.0
     loss_buckets={"minus_5_to_minus_8":0,"minus_8_to_minus_15":0,"below_minus_15":0}
     severe_loss_by_symbol={}
@@ -109,6 +111,8 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
             negative_equity_days+=daily_move<0
             regime_daily_changes[regime].append(daily_move)
             regime_negative_days[regime]+=daily_move<0
+            regime_loss_days_below_2pct[regime]+=daily_move<=-2
+            regime_loss_days_below_4pct[regime]+=daily_move<=-4
             regime_worst_day[regime]=daily_move if regime_worst_day[regime] is None else min(regime_worst_day[regime],daily_move)
             (majority_day_equity_changes if majority_declining else other_day_equity_changes).append(daily_move)
         prior_equity=marked
@@ -142,6 +146,8 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
             "market_proxy_regime_method":"previous_close_equal_weight_20_day_return",
             "market_proxy_regime_days":regime_days,
             "market_proxy_regime_negative_days":regime_negative_days,
+            "market_proxy_regime_days_loss_2pct_or_more":regime_loss_days_below_2pct,
+            "market_proxy_regime_days_loss_4pct_or_more":regime_loss_days_below_4pct,
             "market_proxy_regime_worst_day_pct":{k:(round(v,4) if v is not None else None) for k,v in regime_worst_day.items()},
             "market_proxy_regime_mean_daily_equity_pct":{k:(round(mean(v),4) if v else None) for k,v in regime_daily_changes.items()},
             "days_with_majority_positions_declining":days_with_majority_declining,
