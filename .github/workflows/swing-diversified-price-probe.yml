@@ -168,6 +168,13 @@ jobs:
                   'sector_cap_ab':[{'horizon':h,'warning_exits':w,'max_positions_per_sector':sector_cap,
                     **portfolio_swing_proxy(bars,horizon=h,warning_exits=w,max_exposure_fraction=.5,
                                            max_positions_per_sector=sector_cap)}
+                    for h in (10,15) for w in (False,True) for sector_cap in (None,1)],
+                  'chronological_holdout':[
+                    {'horizon':h,'warning_exits':w,'max_positions_per_sector':sector_cap,
+                     'holdout_start_index':int(len(next(iter(bars.values())))*.7),
+                     **portfolio_swing_proxy(bars,horizon=h,warning_exits=w,max_exposure_fraction=.5,
+                                            max_positions_per_sector=sector_cap,
+                                            entry_start_index=int(len(next(iter(bars.values())))*.7))}
                     for h in (10,15) for w in (False,True) for sector_cap in (None,1)]}
           except (ValueError,KeyError,FileNotFoundError) as exc:
               result={'status':'blocked','reason':type(exc).__name__+': '+str(exc)[:240]}
