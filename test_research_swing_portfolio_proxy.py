@@ -44,6 +44,19 @@ class PortfolioProxyTests(unittest.TestCase):
         self.assertLess(result["mean_equity_change_majority_declining_pct"],0)
         self.assertLess(result["worst_daily_equity_move_pct"],0)
 
+    def test_market_regime_loss_buckets_are_consistent(self):
+        bars=self.panel()
+        for rows in bars.values():
+            rows[45]={"timestamp":45,"open":100,"high":101,"low":94,"close":95}
+        result=portfolio_swing_proxy(bars,horizon=15,slots=3)
+        two=result["market_proxy_regime_days_loss_2pct_or_more"]
+        four=result["market_proxy_regime_days_loss_4pct_or_more"]
+        negative=result["market_proxy_regime_negative_days"]
+        for regime in ("uptrend","downtrend","unknown"):
+            self.assertLessEqual(four[regime],two[regime])
+            self.assertLessEqual(two[regime],negative[regime])
+        self.assertGreater(sum(two.values()),0)
+
     def test_warning_exits_are_optional(self):
         bars=self.panel()
         bars["A"][26]={"timestamp":26,"open":92,"high":93,"low":88,"close":90}
