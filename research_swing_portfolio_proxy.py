@@ -9,10 +9,10 @@ from statistics import mean
 from research_swing_failure_warning import failure_warning_at_close
 
 def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
-                          warning_exits=False, starting_cash=21000):
+                          warning_exits=False, starting_cash=21000, max_exposure_fraction=1.0):
     if horizon not in (5,10,15) or type(slots) is not int or not 1<=slots<=6:
         raise ValueError("invalid_parameters")
-    if not 0<=round_trip_cost_bps<=1000 or starting_cash<=0:
+    if not 0<=round_trip_cost_bps<=1000 or starting_cash<=0 or not 0<max_exposure_fraction<=1:
         raise ValueError("invalid_cost_or_cash")
     if not bars or len({tuple(r["timestamp"] for r in rows) for rows in bars.values()})!=1:
         raise ValueError("unaligned_panel")
@@ -47,7 +47,9 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
                                "reason":order["reason"]})
             elif order["side"]=="buy" and symbol not in positions and len(positions)<slots:
                 # Fixed slots: reserve at most 1/slots of starting capital.
-                budget=min(starting_cash/slots,cash)
+                committed=sum(p["capital"] for p in positions.values())
+                budget=min(starting_cash/slots,cash,
+                           max(0,starting_cash*max_exposure_fraction-committed))
                 if budget>0:
                     shares=budget/(price*(1+round_trip_cost_bps/20000))
                     positions[symbol]={"shares":shares,"capital":budget,"entry_index":t,
@@ -86,6 +88,7 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
             "completed_trades":len(trades),"open_positions_at_end":len(positions),
             "max_simultaneous_positions":max_open,
             "peak_committed_capital_pct":round(100*peak_invested/starting_cash,4),
+            "max_exposure_fraction":max_exposure_fraction,
             "warning_exit_trades":sum(x["reason"]=="warning" for x in trades),
             "severe_completed_losses":sum(x["net_pct"]<=-8 for x in trades),
             "research_only":True,"trade_ready":False,"edge_proven":False,
