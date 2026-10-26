@@ -33,6 +33,9 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
     trades=[]
     equity=[]
     max_open=0
+    worst_daily_equity_move_pct=0.0
+    negative_equity_days=0
+    prior_equity=None
     worst_trade_pct=0.0
     loss_buckets={"minus_5_to_minus_8":0,"minus_8_to_minus_15":0,"below_minus_15":0}
     severe_loss_by_symbol={}
@@ -76,6 +79,11 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
         peak_invested=max(peak_invested,sum(p["capital"] for p in positions.values()))
         marked=cash+sum(p["shares"]*bars[s][t]["close"] for s,p in positions.items())
         equity.append(marked)
+        if prior_equity is not None:
+            daily_move=100*(marked/prior_equity-1)
+            worst_daily_equity_move_pct=min(worst_daily_equity_move_pct,daily_move)
+            negative_equity_days+=daily_move<0
+        prior_equity=marked
         if t==n-1:
             break
         for s,p in list(positions.items()):
@@ -101,6 +109,8 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
     return {"initial_cash":starting_cash,"final_equity":round(final_equity,2),
             "total_net_return_pct":round(100*(final_equity/starting_cash-1),4),
             "max_mark_to_market_drawdown_pct":round(worst_drawdown,4),
+            "worst_daily_equity_move_pct":round(worst_daily_equity_move_pct,4),
+            "negative_equity_days":negative_equity_days,
             "completed_trades":len(trades),"open_positions_at_end":len(positions),
             "max_simultaneous_positions":max_open,
             "peak_committed_capital_pct":round(100*peak_invested/starting_cash,4),
