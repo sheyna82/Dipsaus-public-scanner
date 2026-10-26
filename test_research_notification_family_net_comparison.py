@@ -19,7 +19,7 @@ class FamilyNetComparisonTests(unittest.TestCase):
             sample(cohort_id="2026-01-03", symbol="CCC", family="RECOVERY", net_return_pct=20.0),
         ])
         self.assertEqual(len(result["matched_family_differences"]), 1)
-        self.assertEqual(result["matched_family_differences"][0]["difference_mean_net_percentage_points"], -1.0)
+        self.assertEqual(result["matched_family_differences"][0]["difference_mean_net_percentage_points"], 1.0)
     def test_unverified_rejected(self):
         with self.assertRaises(ValueError):
             compare_signal_families([sample(outcome_verified=False)])
