@@ -70,6 +70,18 @@ class PortfolioProxyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"unmapped_sector"):
             portfolio_swing_proxy(self.panel(),max_positions_per_sector=1)
 
+    def test_delayed_entry_starts_after_holdout_boundary(self):
+        bars=self.panel()
+        early=portfolio_swing_proxy(bars,horizon=10,slots=3)
+        late=portfolio_swing_proxy(bars,horizon=10,slots=3,entry_start_index=55)
+        self.assertEqual(late["entry_start_index"],55)
+        self.assertLess(late["completed_trades"],early["completed_trades"])
+        self.assertGreater(late["completed_trades"],0)
+
+    def test_invalid_delayed_entry_rejected(self):
+        with self.assertRaisesRegex(ValueError,"invalid_entry_start_index"):
+            portfolio_swing_proxy(self.panel(),entry_start_index=75)
+
     def test_warning_exits_are_optional(self):
         bars=self.panel()
         bars["A"][26]={"timestamp":26,"open":92,"high":93,"low":88,"close":90}
