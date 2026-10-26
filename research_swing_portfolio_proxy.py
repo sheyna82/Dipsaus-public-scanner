@@ -27,6 +27,7 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
             if bar["low"]>min(bar["open"],bar["close"]) or bar["high"]<max(bar["open"],bar["close"]):
                 raise ValueError("inconsistent_ohlc")
     cash=float(starting_cash)
+    peak_invested=0
     positions={}
     pending=[]
     trades=[]
@@ -54,6 +55,7 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
                     cash-=budget
         pending=[]
         max_open=max(max_open,len(positions))
+        peak_invested=max(peak_invested,sum(p["capital"] for p in positions))
         marked=cash+sum(p["shares"]*bars[s][t]["close"] for s,p in positions.items())
         equity.append(marked)
         if t==n-1:
@@ -83,6 +85,7 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
             "max_mark_to_market_drawdown_pct":round(worst_drawdown,4),
             "completed_trades":len(trades),"open_positions_at_end":len(positions),
             "max_simultaneous_positions":max_open,
+            "peak_committed_capital_pct":round(100*peak_invested/starting_cash,4),
             "warning_exit_trades":sum(x["reason"]=="warning" for x in trades),
             "severe_completed_losses":sum(x["net_pct"]<=-8 for x in trades),
             "research_only":True,"trade_ready":False,"edge_proven":False,
