@@ -5,6 +5,7 @@ The benchmark must use next-session-open fills; legacy same-close execution
 is intentionally inaccessible through this entrypoint. Research only.
 """
 from research_swing_timestamp_gated_pipeline import evaluate_timestamp_gated_batch
+from research_swing_entry_open_gate import validate_next_open_entries
 from research_swing_portfolio_benchmark import compare_portfolio_rankings
 
 
@@ -18,6 +19,8 @@ def evaluate_gated_portfolio_benchmark(candidates, capital, *,
         raise ValueError("invalid_candidate")
     if any(candidate.get("eligible") is not True for candidate in candidates):
         raise ValueError("ineligible_candidate_in_gated_cohort")
+    # Validate the complete cohort before allowing any portfolio P&L.
+    validate_next_open_entries(candidates)
     def evaluate(verified):
         return compare_portfolio_rankings(
             verified, capital, execution_model="next_session_open",
