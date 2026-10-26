@@ -13,13 +13,14 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run isolated manifest tests
-        run: python -m unittest -v test_research_swing_european_universe
+        run: python -m unittest -v test_research_swing_european_universe test_research_swing_european_data_gates
       - name: Retrieve European daily OHLCV research data
         run: |
           python - <<'PY'
           import json,time,urllib.request
           from pathlib import Path
           from research_swing_european_universe import european_manifest,audit_european_coverage
+          from research_swing_european_data_gates import validate_daily_rows
           m=european_manifest()
           instruments=m["symbols"]+m["benchmarks"]
           root=Path("europe-price-probe");root.mkdir(exist_ok=True)
@@ -37,9 +38,10 @@ jobs:
                   for ts,o,h,l,c,v in raw:
                       if None in (ts,o,h,l,c) or not (0<l<=min(o,c)<=max(o,c)<=h):continue
                       rows.append({"timestamp":ts,"open":o,"high":h,"low":l,"close":c,"volume":v})
-                  if len(rows)<200 or len({r["timestamp"] for r in rows})!=len(rows):raise ValueError("insufficient_or_duplicate_ohlcv")
+                  if len(rows)<200:raise ValueError("insufficient_ohlcv")
+                  validate_daily_rows(rows)
                   (root/(symbol+".json")).write_text(json.dumps({"instrument":instrument,"rows":rows}))
-                  record.update(status="normalized_unverified",raw_rows=len(raw),accepted_rows=len(rows),rejected_rows=len(raw)-len(rows),first_timestamp=rows[0]["timestamp"],last_timestamp=rows[-1]["timestamp"])
+                  record.update(status="normalized_unverified",corporate_actions_verified=False,calendar_aligned=False,raw_rows=len(raw),accepted_rows=len(rows),rejected_rows=len(raw)-len(rows),first_timestamp=rows[0]["timestamp"],last_timestamp=rows[-1]["timestamp"])
               except Exception as exc:
                   record.update(status="unavailable",error_type=type(exc).__name__,error=str(exc)[:160])
               statuses[symbol]=record["status"];results.append(record)
