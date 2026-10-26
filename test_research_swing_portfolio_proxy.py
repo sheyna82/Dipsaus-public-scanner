@@ -34,6 +34,16 @@ class PortfolioProxyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"inconsistent_ohlc"):
             portfolio_swing_proxy(bars)
 
+    def test_simultaneous_decline_severity_is_measured(self):
+        bars=self.panel()
+        for rows in bars.values():
+            rows[30]={"timestamp":30,"open":100,"high":101,"low":94,"close":95}
+        result=portfolio_swing_proxy(bars,horizon=15,slots=3)
+        self.assertGreater(result["days_with_majority_positions_declining"],0)
+        self.assertLess(result["worst_equity_change_majority_declining_pct"],0)
+        self.assertLess(result["mean_equity_change_majority_declining_pct"],0)
+        self.assertLess(result["worst_daily_equity_move_pct"],0)
+
     def test_warning_exits_are_optional(self):
         bars=self.panel()
         bars["A"][26]={"timestamp":26,"open":92,"high":93,"low":88,"close":90}
