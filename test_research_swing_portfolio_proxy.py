@@ -57,6 +57,19 @@ class PortfolioProxyTests(unittest.TestCase):
             self.assertLessEqual(two[regime],negative[regime])
         self.assertGreater(sum(two.values()),0)
 
+    def test_sector_cap_restricts_correlated_entries(self):
+        symbols=("AMD","META","XOM","CVX","KO","PG","JPM","BAC")
+        bars={s:[{"timestamp":i,"open":100,"high":101,"low":99,"close":100}
+                 for i in range(75)] for s in symbols}
+        result=portfolio_swing_proxy(bars,horizon=10,slots=6,max_positions_per_sector=1)
+        self.assertLessEqual(result["peak_same_sector_positions"],1)
+        self.assertEqual(result["max_positions_per_sector"],1)
+        self.assertGreater(result["completed_trades"],0)
+
+    def test_sector_cap_requires_known_sector(self):
+        with self.assertRaisesRegex(ValueError,"unmapped_sector"):
+            portfolio_swing_proxy(self.panel(),max_positions_per_sector=1)
+
     def test_warning_exits_are_optional(self):
         bars=self.panel()
         bars["A"][26]={"timestamp":26,"open":92,"high":93,"low":88,"close":90}
