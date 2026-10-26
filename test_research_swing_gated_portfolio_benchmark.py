@@ -7,6 +7,8 @@ from research_swing_gated_portfolio_benchmark import evaluate_gated_portfolio_be
 def cohort():
     base = {
         "eligible": True, "entry_price": 100,
+        "entry_open_price": 100,
+        "entry_open_timestamp": "2026-10-02T13:30:00+00:00",
         "daily_closes": [101, 102, 103, 104, 105],
         "next_opens": [101, 102, 103, 104, 105],
         "score_available_at": "2026-10-01T18:00:00+00:00",
@@ -50,6 +52,13 @@ class GatedPortfolioBenchmarkTests(unittest.TestCase):
             evaluate_gated_portfolio_benchmark(
                 cohort(), 3500, evaluation_cutoff="2026-10-09T00:00:00+00:00",
                 execution_model="close_optimistic_legacy")
+
+    def test_entry_price_mismatch_rejected(self):
+        x = cohort()
+        x[0]["entry_open_price"] = 110
+        with self.assertRaisesRegex(ValueError, "entry_price_not_next_open"):
+            evaluate_gated_portfolio_benchmark(
+                x, 3500, evaluation_cutoff="2026-10-09T00:00:00+00:00")
 
     def test_ineligible_cohort_rejected(self):
         x = cohort()
