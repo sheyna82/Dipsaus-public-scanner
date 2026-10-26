@@ -11,6 +11,8 @@ on:
       - 'test_research_notification_pre_signal_metrics.py'
       - 'research_notification_signal_stage.py'
       - 'test_research_notification_signal_stage.py'
+      - 'research_notification_outcome_readiness.py'
+      - 'test_research_notification_outcome_readiness.py'
   pull_request:
     branches:
       - main
@@ -29,7 +31,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Verify notification research modules
-        run: python -m unittest -v test_research_notification_signal_cases test_research_notification_forward_returns test_research_notification_relative_performance test_research_notification_coverage_audit test_research_notification_pre_signal_metrics test_research_notification_signal_stage
+        run: python -m unittest -v test_research_notification_signal_cases test_research_notification_forward_returns test_research_notification_relative_performance test_research_notification_coverage_audit test_research_notification_pre_signal_metrics test_research_notification_signal_stage test_research_notification_outcome_readiness
       - name: Acquire historical price observations without execution claims
         run: |
           python - <<'PY'
@@ -81,6 +83,13 @@ jobs:
           for metric in metrics:
               stages.append({"symbol":metric["symbol"],"family":metric["family"],**classify_stage(metric)})
           (root/"signal-stage-hypotheses.json").write_text(json.dumps(stages,indent=2))
+          from research_notification_outcome_readiness import outcome_readiness
+          maturity=[]
+          for case in CASES_2026_10_26:
+              payload=payloads.get(case.symbol)
+              maturity.append({"symbol":case.symbol,**outcome_readiness("2026-10-26",payload["bars"] if payload else [])})
+          (root/"outcome-readiness.json").write_text(json.dumps(maturity,indent=2))
+          print("NOTIFICATION_OUTCOME_READINESS",json.dumps(maturity),flush=True)
           print("NOTIFICATION_SIGNAL_STAGE_HYPOTHESES",json.dumps(stages),flush=True)
           print("NOTIFICATION_PRE_SIGNAL_METRICS",json.dumps(metrics),flush=True)
           print("NOTIFICATION_COVERAGE_AUDIT",json.dumps(audit),flush=True)
