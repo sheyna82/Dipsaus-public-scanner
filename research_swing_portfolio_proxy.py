@@ -16,7 +16,9 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
                           max_positions_per_sector=None, entry_start_index=20, slippage_bps=0, warning_policy="all"):
     if horizon not in (5,10,15) or type(slots) is not int or not 1<=slots<=6:
         raise ValueError("invalid_parameters")
-    if warning_policy not in ("all","severe_only","breakdown_only"):\n        raise ValueError("invalid_warning_policy")\n    if not 0<=round_trip_cost_bps<=1000 or not 0<=slippage_bps<=500 or starting_cash<=0 or not 0<max_exposure_fraction<=1:
+    if warning_policy not in ("all","severe_only","breakdown_only"):
+        raise ValueError("invalid_warning_policy")
+    if not 0<=round_trip_cost_bps<=1000 or not 0<=slippage_bps<=500 or starting_cash<=0 or not 0<max_exposure_fraction<=1:
         raise ValueError("invalid_cost_or_cash")
     if max_positions_per_sector is not None and (type(max_positions_per_sector) is not int or not 1<=max_positions_per_sector<=slots):
         raise ValueError("invalid_sector_cap")
