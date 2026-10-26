@@ -6,6 +6,8 @@ on:
     paths:
       - 'research_notification_signal_cases.py'
       - 'test_research_notification_signal_cases.py'
+      - 'research_notification_forward_returns.py'
+      - 'test_research_notification_forward_returns.py'
       - '.github/workflows/swing-notification-case-research.yml'
   pull_request:
     branches:
@@ -27,6 +29,6 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run notification case tests
-        run: python -m unittest -v test_research_notification_signal_cases
+        run: python -m unittest -v test_research_notification_signal_cases test_research_notification_forward_returns
       - name: Print research readiness audit
         run: python -c "import json; from research_notification_signal_cases import audit_cases; print(json.dumps(audit_cases(), indent=2))"
