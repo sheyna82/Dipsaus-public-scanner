@@ -7,6 +7,8 @@ on:
       - 'research_swing_diversified_universe.py'
       - 'research_swing_intratrade_excursion.py'
       - 'test_research_swing_intratrade_excursion.py'
+      - 'research_swing_warning_component_ablation.py'
+      - 'test_research_swing_warning_component_ablation.py'
       - 'research_swing_failure_warning_evaluation.py'
       - 'test_research_swing_failure_warning_evaluation.py'
       - 'research_swing_failure_warning.py'
@@ -103,6 +105,24 @@ jobs:
               result={'status':'blocked','reason':type(exc).__name__+': '+str(exc)[:240],'research_only':True}
           (root/'warning-evaluation.json').write_text(json.dumps(result,indent=2))
           print('WARNING_EVAL',json.dumps(result))
+          PY
+      - name: Compare individual warning components
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_swing_warning_component_ablation import evaluate_warning_components
+          root=Path('diversified-price-probe')
+          try:
+              coverage=json.loads((root/'coverage.json').read_text())
+              symbols=[x['symbol'] for x in coverage['manifest']['symbols']]
+              bars={s:json.loads((root/(s+'.json')).read_text())['rows'] for s in symbols}
+              result={'status':'computed','summary':[evaluate_warning_components(bars,horizon=h,step=15) for h in (5,10,15)]}
+          except (ValueError,KeyError,FileNotFoundError) as exc:
+              result={'status':'blocked','reason':type(exc).__name__+': '+str(exc)[:240]}
+          result.update(research_only=True,trade_ready=False)
+          (root/'warning-components.json').write_text(json.dumps(result,indent=2))
+          print('WARNING_COMPONENTS',json.dumps(result))
           PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
