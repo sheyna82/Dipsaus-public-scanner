@@ -9,6 +9,8 @@ class WarningEvaluationTests(unittest.TestCase):
         self.assertEqual(r["fn"],0)
         self.assertEqual(r["tn"],3)
         self.assertIsNone(r["precision"])
+        self.assertEqual(r["event_base_rate"],0)
+        self.assertIsNone(r["precision_lift_vs_base_rate"])
     def test_warning_before_future_drawdown(self):
         rows=[{"timestamp":i,"open":100,"high":101,"low":99,"close":100} for i in range(40)]
         rows[20]={"timestamp":20,"open":99,"high":100,"low":90,"close":91}
