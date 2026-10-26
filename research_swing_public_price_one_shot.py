@@ -11,6 +11,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 from research_swing_ohlcv_csv_ingest import load_verified_ohlcv_csv
+from research_swing_price_probe_status import classify_price_probe_error
 
 ALLOWED_SYMBOLS = frozenset({"aapl.us", "msft.us", "spy.us"})
 
@@ -25,8 +26,12 @@ def download_once(symbol, destination, *, allow_network=False, opener=urlopen):
         raise ValueError("destination_already_exists")
     url = "https://stooq.com/q/d/l/?" + urlencode({"s": symbol, "i": "d"})
     request = Request(url, headers={"User-Agent": "DIPSAUS-research/0.1"})
-    with opener(request, timeout=15) as response:
-        data = response.read(2_000_001)
+    try:
+        with opener(request, timeout=15) as response:
+            data = response.read(2_000_001)
+    except (OSError, TimeoutError) as exc:
+        classification = classify_price_probe_error(exc)
+        raise ValueError('provider_probe_failed:' + classification['status']) from exc
     if len(data) > 2_000_000 or not data:
         raise ValueError("empty_or_oversized_response")
     # Stooq uses Date,Open,High,Low,Close,Volume; normalize only the header
