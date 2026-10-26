@@ -93,6 +93,17 @@ class PortfolioProxyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"invalid_entry_start_index"):
             portfolio_swing_proxy(self.panel(),entry_start_index=75)
 
+    def test_selective_warning_policies_are_supported(self):
+        bars=self.panel()
+        for policy in ("all","severe_only","breakdown_only"):
+            result=portfolio_swing_proxy(bars,horizon=10,warning_exits=True,
+                                         warning_policy=policy)
+            self.assertEqual(result["warning_policy"],policy)
+
+    def test_unknown_warning_policy_rejected(self):
+        with self.assertRaisesRegex(ValueError,"invalid_warning_policy"):
+            portfolio_swing_proxy(self.panel(),warning_policy="optimized")
+
     def test_warning_exits_are_optional(self):
         bars=self.panel()
         bars["A"][26]={"timestamp":26,"open":92,"high":93,"low":88,"close":90}
