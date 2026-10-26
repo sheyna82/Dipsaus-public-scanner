@@ -41,7 +41,7 @@ jobs:
                   dates=item["timestamp"]
                   rows=[{"timestamp":ts,"open":o,"high":h,"low":l,"close":c,"volume":v}
                         for ts,o,h,l,c,v in zip(dates,q["open"],q["high"],q["low"],q["close"],q["volume"])
-                        if None not in (o,h,l,c) and o>0 and h>0 and l>0 and c>0 and l>=max(o,c) and h>=max(o,c)]
+                        if None not in (o,h,l,c) and o>0 and h>0 and l>0 and c>0 and l<=min(o,c) and h>=max(o,c)]
                   if len(rows)<200:
                       raise ValueError("insufficient_valid_ohlcv")
                   (root/(symbol+".json")).write_text(json.dumps({"symbol":symbol,"rows":rows}))
