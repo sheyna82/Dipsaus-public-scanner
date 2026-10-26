@@ -169,6 +169,14 @@ jobs:
                     **portfolio_swing_proxy(bars,horizon=h,warning_exits=w,max_exposure_fraction=.5,
                                            max_positions_per_sector=sector_cap)}
                     for h in (10,15) for w in (False,True) for sector_cap in (None,1)],
+                  'slippage_stress':[
+                    {'slippage_bps_per_side':slip,
+                     'horizon':15,'warning_exits':True,'max_positions_per_sector':1,
+                     **portfolio_swing_proxy(bars,horizon=15,warning_exits=True,
+                                            max_exposure_fraction=.5,
+                                            max_positions_per_sector=1,
+                                            slippage_bps=slip)}
+                    for slip in (0,5,10,20,40)],
                   'chronological_holdout':[
                     {'horizon':h,'warning_exits':w,'max_positions_per_sector':sector_cap,
                      'holdout_start_index':int(len(next(iter(bars.values())))*.7),
