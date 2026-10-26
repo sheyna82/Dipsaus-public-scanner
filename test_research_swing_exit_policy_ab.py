@@ -29,6 +29,16 @@ class ExitPolicyTests(unittest.TestCase):
         self.assertEqual(result["partial_profit_exit_index"],23)
         self.assertAlmostEqual(result["partial_profit_net_pct"],1.7)
 
+    def test_severe_loss_and_median_are_reported(self):
+        rows=self.bars()
+        rows[30]={"timestamp":30,"open":80,"high":81,"low":79,"close":80}
+        result=compare_exit_policies({"A":rows},horizon=10,step=15)
+        baseline=result["policies"]["baseline"]
+        self.assertIn("median_net_pct",baseline)
+        self.assertGreaterEqual(baseline["loss_worse_than_8pct"],1)
+        self.assertFalse(result["portfolio_overlap_modelled"])
+        self.assertFalse(result["universe_selection_modelled"])
+
     def test_comparison_requires_nonoverlap(self):
         with self.assertRaises(ValueError):
             compare_exit_policies({"A":self.bars()},horizon=10,step=5)
