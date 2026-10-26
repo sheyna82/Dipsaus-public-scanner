@@ -12,11 +12,16 @@ from research_swing_diversified_universe import UNIVERSE_V1
 SECTOR_BY_SYMBOL=dict(UNIVERSE_V1)
 
 def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
-                          warning_exits=False, starting_cash=21000, max_exposure_fraction=1.0):
+                          warning_exits=False, starting_cash=21000, max_exposure_fraction=1.0,
+                          max_positions_per_sector=None):
     if horizon not in (5,10,15) or type(slots) is not int or not 1<=slots<=6:
         raise ValueError("invalid_parameters")
     if not 0<=round_trip_cost_bps<=1000 or starting_cash<=0 or not 0<max_exposure_fraction<=1:
         raise ValueError("invalid_cost_or_cash")
+    if max_positions_per_sector is not None and (type(max_positions_per_sector) is not int or not 1<=max_positions_per_sector<=slots):
+        raise ValueError("invalid_sector_cap")
+    if max_positions_per_sector is not None and any(s not in SECTOR_BY_SYMBOL for s in bars):
+        raise ValueError("unmapped_sector")
     if not bars or len({tuple(r["timestamp"] for r in rows) for rows in bars.values()})!=1:
         raise ValueError("unaligned_panel")
     n=len(next(iter(bars.values())))
@@ -36,6 +41,7 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
     trades=[]
     equity=[]
     max_open=0
+    peak_same_sector_positions=0
     worst_daily_equity_move_pct=0.0
     negative_equity_days=0
     prior_equity=None
@@ -92,6 +98,11 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
                     cash-=budget
         pending=[]
         max_open=max(max_open,len(positions))
+        sector_occupancy={}
+        for held in positions:
+            sector=SECTOR_BY_SYMBOL.get(held,"unmapped")
+            sector_occupancy[sector]=sector_occupancy.get(sector,0)+1
+        peak_same_sector_positions=max(peak_same_sector_positions,*sector_occupancy.values()) if sector_occupancy else peak_same_sector_positions
         peak_invested=max(peak_invested,sum(p["capital"] for p in positions.values()))
         marked=cash+sum(p["shares"]*bars[s][t]["close"] for s,p in positions.items())
         equity.append(marked)
@@ -145,8 +156,15 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
         if free_slots>0:
             ranked=sorted(((bars[s][t]["close"]/bars[s][t-20]["close"]-1,s)
                            for s in bars if s not in positions),reverse=True)
-            for _,s in ranked[:free_slots]:
+            planned_sector_counts=dict(sector_occupancy)
+            for _,s in ranked:
+                if sum(order["side"]=="buy" for order in pending)>=free_slots:
+                    break
+                sector=SECTOR_BY_SYMBOL.get(s,"unmapped")
+                if max_positions_per_sector is not None and planned_sector_counts.get(sector,0)>=max_positions_per_sector:
+                    continue
                 pending.append({"side":"buy","symbol":s,"reason":"momentum"})
+                planned_sector_counts[sector]=planned_sector_counts.get(sector,0)+1
     # Mark remaining positions at final close, with estimated sell cost.
     final_equity=cash+sum(p["shares"]*bars[s][-1]["close"]*(1-round_trip_cost_bps/20000)
                           for s,p in positions.items())
@@ -176,6 +194,8 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
             "worst_declining_position_breadth":worst_breadth_day,
             "completed_trades":len(trades),"open_positions_at_end":len(positions),
             "max_simultaneous_positions":max_open,
+            "max_positions_per_sector":max_positions_per_sector,
+            "peak_same_sector_positions":peak_same_sector_positions,
             "peak_committed_capital_pct":round(100*peak_invested/starting_cash,4),
             "max_exposure_fraction":max_exposure_fraction,
             "warning_exit_trades":sum(x["reason"]=="warning" for x in trades),
