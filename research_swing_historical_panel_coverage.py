@@ -37,8 +37,15 @@ def audit_historical_panel(universe, benchmark_symbols, histories, *, min_sessio
         rows.append({"symbol": symbol, "status": "sufficient_length_unverified" if len(dates) >= min_sessions else "insufficient_history",
                      "sessions": len(dates)})
     complete = all(row["status"] == "sufficient_length_unverified" for row in rows)
+    date_sets = {symbol: {date.fromisoformat(bar["date"]) for bar in histories[symbol]}
+                 for symbol in required if symbol in histories}
+    common_sessions = set.intersection(*date_sets.values()) if len(date_sets) == len(required) else set()
+    aligned_length_sufficient = complete and len(common_sessions) >= min_sessions
     return {"research_only": True, "trade_ready": False,
             "all_symbols_present": all(row["status"] != "missing" for row in rows),
-            "length_coverage_complete": complete, "source_provenance_verified": False,
+            "length_coverage_complete": complete,
+            "common_session_count": len(common_sessions),
+            "aligned_length_sufficient": aligned_length_sufficient,
+            "source_provenance_verified": False,
             "survivorship_bias_eliminated": False, "historical_profitability_established": False,
             "rows": rows}
