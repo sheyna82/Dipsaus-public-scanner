@@ -9,6 +9,7 @@ import sys
 import zipfile
 from statistics import mean
 from research_swing_short_regime_gate import assess_short_swing_regime
+from research_swing_intratrade_excursion import excursion_for_trade, summarize_excursions
 
 def run_regime_ab_archive(path, *, costs_bps=30, step=15):
     if type(step) is not int or step < 15 or type(costs_bps) not in (int, float) or not 0 <= costs_bps <= 1000:
@@ -33,13 +34,17 @@ def run_regime_ab_archive(path, *, costs_bps=30, step=15):
                        - costs_bps/100 for _,s in ranked)
             benchmark = 100*(bars["SPY"][t+horizon]["close"]/
                              bars["SPY"][t+1]["open"]-1)-costs_bps/100
+            excursions = [excursion_for_trade(bars[s],t,horizon,entry_cost_bps=costs_bps) for _,s in ranked]
             accepted = market["new_entries_permitted_for_research"]
             # Caution state invests half the six equal slots; risk-off stays cash.
             exposure = {"normal":1.0,"caution":0.5,"risk_off":0.0}[market["state"]]
             outcomes.append({"horizon":horizon,"decision_timestamp":bars["SPY"][t]["timestamp"],
                              "state":market["state"],"exposure":exposure,
                              "ungated_net_pct":net,"gated_net_pct":net*exposure,
-                             "benchmark_net_pct":benchmark,"accepted":accepted})
+                             "benchmark_net_pct":benchmark,"accepted":accepted,
+                             "mean_mae_pct":mean(x["mae_pct"] for x in excursions),
+                             "worst_mae_pct":min(x["mae_pct"] for x in excursions),
+                             "mean_mfe_pct":mean(x["mfe_pct"] for x in excursions)})
     summary=[]
     for horizon in (5,10,15):
         subset=[r for r in outcomes if r["horizon"]==horizon]
@@ -48,6 +53,9 @@ def run_regime_ab_archive(path, *, costs_bps=30, step=15):
                         "mean_gated_net_pct":round(mean(r["gated_net_pct"] for r in subset),4),
                         "mean_benchmark_net_pct":round(mean(r["benchmark_net_pct"] for r in subset),4),
                         "mean_exposure":round(mean(r["exposure"] for r in subset),4),
+                        "mean_trade_mae_pct":round(mean(r["mean_mae_pct"] for r in subset),4),
+                        "worst_trade_mae_pct":round(min(r["worst_mae_pct"] for r in subset),4),
+                        "mean_trade_mfe_pct":round(mean(r["mean_mfe_pct"] for r in subset),4),
                         "risk_off_cohorts":sum(r["state"]=="risk_off" for r in subset),
                         "caution_cohorts":sum(r["state"]=="caution" for r in subset)})
     return {"research_only":True,"trade_ready":False,"edge_proven":False,
