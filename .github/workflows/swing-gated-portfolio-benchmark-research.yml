@@ -9,6 +9,7 @@ on:
       - 'research_swing_timestamp_gated_pipeline.py'
       - 'research_swing_portfolio_benchmark.py'
       - 'research_swing_open_auction_capacity.py'
+      - 'research_swing_auction_evidence.py'
       - '.github/workflows/swing-gated-portfolio-benchmark-research.yml'
 
 permissions:
