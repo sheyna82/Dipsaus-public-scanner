@@ -137,7 +137,7 @@ jobs:
               coverage=json.loads((root/'coverage.json').read_text())
               symbols=[x['symbol'] for x in coverage['manifest']['symbols']]
               bars={s:json.loads((root/(s+'.json')).read_text())['rows'] for s in symbols}
-              result={'status':'computed','summary':[compare_exit_policies(bars,horizon=h,step=15) for h in (5,10,15)]}
+              result={'status':'computed','cost_scenarios_bps':{str(cost):[compare_exit_policies(bars,horizon=h,step=15,round_trip_cost_bps=cost) for h in (5,10,15)] for cost in (10,30,60)}}
           except (ValueError,KeyError,FileNotFoundError) as exc:
               result={'status':'blocked','reason':type(exc).__name__+': '+str(exc)[:240]}
           result.update(research_only=True,trade_ready=False)
