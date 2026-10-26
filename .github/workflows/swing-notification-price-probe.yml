@@ -5,6 +5,8 @@ on:
       - research/offline-technical-risk-20261021
     paths:
       - '.github/workflows/swing-notification-price-probe.yml'
+      - 'research_notification_coverage_audit.py'
+      - 'test_research_notification_coverage_audit.py'
   pull_request:
     branches:
       - main
@@ -23,7 +25,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Verify notification research modules
-        run: python -m unittest -v test_research_notification_signal_cases test_research_notification_forward_returns test_research_notification_relative_performance
+        run: python -m unittest -v test_research_notification_signal_cases test_research_notification_forward_returns test_research_notification_relative_performance test_research_notification_coverage_audit
       - name: Acquire historical price observations without execution claims
         run: |
           python - <<'PY'
@@ -51,6 +53,15 @@ jobs:
                   record.update(status="unavailable",error_type=type(exc).__name__,error=str(exc)[:120])
               results.append(record);print(json.dumps(record),flush=True);time.sleep(0.2)
           (root/"coverage.json").write_text(json.dumps(results,indent=2))
+          from research_notification_coverage_audit import audit_coverage
+          payloads={}
+          for case in CASES_2026_10_26:
+              file=root/(case.symbol+".json")
+              if file.exists():
+                  payloads[case.symbol]=json.loads(file.read_text())
+          audit=audit_coverage(CASES_2026_10_26,payloads)
+          (root/"coverage-audit.json").write_text(json.dumps(audit,indent=2))
+          print("NOTIFICATION_COVERAGE_AUDIT",json.dumps(audit),flush=True)
           missing=[r["symbol"] for r in results if r["status"]!="downloaded_unverified"]
           print("NOTIFICATION_PRICE_COVERAGE",json.dumps({"available":len(results)-len(missing),"missing":missing}),flush=True)
           if missing:raise SystemExit("Price data incomplete; inspect artifact")
