@@ -1,6 +1,7 @@
 """No-network synthetic tests for one-shot public price acquisition."""
 import tempfile
 import unittest
+from urllib.error import URLError
 from datetime import date, timedelta
 from pathlib import Path
 from research_swing_public_price_one_shot import download_once
@@ -42,6 +43,15 @@ class OneShotTests(unittest.TestCase):
             self.assertEqual(result["bars"], 15)
             self.assertFalse(result["license_verified"])
             self.assertEqual(path.read_bytes(), sample())
+
+    def test_transport_failure_classified_without_output(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "prices.csv"
+            def unavailable(req, timeout):
+                raise URLError("network unavailable")
+            with self.assertRaisesRegex(ValueError, "provider_probe_failed:network_unavailable"):
+                download_once("aapl.us", path, allow_network=True, opener=unavailable)
+            self.assertFalse(path.exists())
 
     def test_bad_provider_header(self):
         with tempfile.TemporaryDirectory() as tmp:
