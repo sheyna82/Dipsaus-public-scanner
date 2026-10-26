@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/swing-diversified-price-probe.yml'
       - 'research_swing_diversified_universe.py'
+      - 'research_swing_regime_archive_ab.py'
+      - 'research_swing_short_regime_gate.py'
 permissions:
   contents: read
 jobs:
@@ -55,6 +57,26 @@ jobs:
           coverage=audit_coverage(statuses)
           (root/"coverage.json").write_text(json.dumps({"manifest":manifest,"coverage":coverage,"results":summary},indent=2))
           print("COVERAGE",json.dumps({"available":coverage["available"],"unavailable":coverage["unavailable"]}))
+          PY
+      - name: Historical regime A/B comparison (only if dates align)
+        run: |
+          python - <<'PY'
+          import json, zipfile
+          from pathlib import Path
+          from research_swing_regime_archive_ab import run_regime_ab_archive
+          root=Path('diversified-price-probe')
+          archive=Path('diversified-sector-prices.zip')
+          with zipfile.ZipFile(archive,'w') as z:
+              for p in root.glob('*.json'):
+                  z.write(p,p.name)
+          try:
+              result=run_regime_ab_archive(archive)
+          except (ValueError, KeyError, FileNotFoundError, zipfile.BadZipFile) as exc:
+              result={'research_only':True,'trade_ready':False,'status':'blocked',
+                      'reason':type(exc).__name__+': '+str(exc)[:240]}
+          (root/'regime-ab-results.json').write_text(json.dumps(result,indent=2))
+          print('REGIME_AB',json.dumps({'status':result.get('status','computed'),
+              'summary':result.get('summary'),'reason':result.get('reason')}))
           PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
