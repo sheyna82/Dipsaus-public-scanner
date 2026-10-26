@@ -31,6 +31,14 @@ class LiveProbeTests(unittest.TestCase):
         self.assertFalse(result["source_data_saved"])
 
     @patch("research_swing_live_price_probe.download_once")
+    def test_wrapped_network_error_preserves_cause(self, mock_download):
+        mock_download.side_effect = ValueError("provider_probe_failed:network_unavailable")
+        result = probe("aapl.us")
+        self.assertEqual(result["status"], "failed")
+        self.assertEqual(result["provider_failure_class"], "network_unavailable")
+        self.assertFalse(result["data_verified"])
+
+    @patch("research_swing_live_price_probe.download_once")
     def test_invalid_provider_data_not_claimed_as_success(self, mock_download):
         mock_download.side_effect = ValueError("unexpected_provider_header")
         result = probe("spy.us")
