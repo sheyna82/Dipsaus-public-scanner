@@ -13,6 +13,13 @@ class FamilyNetComparisonTests(unittest.TestCase):
         result = compare_signal_families([sample(), sample(symbol="BBB", net_return_pct=-1)])
         self.assertEqual(result["summaries"][0]["mean_net_pct"], 0.5)
         self.assertFalse(result["profitability_ranking_available"])
+    def test_only_matched_cohorts_compared(self):
+        result = compare_signal_families([
+            sample(), sample(symbol="BBB", family="RECOVERY", net_return_pct=1.0),
+            sample(cohort_id="2026-01-03", symbol="CCC", family="RECOVERY", net_return_pct=20.0),
+        ])
+        self.assertEqual(len(result["matched_family_differences"]), 1)
+        self.assertEqual(result["matched_family_differences"][0]["difference_mean_net_percentage_points"], -1.0)
     def test_unverified_rejected(self):
         with self.assertRaises(ValueError):
             compare_signal_families([sample(outcome_verified=False)])
