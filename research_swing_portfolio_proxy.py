@@ -13,7 +13,7 @@ SECTOR_BY_SYMBOL=dict(UNIVERSE_V1)
 
 def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
                           warning_exits=False, starting_cash=21000, max_exposure_fraction=1.0,
-                          max_positions_per_sector=None):
+                          max_positions_per_sector=None, entry_start_index=20):
     if horizon not in (5,10,15) or type(slots) is not int or not 1<=slots<=6:
         raise ValueError("invalid_parameters")
     if not 0<=round_trip_cost_bps<=1000 or starting_cash<=0 or not 0<max_exposure_fraction<=1:
@@ -27,6 +27,8 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
     n=len(next(iter(bars.values())))
     if n<60:
         raise ValueError("insufficient_history")
+    if type(entry_start_index) is not int or not 20<=entry_start_index<n-1:
+        raise ValueError("invalid_entry_start_index")
     for rows in bars.values():
         for bar in rows:
             if any(not isinstance(bar[k],(int,float)) or not isfinite(bar[k]) or bar[k]<=0
@@ -153,7 +155,7 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
                 pending.append({"side":"sell","symbol":s,"reason":"warning"})
         exiting={x["symbol"] for x in pending}
         free_slots=slots-len(positions)
-        if free_slots>0:
+        if free_slots>0 and t>=entry_start_index:
             ranked=sorted(((bars[s][t]["close"]/bars[s][t-20]["close"]-1,s)
                            for s in bars if s not in positions),reverse=True)
             planned_sector_counts=dict(sector_occupancy)
@@ -195,6 +197,7 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
             "completed_trades":len(trades),"open_positions_at_end":len(positions),
             "max_simultaneous_positions":max_open,
             "max_positions_per_sector":max_positions_per_sector,
+            "entry_start_index":entry_start_index,
             "peak_same_sector_positions":peak_same_sector_positions,
             "peak_committed_capital_pct":round(100*peak_invested/starting_cash,4),
             "max_exposure_fraction":max_exposure_fraction,
