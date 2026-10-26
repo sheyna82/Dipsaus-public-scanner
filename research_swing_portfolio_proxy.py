@@ -13,10 +13,10 @@ SECTOR_BY_SYMBOL=dict(UNIVERSE_V1)
 
 def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
                           warning_exits=False, starting_cash=21000, max_exposure_fraction=1.0,
-                          max_positions_per_sector=None, entry_start_index=20, slippage_bps=0):
+                          max_positions_per_sector=None, entry_start_index=20, slippage_bps=0, warning_policy="all"):
     if horizon not in (5,10,15) or type(slots) is not int or not 1<=slots<=6:
         raise ValueError("invalid_parameters")
-    if not 0<=round_trip_cost_bps<=1000 or not 0<=slippage_bps<=500 or starting_cash<=0 or not 0<max_exposure_fraction<=1:
+    if warning_policy not in ("all","severe_only","breakdown_only"):\n        raise ValueError("invalid_warning_policy")\n    if not 0<=round_trip_cost_bps<=1000 or not 0<=slippage_bps<=500 or starting_cash<=0 or not 0<max_exposure_fraction<=1:
         raise ValueError("invalid_cost_or_cash")
     if max_positions_per_sector is not None and (type(max_positions_per_sector) is not int or not 1<=max_positions_per_sector<=slots):
         raise ValueError("invalid_sector_cap")
@@ -151,7 +151,7 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
         for s,p in list(positions.items()):
             if t>=p["scheduled_exit"]:
                 pending.append({"side":"sell","symbol":s,"reason":"time"})
-            elif warning_exits and failure_warning_at_close(bars[s],t)["warning"]:
+            elif warning_exits and (lambda signal: signal["warning"] and (warning_policy=="all" or (warning_policy=="severe_only" and signal["gap_pct"]<=-5) or (warning_policy=="breakdown_only" and signal["breakdown"] and signal["close_location"]<=0.25)))(failure_warning_at_close(bars[s],t)):
                 pending.append({"side":"sell","symbol":s,"reason":"warning"})
         exiting={x["symbol"] for x in pending}
         free_slots=slots-len(positions)
@@ -207,7 +207,7 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
             "entry_start_index":entry_start_index,
             "peak_same_sector_positions":peak_same_sector_positions,
             "peak_committed_capital_pct":round(100*peak_invested/starting_cash,4),
-            "max_exposure_fraction":max_exposure_fraction,"slippage_bps_per_side":slippage_bps,
+            "max_exposure_fraction":max_exposure_fraction,"slippage_bps_per_side":slippage_bps,"warning_policy":warning_policy,
             "warning_exit_trades":sum(x["reason"]=="warning" for x in trades),
             "severe_completed_losses":sum(x["net_pct"]<=-8 for x in trades),
             "worst_completed_trade_pct":round(worst_trade_pct,4),
