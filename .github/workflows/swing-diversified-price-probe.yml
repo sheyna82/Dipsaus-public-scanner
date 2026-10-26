@@ -177,6 +177,17 @@ jobs:
                                             max_positions_per_sector=1,
                                             slippage_bps=slip)}
                     for slip in (0,5,10,20,40)],
+                  'slippage_holdout_stress':[
+                    {'slippage_bps_per_side':slip,
+                     'horizon':15,'warning_exits':True,'max_positions_per_sector':1,
+                     'holdout_start_index':int(len(next(iter(bars.values())))*.7),
+                     'holdout_spy_buy_hold_net_pct':round(100*((benchmark_rows[-1]['close']*(1-.003/2))/(benchmark_rows[int(len(benchmark_rows)*.7)+1]['open']*(1+.003/2))-1),4),
+                     **portfolio_swing_proxy(bars,horizon=15,warning_exits=True,
+                                            max_exposure_fraction=.5,
+                                            max_positions_per_sector=1,
+                                            entry_start_index=int(len(next(iter(bars.values())))*.7),
+                                            slippage_bps=slip)}
+                    for slip in (0,5,10,20,40)],
                   'chronological_holdout':[
                     {'horizon':h,'warning_exits':w,'max_positions_per_sector':sector_cap,
                      'holdout_start_index':int(len(next(iter(bars.values())))*.7),
