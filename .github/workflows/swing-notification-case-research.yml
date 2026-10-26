@@ -14,6 +14,8 @@ on:
       - 'test_research_notification_pre_signal.py'
       - 'research_notification_case_report.py'
       - 'test_research_notification_case_report.py'
+      - 'research_notification_coverage_audit.py'
+      - 'test_research_notification_coverage_audit.py'
       - '.github/workflows/swing-notification-case-research.yml'
   pull_request:
     branches:
@@ -35,6 +37,6 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run notification case tests
-        run: python -m unittest -v test_research_notification_signal_cases test_research_notification_forward_returns test_research_notification_relative_performance test_research_notification_pre_signal test_research_notification_case_report
+        run: python -m unittest -v test_research_notification_signal_cases test_research_notification_forward_returns test_research_notification_relative_performance test_research_notification_pre_signal test_research_notification_case_report test_research_notification_coverage_audit
       - name: Print research readiness audit
         run: python -c "import json; from research_notification_signal_cases import audit_cases; print(json.dumps(audit_cases(), indent=2))"
