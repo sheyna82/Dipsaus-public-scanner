@@ -10,6 +10,7 @@ import zipfile
 from statistics import mean
 from research_swing_short_regime_gate import assess_short_swing_regime
 from research_swing_intratrade_excursion import excursion_for_trade, summarize_excursions
+from research_swing_individual_risk import individual_risk_at_close, allocation_fraction
 
 def run_regime_ab_archive(path, *, costs_bps=30, step=15):
     if type(step) is not int or step < 15 or type(costs_bps) not in (int, float) or not 0 <= costs_bps <= 1000:
@@ -35,6 +36,13 @@ def run_regime_ab_archive(path, *, costs_bps=30, step=15):
             benchmark = 100*(bars["SPY"][t+horizon]["close"]/
                              bars["SPY"][t+1]["open"]-1)-costs_bps/100
             excursions = [excursion_for_trade(bars[s],t,horizon,entry_cost_bps=costs_bps) for _,s in ranked]
+            risk_by_symbol={s:individual_risk_at_close(bars[s],t) for _,s in ranked}
+            individual_variants={}
+            for variant in ("baseline","screen","scaled"):
+                individual_variants[variant]=mean(
+                    allocation_fraction(risk_by_symbol[s],variant)*
+                    (100*(bars[s][t+horizon]["close"]/bars[s][t+1]["open"]-1)-costs_bps/100)
+                    for _,s in ranked)
             accepted = market["new_entries_permitted_for_research"]
             # Caution state invests half the six equal slots; risk-off stays cash.
             exposure = {"normal":1.0,"caution":0.5,"risk_off":0.0}[market["state"]]
@@ -42,6 +50,8 @@ def run_regime_ab_archive(path, *, costs_bps=30, step=15):
                              "state":market["state"],"exposure":exposure,
                              "ungated_net_pct":net,"gated_net_pct":net*exposure,
                              "benchmark_net_pct":benchmark,"accepted":accepted,
+                             "individual_variant_net_pct":individual_variants,
+                             "screened_count":sum(risk_by_symbol[s]["risk_band"]=="extreme" for _,s in ranked),
                              "mean_mae_pct":mean(x["mae_pct"] for x in excursions),
                              "worst_mae_pct":min(x["mae_pct"] for x in excursions),
                              "mean_mfe_pct":mean(x["mfe_pct"] for x in excursions)})
@@ -53,6 +63,9 @@ def run_regime_ab_archive(path, *, costs_bps=30, step=15):
                         "mean_gated_net_pct":round(mean(r["gated_net_pct"] for r in subset),4),
                         "mean_benchmark_net_pct":round(mean(r["benchmark_net_pct"] for r in subset),4),
                         "mean_exposure":round(mean(r["exposure"] for r in subset),4),
+                        "mean_screen_net_pct":round(mean(r["individual_variant_net_pct"]["screen"] for r in subset),4),
+                        "mean_scaled_net_pct":round(mean(r["individual_variant_net_pct"]["scaled"] for r in subset),4),
+                        "mean_screened_names_per_cohort":round(mean(r["screened_count"] for r in subset),4),
                         "mean_trade_mae_pct":round(mean(r["mean_mae_pct"] for r in subset),4),
                         "mean_accepted_trade_mae_pct":round(mean(r["mean_mae_pct"] for r in subset if r["accepted"]),4) if any(r["accepted"] for r in subset) else None,
                         "mean_rejected_trade_mae_pct":round(mean(r["mean_mae_pct"] for r in subset if not r["accepted"]),4) if any(not r["accepted"] for r in subset) else None,
