@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/swing-diversified-price-probe.yml'
       - 'research_swing_diversified_universe.py'
+      - 'research_swing_intratrade_excursion.py'
+      - 'test_research_swing_intratrade_excursion.py'
       - 'research_swing_regime_archive_ab.py'
       - 'research_swing_short_regime_gate.py'
 permissions:
