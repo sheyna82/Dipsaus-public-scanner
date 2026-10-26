@@ -9,6 +9,10 @@ def cohort():
         "eligible": True, "entry_price": 100,
         "entry_open_price": 100,
         "opening_auction_volume": 10000,
+        "auction_volume_source_kind": "official_exchange_opening_auction",
+        "auction_volume_source_uri": "https://example.org/exchange/report",
+        "auction_volume_session_date": "2026-10-02",
+        "entry_session_date": "2026-10-02",
         "entry_open_timestamp": "2026-10-02T13:30:00+00:00",
         "daily_closes": [101, 102, 103, 104, 105],
         "next_opens": [101, 102, 103, 104, 105],
@@ -73,6 +77,14 @@ class GatedPortfolioBenchmarkTests(unittest.TestCase):
         x = cohort()
         del x[0]["opening_auction_volume"]
         with self.assertRaisesRegex(ValueError, "invalid_liquidity_input"):
+            evaluate_gated_portfolio_benchmark(
+                x, 3500, max_positions=1,
+                evaluation_cutoff="2026-10-09T00:00:00+00:00")
+
+    def test_daily_volume_proxy_rejected(self):
+        x = cohort()
+        x[0]["auction_volume_source_kind"] = "daily_consolidated_volume"
+        with self.assertRaisesRegex(ValueError, "opening_auction_volume_source_required"):
             evaluate_gated_portfolio_benchmark(
                 x, 3500, max_positions=1,
                 evaluation_cutoff="2026-10-09T00:00:00+00:00")
