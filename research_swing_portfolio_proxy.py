@@ -13,9 +13,11 @@ SECTOR_BY_SYMBOL=dict(UNIVERSE_V1)
 
 def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
                           warning_exits=False, starting_cash=21000, max_exposure_fraction=1.0,
-                          max_positions_per_sector=None, entry_start_index=20, slippage_bps=0, warning_policy="all"):
+                          max_positions_per_sector=None, entry_start_index=20, slippage_bps=0, warning_policy="all", max_open_gap_pct=None):
     if horizon not in (5,10,15) or type(slots) is not int or not 1<=slots<=6:
         raise ValueError("invalid_parameters")
+    if max_open_gap_pct is not None and (not isinstance(max_open_gap_pct,(int,float)) or not isfinite(max_open_gap_pct) or not 0<=max_open_gap_pct<=100):
+        raise ValueError("invalid_max_open_gap_pct")
     if warning_policy not in ("all","severe_only","breakdown_only"):
         raise ValueError("invalid_warning_policy")
     if not 0<=round_trip_cost_bps<=1000 or not 0<=slippage_bps<=500 or starting_cash<=0 or not 0<max_exposure_fraction<=1:
@@ -43,6 +45,7 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
     positions={}
     pending=[]
     trades=[]
+    skipped_gap_entries=0
     equity=[]
     max_open=0
     peak_same_sector_positions=0
@@ -91,6 +94,11 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
                                "exit_index":t,"net_pct":round(net_pct,4),
                                "reason":order["reason"]})
             elif order["side"]=="buy" and symbol not in positions and len(positions)<slots:
+                # A next-open gap filter uses only the observed opening print;
+                # skip instead of pretending the prior close was executable.
+                if max_open_gap_pct is not None and abs(100*(price/bars[symbol][t-1]["close"]-1))>max_open_gap_pct:
+                    skipped_gap_entries+=1
+                    continue
                 # Fixed slots: reserve at most 1/slots of starting capital.
                 committed=sum(p["capital"] for p in positions.values())
                 budget=min(starting_cash/slots,cash,
@@ -203,7 +211,8 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
             "worst_equity_change_majority_declining_pct":round(min(majority_day_equity_changes),4) if majority_day_equity_changes else None,
             "mean_equity_change_other_days_pct":round(mean(other_day_equity_changes),4) if other_day_equity_changes else None,
             "worst_declining_position_breadth":worst_breadth_day,
-            "completed_trades":len(trades),"trade_log":trades,"open_positions_at_end":len(positions),
+            "completed_trades":len(trades),"trade_log":trades,
+            "skipped_gap_entries":skipped_gap_entries,"max_open_gap_pct":max_open_gap_pct,"open_positions_at_end":len(positions),
             "max_simultaneous_positions":max_open,
             "max_positions_per_sector":max_positions_per_sector,
             "entry_start_index":entry_start_index,
