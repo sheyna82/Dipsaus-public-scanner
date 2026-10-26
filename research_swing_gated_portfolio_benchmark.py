@@ -7,6 +7,7 @@ is intentionally inaccessible through this entrypoint. Research only.
 from research_swing_timestamp_gated_pipeline import evaluate_timestamp_gated_batch
 from research_swing_entry_open_gate import validate_next_open_entries
 from research_swing_open_auction_capacity import assess_open_auction_capacity
+from research_swing_auction_evidence import validate_auction_volume_evidence
 from research_swing_portfolio_benchmark import compare_portfolio_rankings
 
 
@@ -28,6 +29,12 @@ def evaluate_gated_portfolio_benchmark(candidates, capital, *,
             **{k: v for k, v in benchmark_options.items() if k != "execution_model"})
     result = evaluate_timestamp_gated_batch(
         candidates, evaluation_cutoff=evaluation_cutoff, evaluator=evaluate)
+    # Source-type checks are applied to selected names in either arm, not
+    # merely to user-declared candidate eligibility.
+    selected_tickers = {row["ticker"] for arm in ("hypothesis", "baseline")
+                        for row in result["analysis"][arm]["selected"]}
+    validate_auction_volume_evidence(
+        [item for item in candidates if item["ticker"] in selected_tickers])
     # Capacity is evaluated against the exact simulated share count for every
     # selected position in both ranking arms. No user-supplied share estimate.
     volume_by_ticker = {item["ticker"]: item.get("opening_auction_volume")
