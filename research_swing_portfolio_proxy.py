@@ -35,6 +35,8 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
     max_open=0
     worst_trade_pct=0.0
     loss_buckets={"minus_5_to_minus_8":0,"minus_8_to_minus_15":0,"below_minus_15":0}
+    severe_loss_by_symbol={}
+    severe_loss_by_reason={}
     for t in range(20,n):
         # Execute orders at the open, after decisions made at prior close.
         for order in pending:
@@ -46,6 +48,10 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
                 cash+=proceeds
                 net_pct=100*(proceeds/p["capital"]-1)
                 worst_trade_pct=min(worst_trade_pct,net_pct)
+                if net_pct<=-8:
+                    severe_loss_by_symbol[symbol]=severe_loss_by_symbol.get(symbol,0)+1
+                    reason=order["reason"]
+                    severe_loss_by_reason[reason]=severe_loss_by_reason.get(reason,0)+1
                 if net_pct<=-15:
                     loss_buckets["below_minus_15"]+=1
                 elif net_pct<=-8:
@@ -103,6 +109,8 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
             "severe_completed_losses":sum(x["net_pct"]<=-8 for x in trades),
             "worst_completed_trade_pct":round(worst_trade_pct,4),
             "completed_loss_buckets":loss_buckets,
+            "severe_loss_by_symbol":dict(sorted(severe_loss_by_symbol.items())),
+            "severe_loss_by_exit_reason":dict(sorted(severe_loss_by_reason.items())),
             "research_only":True,"trade_ready":False,"edge_proven":False,
             "dividends_and_fx_modelled":False,"corporate_actions_verified":False,
             "fractional_shares_assumed":True,"slippage_modelled":False,
