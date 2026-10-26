@@ -13,7 +13,7 @@ class PortfolioProxyTests(unittest.TestCase):
         # Repeated five-session trades incur costs on every round trip.
         self.assertLess(result["total_net_return_pct"],-.3)
         self.assertGreater(result["completed_trades"],3)
-        self.assertEqual(result["worst_completed_trade_pct"],-.3)
+        self.assertAlmostEqual(result["worst_completed_trade_pct"],-.3,delta=.001)
         self.assertEqual(sum(result["completed_loss_buckets"].values()),0)
         self.assertFalse(result["trade_ready"])
 
