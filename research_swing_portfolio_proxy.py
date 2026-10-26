@@ -33,6 +33,8 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
     trades=[]
     equity=[]
     max_open=0
+    worst_trade_pct=0.0
+    loss_buckets={"minus_5_to_minus_8":0,"minus_8_to_minus_15":0,"below_minus_15":0}
     for t in range(20,n):
         # Execute orders at the open, after decisions made at prior close.
         for order in pending:
@@ -42,8 +44,16 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
                 p=positions.pop(symbol)
                 proceeds=p["shares"]*price*(1-round_trip_cost_bps/20000)
                 cash+=proceeds
+                net_pct=100*(proceeds/p["capital"]-1)
+                worst_trade_pct=min(worst_trade_pct,net_pct)
+                if net_pct<=-15:
+                    loss_buckets["below_minus_15"]+=1
+                elif net_pct<=-8:
+                    loss_buckets["minus_8_to_minus_15"]+=1
+                elif net_pct<=-5:
+                    loss_buckets["minus_5_to_minus_8"]+=1
                 trades.append({"symbol":symbol,"entry_index":p["entry_index"],
-                               "exit_index":t,"net_pct":round(100*(proceeds/p["capital"]-1),4),
+                               "exit_index":t,"net_pct":round(net_pct,4),
                                "reason":order["reason"]})
             elif order["side"]=="buy" and symbol not in positions and len(positions)<slots:
                 # Fixed slots: reserve at most 1/slots of starting capital.
@@ -91,6 +101,8 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
             "max_exposure_fraction":max_exposure_fraction,
             "warning_exit_trades":sum(x["reason"]=="warning" for x in trades),
             "severe_completed_losses":sum(x["net_pct"]<=-8 for x in trades),
+            "worst_completed_trade_pct":round(worst_trade_pct,4),
+            "completed_loss_buckets":loss_buckets,
             "research_only":True,"trade_ready":False,"edge_proven":False,
             "dividends_and_fx_modelled":False,"corporate_actions_verified":False,
             "fractional_shares_assumed":True,"slippage_modelled":False,
