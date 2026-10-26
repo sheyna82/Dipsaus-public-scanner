@@ -18,6 +18,12 @@ class PortfolioProxyTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             portfolio_swing_proxy(bars)
 
+    def test_inconsistent_ohlc_is_rejected(self):
+        bars=self.panel()
+        bars["A"][25]["open"]=120
+        with self.assertRaisesRegex(ValueError,"inconsistent_ohlc"):
+            portfolio_swing_proxy(bars)
+
     def test_warning_exits_are_optional(self):
         bars=self.panel()
         bars["A"][26]={"timestamp":26,"open":92,"high":93,"low":88,"close":90}
