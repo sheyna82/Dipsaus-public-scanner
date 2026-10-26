@@ -40,6 +40,26 @@ class PortfolioBenchmarkTests(unittest.TestCase):
         result = compare_portfolio_rankings(x, 3500)
         self.assertEqual(result["hypothesis"]["selected"][0]["ticker"], "B")
 
+    def test_next_open_can_reverse_apparent_profit(self):
+        x = candidates()
+        x[0]["next_opens"] = [101, 102, 90, 104, 90]
+        x[1]["next_opens"] = [99, 98, 110, 96, 110]
+        result = compare_portfolio_rankings(
+            x, 3500, max_positions=1, horizon=3,
+            execution_model="next_session_open")
+        self.assertEqual(result["execution_model"], "next_session_open")
+        self.assertLess(Decimal(result["net_pnl_difference"]), 0)
+
+    def test_next_open_requires_following_open(self):
+        with self.assertRaises(KeyError):
+            compare_portfolio_rankings(candidates(), 3500,
+                                       execution_model="next_session_open")
+
+    def test_invalid_execution_model_rejected(self):
+        with self.assertRaisesRegex(ValueError, "invalid_execution_model"):
+            compare_portfolio_rankings(candidates(), 3500,
+                                       execution_model="future_perfect")
+
     def test_invalid_baseline_rejected(self):
         with self.assertRaisesRegex(ValueError, "invalid_baseline"):
             compare_portfolio_rankings(candidates(), 3500, baseline_key="future_return")
