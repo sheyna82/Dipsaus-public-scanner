@@ -24,6 +24,8 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
             if any(not isinstance(bar[k],(int,float)) or not isfinite(bar[k]) or bar[k]<=0
                    for k in ("open","high","low","close")):
                 raise ValueError("invalid_prices")
+            if bar["low"]>min(bar["open"],bar["close"]) or bar["high"]<max(bar["open"],bar["close"]):
+                raise ValueError("inconsistent_ohlc")
     cash=float(starting_cash)
     positions={}
     pending=[]
@@ -85,4 +87,7 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
             "severe_completed_losses":sum(x["net_pct"]<=-8 for x in trades),
             "research_only":True,"trade_ready":False,"edge_proven":False,
             "dividends_and_fx_modelled":False,"corporate_actions_verified":False,
-            "fractional_shares_assumed":True,"slippage_modelled":False}
+            "fractional_shares_assumed":True,"slippage_modelled":False,
+            "entry_selection_bias_controlled":False,
+            "cash_dividends_modelled":False,
+            "risk_adjusted_benchmark_tested":False}
