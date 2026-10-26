@@ -6,6 +6,8 @@ destination. No live scanner access and no repository writes.
 """
 import io
 from pathlib import Path
+from urllib.error import HTTPError
+from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 from zipfile import ZipFile, BadZipFile
 
@@ -37,8 +39,15 @@ def download_previous_archive(repo, token, artifact_id, destination, *,
                  "Authorization": "Bearer " + token,
                  "X-GitHub-Api-Version": "2022-11-28",
                  "User-Agent": "DIPSAUS-research-read-only"})
-    with opener(request, timeout=20) as response:
-        payload = response.read(max_bytes + 1)
+    try:
+        with opener(request, timeout=20) as response:
+            payload = response.read(max_bytes + 1)
+    except HTTPError as exc:
+        # Report only the failing host, never signed URLs or credentials.
+        host = urlsplit(exc.geturl()).hostname or 'unknown'
+        if host not in {'api.github.com', 'github.com'}:
+            host = 'external-artifact-host'
+        raise RuntimeError(f'artifact_download_http_{exc.code}_at_{host}') from None
     if len(payload) > max_bytes:
         raise ValueError("outer_artifact_too_large")
     try:
