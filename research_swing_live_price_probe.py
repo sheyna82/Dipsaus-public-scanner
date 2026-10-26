@@ -17,6 +17,8 @@ def probe(symbol):
             result = download_once(symbol, Path(tmp) / "raw.csv", allow_network=True)
         except Exception as exc:
             result = classify_price_probe_error(exc)
+            if isinstance(exc, ValueError) and str(exc).startswith("provider_probe_failed:"):
+                result["provider_failure_class"] = str(exc).split(":", 1)[1]
             result["status"] = "failed"
             result["error_type"] = type(exc).__name__
             result["source_data_saved"] = False
