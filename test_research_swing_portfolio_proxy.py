@@ -110,7 +110,7 @@ class PortfolioProxyTests(unittest.TestCase):
                 rows[i]={"timestamp":i,"open":price,"high":price+2,
                          "low":price-2,"close":price}
         altered=portfolio_swing_proxy(changed,horizon=10,slots=3,warning_exits=True)
-        past=lambda result:[trade for trade in result["trades"] if trade["exit_index"]<60]
+        past=lambda result:[trade for trade in result["trade_log"] if trade["exit_index"]<60]
         self.assertEqual(past(baseline),past(altered))
 
     def test_selective_warning_policies_are_supported(self):
