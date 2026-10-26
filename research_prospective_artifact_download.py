@@ -8,15 +8,34 @@ import io
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.parse import urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import Request, urlopen, build_opener, HTTPRedirectHandler
 from zipfile import ZipFile, BadZipFile
 
 from research_prospective_archive import verify_archive
 
 
+class _SafeArtifactRedirect(HTTPRedirectHandler):
+    """Follow GitHub's signed artifact redirect without forwarding API credentials."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        target = urlsplit(newurl)
+        if target.scheme != "https" or not target.hostname:
+            raise ValueError("unsafe_artifact_redirect")
+        if target.username or target.password or target.port not in (None, 443):
+            raise ValueError("unsafe_artifact_redirect")
+        if urlsplit(req.full_url).hostname != "api.github.com":
+            raise ValueError("unexpected_artifact_redirect_chain")
+        # A short-lived signed URL is the only credential needed by the storage host.
+        return Request(newurl, headers={"User-Agent": "DIPSAUS-research-read-only"})
+
+
+def _open_artifact(request, timeout):
+    return build_opener(_SafeArtifactRedirect()).open(request, timeout=timeout)
+
+
 def download_previous_archive(repo, token, artifact_id, destination, *,
                               expected_member="synthetic-prospective-ledger.zip",
-                              opener=urlopen, max_bytes=8_000_000):
+                              opener=_open_artifact, max_bytes=8_000_000):
     if not token:
         raise ValueError("github_token_required")
     if not isinstance(artifact_id, int) or artifact_id <= 0:
