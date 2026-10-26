@@ -4,7 +4,7 @@ All decisions use completed daily closes; executions use the following open.
 No intraday target fills, stop orders, earnings knowledge, or portfolio claims.
 """
 from math import isfinite
-from statistics import mean
+from statistics import mean, median
 from research_swing_failure_warning import failure_warning_at_close
 
 def simulate_exit_policies(rows, decision_index, horizon, *, round_trip_cost_bps=30):
@@ -70,11 +70,14 @@ def compare_exit_policies(bars, *, horizon=10, step=15, round_trip_cost_bps=30):
             "early_observations":len(early),"late_observations":len(late),
             "policies":{name:{"mean_net_pct":round(mean(x[name+"_net_pct"] for x in observations),4) if observations else None,
                               "negative_outcomes":sum(x[name+"_net_pct"]<0 for x in observations),
+                              "median_net_pct":round(median(x[name+"_net_pct"] for x in observations),4) if observations else None,
+                              "loss_worse_than_8pct":sum(x[name+"_net_pct"]<=-8 for x in observations),
+                              "late_loss_worse_than_8pct":sum(x[name+"_net_pct"]<=-8 for x in late),
                               "early_mean_net_pct":period_mean(early,name),
                               "late_mean_net_pct":period_mean(late,name),
                               "worst_net_pct":round(min(x[name+"_net_pct"] for x in observations),4) if observations else None}
                         for name in names},
             "warning_exits":sum(x["warning_exit_index"] is not None for x in observations),
             "partial_profit_exits":sum(x["partial_profit_exit_index"] is not None for x in observations),
-            "research_only":True,"trade_ready":False,"portfolio_overlap_modelled":False,
+            "research_only":True,"trade_ready":False,"portfolio_overlap_modelled":False,"universe_selection_modelled":False,
             "edge_proven":False}
