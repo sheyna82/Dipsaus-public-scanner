@@ -17,6 +17,10 @@ def compare_signal_families(rows):
         if not isinstance(row, dict):
             raise ValueError("invalid_row")
         key = (row.get("cohort_id"), row.get("symbol"), row.get("horizon"))
+        try:
+            decision_day = date.fromisoformat(key[0])
+        except (ValueError, TypeError):
+            raise ValueError("invalid_cohort_date") from None
         if key in seen or any(not isinstance(x, str) or not x for x in key[:2]):
             raise ValueError("duplicate_or_invalid_observation")
         seen.add(key)
@@ -27,20 +31,30 @@ def compare_signal_families(rows):
         if not isinstance(family, str) or not family:
             raise ValueError("invalid_family")
         entry, exit_ = date.fromisoformat(row["entry_date"]), date.fromisoformat(row["exit_date"])
-        if exit_ <= entry:
+        if exit_ <= entry or entry <= decision_day:
             raise ValueError("invalid_dates")
         if row.get("outcome_verified") is not True:
             raise ValueError("unverified_outcome")
         net = row.get("net_return_pct")
         if isinstance(net, bool) or not isinstance(net, (int, float)) or not isfinite(net):
             raise ValueError("invalid_net_return")
-        grouped[(key[0], h, family)].append(float(net))
+        benchmark = row.get("benchmark_net_return_pct")
+        if benchmark is not None:
+            if isinstance(benchmark, bool) or not isinstance(benchmark, (int, float)) or not isfinite(benchmark):
+                raise ValueError("invalid_benchmark_return")
+            if row.get("benchmark_entry_date") != row["entry_date"] or row.get("benchmark_exit_date") != row["exit_date"]:
+                raise ValueError("unaligned_benchmark_window")
+        grouped[(key[0], h, family)].append((float(net), None if benchmark is None else float(net - benchmark)))
     summaries = []
     for (cohort, horizon, family), returns in sorted(grouped.items()):
+        net_returns = [value[0] for value in returns]
+        excess = [value[1] for value in returns if value[1] is not None]
         summaries.append({"cohort_id": cohort, "horizon": horizon, "family": family,
-                          "count": len(returns), "mean_net_pct": mean(returns),
-                          "median_net_pct": median(returns),
-                          "win_fraction": sum(x > 0 for x in returns) / len(returns)})
+                          "count": len(returns), "mean_net_pct": mean(net_returns),
+                          "median_net_pct": median(net_returns),
+                          "win_fraction": sum(x > 0 for x in net_returns) / len(returns),
+                          "benchmark_aligned_count": len(excess),
+                          "mean_excess_net_pct_points": mean(excess) if excess else None})
     # Only compare families when both are observed in the same cohort/horizon.
     matched = []
     by_cohort = defaultdict(dict)
