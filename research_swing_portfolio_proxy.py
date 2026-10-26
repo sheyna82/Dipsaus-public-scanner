@@ -36,6 +36,8 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
     worst_daily_equity_move_pct=0.0
     negative_equity_days=0
     prior_equity=None
+    worst_breadth_day={"index":None,"declining_positions":0,"open_positions":0,"fraction":0.0}
+    days_with_majority_declining=0
     worst_trade_pct=0.0
     loss_buckets={"minus_5_to_minus_8":0,"minus_8_to_minus_15":0,"below_minus_15":0}
     severe_loss_by_symbol={}
@@ -79,6 +81,12 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
         peak_invested=max(peak_invested,sum(p["capital"] for p in positions.values()))
         marked=cash+sum(p["shares"]*bars[s][t]["close"] for s,p in positions.items())
         equity.append(marked)
+        if positions:
+            declining=sum(bars[s][t]["close"]<bars[s][t-1]["close"] for s in positions if t>0)
+            fraction=declining/len(positions)
+            days_with_majority_declining+=fraction>0.5
+            if declining>worst_breadth_day["declining_positions"] or (declining==worst_breadth_day["declining_positions"] and fraction>worst_breadth_day["fraction"]):
+                worst_breadth_day={"index":t,"declining_positions":declining,"open_positions":len(positions),"fraction":round(fraction,4)}
         if prior_equity is not None:
             daily_move=100*(marked/prior_equity-1)
             worst_daily_equity_move_pct=min(worst_daily_equity_move_pct,daily_move)
@@ -111,6 +119,8 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
             "max_mark_to_market_drawdown_pct":round(worst_drawdown,4),
             "worst_daily_equity_move_pct":round(worst_daily_equity_move_pct,4),
             "negative_equity_days":negative_equity_days,
+            "days_with_majority_positions_declining":days_with_majority_declining,
+            "worst_declining_position_breadth":worst_breadth_day,
             "completed_trades":len(trades),"open_positions_at_end":len(positions),
             "max_simultaneous_positions":max_open,
             "peak_committed_capital_pct":round(100*peak_invested/starting_cash,4),
