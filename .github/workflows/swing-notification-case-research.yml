@@ -8,6 +8,8 @@ on:
       - 'test_research_notification_signal_cases.py'
       - 'research_notification_forward_returns.py'
       - 'test_research_notification_forward_returns.py'
+      - 'research_notification_relative_performance.py'
+      - 'test_research_notification_relative_performance.py'
       - '.github/workflows/swing-notification-case-research.yml'
   pull_request:
     branches:
@@ -29,6 +31,6 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run notification case tests
-        run: python -m unittest -v test_research_notification_signal_cases test_research_notification_forward_returns
+        run: python -m unittest -v test_research_notification_signal_cases test_research_notification_forward_returns test_research_notification_relative_performance
       - name: Print research readiness audit
         run: python -c "import json; from research_notification_signal_cases import audit_cases; print(json.dumps(audit_cases(), indent=2))"
