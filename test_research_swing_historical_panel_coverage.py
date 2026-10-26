@@ -14,6 +14,15 @@ class HistoricalPanelCoverageTests(unittest.TestCase):
         r = audit_historical_panel(["AAA"], ["SPY"], {"AAA": bars(4), "SPY": bars(4)}, min_sessions=3)
         self.assertTrue(r["length_coverage_complete"])
         self.assertFalse(r["source_provenance_verified"])
+    def test_disjoint_dates_block_aligned_panel(self):
+        other = [{"date": "2024-01-0" + str(i)} for i in range(1, 5)]
+        r = audit_historical_panel(["AAA"], ["SPY"], {"AAA": bars(4), "SPY": other}, min_sessions=3)
+        self.assertTrue(r["length_coverage_complete"])
+        self.assertFalse(r["aligned_length_sufficient"])
+        self.assertEqual(r["common_session_count"], 0)
+    def test_aligned_sessions_sufficient(self):
+        r = audit_historical_panel(["AAA"], ["SPY"], {"AAA": bars(4), "SPY": bars(4)}, min_sessions=3)
+        self.assertTrue(r["aligned_length_sufficient"])
     def test_duplicate_dates_fail(self):
         with self.assertRaises(ValueError):
             audit_historical_panel(["AAA"], [], {"AAA": [bars(1)[0], bars(1)[0]]})
