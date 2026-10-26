@@ -17,7 +17,7 @@ class ForwardReturnTests(unittest.TestCase):
         r=forward_returns(self.signal,self.bars[:3])
         self.assertEqual(r[3]["exit_date"],"2026-11-03")
         self.assertIsNone(r[5])
-        self.assertAlmostEqual(r[3]["gross_return_pct"],4.0,places=4)
+        self.assertAlmostEqual(r[3]["gross_return_pct"],100*(104/101-1),places=4)
 
     def test_missing_future_is_not_zero(self):
         self.assertIsNone(forward_returns(self.signal, self.bars[:2])[3])
