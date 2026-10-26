@@ -57,7 +57,7 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
                     cash-=budget
         pending=[]
         max_open=max(max_open,len(positions))
-        peak_invested=max(peak_invested,sum(p["capital"] for p in positions))
+        peak_invested=max(peak_invested,sum(p["capital"] for p in positions.values()))
         marked=cash+sum(p["shares"]*bars[s][t]["close"] for s,p in positions.items())
         equity.append(marked)
         if t==n-1:
