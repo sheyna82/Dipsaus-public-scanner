@@ -13,10 +13,10 @@ SECTOR_BY_SYMBOL=dict(UNIVERSE_V1)
 
 def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
                           warning_exits=False, starting_cash=21000, max_exposure_fraction=1.0,
-                          max_positions_per_sector=None, entry_start_index=20):
+                          max_positions_per_sector=None, entry_start_index=20, slippage_bps=0):
     if horizon not in (5,10,15) or type(slots) is not int or not 1<=slots<=6:
         raise ValueError("invalid_parameters")
-    if not 0<=round_trip_cost_bps<=1000 or starting_cash<=0 or not 0<max_exposure_fraction<=1:
+    if not 0<=round_trip_cost_bps<=1000 or not 0<=slippage_bps<=500 or starting_cash<=0 or not 0<max_exposure_fraction<=1:
         raise ValueError("invalid_cost_or_cash")
     if max_positions_per_sector is not None and (type(max_positions_per_sector) is not int or not 1<=max_positions_per_sector<=slots):
         raise ValueError("invalid_sector_cap")
@@ -71,7 +71,7 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
             price=bars[symbol][t]["open"]
             if order["side"]=="sell" and symbol in positions:
                 p=positions.pop(symbol)
-                proceeds=p["shares"]*price*(1-round_trip_cost_bps/20000)
+                proceeds=p["shares"]*price*(1-round_trip_cost_bps/20000)*(1-slippage_bps/10000)
                 cash+=proceeds
                 net_pct=100*(proceeds/p["capital"]-1)
                 worst_trade_pct=min(worst_trade_pct,net_pct)
@@ -94,7 +94,7 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
                 budget=min(starting_cash/slots,cash,
                            max(0,starting_cash*max_exposure_fraction-committed))
                 if budget>0:
-                    shares=budget/(price*(1+round_trip_cost_bps/20000))
+                    shares=budget/(price*(1+round_trip_cost_bps/20000)*(1+slippage_bps/10000))
                     positions[symbol]={"shares":shares,"capital":budget,"entry_index":t,
                                        "scheduled_exit":min(t+horizon-1,n-1)}
                     cash-=budget
@@ -168,7 +168,7 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
                 pending.append({"side":"buy","symbol":s,"reason":"momentum"})
                 planned_sector_counts[sector]=planned_sector_counts.get(sector,0)+1
     # Mark remaining positions at final close, with estimated sell cost.
-    final_equity=cash+sum(p["shares"]*bars[s][-1]["close"]*(1-round_trip_cost_bps/20000)
+    final_equity=cash+sum(p["shares"]*bars[s][-1]["close"]*(1-round_trip_cost_bps/20000)*(1-slippage_bps/10000)
                           for s,p in positions.items())
     peak=starting_cash
     worst_drawdown=0
@@ -207,7 +207,7 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
             "entry_start_index":entry_start_index,
             "peak_same_sector_positions":peak_same_sector_positions,
             "peak_committed_capital_pct":round(100*peak_invested/starting_cash,4),
-            "max_exposure_fraction":max_exposure_fraction,
+            "max_exposure_fraction":max_exposure_fraction,"slippage_bps_per_side":slippage_bps,
             "warning_exit_trades":sum(x["reason"]=="warning" for x in trades),
             "severe_completed_losses":sum(x["net_pct"]<=-8 for x in trades),
             "worst_completed_trade_pct":round(worst_trade_pct,4),
