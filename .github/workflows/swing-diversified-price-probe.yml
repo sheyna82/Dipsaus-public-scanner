@@ -86,6 +86,24 @@ jobs:
           print('REGIME_AB',json.dumps({'status':result.get('status','computed'),
               'summary':result.get('summary'),'reason':result.get('reason')}))
           PY
+      - name: Evaluate warning signals on historical price panel
+        run: |
+          python - <<'PY'
+          import json,zipfile
+          from pathlib import Path
+          from research_swing_failure_warning_evaluation import evaluate_failure_warnings
+          root=Path('diversified-price-probe')
+          try:
+              coverage=json.loads((root/'coverage.json').read_text())
+              symbols=[x['symbol'] for x in coverage['manifest']['symbols']]
+              bars={s:json.loads((root/(s+'.json')).read_text())['rows'] for s in symbols}
+              summary=[evaluate_failure_warnings(bars,horizon=h,step=15) for h in (5,10,15)]
+              result={'status':'computed','summary':summary,'research_only':True,'trade_ready':False}
+          except (ValueError,KeyError,FileNotFoundError) as exc:
+              result={'status':'blocked','reason':type(exc).__name__+': '+str(exc)[:240],'research_only':True}
+          (root/'warning-evaluation.json').write_text(json.dumps(result,indent=2))
+          print('WARNING_EVAL',json.dumps(result))
+          PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: dipsaus-diversified-sector-prices-unverified
