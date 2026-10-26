@@ -93,6 +93,21 @@ class PortfolioProxyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"invalid_entry_start_index"):
             portfolio_swing_proxy(self.panel(),entry_start_index=75)
 
+    def test_next_open_gap_guard_skips_unfavorable_execution(self):
+        bars=self.panel()
+        for rows in bars.values():
+            rows[21]={"timestamp":21,"open":110,"high":111,"low":109,"close":110}
+        baseline=portfolio_swing_proxy(bars,horizon=5,slots=3)
+        guarded=portfolio_swing_proxy(bars,horizon=5,slots=3,max_open_gap_pct=5)
+        self.assertGreater(guarded["skipped_gap_entries"],0)
+        self.assertEqual(baseline["skipped_gap_entries"],0)
+        self.assertEqual(guarded["max_open_gap_pct"],5)
+        self.assertLess(guarded["completed_trades"],baseline["completed_trades"])
+
+    def test_invalid_gap_guard_rejected(self):
+        with self.assertRaisesRegex(ValueError,"invalid_max_open_gap_pct"):
+            portfolio_swing_proxy(self.panel(),max_open_gap_pct=-1)
+
     def test_future_bars_cannot_change_past_executed_trades(self):
         # Inspired by Freqtrade's lookahead-analysis: change unseen future
         # candles and require all earlier completed trades to stay identical.
