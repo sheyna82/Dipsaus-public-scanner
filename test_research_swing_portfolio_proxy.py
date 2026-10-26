@@ -113,6 +113,29 @@ class PortfolioProxyTests(unittest.TestCase):
         past=lambda result:[trade for trade in result["trade_log"] if trade["exit_index"]<60]
         self.assertEqual(past(baseline),past(altered))
 
+    def test_future_universe_winner_cannot_rewrite_past_rankings(self):
+        # Cross-sectional ranking must not use a future winner's later surge.
+        symbols=("AMD","META","XOM","CVX","KO","PG","JPM","BAC")
+        bars={}
+        for j,symbol in enumerate(symbols):
+            rows=[]
+            for i in range(80):
+                close=100+i*(.15+j*.03)
+                rows.append({"timestamp":i,"open":close,"high":close+1,
+                             "low":close-1,"close":close})
+            bars[symbol]=rows
+        baseline=portfolio_swing_proxy(bars,horizon=5,slots=4,
+                                       max_positions_per_sector=1)
+        altered={s:[dict(x) for x in rows] for s,rows in bars.items()}
+        for i in range(65,80):
+            altered["AMD"][i]={"timestamp":i,"open":500+i,
+                               "high":502+i,"low":498+i,"close":500+i}
+        revised=portfolio_swing_proxy(altered,horizon=5,slots=4,
+                                      max_positions_per_sector=1)
+        before=lambda result:[x for x in result["trade_log"] if x["exit_index"]<65]
+        self.assertGreater(len(before(baseline)),0)
+        self.assertEqual(before(baseline),before(revised))
+
     def test_selective_warning_policies_are_supported(self):
         bars=self.panel()
         for policy in ("all","severe_only","breakdown_only"):
