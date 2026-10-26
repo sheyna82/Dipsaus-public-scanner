@@ -10,7 +10,9 @@ class PortfolioProxyTests(unittest.TestCase):
         result=portfolio_swing_proxy(self.panel(),horizon=5,slots=3)
         self.assertLessEqual(result["max_simultaneous_positions"],3)
         self.assertLessEqual(result["peak_committed_capital_pct"],100.0001)
-        self.assertAlmostEqual(result["total_net_return_pct"],-.3,delta=1.5)
+        # Repeated five-session trades incur costs on every round trip.
+        self.assertLess(result["total_net_return_pct"],-.3)
+        self.assertGreater(result["completed_trades"],3)
         self.assertFalse(result["trade_ready"])
 
     def test_cash_reserve_cap(self):
