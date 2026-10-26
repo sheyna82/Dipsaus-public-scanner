@@ -13,6 +13,11 @@ class PortfolioProxyTests(unittest.TestCase):
         self.assertAlmostEqual(result["total_net_return_pct"],-.3,delta=1.5)
         self.assertFalse(result["trade_ready"])
 
+    def test_cash_reserve_cap(self):
+        result=portfolio_swing_proxy(self.panel(),horizon=5,slots=6,max_exposure_fraction=.5)
+        self.assertLessEqual(result["peak_committed_capital_pct"],50.0001)
+        self.assertEqual(result["max_exposure_fraction"],.5)
+
     def test_misaligned_panel_rejected(self):
         bars=self.panel()
         bars["A"][10]["timestamp"]=999
