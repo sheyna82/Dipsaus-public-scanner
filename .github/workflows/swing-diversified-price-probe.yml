@@ -157,7 +157,11 @@ jobs:
               coverage=json.loads((root/'coverage.json').read_text())
               symbols=[x['symbol'] for x in coverage['manifest']['symbols']]
               bars={s:json.loads((root/(s+'.json')).read_text())['rows'] for s in symbols}
-              result={'status':'computed','comparisons':[
+              benchmark_rows=json.loads((root/'SPY.json').read_text())['rows']
+              if tuple(x['timestamp'] for x in benchmark_rows)!=tuple(x['timestamp'] for x in next(iter(bars.values()))):
+                  raise ValueError('unaligned_benchmark')
+              benchmark_net_pct=round(100*(benchmark_rows[-1]['close']/benchmark_rows[20]['open']-1)-.3,4)
+              result={'status':'computed','benchmark':{'symbol':'SPY','buy_hold_net_pct':benchmark_net_pct,'cost_assumption_bps':30,'dividends_modelled':False},'comparisons':[
                   {'horizon':h,'warning_exits':w,'exposure_cap':cap,
                    **portfolio_swing_proxy(bars,horizon=h,warning_exits=w,max_exposure_fraction=cap)}
                   for h in (5,10,15) for w in (False,True) for cap in (.5,.75,1.0)]}
