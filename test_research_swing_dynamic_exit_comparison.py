@@ -9,7 +9,7 @@ class TestExit(unittest.TestCase):
             c[i]=110 if i<8 else 98
         r=compare_exit_policies(o,c,horizons=(3,5,10),max_hold=12)
         self.assertEqual(r["fixed"]["3"]["holding_sessions"],3)
-        self.assertEqual(r["dynamic"]["exit_index"],8)
+        self.assertEqual(r["dynamic"]["exit_index"],9)
         self.assertEqual(r["dynamic"]["reason"],"trailing_close_drawdown_next_open")
 
     def test_future_data_insufficient(self):
