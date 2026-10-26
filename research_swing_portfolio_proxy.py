@@ -172,11 +172,18 @@ def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
                           for s,p in positions.items())
     peak=starting_cash
     worst_drawdown=0
+    holdout_equity=equity[max(0,entry_start_index-20):]+[final_equity]
+    holdout_peak=starting_cash
+    holdout_worst_drawdown=0
+    for value in holdout_equity:
+        holdout_peak=max(holdout_peak,value)
+        holdout_worst_drawdown=min(holdout_worst_drawdown,100*(value/holdout_peak-1))
     for value in equity+[final_equity]:
         peak=max(peak,value)
         worst_drawdown=min(worst_drawdown,100*(value/peak-1))
     return {"initial_cash":starting_cash,"final_equity":round(final_equity,2),
             "total_net_return_pct":round(100*(final_equity/starting_cash-1),4),
+            "holdout_max_drawdown_pct":round(holdout_worst_drawdown,4),
             "max_mark_to_market_drawdown_pct":round(worst_drawdown,4),
             "worst_daily_equity_move_pct":round(worst_daily_equity_move_pct,4),
             "negative_equity_days":negative_equity_days,
