@@ -17,6 +17,17 @@ class PortfolioProxyTests(unittest.TestCase):
         self.assertEqual(sum(result["completed_loss_buckets"].values()),0)
         self.assertFalse(result["trade_ready"])
 
+    def test_adverse_slippage_reduces_net_return(self):
+        bars=self.panel()
+        base=portfolio_swing_proxy(bars,horizon=5,slots=3,slippage_bps=0)
+        adverse=portfolio_swing_proxy(bars,horizon=5,slots=3,slippage_bps=20)
+        self.assertLess(adverse["total_net_return_pct"],base["total_net_return_pct"])
+        self.assertEqual(adverse["slippage_bps_per_side"],20)
+
+    def test_invalid_slippage_rejected(self):
+        with self.assertRaisesRegex(ValueError,"invalid_cost_or_cash"):
+            portfolio_swing_proxy(self.panel(),slippage_bps=-1)
+
     def test_cash_reserve_cap(self):
         result=portfolio_swing_proxy(self.panel(),horizon=5,slots=6,max_exposure_fraction=.5)
         self.assertLessEqual(result["peak_committed_capital_pct"],50.0001)
