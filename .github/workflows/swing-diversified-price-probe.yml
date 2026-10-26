@@ -7,6 +7,8 @@ on:
       - 'research_swing_diversified_universe.py'
       - 'research_swing_intratrade_excursion.py'
       - 'test_research_swing_intratrade_excursion.py'
+      - 'research_swing_portfolio_proxy.py'
+      - 'test_research_swing_portfolio_proxy.py'
       - 'research_swing_exit_policy_ab.py'
       - 'test_research_swing_exit_policy_ab.py'
       - 'research_swing_warning_component_ablation.py'
@@ -143,6 +145,26 @@ jobs:
           result.update(research_only=True,trade_ready=False)
           (root/'exit-policy-ab.json').write_text(json.dumps(result,indent=2))
           print('EXIT_POLICY_AB',json.dumps(result))
+          PY
+      - name: Compare six-slot portfolio proxies
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_swing_portfolio_proxy import portfolio_swing_proxy
+          root=Path('diversified-price-probe')
+          try:
+              coverage=json.loads((root/'coverage.json').read_text())
+              symbols=[x['symbol'] for x in coverage['manifest']['symbols']]
+              bars={s:json.loads((root/(s+'.json')).read_text())['rows'] for s in symbols}
+              result={'status':'computed','comparisons':[
+                  {'horizon':h,'warning_exits':w,**portfolio_swing_proxy(bars,horizon=h,warning_exits=w)}
+                  for h in (5,10,15) for w in (False,True)]}
+          except (ValueError,KeyError,FileNotFoundError) as exc:
+              result={'status':'blocked','reason':type(exc).__name__+': '+str(exc)[:240]}
+          result.update(research_only=True,trade_ready=False)
+          (root/'portfolio-proxy.json').write_text(json.dumps(result,indent=2))
+          print('PORTFOLIO_PROXY',json.dumps(result))
           PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
