@@ -41,7 +41,20 @@ def compare_signal_families(rows):
                           "count": len(returns), "mean_net_pct": mean(returns),
                           "median_net_pct": median(returns),
                           "win_fraction": sum(x > 0 for x in returns) / len(returns)})
+    # Only compare families when both are observed in the same cohort/horizon.
+    matched = []
+    by_cohort = defaultdict(dict)
+    for item in summaries:
+        by_cohort[(item["cohort_id"], item["horizon"])][item["family"]] = item
+    for (cohort, horizon), families in sorted(by_cohort.items()):
+        labels = sorted(families)
+        for i, left in enumerate(labels):
+            for right in labels[i + 1:]:
+                matched.append({"cohort_id": cohort, "horizon": horizon,
+                                "family_a": left, "family_b": right,
+                                "difference_mean_net_percentage_points":
+                                    families[left]["mean_net_pct"] - families[right]["mean_net_pct"]})
     return {"research_only": True, "predictive_edge_proven": False,
             "independent_trials_established": False,
             "profitability_ranking_available": False,
-            "summaries": summaries}
+            "summaries": summaries, "matched_family_differences": matched}
