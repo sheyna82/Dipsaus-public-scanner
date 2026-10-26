@@ -158,8 +158,9 @@ jobs:
               symbols=[x['symbol'] for x in coverage['manifest']['symbols']]
               bars={s:json.loads((root/(s+'.json')).read_text())['rows'] for s in symbols}
               result={'status':'computed','comparisons':[
-                  {'horizon':h,'warning_exits':w,**portfolio_swing_proxy(bars,horizon=h,warning_exits=w)}
-                  for h in (5,10,15) for w in (False,True)]}
+                  {'horizon':h,'warning_exits':w,'exposure_cap':cap,
+                   **portfolio_swing_proxy(bars,horizon=h,warning_exits=w,max_exposure_fraction=cap)}
+                  for h in (5,10,15) for w in (False,True) for cap in (.5,.75,1.0)]}
           except (ValueError,KeyError,FileNotFoundError) as exc:
               result={'status':'blocked','reason':type(exc).__name__+': '+str(exc)[:240]}
           result.update(research_only=True,trade_ready=False)
