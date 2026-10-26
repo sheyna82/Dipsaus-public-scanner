@@ -93,6 +93,26 @@ class PortfolioProxyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"invalid_entry_start_index"):
             portfolio_swing_proxy(self.panel(),entry_start_index=75)
 
+    def test_future_bars_cannot_change_past_executed_trades(self):
+        # Inspired by Freqtrade's lookahead-analysis: change unseen future
+        # candles and require all earlier completed trades to stay identical.
+        bars=self.panel()
+        for symbol,rows in bars.items():
+            for i in range(21,75):
+                close=100 + (i % 9) * (1 if symbol in ("A","C","E") else -1)
+                rows[i]={"timestamp":i,"open":close,"high":close+2,
+                         "low":close-2,"close":close}
+        baseline=portfolio_swing_proxy(bars,horizon=10,slots=3,warning_exits=True)
+        changed={symbol:[dict(row) for row in rows] for symbol,rows in bars.items()}
+        for symbol,rows in changed.items():
+            for i in range(60,75):
+                price=150 if symbol in ("A","C","E") else 60
+                rows[i]={"timestamp":i,"open":price,"high":price+2,
+                         "low":price-2,"close":price}
+        altered=portfolio_swing_proxy(changed,horizon=10,slots=3,warning_exits=True)
+        past=lambda result:[trade for trade in result["trades"] if trade["exit_index"]<60]
+        self.assertEqual(past(baseline),past(altered))
+
     def test_selective_warning_policies_are_supported(self):
         bars=self.panel()
         for policy in ("all","severe_only","breakdown_only"):
