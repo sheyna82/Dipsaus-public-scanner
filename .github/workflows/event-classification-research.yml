@@ -29,6 +29,8 @@ on:
       - 'test_research_swing_sec_submissions.py'
       - 'research_swing_sec_acceptance_reconciliation.py'
       - 'test_research_swing_sec_acceptance_reconciliation.py'
+      - 'research_swing_crossmarket_scorecard.py'
+      - 'test_research_swing_crossmarket_scorecard.py'
       - '.github/workflows/event-classification-research.yml'
 permissions:
   contents: read
@@ -42,4 +44,4 @@ jobs:
         with:
           python-version: '3.12'
       - name: Validate offline event classification
-        run: python -m unittest -v test_research_swing_event_classification test_research_swing_event_downside test_research_swing_event_dataset_audit test_research_swing_user_event_examples test_research_swing_event_session_alignment test_research_swing_event_outcome_study test_research_swing_event_cohort_summary test_research_swing_historical_event_inputs test_research_swing_breadth_audit test_research_swing_event_walkforward_split test_research_swing_historical_source_registry test_research_swing_sec_submissions test_research_swing_sec_acceptance_reconciliation
+        run: python -m unittest -v test_research_swing_event_classification test_research_swing_event_downside test_research_swing_event_dataset_audit test_research_swing_user_event_examples test_research_swing_event_session_alignment test_research_swing_event_outcome_study test_research_swing_event_cohort_summary test_research_swing_historical_event_inputs test_research_swing_breadth_audit test_research_swing_event_walkforward_split test_research_swing_historical_source_registry test_research_swing_sec_submissions test_research_swing_sec_acceptance_reconciliation test_research_swing_crossmarket_scorecard
