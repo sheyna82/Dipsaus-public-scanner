@@ -21,6 +21,9 @@ class ChronologicalLedgerTests(unittest.TestCase):
                          [("A", "entry"), ("A", "exit"),
                           ("C", "entry"), ("C", "exit")])
         self.assertEqual(Decimal(r["ending_cash"]), Decimal("3465"))
+        self.assertEqual(r["rejected_entries"],
+                         [{"date": "2026-01-05", "ticker": "B",
+                           "reason": "position_cap"}])
 
     def test_cap_and_score_tie(self):
         rows = [trade("Z", 2, 5, 10), trade("A", 2, 5, -10),
@@ -35,6 +38,7 @@ class ChronologicalLedgerTests(unittest.TestCase):
         r = simulate_chronological_portfolio(
             [trade("A", 2, 6, 10), trade("A", 3, 7, 20)])
         self.assertEqual(sum(x["action"] == "entry" for x in r["ledger"]), 1)
+        self.assertEqual(r["rejected_entries"][0]["reason"], "already_held")
 
     def test_rejects_invalid_returns(self):
         with self.assertRaisesRegex(ValueError, "invalid_return"):
