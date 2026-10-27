@@ -32,7 +32,7 @@ jobs:
                       body=r.read(3000000)
                   data=json.loads(body)
                   payload=data.get('data',data) if isinstance(data,dict) else data
-                  releases=payload.get('releases',[]) if isinstance(payload,dict) else []
+                  releases=payload if isinstance(payload,list) else payload.get('releases',[]) if isinstance(payload,dict) else []
                   if not isinstance(releases,list): raise ValueError('unexpected_releases_shape')
                   valid=[x for x in releases if isinstance(x,dict) and x.get('status')=='reported'
                          and isinstance(x.get('date'),str) and start<=x['date']<=end
