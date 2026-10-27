@@ -37,7 +37,7 @@ def walk_forward_folds(
     if any(type(x) is not date for x in trading_dates):
         raise ValueError("trading_dates must contain datetime.date values")
     dates = list(trading_dates)
-    if not dates or dates != sorted(set(dates)):
+    if dates != sorted(set(dates)):
         raise ValueError("trading_dates must be strictly increasing and unique")
     if min_train_sessions < 1 or validation_sessions < 1 or step_sessions < 1:
         raise ValueError("training, validation and step lengths must be positive")
