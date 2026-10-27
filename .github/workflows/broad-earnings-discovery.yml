@@ -37,7 +37,15 @@ jobs:
                   valid=[x for x in releases if isinstance(x,dict) and x.get('status')=='reported'
                          and isinstance(x.get('date'),str) and start<=x['date']<=end
                          and x.get('ticker') and x.get('accession_number')]
-                  if not valid: raise ValueError('no_confirmed_reported_earnings')
+                  if not valid:
+                      diagnostic={'top_level_keys':list(data)[:20] if isinstance(data,dict) else [],
+                                  'payload_type':type(payload).__name__,
+                                  'payload_keys':list(payload)[:20] if isinstance(payload,dict) else [],
+                                  'releases_count':len(releases),
+                                  'first_release_keys':list(releases[0])[:20] if releases and isinstance(releases[0],dict) else [],
+                                  'response_sha256':hashlib.sha256(body).hexdigest()}
+                      (root/f"diagnostic_{start}.json").write_text(json.dumps(diagnostic,indent=2))
+                      raise ValueError('no_confirmed_reported_earnings')
                   if len(releases)>=2000: raise ValueError('possible_truncation_split_window')
                   total+=len(valid)
                   (root/f"source_{start}.json").write_bytes(body)
@@ -45,7 +53,8 @@ jobs:
                                'raw_sha256':hashlib.sha256(body).hexdigest(),
                                'source':url,'status':'downloaded_unverified'})
               except Exception as e:
-                  errors.append({'start':start,'error_type':type(e).__name__})
+                  errors.append({'start':start,'error_type':type(e).__name__,
+                                 'reason':str(e)[:100]})
               time.sleep(2)
           (root/'coverage.json').write_text(json.dumps({'windows':rows,'errors':errors,'valid_records':total,'no_verified_signal_timestamps':True,'trade_ready':False},indent=2))
           print(json.dumps({'windows':rows,'errors':errors}))
