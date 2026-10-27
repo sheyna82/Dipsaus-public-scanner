@@ -45,6 +45,8 @@ on:
       - 'test_research_swing_price_only_recovery_benchmark.py'
       - 'research_swing_walkforward_selection.py'
       - 'test_research_swing_walkforward_selection.py'
+      - 'research_swing_ranking_directions.py'
+      - 'test_research_swing_ranking_directions.py'
       - 'research_swing_walkforward_splits.py'
       - 'test_research_swing_walkforward_splits.py'
       - 'research_swing_price_only_cli.py'
@@ -62,4 +64,4 @@ jobs:
         with:
           python-version: '3.12'
       - name: Validate offline event classification
-        run: python -m unittest -v test_research_swing_event_classification test_research_swing_event_downside test_research_swing_event_dataset_audit test_research_swing_user_event_examples test_research_swing_event_session_alignment test_research_swing_event_outcome_study test_research_swing_event_cohort_summary test_research_swing_historical_event_inputs test_research_swing_breadth_audit test_research_swing_event_walkforward_split test_research_swing_historical_source_registry test_research_swing_sec_submissions test_research_swing_sec_acceptance_reconciliation test_research_swing_crossmarket_scorecard test_research_swing_dataset_manifest test_research_swing_sec_batch_import test_research_swing_sec_acquisition test_research_swing_verified_event_runner test_research_swing_event_price_csv_bridge test_research_swing_price_only_recovery_benchmark test_research_swing_price_only_cli test_research_swing_walkforward_splits test_research_swing_walkforward_selection
+        run: python -m unittest -v test_research_swing_event_classification test_research_swing_event_downside test_research_swing_event_dataset_audit test_research_swing_user_event_examples test_research_swing_event_session_alignment test_research_swing_event_outcome_study test_research_swing_event_cohort_summary test_research_swing_historical_event_inputs test_research_swing_breadth_audit test_research_swing_event_walkforward_split test_research_swing_historical_source_registry test_research_swing_sec_submissions test_research_swing_sec_acceptance_reconciliation test_research_swing_crossmarket_scorecard test_research_swing_dataset_manifest test_research_swing_sec_batch_import test_research_swing_sec_acquisition test_research_swing_verified_event_runner test_research_swing_event_price_csv_bridge test_research_swing_price_only_recovery_benchmark test_research_swing_price_only_cli test_research_swing_walkforward_splits test_research_swing_walkforward_selection test_research_swing_ranking_directions
