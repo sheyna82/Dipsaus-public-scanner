@@ -19,6 +19,8 @@ on:
       - 'test_research_swing_event_cohort_summary.py'
       - 'research_swing_historical_event_inputs.py'
       - 'test_research_swing_historical_event_inputs.py'
+      - 'research_swing_breadth_audit.py'
+      - 'test_research_swing_breadth_audit.py'
       - '.github/workflows/event-classification-research.yml'
 permissions:
   contents: read
@@ -32,4 +34,4 @@ jobs:
         with:
           python-version: '3.12'
       - name: Validate offline event classification
-        run: python -m unittest -v test_research_swing_event_classification test_research_swing_event_downside test_research_swing_event_dataset_audit test_research_swing_user_event_examples test_research_swing_event_session_alignment test_research_swing_event_outcome_study test_research_swing_event_cohort_summary test_research_swing_historical_event_inputs
+        run: python -m unittest -v test_research_swing_event_classification test_research_swing_event_downside test_research_swing_event_dataset_audit test_research_swing_user_event_examples test_research_swing_event_session_alignment test_research_swing_event_outcome_study test_research_swing_event_cohort_summary test_research_swing_historical_event_inputs test_research_swing_breadth_audit
