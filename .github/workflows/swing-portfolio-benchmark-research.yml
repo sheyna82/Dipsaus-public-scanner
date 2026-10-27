@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
+      - 'research_swing_next_open_execution.py'
       - 'research_swing_portfolio_benchmark.py'
       - 'test_research_swing_portfolio_benchmark.py'
       - '.github/workflows/swing-portfolio-benchmark-research.yml'
