@@ -23,7 +23,7 @@ jobs:
           root=Path("broad-earnings-discovery");root.mkdir(exist_ok=True)
           rows=[];errors=[];total=0
           # Past six months per documented no-key endpoint. Quarterly windows avoid truncation.
-          for start,end in [('2026-05-01','2026-06-30'),('2026-07-01','2026-09-30'),('2026-10-01','2026-10-27')]:
+          for start,end in [('2026-05-01','2026-05-15'),('2026-05-16','2026-05-31'),('2026-06-01','2026-06-15'),('2026-06-16','2026-06-30'),('2026-07-01','2026-07-15'),('2026-07-16','2026-07-31'),('2026-08-01','2026-08-15'),('2026-08-16','2026-08-31'),('2026-09-01','2026-09-15'),('2026-09-16','2026-09-30'),('2026-10-01','2026-10-15'),('2026-10-16','2026-10-27')]:
               q=urllib.parse.urlencode({'from':start,'to':end,'status':'reported','limit':2000})
               url='https://xoomar.com/api/markets/earnings?'+q
               try:
@@ -58,7 +58,7 @@ jobs:
               time.sleep(2)
           (root/'coverage.json').write_text(json.dumps({'windows':rows,'errors':errors,'valid_records':total,'no_verified_signal_timestamps':True,'trade_ready':False},indent=2))
           print(json.dumps({'windows':rows,'errors':errors}))
-          if errors or len(rows)!=3 or total==0: raise SystemExit('Incomplete confirmed earnings coverage; inspect artifact')
+          if errors or len(rows)!=12 or total==0: raise SystemExit('Incomplete confirmed earnings coverage; inspect artifact')
           PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
