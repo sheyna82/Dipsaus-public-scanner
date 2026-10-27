@@ -18,20 +18,34 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.12'
-      - name: Download exact historical artifact from prior successful run
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Recollect historical reported earnings from public source without cross-run token
         run: |
           python - <<'PY'
-          import io, os, urllib.request, zipfile
-          url="https://api.github.com/repos/sheyna82/Dipsaus-public-scanner/actions/artifacts/12763431282/zip"
-          req=urllib.request.Request(url,headers={"Authorization":"Bearer "+os.environ["GH_TOKEN"],"Accept":"application/vnd.github+json","User-Agent":"DIPSAUS-research"})
-          with urllib.request.urlopen(req,timeout=40) as response: raw=response.read(5000000)
-          with zipfile.ZipFile(io.BytesIO(raw)) as z:
-              names=z.namelist()
-              if len(names)!=14 or any("/" in n or ".." in n for n in names):raise ValueError("unexpected_artifact_members")
-              os.mkdir("earnings-source")
-              z.extractall("earnings-source")
+          import json,time,urllib.request,urllib.parse,hashlib
+          from pathlib import Path
+          root=Path("earnings-source");root.mkdir(exist_ok=True)
+          windows=[('2026-05-01','2026-05-07'),('2026-05-08','2026-05-15'),('2026-05-16','2026-05-31'),('2026-06-01','2026-06-15'),('2026-06-16','2026-06-30'),('2026-07-01','2026-07-15'),('2026-07-16','2026-07-31'),('2026-08-01','2026-08-15'),('2026-08-16','2026-08-31'),('2026-09-01','2026-09-15'),('2026-09-16','2026-09-30'),('2026-10-01','2026-10-15'),('2026-10-16','2026-10-27')]
+          audit=[]
+          for start,end in windows:
+              url="https://xoomar.com/api/markets/earnings?"+urllib.parse.urlencode({'from':start,'to':end,'status':'reported','limit':2000})
+              req=urllib.request.Request(url,headers={'User-Agent':'DipsausResearch/1.0'})
+              for attempt in range(4):
+                  try:
+                      with urllib.request.urlopen(req,timeout=30) as response: body=response.read(3000000)
+                      break
+                  except Exception:
+                      if attempt==3:raise
+                      time.sleep(8*(attempt+1))
+              obj=json.loads(body);data=obj.get("data",obj) if isinstance(obj,dict) else obj
+              releases=data.get("releases",[]) if isinstance(data,dict) else data
+              if not isinstance(releases,list) or len(releases)>=2000:raise ValueError("bad_or_truncated_earnings_window")
+              valid=[x for x in releases if isinstance(x,dict) and x.get("status")=="reported" and start<=str(x.get("date",""))<=end and x.get("ticker") and x.get("accessionNo")]
+              if not valid:raise ValueError("empty_valid_window")
+              (root/f"source_{start}.json").write_bytes(body)
+              audit.append({"start":start,"end":end,"valid":len(valid),"sha256":hashlib.sha256(body).hexdigest()})
+              time.sleep(7)
+          (root/"coverage.json").write_text(json.dumps({"windows":audit,"timestamp_verified":False,"trade_ready":False},indent=2))
+          print(json.dumps({"windows":len(audit),"valid_events":sum(x["valid"] for x in audit)}))
           PY
       - name: Link first 40 symbols to historical daily OHLCV
         run: python research_broad_earnings_price_link.py --events-dir earnings-source --output-dir earnings-price-link --max-symbols 40
