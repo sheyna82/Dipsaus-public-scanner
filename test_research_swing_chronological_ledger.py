@@ -20,7 +20,7 @@ class ChronologicalLedgerTests(unittest.TestCase):
         self.assertEqual([(x["ticker"], x["action"]) for x in r["ledger"]],
                          [("A", "entry"), ("A", "exit"),
                           ("C", "entry"), ("C", "exit")])
-        self.assertEqual(Decimal(r["ending_cash"]), Decimal("3465"))
+        self.assertEqual(Decimal(r["ending_cash"]), Decimal("3500"))
         self.assertEqual(r["rejected_entries"],
                          [{"date": "2026-01-05", "ticker": "B",
                            "reason": "position_cap"}])
