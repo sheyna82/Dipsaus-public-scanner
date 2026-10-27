@@ -5,6 +5,8 @@ on:
     paths:
       - 'research_swing_event_classification.py'
       - 'test_research_swing_event_classification.py'
+      - 'research_swing_event_downside.py'
+      - 'test_research_swing_event_downside.py'
       - '.github/workflows/event-classification-research.yml'
 permissions:
   contents: read
@@ -18,4 +20,4 @@ jobs:
         with:
           python-version: '3.12'
       - name: Validate offline event classification
-        run: python -m unittest -v test_research_swing_event_classification
+        run: python -m unittest -v test_research_swing_event_classification test_research_swing_event_downside
