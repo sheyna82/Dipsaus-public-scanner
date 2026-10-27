@@ -18,10 +18,10 @@ jobs:
       - name: Collect reported US earnings dates from historical filing index
         run: |
           python - <<'PY'
-          import csv,io,json,time,urllib.request,urllib.parse
+          import json,time,urllib.request,urllib.parse,hashlib
           from pathlib import Path
           root=Path("broad-earnings-discovery");root.mkdir(exist_ok=True)
-          rows=[];errors=[]
+          rows=[];errors=[];total=0
           # Past six months per documented no-key endpoint. Quarterly windows avoid truncation.
           for start,end in [('2026-04-01','2026-06-30'),('2026-07-01','2026-09-30'),('2026-10-01','2026-10-27')]:
               q=urllib.parse.urlencode({'from':start,'to':end,'status':'reported','limit':2000})
@@ -31,14 +31,25 @@ jobs:
                   with urllib.request.urlopen(req,timeout=25) as r:
                       body=r.read(3000000)
                   data=json.loads(body)
+                  payload=data.get('data',data) if isinstance(data,dict) else data
+                  releases=payload.get('releases',[]) if isinstance(payload,dict) else []
+                  if not isinstance(releases,list): raise ValueError('unexpected_releases_shape')
+                  valid=[x for x in releases if isinstance(x,dict) and x.get('status')=='reported'
+                         and isinstance(x.get('date'),str) and start<=x['date']<=end
+                         and x.get('ticker') and x.get('accession_number')]
+                  if not valid: raise ValueError('no_confirmed_reported_earnings')
+                  if len(releases)>=2000: raise ValueError('possible_truncation_split_window')
+                  total+=len(valid)
                   (root/f"source_{start}.json").write_bytes(body)
-                  rows.append({'start':start,'end':end,'type':type(data).__name__,'size':len(data) if hasattr(data,'__len__') else None,'source':url,'status':'downloaded_unverified'})
+                  rows.append({'start':start,'end':end,'returned':len(releases),'valid':len(valid),
+                               'raw_sha256':hashlib.sha256(body).hexdigest(),
+                               'source':url,'status':'downloaded_unverified'})
               except Exception as e:
                   errors.append({'start':start,'error_type':type(e).__name__})
               time.sleep(2)
-          (root/'coverage.json').write_text(json.dumps({'windows':rows,'errors':errors,'no_verified_signal_timestamps':True,'trade_ready':False},indent=2))
+          (root/'coverage.json').write_text(json.dumps({'windows':rows,'errors':errors,'valid_records':total,'no_verified_signal_timestamps':True,'trade_ready':False},indent=2))
           print(json.dumps({'windows':rows,'errors':errors}))
-          if not rows: raise SystemExit('No event history downloaded')
+          if errors or len(rows)!=3 or total==0: raise SystemExit('Incomplete confirmed earnings coverage; inspect artifact')
           PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
