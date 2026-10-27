@@ -32,6 +32,22 @@ class VerifiedEventRunnerTests(unittest.TestCase):
         data["events"][0]["release_timestamp_verified"] = False
         with self.assertRaisesRegex(ValueError, "unverified_release_time"):
             run_verified_event_study(data, as_of_at="2026-10-20T00:00:00Z")
+    def test_uses_original_event_availability_not_a_reconstructed_time(self):
+        data = payload()
+        data["events"][0]["published_at"] = "2026-10-05T17:00:00Z"
+        data["events"][0]["first_observed_at"] = "2026-10-05T17:01:00Z"
+        result = run_verified_event_study(
+            data, as_of_at="2026-10-20T00:00:00Z", minimum_events=2)
+        self.assertGreater(result["outcome_rows"], 0)
+        # Publication after the fifth session close: next decision is sixth close;
+        # entry therefore cannot occur before seventh session open.
+        self.assertEqual(result["cohorts"]["3"]["event_count"], 1)
+    def test_future_publication_rejected(self):
+        data = payload()
+        data["events"][0]["published_at"] = "2026-10-21T12:00:00Z"
+        data["events"][0]["first_observed_at"] = "2026-10-21T12:01:00Z"
+        with self.assertRaisesRegex(ValueError, "event_after_cutoff"):
+            run_verified_event_study(data, as_of_at="2026-10-20T00:00:00Z")
     def test_missing_prices_reported(self):
         data = payload()
         data["bars_by_symbol"] = {}
