@@ -14,9 +14,8 @@ class BenchmarkComparisonTests(unittest.TestCase):
         self.assertFalse(result["trade_ready"])
 
     def test_missing_exact_date_is_rejected_not_substituted(self):
-        result=compare(self.rows,self.bars[:1])
-        self.assertEqual(result["matched_rows"],0)
-        self.assertEqual(result["cohorts"][0]["missing_exact_benchmark_dates"],1)
+        with self.assertRaisesRegex(ValueError,"no_exact_date_matches"):
+            compare(self.rows,self.bars[:1])
 
     def test_duplicate_events_fail_closed(self):
         with self.assertRaisesRegex(ValueError,"duplicate_event_horizon"):
