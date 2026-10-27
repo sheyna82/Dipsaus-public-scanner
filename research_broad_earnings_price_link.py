@@ -8,6 +8,7 @@ def load_events(root):
     for path in sorted(Path(root).glob("source_*.json")):
         payload=json.loads(path.read_text())
         data=payload.get("data",payload) if isinstance(payload,dict) else payload
+        if isinstance(data,dict): data=data.get("releases",[])
         if not isinstance(data,list): raise ValueError("unexpected_source_shape")
         rows.extend(x for x in data if isinstance(x,dict) and x.get("ticker") and x.get("date") and x.get("accessionNo") and x.get("status")=="reported")
     if not rows: raise ValueError("no_events")
