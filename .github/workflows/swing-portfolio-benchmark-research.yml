@@ -5,6 +5,8 @@ on:
   pull_request:
     paths:
       - 'research_swing_next_open_execution.py'
+      - 'research_swing_portfolio_with_marks.py'
+      - 'test_research_swing_portfolio_with_marks.py'
       - 'research_swing_daily_equity.py'
       - 'test_research_swing_daily_equity.py'
       - 'research_swing_chronological_ledger.py'
@@ -27,4 +29,4 @@ jobs:
         with:
           python-version: '3.12'
       - name: Test capital-matched portfolio ranking baseline
-        run: python -m unittest -v test_research_swing_portfolio_benchmark test_research_swing_chronological_ledger test_research_swing_daily_equity
+        run: python -m unittest -v test_research_swing_portfolio_benchmark test_research_swing_chronological_ledger test_research_swing_daily_equity test_research_swing_portfolio_with_marks
