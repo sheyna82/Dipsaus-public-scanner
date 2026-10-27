@@ -23,7 +23,7 @@ jobs:
           root=Path("broad-earnings-discovery");root.mkdir(exist_ok=True)
           rows=[];errors=[];total=0
           # Past six months per documented no-key endpoint. Quarterly windows avoid truncation.
-          for start,end in [('2026-04-01','2026-06-30'),('2026-07-01','2026-09-30'),('2026-10-01','2026-10-27')]:
+          for start,end in [('2026-05-01','2026-06-30'),('2026-07-01','2026-09-30'),('2026-10-01','2026-10-27')]:
               q=urllib.parse.urlencode({'from':start,'to':end,'status':'reported','limit':2000})
               url='https://xoomar.com/api/markets/earnings?'+q
               try:
@@ -36,7 +36,7 @@ jobs:
                   if not isinstance(releases,list): raise ValueError('unexpected_releases_shape')
                   valid=[x for x in releases if isinstance(x,dict) and x.get('status')=='reported'
                          and isinstance(x.get('date'),str) and start<=x['date']<=end
-                         and x.get('ticker') and x.get('accession_number')]
+                         and x.get('ticker') and x.get('accessionNo')]
                   if not valid:
                       diagnostic={'top_level_keys':list(data)[:20] if isinstance(data,dict) else [],
                                   'payload_type':type(payload).__name__,
