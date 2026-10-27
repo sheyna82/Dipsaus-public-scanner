@@ -31,4 +31,4 @@ jobs:
       - name: Compile evidence modules
         run: python -m py_compile research_event_replay_intake_202610.py research_event_replay_readiness.py research_event_private_notification_inventory.py
       - name: Run event evidence regressions
-        run: python -m unittest -v test_research_event_replay_intake_202610 test_research_event_replay_complete_evidence test_research_event_replay_independent_origin test_research_event_replay_readiness test_research_event_private_notification_inventory test_research_event_notification_dedup test_research_event_vendor_price_coverage
+        run: python -m unittest -v test_research_event_replay_intake_202610 test_research_event_replay_complete_evidence test_research_event_replay_independent_origin test_research_event_replay_readiness test_research_event_private_notification_inventory test_research_event_notification_dedup test_research_event_vendor_price_coverage test_research_event_replay_invalid_timestamp
