@@ -16,7 +16,11 @@ from research_swing_portfolio_with_marks import backtest_portfolio_with_marks
 def backtest_bars_and_signals(series_by_ticker, signals, trading_dates, *,
                               horizon=10, initial_capital=21000,
                               tranche=3500, max_positions=6,
-                              roundtrip_cost_bps=50, dataset_manifest=None):
+                              roundtrip_cost_bps=50, dataset_manifest=None,
+                              entry_cost_share="0.5"):
+    share = _money(entry_cost_share)
+    if not 0 <= share <= 1:
+        raise ValueError("invalid_entry_cost_share")
     manifest_audit = None
     if dataset_manifest is not None:
         manifest_audit = validate_research_dataset_manifest(dataset_manifest)
@@ -28,9 +32,9 @@ def backtest_bars_and_signals(series_by_ticker, signals, trading_dates, *,
         series_by_ticker, signals, horizon=horizon,
         roundtrip_cost_bps=roundtrip_cost_bps)
     ticket = _money(tranche)
-    # Split the existing fixed roundtrip return haircut equally between
-    # entry and exit for interim valuations; preserve terminal net cash.
-    entry_cost = ticket * _money(roundtrip_cost_bps) / 20000
+    # Allocate the assumed roundtrip haircut across entry and exit.
+    # This affects interim marks only; terminal cash uses the full haircut.
+    entry_cost = ticket * _money(roundtrip_cost_bps) * share / 10000
     marks = {}
     for proposal in proposals:
         ticker = proposal["ticker"]
@@ -72,6 +76,8 @@ def backtest_bars_and_signals(series_by_ticker, signals, trading_dates, *,
         "drawdown_cost_adjusted": True,
         "drawdown_warning": "estimated_half_roundtrip_entry_cost_only_no_intraday_fx_or_dividends",
         "daily_marks_floor": "zero_long_equity_value",
+        "entry_cost_share": str(share),
+        "entry_cost_model": "allocated_fraction_of_fixed_roundtrip_haircut",
         "historical_data_provenance_verified": False,
         "dataset_manifest_checked": manifest_audit is not None,
     }
