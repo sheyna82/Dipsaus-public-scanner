@@ -1,0 +1,32 @@
+name: DIPSAUS event replay evidence gates
+on:
+  push:
+    branches:
+      - research/offline-technical-risk-20261021
+    paths:
+      - '.github/workflows/event-replay-evidence-gates.yml'
+      - 'research_event_replay_intake_202610.py'
+      - 'research_event_replay_readiness.py'
+      - 'research_event_private_notification_inventory.py'
+      - 'research_notification_timestamp_extract.py'
+      - 'test_research_event_replay_*.py'
+      - 'test_research_event_private_notification_inventory.py'
+      - 'test_research_event_notification_dedup.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  evidence-gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Compile evidence modules
+        run: python -m py_compile research_event_replay_intake_202610.py research_event_replay_readiness.py research_event_private_notification_inventory.py
+      - name: Run event evidence regressions
+        run: python -m unittest -v test_research_event_replay_intake_202610 test_research_event_replay_complete_evidence test_research_event_replay_independent_origin test_research_event_replay_readiness test_research_event_private_notification_inventory test_research_event_notification_dedup
