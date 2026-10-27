@@ -22,9 +22,17 @@ class SECSubmissionTests(unittest.TestCase):
         self.assertEqual(result["acceptance_raw"], "2026-10-26T17:03:00-04:00")
         self.assertNotIn("acceptance_at_utc", result)
         self.assertIn("Archives/edgar/data/320193/", result["filing_url"])
-    def test_naive_timestamp_rejected(self):
-        with self.assertRaisesRegex(ValueError, "unverified_acceptance_timezone"):
-            normalize_sec_recent_filings(payload("2026-10-26T17:03:00"))
+    def test_naive_timestamp_retained_without_fabricated_timezone(self):
+        result = normalize_sec_recent_filings(payload("2026-10-26T17:03:00"))[0]
+        self.assertEqual(result["acceptance_raw"], "2026-10-26T17:03:00")
+        self.assertIsNone(result["acceptance_candidate_timestamp"])
+        self.assertFalse(result["acceptance_timezone_known"])
+        self.assertFalse(result["acceptance_timestamp_verified"])
+        self.assertFalse(result["research_eligible"])
+    def test_explicit_timezone_candidate_still_not_verified(self):
+        result = normalize_sec_recent_filings(payload())[0]
+        self.assertTrue(result["acceptance_timezone_known"])
+        self.assertFalse(result["acceptance_timestamp_verified"])
     def test_parallel_column_mismatch_rejected(self):
         data = payload()
         data["filings"]["recent"]["form"] = []
