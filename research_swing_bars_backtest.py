@@ -6,6 +6,7 @@ fixed-tranche gross price ratios; fees on marks and FX are NOT modeled.
 """
 from decimal import Decimal
 from research_swing_chronological_ledger import _money
+from research_swing_data_preflight import validate_research_bars
 from research_swing_session_fill_adapter import proposals_from_bars
 from research_swing_portfolio_with_marks import backtest_portfolio_with_marks
 
@@ -14,6 +15,8 @@ def backtest_bars_and_signals(series_by_ticker, signals, trading_dates, *,
                               horizon=10, initial_capital=21000,
                               tranche=3500, max_positions=6,
                               roundtrip_cost_bps=50):
+    validate_research_bars(series_by_ticker, trading_dates,
+                           minimum_sessions=horizon + 2)
     proposals = proposals_from_bars(
         series_by_ticker, signals, horizon=horizon,
         roundtrip_cost_bps=roundtrip_cost_bps)
