@@ -1,6 +1,5 @@
 """Point-in-time event replay intake. No prices, fills or PnL are inferred."""
 from datetime import datetime
-from datetime import timezone
 
 CASES = (
     {"ticker": "TSLA", "event_date": "2026-10-21", "kind": "POST_EVENT", "alert_date": "2026-10-22", "event_source": "https://giroku.app/earnings"},
@@ -47,7 +46,7 @@ def eligible_replay(case, *, alert_timestamp=None, timestamped_bars=None,
         return False
     if alert_timestamp.tzinfo is None or alert_timestamp.utcoffset() is None:
         return False
-    if alert_timestamp.date().isoformat() != case["alert_date"]:
+    if alert_timestamp.astimezone(__import__("zoneinfo").ZoneInfo("America/New_York")).date().isoformat() != case["alert_date"]:
         return False
     if not isinstance(signal_snapshot, dict):
         return False
@@ -55,6 +54,11 @@ def eligible_replay(case, *, alert_timestamp=None, timestamped_bars=None,
     if not isinstance(created, datetime) or created.tzinfo is None or created.utcoffset() is None:
         return False
     if created > alert_timestamp:
+        return False
+    # An alert is not a verified signal merely because it has a source label.
+    if signal_snapshot.get("ticker") != case["ticker"]:
+        return False
+    if signal_snapshot.get("source_id") is None:
         return False
     if not isinstance(timestamped_bars, (tuple, list)) or not timestamped_bars:
         return False
@@ -66,6 +70,17 @@ def eligible_replay(case, *, alert_timestamp=None, timestamped_bars=None,
         if not isinstance(stamp, datetime) or stamp.tzinfo is None or stamp.utcoffset() is None:
             return False
         if stamp <= last:
+            return False
+        if not all(field in bar for field in ("open", "high", "low", "close", "volume")):
+            return False
+        try:
+            from decimal import Decimal
+            o, h, l, c, v = (Decimal(str(bar[key])) for key in ("open", "high", "low", "close", "volume"))
+            if min(o, h, l, c) <= 0 or v < 0 or l > min(o, c) or h < max(o, c):
+                return False
+            if not all(x.is_finite() for x in (o, h, l, c, v)):
+                return False
+        except (ValueError, TypeError, ArithmeticError):
             return False
         last = stamp
     return True
