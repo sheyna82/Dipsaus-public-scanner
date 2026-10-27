@@ -1,0 +1,13 @@
+symbol,date,open,high,low,close,volume,source_url,source_status
+TSLA,2026-10-21,381.43,388.84,380.51,386.47,48875800,https://finance.yahoo.com/quote/TSLA/history/,public_page_unverified
+TSLA,2026-10-22,374.29,388.86,373.71,374.58,51610900,https://finance.yahoo.com/quote/TSLA/history/,public_page_unverified
+TSLA,2026-10-23,373.2,377.32,365.27,372.22,34689700,https://finance.yahoo.com/quote/TSLA/history/,public_page_unverified
+META,2026-10-21,697.6,713.22,689.68,697.52,29203900,https://finance.yahoo.com/quote/META/history/,public_page_unverified
+META,2026-10-22,676.35,681.07,639.69,648.85,40571000,https://finance.yahoo.com/quote/META/history/,public_page_unverified
+META,2026-10-23,638.18,648.04,633.27,642.62,14761500,https://finance.yahoo.com/quote/META/history/,public_page_unverified
+AMZN,2026-10-21,262.71,264.36,259.29,262.37,31214700,https://finance.yahoo.com/quote/AMZN/history/,public_page_unverified
+AMZN,2026-10-22,258.18,258.41,248,250.38,48814000,https://finance.yahoo.com/quote/AMZN/history/,public_page_unverified
+AMZN,2026-10-23,248.85,250.01,246.45,248,25518200,https://finance.yahoo.com/quote/AMZN/history/,public_page_unverified
+COHU,2026-10-21,54.48,56.68,53.96,55.29,1190282,https://stockanalysis.com/stocks/cohu/history/,public_page_unverified
+COHU,2026-10-22,51.24,51.9,45.29,46.26,2257061,https://stockanalysis.com/stocks/cohu/history/,public_page_unverified
+COHU,2026-10-23,45.57,49.5,45.54,47.96,979716,https://stockanalysis.com/stocks/cohu/history/,public_page_unverified
