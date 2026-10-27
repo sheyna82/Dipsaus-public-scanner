@@ -1,6 +1,6 @@
 """Point-in-time event replay intake. No prices, fills or PnL are inferred."""
 from datetime import datetime
-from zoneinfo import ZoneInfo
+from datetime import timezone
 
 CASES = (
     {"ticker": "TSLA", "event_date": "2026-10-21", "kind": "POST_EVENT", "alert_date": "2026-10-22", "event_source": "https://giroku.app/earnings"},
@@ -29,21 +29,47 @@ def validate_cases(cases=CASES):
             raise ValueError(f"{ticker}: missing source")
     return True
 
-def eligible_replay(case, *, alert_timestamp=None, timestamped_bars=None, signal_snapshot=None):
-    """Fail closed: date-only alert and screenshot prices cannot produce a trade."""
+def eligible_replay(case, *, alert_timestamp=None, timestamped_bars=None,
+                    signal_snapshot=None, alert_evidence=None, price_evidence=None):
+    """Require independently timestamped evidence before any historical replay.
+
+    This is an intake gate, NOT a profitability test or a trading signal.
+    """
+    if case not in CASES:
+        return False
     if not (alert_timestamp and timestamped_bars and signal_snapshot):
         return False
-    if alert_timestamp.tzinfo is None:
+    if not isinstance(alert_evidence, dict) or not isinstance(price_evidence, dict):
         return False
-    if not isinstance(signal_snapshot, dict) or signal_snapshot.get("created_at") is None:
+    if alert_evidence.get("verified") is not True or not alert_evidence.get("source_id"):
         return False
-    created = signal_snapshot["created_at"]
-    if created.tzinfo is None or created > alert_timestamp:
+    if price_evidence.get("verified") is not True or not price_evidence.get("source_id"):
         return False
-    return all(bar.get("timestamp") is not None and
-               bar["timestamp"].tzinfo is not None and
-               bar["timestamp"] >= alert_timestamp
-               for bar in timestamped_bars)
+    if alert_timestamp.tzinfo is None or alert_timestamp.utcoffset() is None:
+        return False
+    if alert_timestamp.date().isoformat() != case["alert_date"]:
+        return False
+    if not isinstance(signal_snapshot, dict):
+        return False
+    created = signal_snapshot.get("created_at")
+    if not isinstance(created, datetime) or created.tzinfo is None or created.utcoffset() is None:
+        return False
+    if created > alert_timestamp:
+        return False
+    if not isinstance(timestamped_bars, (tuple, list)) or not timestamped_bars:
+        return False
+    last = alert_timestamp
+    for bar in timestamped_bars:
+        if not isinstance(bar, dict):
+            return False
+        stamp = bar.get("timestamp")
+        if not isinstance(stamp, datetime) or stamp.tzinfo is None or stamp.utcoffset() is None:
+            return False
+        if stamp <= last:
+            return False
+        last = stamp
+    return True
+
 
 if __name__ == "__main__":
     validate_cases()
