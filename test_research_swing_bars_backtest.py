@@ -33,6 +33,23 @@ class BarsBacktestTests(unittest.TestCase):
         self.assertFalse(result["research_evidence"]["historical_comparison_claim_allowed"])
         self.assertFalse(result["research_evidence"]["independently_validated"])
 
+    def test_entry_cost_share_sensitivity_preserves_final_cash(self):
+        days = [date(2026, 1, n) for n in (2, 5, 6)]
+        bars = [{"date": d, "open": 100, "close": 100} for d in days]
+        signal = [{"ticker": "A", "decision_index": 0, "score": 1}]
+        results = [backtest_bars_and_signals(
+            {"A": bars}, signal, days, horizon=1,
+            initial_capital=3500, roundtrip_cost_bps=50,
+            entry_cost_share=share) for share in ("0", "0.5", "1")]
+        self.assertEqual([Decimal(r["equity"]["equity_curve"][1]["equity"])
+                          for r in results],
+                         [Decimal("3500"), Decimal("3491.25"), Decimal("3482.5")])
+        self.assertEqual([Decimal(r["cash_accounting"]["ending_cash"])
+                          for r in results], [Decimal("3482.5")] * 3)
+        with self.assertRaisesRegex(ValueError, "invalid_entry_cost_share"):
+            backtest_bars_and_signals({"A": bars}, signal, days,
+                                      horizon=1, entry_cost_share="1.1")
+
     def test_near_total_loss_does_not_create_negative_long_equity(self):
         days = [date(2026, 1, n) for n in (2, 5, 6)]
         bars = [{"date": d, "open": op, "close": close}
