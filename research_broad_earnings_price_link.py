@@ -44,6 +44,7 @@ def main():
     p.add_argument("--max-symbols",type=int,default=200)
     p.add_argument("--shard-index",type=int,default=0)
     p.add_argument("--shard-count",type=int,default=1)
+    p.add_argument("--symbol-file",default=None)
     args=p.parse_args()
     if not 1<=args.max_symbols<=200:raise ValueError("invalid_batch_size")
     if not 1<=args.shard_count<=40 or not 0<=args.shard_index<args.shard_count:raise ValueError("invalid_shard")
@@ -51,6 +52,11 @@ def main():
     events=load_events(args.events_dir)
     counts=collections.Counter(x["ticker"] for x in events)
     ordered=sorted(counts,key=lambda s:(-counts[s],s))
+    if args.symbol_file:
+        import csv
+        with open(args.symbol_file,newline="") as handle:
+            ordered=[r["symbol"] for r in csv.DictReader(handle)]
+        if len(ordered)!=len(set(ordered)):raise ValueError("duplicate_symbols_in_universe")
     selected=ordered[args.shard_index*args.max_symbols:(args.shard_index+1)*args.max_symbols]
     report=[]
     for symbol in selected:
