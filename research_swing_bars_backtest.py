@@ -46,7 +46,9 @@ def backtest_bars_and_signals(series_by_ticker, signals, trading_dates, *,
                 if close <= 0:
                     raise ValueError("invalid_close_price")
                 key = (day, ticker)
-                value = ticket * close / entry_open - entry_cost
+                # Clamp at zero: limited-liability long equity cannot have
+                # negative liquidation value, even under extreme drawdowns.
+                value = max(Decimal(0), ticket * close / entry_open - entry_cost)
                 if key in marks and marks[key] != value:
                     raise ValueError("conflicting_marks")
                 marks[key] = value
@@ -69,6 +71,7 @@ def backtest_bars_and_signals(series_by_ticker, signals, trading_dates, *,
         "mark_to_market_costs_included": True,
         "drawdown_cost_adjusted": True,
         "drawdown_warning": "estimated_half_roundtrip_entry_cost_only_no_intraday_fx_or_dividends",
+        "daily_marks_floor": "zero_long_equity_value",
         "historical_data_provenance_verified": False,
         "dataset_manifest_checked": manifest_audit is not None,
     }
