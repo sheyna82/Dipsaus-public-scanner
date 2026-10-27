@@ -55,6 +55,28 @@ class PortfolioBenchmarkTests(unittest.TestCase):
             compare_portfolio_rankings(candidates(), 3500,
                                        execution_model="next_session_open")
 
+    def test_fifteen_session_next_open_portfolio(self):
+        x = candidates()
+        x[0]["daily_closes"] = [100] * 15
+        x[1]["daily_closes"] = [100] * 15
+        x[0]["next_opens"] = [100] * 14 + [110]
+        x[1]["next_opens"] = [100] * 14 + [90]
+        result = compare_portfolio_rankings(
+            x, 3500, max_positions=1, horizon=15,
+            execution_model="next_session_open")
+        self.assertEqual(Decimal(result["net_pnl_difference"]), Decimal("700.00"))
+        self.assertFalse(result["trade_ready"])
+
+    def test_fifteen_session_requires_complete_open_history(self):
+        x = candidates()
+        for item in x:
+            item["daily_closes"] = [100] * 15
+            item["next_opens"] = [100] * 14
+        with self.assertRaisesRegex(ValueError, "incomplete_next_open_horizon"):
+            compare_portfolio_rankings(
+                x, 3500, max_positions=1, horizon=15,
+                execution_model="next_session_open")
+
     def test_invalid_execution_model_rejected(self):
         with self.assertRaisesRegex(ValueError, "invalid_execution_model"):
             compare_portfolio_rankings(candidates(), 3500,
