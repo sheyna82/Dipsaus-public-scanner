@@ -25,6 +25,10 @@ def fetch_bars(symbol):
     if obj.get("error"): raise ValueError("chart_error")
     item=obj["result"][0]
     if item["meta"]["symbol"].upper()!=symbol.upper(): raise ValueError("symbol_mismatch")
+    tz_name=item["meta"].get("exchangeTimezoneName")
+    if not tz_name: raise ValueError("missing_exchange_timezone")
+    try: exchange_tz=ZoneInfo(tz_name)
+    except (KeyError,ValueError) as exc: raise ValueError("invalid_exchange_timezone") from exc
     quote_data=item["indicators"]["quote"][0]
     bars=[]
     for i,stamp in enumerate(item.get("timestamp",[])):
@@ -32,7 +36,7 @@ def fetch_bars(symbol):
         if any(x is None for x in vals):continue
         o,h,l,c,v=vals
         if not (0<l<=min(o,c)<=max(o,c)<=h and v>=0):raise ValueError("invalid_ohlcv")
-        day=dt.datetime.fromtimestamp(stamp,dt.timezone.utc).astimezone(ZoneInfo("America/New_York")).date().isoformat()
+        day=dt.datetime.fromtimestamp(stamp,dt.timezone.utc).astimezone(exchange_tz).date().isoformat()
         bars.append({"date":day,"open":o,"high":h,"low":l,"close":c,"volume":v})
     if not bars or any(a["date"]>=b["date"] for a,b in zip(bars,bars[1:])):raise ValueError("invalid_sessions")
     return bars,hashlib.sha256(body).hexdigest()
