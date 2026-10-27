@@ -9,7 +9,7 @@ permissions:
 jobs:
   discovery:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
@@ -18,18 +18,24 @@ jobs:
       - name: Collect reported US earnings dates from historical filing index
         run: |
           python - <<'PY'
-          import json,time,urllib.request,urllib.parse,hashlib
+          import json,time,urllib.request,urllib.parse,urllib.error,hashlib
           from pathlib import Path
           root=Path("broad-earnings-discovery");root.mkdir(exist_ok=True)
           rows=[];errors=[];total=0
           # Past six months per documented no-key endpoint. Quarterly windows avoid truncation.
-          for start,end in [('2026-05-01','2026-05-15'),('2026-05-16','2026-05-31'),('2026-06-01','2026-06-15'),('2026-06-16','2026-06-30'),('2026-07-01','2026-07-15'),('2026-07-16','2026-07-31'),('2026-08-01','2026-08-15'),('2026-08-16','2026-08-31'),('2026-09-01','2026-09-15'),('2026-09-16','2026-09-30'),('2026-10-01','2026-10-15'),('2026-10-16','2026-10-27')]:
+          for start,end in [('2026-05-01','2026-05-07'),('2026-05-08','2026-05-15'),('2026-05-16','2026-05-31'),('2026-06-01','2026-06-15'),('2026-06-16','2026-06-30'),('2026-07-01','2026-07-15'),('2026-07-16','2026-07-31'),('2026-08-01','2026-08-15'),('2026-08-16','2026-08-31'),('2026-09-01','2026-09-15'),('2026-09-16','2026-09-30'),('2026-10-01','2026-10-15'),('2026-10-16','2026-10-27')]:
               q=urllib.parse.urlencode({'from':start,'to':end,'status':'reported','limit':2000})
               url='https://xoomar.com/api/markets/earnings?'+q
               try:
                   req=urllib.request.Request(url,headers={'User-Agent':'DipsausResearch/1.0 (public event study)'})
-                  with urllib.request.urlopen(req,timeout=25) as r:
-                      body=r.read(3000000)
+                  for attempt in range(5):
+                      try:
+                          with urllib.request.urlopen(req,timeout=25) as r:
+                              body=r.read(3000000)
+                          break
+                      except urllib.error.HTTPError as err:
+                          if err.code!=429 or attempt==4: raise
+                          time.sleep(min(45,8*(attempt+1)))
                   data=json.loads(body)
                   payload=data.get('data',data) if isinstance(data,dict) else data
                   releases=payload if isinstance(payload,list) else payload.get('releases',[]) if isinstance(payload,dict) else []
@@ -55,10 +61,10 @@ jobs:
               except Exception as e:
                   errors.append({'start':start,'error_type':type(e).__name__,
                                  'reason':str(e)[:100]})
-              time.sleep(2)
+              time.sleep(7)
           (root/'coverage.json').write_text(json.dumps({'windows':rows,'errors':errors,'valid_records':total,'no_verified_signal_timestamps':True,'trade_ready':False},indent=2))
           print(json.dumps({'windows':rows,'errors':errors}))
-          if errors or len(rows)!=12 or total==0: raise SystemExit('Incomplete confirmed earnings coverage; inspect artifact')
+          if errors or len(rows)!=13 or total==0: raise SystemExit('Incomplete confirmed earnings coverage; inspect artifact')
           PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
