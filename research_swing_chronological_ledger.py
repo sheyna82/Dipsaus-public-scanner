@@ -48,11 +48,22 @@ def simulate_chronological_portfolio(trades, *, initial_capital=21000,
     cash = capital
     positions = {}
     ledger = []
+    rejected = []
     dates = sorted(set(entries) | {item[2] for rows in entries.values() for item in rows})
     for today in dates:
         # Entries use cash known at session start, before exits settle.
         for score, ticker, end, ret in sorted(entries[today], key=lambda x: (-x[0], x[1])):
-            if ticker in positions or len(positions) >= max_positions or cash < ticket:
+            if ticker in positions:
+                reason = "already_held"
+            elif len(positions) >= max_positions:
+                reason = "position_cap"
+            elif cash < ticket:
+                reason = "insufficient_cash"
+            else:
+                reason = None
+            if reason is not None:
+                rejected.append({"date": today.isoformat(), "ticker": ticker,
+                                 "reason": reason})
                 continue
             cash -= ticket
             positions[ticker] = (end, ret, ticket)
@@ -74,4 +85,5 @@ def simulate_chronological_portfolio(trades, *, initial_capital=21000,
             "initial_capital": str(capital), "ending_cash": str(cash),
             "realized_net_pnl": str(cash - capital),
             "realized_return_pct": str((cash / capital - 1) * 100),
-            "ledger": ledger}
+            "ledger": ledger, "rejected_entries": rejected,
+            "rejected_count": len(rejected)}
