@@ -2,7 +2,8 @@
 
 The caller supplies chronological bars and independently computed
 point-in-time signals. Same-currency close marks are constructed using
-fixed-tranche gross price ratios; fees on marks and FX are NOT modeled.
+fixed-tranche price ratios less an assumed half-roundtrip entry cost.
+FX, dividends and exact share sizing are NOT modeled.
 """
 from decimal import Decimal
 from research_swing_chronological_ledger import _money
@@ -27,6 +28,9 @@ def backtest_bars_and_signals(series_by_ticker, signals, trading_dates, *,
         series_by_ticker, signals, horizon=horizon,
         roundtrip_cost_bps=roundtrip_cost_bps)
     ticket = _money(tranche)
+    # Split the existing fixed roundtrip return haircut equally between
+    # entry and exit for interim valuations; preserve terminal net cash.
+    entry_cost = ticket * _money(roundtrip_cost_bps) / 20000
     marks = {}
     for proposal in proposals:
         ticker = proposal["ticker"]
@@ -42,7 +46,7 @@ def backtest_bars_and_signals(series_by_ticker, signals, trading_dates, *,
                 if close <= 0:
                     raise ValueError("invalid_close_price")
                 key = (day, ticker)
-                value = ticket * close / entry_open
+                value = ticket * close / entry_open - entry_cost
                 if key in marks and marks[key] != value:
                     raise ValueError("conflicting_marks")
                 marks[key] = value
@@ -61,10 +65,10 @@ def backtest_bars_and_signals(series_by_ticker, signals, trading_dates, *,
         "entry": "next_session_open",
         "exit": "open_after_holding_sessions",
         "cost": "fixed_roundtrip_bps_return_haircut",
-        "marks": "gross_close_ratio_no_fx_or_dividends",
-        "mark_to_market_costs_included": False,
-        "drawdown_cost_adjusted": False,
-        "drawdown_warning": "gross_close_marks_exclude_transaction_costs",
+        "marks": "close_ratio_less_half_roundtrip_entry_cost_no_fx_or_dividends",
+        "mark_to_market_costs_included": True,
+        "drawdown_cost_adjusted": True,
+        "drawdown_warning": "estimated_half_roundtrip_entry_cost_only_no_intraday_fx_or_dividends",
         "historical_data_provenance_verified": False,
         "dataset_manifest_checked": manifest_audit is not None,
     }
