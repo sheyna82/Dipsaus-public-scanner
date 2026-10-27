@@ -20,12 +20,15 @@ class BarsBacktestTests(unittest.TestCase):
         self.assertEqual(Decimal(result["cash_accounting"]["ending_cash"]),
                          Decimal("3832.5"))
         self.assertEqual(Decimal(result["equity"]["max_drawdown_pct"]),
-                         Decimal("-20"))
+                         Decimal("-20.25"))
         self.assertFalse(result["historical_edge_proven"])
-        self.assertFalse(result["execution_assumptions"]["mark_to_market_costs_included"])
-        self.assertFalse(result["execution_assumptions"]["drawdown_cost_adjusted"])
+        curve = result["equity"]["equity_curve"]
+        self.assertEqual(Decimal(curve[1]["equity"]), Decimal("3491.25"))
+        self.assertEqual(Decimal(curve[2]["equity"]), Decimal("2791.25"))
+        self.assertTrue(result["execution_assumptions"]["mark_to_market_costs_included"])
+        self.assertTrue(result["execution_assumptions"]["drawdown_cost_adjusted"])
         self.assertEqual(result["execution_assumptions"]["drawdown_warning"],
-                         "gross_close_marks_exclude_transaction_costs")
+                         "estimated_half_roundtrip_entry_cost_only_no_intraday_fx_or_dividends")
         self.assertEqual(result["research_evidence"]["level"], "technical_unverified")
         self.assertFalse(result["research_evidence"]["historical_comparison_claim_allowed"])
         self.assertFalse(result["research_evidence"]["independently_validated"])
