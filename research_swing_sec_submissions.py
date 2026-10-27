@@ -37,8 +37,9 @@ def normalize_sec_recent_filings(payload, *, forms=("8-K", "10-Q", "10-K")):
             parsed = datetime.fromisoformat(accepted.replace("Z", "+00:00"))
         except ValueError as exc:
             raise ValueError("invalid_filing_timestamp") from exc
-        if parsed.tzinfo is None or parsed.utcoffset() is None:
-            raise ValueError("unverified_acceptance_timezone")
+        # Official SEC submissions often provide offset-naive acceptanceDateTime.
+        # Retain the raw candidate; never invent an exchange/UTC timezone.
+        timezone_known = parsed.tzinfo is not None and parsed.utcoffset() is not None
         if accession in seen:
             raise ValueError("duplicate_accession")
         seen.add(accession)
@@ -49,7 +50,8 @@ def normalize_sec_recent_filings(payload, *, forms=("8-K", "10-Q", "10-K")):
             "cik": cik, "accession": accession, "form": form,
             "filing_date": filing_date,
             "acceptance_raw": accepted,
-            "acceptance_candidate_timestamp": parsed.isoformat(),
+            "acceptance_candidate_timestamp": parsed.isoformat() if timezone_known else None,
+            "acceptance_timezone_known": timezone_known,
             "acceptance_timestamp_verified": False,
             "acceptance_timestamp_provenance": "sec_submissions_json_unverified",
             "filing_url": f"https://www.sec.gov/Archives/edgar/data/{cik}/{compact}/{document}",
