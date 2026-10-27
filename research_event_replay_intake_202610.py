@@ -1,5 +1,6 @@
 """Point-in-time event replay intake. No prices, fills or PnL are inferred."""
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 CASES = (
     {"ticker": "TSLA", "event_date": "2026-10-21", "kind": "POST_EVENT", "alert_date": "2026-10-22", "event_source": "https://giroku.app/earnings"},
@@ -46,7 +47,7 @@ def eligible_replay(case, *, alert_timestamp=None, timestamped_bars=None,
         return False
     if alert_timestamp.tzinfo is None or alert_timestamp.utcoffset() is None:
         return False
-    if alert_timestamp.astimezone(__import__("zoneinfo").ZoneInfo("America/New_York")).date().isoformat() != case["alert_date"]:
+    if alert_timestamp.astimezone(ZoneInfo("America/New_York")).date().isoformat() != case["alert_date"]:
         return False
     if not isinstance(signal_snapshot, dict):
         return False
@@ -58,7 +59,13 @@ def eligible_replay(case, *, alert_timestamp=None, timestamped_bars=None,
     # An alert is not a verified signal merely because it has a source label.
     if signal_snapshot.get("ticker") != case["ticker"]:
         return False
-    if signal_snapshot.get("source_id") is None:
+    if not signal_snapshot.get("source_id"):
+        return False
+    # Synthetic fixture flags must never be interpreted as independent verification.
+    for evidence in (alert_evidence, price_evidence):
+        if evidence.get("origin") != "independent_archive":
+            return False
+    if signal_snapshot.get("origin") != "independent_archive":
         return False
     if not isinstance(timestamped_bars, (tuple, list)) or not timestamped_bars:
         return False
