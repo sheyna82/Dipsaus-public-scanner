@@ -33,6 +33,22 @@ class BarsBacktestTests(unittest.TestCase):
         self.assertFalse(result["research_evidence"]["historical_comparison_claim_allowed"])
         self.assertFalse(result["research_evidence"]["independently_validated"])
 
+    def test_near_total_loss_does_not_create_negative_long_equity(self):
+        days = [date(2026, 1, n) for n in (2, 5, 6)]
+        bars = [{"date": d, "open": op, "close": close}
+                for d, op, close in zip(days, [100, 100, 100],
+                                        [100, 0.01, 100])]
+        result = backtest_bars_and_signals(
+            {"A": bars}, [{"ticker": "A", "decision_index": 0, "score": 1}],
+            days, horizon=1, initial_capital=3500,
+            roundtrip_cost_bps=50)
+        self.assertEqual(Decimal(result["equity"]["equity_curve"][1]["equity"]),
+                         Decimal("0"))
+        self.assertEqual(Decimal(result["equity"]["max_drawdown_pct"]),
+                         Decimal("-100"))
+        self.assertEqual(result["execution_assumptions"]["daily_marks_floor"],
+                         "zero_long_equity_value")
+
     def test_ineligible_dataset_manifest_rejected(self):
         days = [date(2026, 1, n) for n in (2, 5, 6)]
         bars = [{"date": d, "open": 100, "close": 100} for d in days]
