@@ -29,7 +29,7 @@ def simulate_next_open_exit(entry_price, closes, next_opens, capital, *,
     session's open. The caller must independently validate chronological
     source timestamps and corporate-action-adjusted price consistency.
     """
-    if isinstance(horizon, bool) or horizon not in (3, 5, 10):
+    if isinstance(horizon, bool) or horizon not in (3, 5, 10, 15):
         raise ValueError("invalid_horizon")
     if len(closes) < horizon or len(next_opens) < horizon:
         raise ValueError("incomplete_next_open_horizon")
