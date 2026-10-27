@@ -43,17 +43,25 @@ def daily_equity_from_ledger(ledger, daily_marks, trading_dates, *, initial_capi
     curve = []
     for today in trading_dates:
         for event in events.get(today, []):
+            if not isinstance(event, dict):
+                raise ValueError("invalid_event")
             ticker = event["ticker"]
             if event["action"] == "entry":
                 if ticker in positions or cash < ticket:
                     raise ValueError("inconsistent_entry")
                 cash -= ticket
+                if "cash" not in event or _money(event["cash"]) != cash:
+                    raise ValueError("entry_cash_mismatch")
                 positions.add(ticker)
             elif event["action"] == "exit":
                 if ticker not in positions:
                     raise ValueError("inconsistent_exit")
                 positions.remove(ticker)
-                cash = _money(event["cash"])
+                pnl = _money(event["net_pnl"])
+                expected_cash = cash + ticket + pnl
+                if "cash" not in event or _money(event["cash"]) != expected_cash:
+                    raise ValueError("exit_cash_mismatch")
+                cash = expected_cash
             else:
                 raise ValueError("unknown_action")
         marked = Decimal(0)
