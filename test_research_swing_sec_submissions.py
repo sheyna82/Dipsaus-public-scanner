@@ -18,6 +18,9 @@ class SECSubmissionTests(unittest.TestCase):
         self.assertFalse(result["research_eligible"])
         self.assertFalse(result["release_timestamp_verified"])
         self.assertIsNone(result["first_observed_at"])
+        self.assertFalse(result["acceptance_timestamp_verified"])
+        self.assertEqual(result["acceptance_raw"], "2026-10-26T17:03:00-04:00")
+        self.assertNotIn("acceptance_at_utc", result)
         self.assertIn("Archives/edgar/data/320193/", result["filing_url"])
     def test_naive_timestamp_rejected(self):
         with self.assertRaisesRegex(ValueError, "unverified_acceptance_timezone"):
