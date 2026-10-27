@@ -49,6 +49,14 @@ def backtest_bars_and_signals(series_by_ticker, signals, trading_dates, *,
     result = backtest_portfolio_with_marks(
         proposals, marks, trading_dates, initial_capital=initial_capital,
         tranche=tranche, max_positions=max_positions)
+    # A manifest is a self-declaration, never independent provenance proof.
+    # Keep synthetic and exploratory results visibly separate from validated edge.
+    result["research_evidence"] = {
+        "level": "manifest_declared_exploratory" if manifest_audit is not None else "technical_unverified",
+        "historical_comparison_claim_allowed": False,
+        "independently_validated": False,
+        "reason": "independent_source_and_out_of_sample_validation_missing",
+    }
     result["execution_assumptions"] = {
         "entry": "next_session_open",
         "exit": "open_after_holding_sessions",
