@@ -11,7 +11,7 @@ permissions:
   contents: read
   actions: read
 jobs:
-  link:
+  source:
     runs-on: ubuntu-latest
     timeout-minutes: 18
     steps:
@@ -48,14 +48,39 @@ jobs:
           (root/"coverage.json").write_text(json.dumps({"windows":audit,"timestamp_verified":False,"trade_ready":False},indent=2))
           print(json.dumps({"windows":len(audit),"valid_events":sum(x["valid"] for x in audit)}))
           PY
-      - name: Link first 40 symbols to historical daily OHLCV
-        run: python research_broad_earnings_price_link.py --events-dir earnings-source --output-dir earnings-price-link --max-symbols 40
-      - name: Descriptive 3 5 10 15 session outcome audit (not a trading backtest)
+      - name: Upload shared source
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: earnings-source-snapshot
+          path: earnings-source/
+          retention-days: 7
+  link:
+    needs: source
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Download shared source from this run
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: earnings-source-snapshot
+          path: earnings-source/
+      - name: Link shard of up to 200 symbols
+        run: python research_broad_earnings_price_link.py --events-dir earnings-source --output-dir earnings-price-link --max-symbols 200 --shard-index ${{ matrix.shard }} --shard-count 20
+      - name: Descriptive horizons (unverified and not trade ready)
         run: python research_broad_earnings_descriptive_outcomes.py --events-dir earnings-source --prices-dir earnings-price-link --output earnings-price-link/descriptive_outcomes.json
-      - name: Upload research outputs and failures
+      - name: Upload shard output, including failures
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: dipsaus-earnings-price-link-unverified
+          name: earnings-price-shard-${{ matrix.shard }}
           path: earnings-price-link/
           retention-days: 7
