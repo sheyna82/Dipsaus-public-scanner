@@ -24,6 +24,9 @@ class PortfolioWithMarksTests(unittest.TestCase):
                          Decimal("7000"))
         self.assertEqual(Decimal(result["equity"]["ending_equity"]),
                          Decimal("7000"))
+        self.assertTrue(result["cash_equity_reconciliation"]["passed"])
+        self.assertEqual(Decimal(result["cash_equity_reconciliation"]["equity_minus_cash"]), Decimal("0"))
+        self.assertEqual(Decimal(result["cash_equity_reconciliation"]["realized_pnl"]), Decimal("0"))
         self.assertEqual(Decimal(result["equity"]["max_drawdown_pct"]),
                          Decimal("-20"))
 
