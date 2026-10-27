@@ -5,6 +5,7 @@ on:
     branches: [research/offline-technical-risk-20261021]
     paths:
       - research_broad_earnings_price_link.py
+      - research_broad_earnings_descriptive_outcomes.py
       - .github/workflows/broad-earnings-price-link.yml
 permissions:
   contents: read
@@ -49,6 +50,8 @@ jobs:
           PY
       - name: Link first 40 symbols to historical daily OHLCV
         run: python research_broad_earnings_price_link.py --events-dir earnings-source --output-dir earnings-price-link --max-symbols 40
+      - name: Descriptive 3 5 10 15 session outcome audit (not a trading backtest)
+        run: python research_broad_earnings_descriptive_outcomes.py --events-dir earnings-source --prices-dir earnings-price-link --output earnings-price-link/descriptive_outcomes.json
       - name: Upload research outputs and failures
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
