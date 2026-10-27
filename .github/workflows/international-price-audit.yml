@@ -1,0 +1,58 @@
+name: DIPSAUS international candidate price audit
+on:
+  workflow_dispatch:
+  push:
+    branches: [research/offline-technical-risk-20261021]
+    paths:
+      - research_international_universe.py
+      - research_broad_earnings_price_link.py
+      - .github/workflows/international-price-audit.yml
+permissions:
+  contents: read
+jobs:
+  international:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        shard: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Audit international historical price availability (not earnings)
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: |
+          python - <<'PY'
+          import json,os,time
+          from pathlib import Path
+          from research_international_universe import candidates
+          from research_broad_earnings_price_link import fetch_bars
+          rows=candidates()
+          shard=int(os.environ['SHARD'])
+          chosen=rows[shard::4]
+          output=[]
+          for item in chosen:
+              record=dict(item)
+              try:
+                  bars,digest=fetch_bars(item['symbol'])
+                  record.update(price_status='available_unverified',bars=len(bars),raw_sha256=digest,first_bar=bars[0]['date'],last_bar=bars[-1]['date'])
+              except Exception as exc:
+                  record.update(price_status='failed',reason=f'{type(exc).__name__}:{str(exc)[:120]}')
+              output.append(record)
+              time.sleep(2)
+          root=Path('international-audit');root.mkdir(exist_ok=True)
+          (root/f'shard_{shard}.json').write_text(json.dumps({'shard':shard,'results':output,'event_verified':False,'trade_ready':False},indent=2))
+          print(json.dumps({'shard':shard,'tested':len(output),'price_available':sum(x['price_status']=='available_unverified' for x in output)}))
+          PY
+      - name: Upload per-market availability and failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: international-price-audit-${{ matrix.shard }}
+          path: international-audit/
+          retention-days: 7
