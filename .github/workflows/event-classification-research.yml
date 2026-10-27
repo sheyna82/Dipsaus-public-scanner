@@ -8,7 +8,9 @@ on:
       - 'research_swing_event_downside.py'
       - 'test_research_swing_event_downside.py'
       - 'research_swing_event_dataset_audit.py'
-      - 'test_research_swing_event_dataset_audit.py'
+      - 'test_research_swing_event_dataset_audit test_research_swing_user_event_examples.py'
+      - 'research_swing_user_event_examples.py'
+      - 'test_research_swing_user_event_examples.py'
       - '.github/workflows/event-classification-research.yml'
 permissions:
   contents: read
