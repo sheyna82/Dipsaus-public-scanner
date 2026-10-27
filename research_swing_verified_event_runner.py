@@ -37,8 +37,7 @@ def run_verified_event_study(payload, *, as_of_at, horizons=(3, 5, 10, 15),
         if bars is None:
             skipped += 1
             continue
-        # The validated projection retains availability but not the original\n        # publication fields required by session alignment. Use the audited\n        # source event, never a reconstructed or guessed timestamp.\n        source_event = next(row for row in payload["events"]\n                            if row["symbol"] == symbol and row["event_id"] == event["event_id"]\n                            and row["kind"] == event["kind"])\n        result = study_event_outcomes(source_event, bars, bars, horizons=horizons)
-        for outcome in result["outcomes"]:
+        # Use validated event fields including original publication timestamps.\n        result = study_event_outcomes(event, bars, bars, horizons=horizons)\n        for outcome in result["outcomes"]:
             # Never use prices that were not observable by the study cutoff.
             if _utc(bars[outcome["exit_index"]]["open_at"]) > as_of:
                 continue
