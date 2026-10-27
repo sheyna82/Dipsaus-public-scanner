@@ -45,6 +45,8 @@ def eligible_replay(case, *, alert_timestamp=None, timestamped_bars=None,
         return False
     if price_evidence.get("verified") is not True or not price_evidence.get("source_id"):
         return False
+    if not isinstance(alert_timestamp, datetime):
+        return False
     if alert_timestamp.tzinfo is None or alert_timestamp.utcoffset() is None:
         return False
     if alert_timestamp.astimezone(ZoneInfo("America/New_York")).date().isoformat() != case["alert_date"]:
