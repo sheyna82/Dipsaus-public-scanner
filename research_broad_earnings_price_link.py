@@ -41,13 +41,17 @@ def main():
     p=argparse.ArgumentParser()
     p.add_argument("--events-dir",required=True)
     p.add_argument("--output-dir",required=True)
-    p.add_argument("--max-symbols",type=int,default=40)
+    p.add_argument("--max-symbols",type=int,default=200)
+    p.add_argument("--shard-index",type=int,default=0)
+    p.add_argument("--shard-count",type=int,default=1)
     args=p.parse_args()
     if not 1<=args.max_symbols<=200:raise ValueError("invalid_batch_size")
+    if not 1<=args.shard_count<=40 or not 0<=args.shard_index<args.shard_count:raise ValueError("invalid_shard")
     out=Path(args.output_dir);out.mkdir(parents=True,exist_ok=True)
     events=load_events(args.events_dir)
     counts=collections.Counter(x["ticker"] for x in events)
-    selected=sorted(counts,key=lambda s:(-counts[s],s))[:args.max_symbols]
+    ordered=sorted(counts,key=lambda s:(-counts[s],s))
+    selected=ordered[args.shard_index*args.max_symbols:(args.shard_index+1)*args.max_symbols]
     report=[]
     for symbol in selected:
         row={"symbol":symbol,"event_count":counts[symbol],"timestamp_verified":False}
