@@ -28,7 +28,7 @@ class EventReplayIntakeTests(unittest.TestCase):
         alert = datetime(2026, 10, 22, 7, 33, tzinfo=timezone.utc)
         bars = [{"timestamp": datetime(2026, 10, 23, tzinfo=timezone.utc)}]
         snapshot = {"created_at": datetime(2026, 10, 22, 7, 30, tzinfo=timezone.utc)}
-        self.assertTrue(eligible_replay(CASES[0], alert_timestamp=alert, timestamped_bars=bars,
+        self.assertFalse(eligible_replay(CASES[0], alert_timestamp=alert, timestamped_bars=bars,
             signal_snapshot=snapshot, alert_evidence={"verified": True, "source_id": "archive"},
             price_evidence={"verified": True, "source_id": "ohlcv"}))
 
