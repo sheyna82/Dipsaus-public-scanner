@@ -22,6 +22,10 @@ class BarsBacktestTests(unittest.TestCase):
         self.assertEqual(Decimal(result["equity"]["max_drawdown_pct"]),
                          Decimal("-20"))
         self.assertFalse(result["historical_edge_proven"])
+        self.assertFalse(result["execution_assumptions"]["mark_to_market_costs_included"])
+        self.assertFalse(result["execution_assumptions"]["drawdown_cost_adjusted"])
+        self.assertEqual(result["execution_assumptions"]["drawdown_warning"],
+                         "gross_close_marks_exclude_transaction_costs")
         self.assertEqual(result["research_evidence"]["level"], "technical_unverified")
         self.assertFalse(result["research_evidence"]["historical_comparison_claim_allowed"])
         self.assertFalse(result["research_evidence"]["independently_validated"])
