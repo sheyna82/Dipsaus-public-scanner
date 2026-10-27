@@ -21,6 +21,7 @@ def compare(outcomes,benchmark_bars,cost_bps=20):
         if key in seen: raise ValueError("duplicate_event_horizon")
         seen.add(key)
         if not r["event_date"]<r["entry_date"]<=r["exit_date"]: raise ValueError("invalid_event_chronology")
+        if int(r["horizon"]) not in (3,5,10,15): raise ValueError("invalid_horizon")
         if r["entry_date"] not in benchmark or r["exit_date"] not in benchmark:
             missing[r["horizon"]]+=1;continue
         stock=float(r["gross_return_pct"])
@@ -32,6 +33,7 @@ def compare(outcomes,benchmark_bars,cost_bps=20):
             "stock_net_pct":round(stock-cost_bps/100,6),
             "benchmark_net_pct":round(bench-cost_bps/100,6),
             "excess_pct":round(stock-bench,6)})
+    if not rows: raise ValueError("no_exact_date_matches")
     cohorts=[]
     for horizon in (3,5,10,15):
         sample=[r for r in rows if r["horizon"]==horizon]
