@@ -1,6 +1,7 @@
 """Synthetic read-only archive audit regressions."""
 import gzip
 import json
+import math
 import tempfile
 import unittest
 from pathlib import Path
@@ -27,6 +28,9 @@ class ArchiveAuditTests(unittest.TestCase):
         self.assertEqual(issues["DUPLICATE_SYMBOL_RECORD"],1)
         self.assertEqual(issues["DUPLICATE_SESSION"],1)
         self.assertEqual(issues["NONINCREASING_SESSION"],2)
+    def test_nonfinite_bar_rejected(self):
+        p=self.make_archive([{"symbol":"ABC","bars":[["2026-01-05",10,12,9,math.nan,100]]}])
+        self.assertEqual(audit_archive(p)["issues"]["INVALID_BAR"],1)
     def test_invalid_bar(self):
         p=self.make_archive([{"symbol":"ABC","bars":[["2026-01-05",10,8,9,11,100]]}])
         self.assertEqual(audit_archive(p)["issues"]["INVALID_BAR"],1)
