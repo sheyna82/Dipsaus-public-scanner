@@ -2,6 +2,7 @@
 import argparse
 import gzip
 import json
+import math
 from collections import Counter
 from datetime import date
 from pathlib import Path
@@ -38,7 +39,7 @@ def audit_archive(path):
                     o,h,l,c,v=bar[1:6]
                     if not all(isinstance(x,(int,float)) and not isinstance(x,bool) for x in (o,h,l,c,v)):
                         raise ValueError("nonnumeric")
-                    if not (0<l<=min(o,c)<=max(o,c)<=h and v>=0):
+                    if not all(math.isfinite(x) for x in (o,h,l,c,v)) or not (0<l<=min(o,c)<=max(o,c)<=h and v>=0):
                         raise ValueError("bad OHLCV")
                 except (ValueError,TypeError,IndexError,AttributeError):
                     issues["INVALID_BAR"]+=1
