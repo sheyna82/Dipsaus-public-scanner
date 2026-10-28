@@ -43,6 +43,9 @@ def restore():
                 ("ohlcv-incremental","database-pilot-60")]
     if not candidates:
         return {}, "no prior artifact (first run)"
+    # GitHub API ordering is not a provenance guarantee: newest first explicitly.
+    # Keep stable tie-breaking for reproducible restoration.
+    candidates.sort(key=lambda a: (a.get("created_at") or "", a.get("id") or 0), reverse=True)
     errors=[]
     for artifact in candidates:
         run_id=(artifact.get("workflow_run") or {}).get("id")
