@@ -107,7 +107,7 @@ class BarsBacktestTests(unittest.TestCase):
         days = [date(2026, 1, n) for n in (2, 5, 6)]
         bars = [{"date": d, "open": 100, "close": 0 if i == 1 else 100}
                 for i, d in enumerate(days)]
-        with self.assertRaisesRegex(ValueError, "invalid_close_price"):
+        with self.assertRaisesRegex(ValueError, "invalid_price"):
             backtest_bars_and_signals(
                 {"A": bars}, [{"ticker": "A", "decision_index": 0,
                                "score": 1}], days,
