@@ -20,7 +20,7 @@ class RestorePaginationTests(unittest.TestCase):
         def fake_run(cmd,**kwargs):
             folder=Path(cmd[cmd.index("-D")+1])
             with gzip.open(folder/"ohlcv.jsonl.gz","wt",encoding="utf-8") as f:
-                f.write(json.dumps({"symbol":"ABC","bars":[["2026-01-02",10,12,9,11,100]]})+"\\n")
+                f.write(json.dumps({"symbol":"ABC","bars":[["2026-01-02",10,12,9,11,100]]})+"\n")
             return type("Result",(),{"returncode":0,"stderr":""})()
         with patch.object(mod,"TOKEN","mock-token"),patch.object(mod,"get",side_effect=fake_get),patch.object(mod.subprocess,"run",side_effect=fake_run):
             records,note=mod.restore()
