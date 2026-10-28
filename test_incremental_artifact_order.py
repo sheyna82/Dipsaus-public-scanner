@@ -16,6 +16,14 @@ class ArtifactOrderingTests(unittest.TestCase):
         self.assertLess(sort_lines[0],loop_lines[0])
         self.assertIn("created_at",source_lines[sort_lines[0]-1])
         self.assertIn("reverse=True",source_lines[sort_lines[0]-1])
+    def test_artifact_inventory_is_paginated_and_bounded(self):
+        source=pathlib.Path(__file__).with_name("incremental_database.py").read_text(encoding="utf-8")
+        tree=ast.parse(source)
+        restore=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=="restore")
+        calls=[n for n in ast.walk(restore) if isinstance(n,ast.Call)]
+        self.assertTrue(any(isinstance(n.func,ast.Name) and n.func.id=="range" for n in calls))
+        self.assertIn('page_url=api+"&page="+str(page)',source)
+        self.assertIn("Artifact inventory pagination limit reached",source)
     def test_newest_first_with_id_tiebreak(self):
         candidates=[{"id":1,"created_at":"2026-10-20T10:00:00Z"},{"id":5,"created_at":"2026-10-21T10:00:00Z"},{"id":8,"created_at":"2026-10-21T10:00:00Z"}]
         candidates.sort(key=lambda a:(a.get("created_at") or "",a.get("id") or 0),reverse=True)
