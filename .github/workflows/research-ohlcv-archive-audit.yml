@@ -1,0 +1,20 @@
+name: Research OHLCV archive audit tests
+on:
+  pull_request:
+    paths:
+      - 'research/swing_lifecycle/ohlcv_archive_audit.py'
+      - 'research/swing_lifecycle/test_ohlcv_archive_audit.py'
+      - '.github/workflows/research-ohlcv-archive-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  archive-audit-unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test archive audit with synthetic data
+        run: python -m unittest discover -s research/swing_lifecycle -p 'test_ohlcv_archive_audit.py' -v
