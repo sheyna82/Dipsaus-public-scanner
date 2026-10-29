@@ -117,6 +117,11 @@ class IntegratedReadonlyTests(unittest.TestCase):
         profit = result["reconciled_portfolio_research"]["closed_trade_profit_diagnostics"]
         self.assertEqual(profit["trade_count"], 1)
         self.assertEqual(profit["net_profit"], "70.00")
+        efficiency = result["reconciled_portfolio_research"]["holding_capital_efficiency"]
+        self.assertEqual(efficiency["completed_trades"], 1)
+        self.assertEqual(efficiency["total_invested_tranche_sessions"], 1)
+        self.assertEqual(efficiency["capital_session_units"], "3500")
+        self.assertEqual(efficiency["net_pnl_per_1000_currency_session_units"], "20.0000")
         self.assertEqual(profit["profit_factor"], "undefined_no_losses")
         self.assertFalse(profit["independent_real_trade_data_verified"])
         self.assertFalse(result["cross_component_consistency"]["portfolio_evidence_complete"])
