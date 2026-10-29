@@ -10,6 +10,7 @@ on:
       - 'research/swing_lifecycle/warning_quarter_robustness.py'
       - 'research/swing_lifecycle/warning_preentry_regimes.py'
       - 'research/swing_lifecycle/test_warning_preentry_regimes.py'
+      - 'research/swing_lifecycle/warning_decision_holdout.py'
   workflow_dispatch:
 permissions:
   contents: read
