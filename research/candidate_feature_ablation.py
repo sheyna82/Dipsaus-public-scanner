@@ -27,6 +27,7 @@ def evaluate_ablation(stock,benchmark,pattern):
     risk_cohorts={key:[] for key in FILTERS}
     execution_cohorts={key:[] for key in FILTERS}
     execution_blocked={key:0 for key in FILTERS}
+    portfolio_events={key:[] for key in FILTERS}
     for i in indices:
         f=pre_entry_features(stock,benchmark,i)
         decision=label(f,fitted)
@@ -49,16 +50,26 @@ def evaluate_ablation(stock,benchmark,pattern):
                 execution_cohorts[key].append(execution)
             else:
                 execution_blocked[key]+=1
+        def add_portfolio_event(key):
+            if execution["status"]=="DESCRIPTIVE_EXECUTION_SENSITIVITY":
+                portfolio_events[key].append({
+                    "entry_day":stock[i+1]["timestamp"]//86400,
+                    "exit_day":stock[i+HORIZON]["timestamp"]//86400,
+                    "net_return_pct":next(x["net_return_pct"] for x in execution["scenarios"]
+                                           if x["adverse_entry_bps"]==25)})
         add_execution("baseline")
+        add_portfolio_event("baseline")
         cohorts["baseline"].append(record)
         risk_cohorts["baseline"].append(risk_record)
         for key,passed in decision["passes"].items():
             if passed:
                 add_execution(key)
+                add_portfolio_event(key)
                 cohorts[key].append(record)
                 risk_cohorts[key].append(risk_record)
         if all(decision["passes"].values()):
             add_execution("all_three")
+            add_portfolio_event("all_three")
             cohorts["all_three"].append(record)
             risk_cohorts["all_three"].append(risk_record)
     def summary(records):
@@ -81,6 +92,7 @@ def evaluate_ablation(stock,benchmark,pattern):
             "thresholds":fitted["thresholds"],
             "cohorts":{key:summary(records) for key,records in cohorts.items()},
             "risk_diagnostics":compare_risk(risk_cohorts),
+            "portfolio_events_25bps":portfolio_events,
             "execution_sensitivity":{key:execution_summary(key) for key in FILTERS},
             "matched_count_placebo":{key:placebo(risk_cohorts["baseline"], risk_cohorts[key])
                                       for key in FILTERS if key != "baseline"},
