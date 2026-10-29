@@ -36,6 +36,9 @@ class DurationPlaceboTests(unittest.TestCase):
             writer.writerow(dict(ticker="TEST", entry_date=dates[test],
                 exit_date=dates[test + 4], confirmation_sessions=1,
                 early_exit="True", return_difference_pp=0, baseline_mae_pct=-1))
+            writer.writerow(dict(ticker="TEST", entry_date=dates[test + 20],
+                exit_date=dates[test + 30], confirmation_sessions=1,
+                early_exit="False", return_difference_pp=0, baseline_mae_pct=-1))
         return cases, archive
 
     def test_reproducible_and_training_only(self):
@@ -43,12 +46,14 @@ class DurationPlaceboTests(unittest.TestCase):
             cases, archive = self.make_inputs(folder)
             first = evaluate(cases, archive)
             self.assertEqual(first, evaluate(cases, archive))
-            self.assertEqual(first["test_candidates"], 1)
+            self.assertEqual(first["test_candidates"], 2)
             self.assertEqual(first["training_duration_counts"], {3: 1})
             self.assertEqual(first["rows"][0]["placebo_duration"], 3)
             self.assertEqual(first["warning_early_exits"], first["placebo_early_exits"])
             self.assertAlmostEqual(first["rows"][0]["warning_minus_placebo_pp"], 0.0)
-            self.assertEqual(first["summary"]["candidates"], 1)
+            self.assertEqual(first["summary"]["candidates"], 2)
+            self.assertEqual(first["rows"][1]["placebo_duration"], 10)
+            self.assertEqual(first["rows"][1]["warning_minus_placebo_pp"], 0.0)
             self.assertFalse(first["trade_ready"])
 
     def test_no_training_warning_is_error(self):
