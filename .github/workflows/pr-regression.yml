@@ -73,6 +73,18 @@ jobs:
         env:
           SCANNER_NOTIFICATIONS_ENABLED: 'false'
         run: python research/candidate_regime_cost_validation.py
+      - name: Calculate benchmark-relative sensitivity
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python research/candidate_benchmark_excess.py
+      - name: Upload benchmark-relative sensitivity
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-benchmark-excess
+          path: reports/candidate_benchmark_excess.json
+          if-no-files-found: error
       - name: Audit cross-symbol research breadth
         if: github.head_ref == 'research/offline-technical-risk-20261021'
         env:
