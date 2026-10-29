@@ -83,6 +83,18 @@ class RegimeCostTests(unittest.TestCase):
                          "FURTHER_VALIDATION_REQUIRED")
         self.assertFalse(model.risk_screen(metrics,20)["trade_ready"])
 
+    def test_partial_open_coverage_fails_closed(self):
+        data=rows()
+        data[101]["open"]=100
+        result=model.summarize_next_open(data,[100,110],1,50)
+        self.assertEqual(result["status"],"BLOCKED_OPEN_PRICE_MISSING")
+        self.assertEqual(result["n"],0)
+        self.assertEqual(result["missing_open_count"],1)
+
+    def test_empty_next_open_sample_not_research_only(self):
+        result=model.summarize_next_open(rows(),[],10,50)
+        self.assertEqual(result["status"],"NO_SAMPLES")
+
     def test_short_holdout_blocks(self):
         self.assertEqual(model.evaluate(rows(120), 15, "breakout_prior20")["status"],
                          "INSUFFICIENT_TEST_WINDOW")
