@@ -130,6 +130,20 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
         if not isinstance(reconciled_portfolio_inputs, dict) or set(reconciled_portfolio_inputs) != {"trades", "daily_marks", "trading_dates"}:
             raise ValueError("INVALID_RECONCILIATION_INPUTS")
         verified = backtest_portfolio_with_marks(**reconciled_portfolio_inputs)
+        if equity_observations is not None:
+            reconciled_curve = verified["equity"]["equity_curve"]
+            supplied = [(row["date"], str(row["equity"])) for row in equity_observations]
+            from decimal import Decimal
+            try:
+                matches = len(supplied) == len(reconciled_curve) and all(
+                    supplied[i][0] == reconciled_curve[i]["date"] and
+                    Decimal(supplied[i][1]) == Decimal(reconciled_curve[i]["equity"])
+                    for i in range(len(supplied))
+                )
+            except (KeyError, TypeError, ValueError, ArithmeticError):
+                matches = False
+            if not matches:
+                raise ValueError("EQUITY_SERIES_RECONCILIATION_MISMATCH")
         reconciled = {"status": "ARITHMETIC_RECONCILED_RESEARCH_ONLY",
                       "cash_equity_reconciliation": verified["cash_equity_reconciliation"],
                       "equity": verified["equity"], "trade_ready": False,
@@ -146,6 +160,7 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
         "cash_equity_reconciled": reconciled.get("status") == "ARITHMETIC_RECONCILED_RESEARCH_ONLY",
         "signal_provenance_verified": False,
         "portfolio_evidence_complete": False,
+        "equity_series_matched_to_reconciled_ledger": reconciled.get("status") == "ARITHMETIC_RECONCILED_RESEARCH_ONLY" and equity_observations is not None,
         "blockers": [
             "SIGNAL_PROVENANCE_NOT_INDEPENDENTLY_VERIFIED",
             "PORTFOLIO_METRICS_NOT_SAME_COHORT_VERIFIED",
@@ -153,6 +168,8 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
     }
     if not checks["cash_equity_reconciled"]:
         checks["blockers"].append("CASH_EQUITY_RECONCILIATION_NOT_PROVIDED")
+    if not checks["equity_series_matched_to_reconciled_ledger"]:
+        checks["blockers"].append("EQUITY_SERIES_NOT_MATCHED_TO_LEDGER")
     if not checks["capacity_available"]:
         checks["blockers"].append("CAPACITY_NOT_EVALUATED")
     if not checks["sector_exposure_available"]:
