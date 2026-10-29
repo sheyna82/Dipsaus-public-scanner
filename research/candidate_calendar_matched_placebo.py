@@ -32,6 +32,12 @@ def calendar_placebo(baseline, selected, *, draws=1000, seed=20261029):
     if n < 2 or any(len(groups[month]) < count for month, count in counts.items()):
         return {"status": "INSUFFICIENT_CALENDAR_MATCHES", "trade_ready": False,
                 "n_selected": n, "n_baseline": len(baseline)}
+    combinations = math.prod(math.comb(len(groups[month]), count) for month, count in counts.items())
+    if combinations < 100:
+        return {"status": "INSUFFICIENT_DISTINCT_PLACEBOS", "trade_ready": False,
+                "n_selected": n, "n_baseline": len(baseline),
+                "distinct_possible_placebos": combinations,
+                "required_distinct_placebos": 100}
     rng = random.Random(seed)
     observed = statistics.mean(row["excess_pct"] for row in selected)
     null = []
@@ -43,6 +49,7 @@ def calendar_placebo(baseline, selected, *, draws=1000, seed=20261029):
     return {"status": "DESCRIPTIVE_CALENDAR_MATCHED", "trade_ready": False,
             "n_selected": n, "n_baseline": len(baseline), "draws": draws,
             "calendar_months": len(counts),
+            "distinct_possible_placebos": combinations,
             "observed_mean_excess_pct": round(observed, 4),
             "placebo_median_mean_excess_pct": round(statistics.median(null), 4),
             "observed_percentile": round(sum(x <= observed for x in null)/draws, 4),
