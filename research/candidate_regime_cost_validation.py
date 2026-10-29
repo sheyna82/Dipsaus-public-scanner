@@ -2,6 +2,17 @@
 import json, statistics
 from pathlib import Path
 from candidate_entry_snapshot import SYMBOLS, bars
+
+# Predeclared research expansion; never selected from observed performance.
+# Deliberately retain original six for comparability. Survivorship and sector
+# composition biases remain; this is not an investable-universe backtest.
+RESEARCH_UNIVERSE = SYMBOLS + (
+    "MSFT", "GOOGL", "META", "NVDA", "INTC", "MU", "QCOM", "TXN",
+    "JPM", "BAC", "XOM", "CVX", "CAT", "DE", "UNH", "PFE",
+    "SAP.DE", "SIE.DE", "ASML.AS", "INGA.AS", "AIR.PA", "MC.PA",
+    "SAN.MC", "IBE.MC", "NOVO-B.CO", "NESN.SW",
+)
+
 from candidate_nonoverlap_validation import PATTERNS
 
 HORIZONS=(5,10,15)
@@ -131,8 +142,10 @@ def evaluate(rows,horizon,pattern,cost_bps=50):
 def main():
     output={"research_only":True,"trade_ready":False,"horizons":list(HORIZONS),
             "cost_bps_round_trip":list(COST_BPS),"requested_history":"5y",
-            "costs_are_illustrative":True,"candidates":[]}
-    for symbol in SYMBOLS:
+            "costs_are_illustrative":True,"research_universe_size":len(RESEARCH_UNIVERSE),
+            "universe_selection":"PREDECLARED_CONVENIENCE_SAMPLE_NOT_SURVIVORSHIP_FREE",
+            "candidates":[]}
+    for symbol in RESEARCH_UNIVERSE:
         try:
             rows=bars(symbol, history_range="5y")
             if len(rows)<750:raise ValueError("INSUFFICIENT_FIVE_YEAR_BARS")
