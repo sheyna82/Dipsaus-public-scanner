@@ -34,6 +34,20 @@ class RegimeCostTests(unittest.TestCase):
         self.assertEqual(result["next_open_execution_status"], "BLOCKED_OPEN_PRICE_MISSING")
         self.assertEqual(result["execution_model"], "SIGNAL_CLOSE_ONLY_UNEXECUTABLE_REFERENCE")
 
+    def test_next_open_execution_uses_next_bar_not_signal_close(self):
+        data = rows()
+        data[101]["open"] = 105
+        data[101]["high"] = 111
+        data[101]["low"] = 104
+        data[101]["close"] = 110
+        result = model.summarize_next_open(data, [100], 1, 50)
+        self.assertEqual(result["status"], "RESEARCH_ONLY")
+        self.assertEqual(result["median_net_pct"], 4.26)
+
+    def test_next_open_missing_blocks(self):
+        result = model.summarize_next_open(rows(), [100], 1, 50)
+        self.assertEqual(result["status"], "BLOCKED_OPEN_PRICE_MISSING")
+
     def test_short_holdout_blocks(self):
         self.assertEqual(model.evaluate(rows(120), 15, "breakout_prior20")["status"],
                          "INSUFFICIENT_TEST_WINDOW")
