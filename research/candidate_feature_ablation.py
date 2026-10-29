@@ -9,6 +9,7 @@ from candidate_benchmark_excess import PATTERNS, HORIZON, COST_BPS
 from candidate_ablation_risk_diagnostics import compare as compare_risk
 from candidate_matched_count_placebo import placebo
 from candidate_calendar_matched_placebo import calendar_placebo
+from candidate_execution_sensitivity import execution_sensitivity
 
 FILTERS=("baseline",)+tuple(FEATURE_DIRECTIONS)+("all_three",)
 
@@ -24,6 +25,8 @@ def evaluate_ablation(stock,benchmark,pattern):
     by_day={r["timestamp"]//86400:r for r in benchmark}
     cohorts={key:[] for key in FILTERS}
     risk_cohorts={key:[] for key in FILTERS}
+    execution_cohorts={key:[] for key in FILTERS}
+    execution_blocked={key:0 for key in FILTERS}
     for i in indices:
         f=pre_entry_features(stock,benchmark,i)
         decision=label(f,fitted)
@@ -40,13 +43,22 @@ def evaluate_ablation(stock,benchmark,pattern):
         risk_record={"net_return_pct":100*(stock[i+HORIZON]["close"]/entry-1)-COST_BPS/100,
                      "excess_pct":excess,"mae_pct":mae,
                      "session_day":stock[i+1]["timestamp"]//86400}
+        execution=execution_sensitivity(stock,i,horizon=HORIZON,cost_bps=COST_BPS)
+        def add_execution(key):
+            if execution["status"]=="DESCRIPTIVE_EXECUTION_SENSITIVITY":
+                execution_cohorts[key].append(execution)
+            else:
+                execution_blocked[key]+=1
+        add_execution("baseline")
         cohorts["baseline"].append(record)
         risk_cohorts["baseline"].append(risk_record)
         for key,passed in decision["passes"].items():
             if passed:
+                add_execution(key)
                 cohorts[key].append(record)
                 risk_cohorts[key].append(risk_record)
         if all(decision["passes"].values()):
+            add_execution("all_three")
             cohorts["all_three"].append(record)
             risk_cohorts["all_three"].append(risk_record)
     def summary(records):
@@ -55,11 +67,21 @@ def evaluate_ablation(stock,benchmark,pattern):
                 "positive_excess_fraction":round(sum(x[0]>0 for x in records)/len(records),3) if records else None,
                 "median_mae_pct":round(statistics.median(x[1] for x in records),3) if records else None,
                 "worst_mae_pct":round(min(x[1] for x in records),3) if records else None}
+    def execution_summary(key):
+        records=execution_cohorts[key]
+        scenario_bps=(0,10,25,50)
+        return {"status":"DESCRIPTIVE_ONLY" if records else "INSUFFICIENT_LIQUID_EXECUTIONS",
+                "trade_ready":False,"n":len(records),"blocked_n":execution_blocked[key],
+                "mean_net_pct_by_entry_slippage_bps":{
+                    str(bps):round(statistics.mean(next(x["net_return_pct"] for x in row["scenarios"]
+                            if x["adverse_entry_bps"]==bps) for row in records),4) if records else None
+                    for bps in scenario_bps}}
     return {"status":"DESCRIPTIVE_ONLY","trade_ready":False,
             "training_n":len(training),"test_baseline_n":len(indices),
             "thresholds":fitted["thresholds"],
             "cohorts":{key:summary(records) for key,records in cohorts.items()},
             "risk_diagnostics":compare_risk(risk_cohorts),
+            "execution_sensitivity":{key:execution_summary(key) for key in FILTERS},
             "matched_count_placebo":{key:placebo(risk_cohorts["baseline"], risk_cohorts[key])
                                       for key in FILTERS if key != "baseline"},
             "calendar_matched_placebo":{key:calendar_placebo(risk_cohorts["baseline"], risk_cohorts[key])
