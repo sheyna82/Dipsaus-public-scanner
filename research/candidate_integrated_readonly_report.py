@@ -159,10 +159,50 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
             if Decimal(closed_trade_diagnostics["net_profit"]) != Decimal(
                     verified["cash_accounting"]["realized_net_pnl"]).quantize(Decimal("0.01")):
                 raise ValueError("CLOSED_TRADE_PNL_RECONCILIATION_MISMATCH")
+        from datetime import date
+        from decimal import Decimal
+        open_by_symbol = {}
+        holding_sessions = []
+        for event in verified["cash_accounting"]["ledger"]:
+            symbol = event["ticker"]
+            if event["action"] == "entry":
+                if symbol in open_by_symbol:
+                    raise ValueError("AMBIGUOUS_HOLDING_PERIOD")
+                open_by_symbol[symbol] = date.fromisoformat(event["date"])
+            elif event["action"] == "exit":
+                if symbol not in open_by_symbol:
+                    raise ValueError("AMBIGUOUS_HOLDING_PERIOD")
+                start = open_by_symbol.pop(symbol)
+                finish = date.fromisoformat(event["date"])
+                sessions = sum(start <= day < finish for day in reconciled_portfolio_inputs["trading_dates"])
+                if sessions < 1:
+                    raise ValueError("INVALID_HOLDING_SESSION_COUNT")
+                holding_sessions.append(sessions)
+        if open_by_symbol:
+            raise ValueError("UNCLOSED_HOLDING_PERIOD")
+        capital_session_units = sum(Decimal("3500") * n for n in holding_sessions)
+        holding_efficiency = {
+            "status": "DESCRIPTIVE_COMPLETED_TRADES" if holding_sessions else "NO_COMPLETED_TRADES",
+            "trade_ready": False,
+            "completed_trades": len(holding_sessions),
+            "total_invested_tranche_sessions": sum(holding_sessions),
+            "capital_session_units": str(capital_session_units),
+            "longest_holding_sessions": max(holding_sessions, default=0),
+            "net_pnl_per_1000_currency_session_units": (
+                str((Decimal(verified["cash_accounting"]["realized_net_pnl"]) /
+                     capital_session_units * 1000).quantize(Decimal("0.0001")))
+                if capital_session_units else None),
+            "limitations": [
+                "Capital-session efficiency is descriptive, not an annualized return or a forecast",
+                "Uses the research ledger fixed tranche of 3500 and caller-supplied session calendar",
+                "No intraday capital usage, financing, FX or broker fill verification",
+            ],
+        }
         reconciled = {"status": "ARITHMETIC_RECONCILED_RESEARCH_ONLY",
                       "cash_equity_reconciliation": verified["cash_equity_reconciliation"],
                       "equity": verified["equity"],
                       "closed_trade_profit_diagnostics": closed_trade_diagnostics,
+                      "holding_capital_efficiency": holding_efficiency,
                       "trade_ready": False,
                       "independent_provenance_verified": False,
                       "limitations": ["Arithmetic reconciliation is not source authentication",
