@@ -46,7 +46,7 @@ class DurationPlaceboTests(unittest.TestCase):
             self.assertEqual(first["test_candidates"], 1)
             self.assertEqual(first["training_duration_counts"], {3: 1})
             self.assertEqual(first["rows"][0]["placebo_duration"], 3)
-            self.assertFalse(first["trade_ready"])
+            self.assertEqual(first["warning_early_exits"], first["placebo_early_exits"])\n            self.assertAlmostEqual(first["rows"][0]["warning_minus_placebo_pp"], 0.0)\n            self.assertFalse(first["trade_ready"])
 
     def test_no_training_warning_is_error(self):
         with tempfile.TemporaryDirectory() as folder:
