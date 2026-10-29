@@ -21,6 +21,9 @@ def match_observed_notifications(state, cases=CASES_2026_10_26, *,
     results = []
     for index, case in enumerate(cases):
         matches = by_symbol[case.symbol]
+        exact_family_candidates = sum(
+            record["key_family"] == case.family for record in matches
+        )
         if len(matches) == 1:
             status = "unique_symbol_utc_day_candidate_unverified_link"
         elif len(matches) == 0:
@@ -34,6 +37,7 @@ def match_observed_notifications(state, cases=CASES_2026_10_26, *,
             "symbol": case.symbol,
             "family": case.family,
             "candidate_private_record_count": len(matches),
+            "exact_family_candidate_count": exact_family_candidates,
             "match_status": status,
             "screenshot_link_verified": False,
             "scanner_decision_verified": False,
@@ -48,6 +52,7 @@ def match_observed_notifications(state, cases=CASES_2026_10_26, *,
         "cases": results,
         "warnings": [
             "UTC date matching is only a candidate lookup, not screenshot identity proof",
+            "Exact family matching is descriptive and does not verify scanner origin",
             "Private timestamps, key families and delivery statuses are not exported",
             "No historical profit or execution claim is supported",
         ],
