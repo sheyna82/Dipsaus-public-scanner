@@ -56,6 +56,21 @@ class PortfolioWarningComparisonTests(unittest.TestCase):
             [row["ticker"] for row in result["warning_protected"]["ledger"]
              if row["action"] == "entry"], ["AAA", "BBB"])
 
+    def test_counterfactual_captures_missed_rebound(self):
+        example = case(warning=True)
+        example["bars"][29].update(open=120, high=122, low=119, close=121)
+        diagnostic = compare_warning_exit_portfolios([example])["candidate_diagnostics"][0]
+        self.assertEqual(
+            Decimal(diagnostic["counterfactual_baseline_minus_candidate_pct_points"]),
+            Decimal("31"))
+        self.assertEqual(diagnostic["sessions_capital_released_early"], 4)
+
+    def test_no_warning_has_zero_counterfactual(self):
+        diagnostic = compare_warning_exit_portfolios([case()])["candidate_diagnostics"][0]
+        self.assertEqual(
+            Decimal(diagnostic["counterfactual_baseline_minus_candidate_pct_points"]), 0)
+        self.assertEqual(diagnostic["sessions_capital_released_early"], 0)
+
     def test_duplicate_trade_rejected(self):
         with self.assertRaisesRegex(ValueError, "duplicate_trade"):
             compare_warning_exit_portfolios([case(), case()])
