@@ -1,5 +1,6 @@
 """Chronological regime-matched, cost-sensitive research. Never a trading signal."""
 import json, statistics
+from datetime import datetime, timezone
 from pathlib import Path
 from candidate_entry_snapshot import SYMBOLS, bars
 
@@ -138,9 +139,7 @@ def evaluate(rows,horizon,pattern,cost_bps=50):
     # Preserve signal dates for cross-symbol clustering; never treat correlated
     # simultaneous events as independent statistical observations.
     results["signal_dates_utc"] = [
-        __import__("datetime").datetime.fromtimestamp(
-            rows[i]["timestamp"], __import__("datetime").timezone.utc
-        ).strftime("%Y-%m-%d") for i in signal
+        datetime.fromtimestamp(rows[i]["timestamp"], timezone.utc).strftime("%Y-%m-%d") for i in signal
     ]
     results["risk_screen_50bps"] = risk_screen(
         results["cost_scenarios"]["50"]["next_open_signals"],len(controls))
