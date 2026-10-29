@@ -2,6 +2,7 @@ name: DIPSAUS pull request regression
 on:
   pull_request:
     paths:
+      - 'research/candidate_nonoverlap_validation.py'
       - 'research/candidate_conditional_cohorts.py'
       - 'research/test_candidate_conditional_cohorts.py'
       - 'research/candidate_entry_snapshot.py'
@@ -58,6 +59,18 @@ jobs:
         env:
           SCANNER_NOTIFICATIONS_ENABLED: 'false'
         run: python research/candidate_conditional_cohorts.py
+      - name: Calculate non-overlapping candidate validation
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python research/candidate_nonoverlap_validation.py
+      - name: Upload non-overlapping candidate validation
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        uses: actions/upload-artifact@v4
+        with:
+          name: six-candidate-nonoverlap-validation
+          path: reports/candidate_nonoverlap_validation.json
+          if-no-files-found: error
       - name: Upload conditional recovery cohorts
         if: github.head_ref == 'research/offline-technical-risk-20261021'
         uses: actions/upload-artifact@v4
