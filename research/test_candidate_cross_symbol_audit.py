@@ -38,6 +38,19 @@ class CrossSymbolAuditTests(unittest.TestCase):
         self.assertEqual(p["fraction_signal_events_on_shared_dates"],0.5)
         self.assertEqual(p["signal_date_coverage_status"],"AVAILABLE")
 
+    def test_matching_reasons_aggregate_across_symbols(self):
+        a=sample("AAA",20,5,1)
+        b=sample("BBB",10,3,-1)
+        for pattern in ("breakout_prior20","recovery_from_prior20_low_3to15pct"):
+            a["patterns"][pattern]["10"]["matching_diagnostics"]={
+                "matched":5,"blocked_by_signal_window":15}
+            b["patterns"][pattern]["10"]["matching_diagnostics"]={
+                "matched":3,"no_eligible_same_regime_non_signal":7}
+        p=audit({"candidates":[a,b]})["patterns"]["breakout_prior20"]
+        self.assertEqual(p["matching_diagnostic_counts"]["matched"],8)
+        self.assertEqual(p["matching_diagnostic_counts"]["blocked_by_signal_window"],15)
+        self.assertEqual(p["matching_diagnostic_coverage"],"COMPLETE")
+
     def test_blocked_symbols_excluded_not_hidden(self):
         result=audit({"candidates":[sample("AAA",30,20,1),
                                     {"symbol":"BAD","status":"DATA_BLOCKED"}]})
