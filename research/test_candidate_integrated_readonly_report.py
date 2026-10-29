@@ -144,6 +144,7 @@ class IntegratedReadonlyTests(unittest.TestCase):
         self.assertFalse(timeline["cross_component_consistency"]["portfolio_evidence_complete"])
         self.assertTrue(timeline["cross_component_consistency"]["capacity_ledger_net_returns_matched"])
         self.assertTrue(timeline["cross_component_consistency"]["selection_priority_equivalence_verified"])
+        self.assertTrue(timeline["cross_component_consistency"]["capacity_ledger_rejected_identities_matched"])
         self.assertFalse(timeline["cross_component_consistency"]["transaction_cost_provenance_verified"])
         self.assertNotIn("SELECTION_PRIORITY_NOT_RECONCILED",
                          timeline["cross_component_consistency"]["blockers"])
