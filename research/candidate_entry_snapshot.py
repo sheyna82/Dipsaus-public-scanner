@@ -9,8 +9,9 @@ CHART = "https://query1.finance.yahoo.com/v8/finance/chart/"
 OUT = Path("reports/candidate_entry_research.json")
 HEADERS = {"User-Agent": "Mozilla/5.0 DIPSAUS research"}
 
-def bars(symbol):
-    url = CHART + urllib.parse.quote(symbol, safe="") + "?range=1y&interval=1d"
+def bars(symbol, history_range="1y"):
+    if history_range not in ("1y", "5y"): raise ValueError("UNSUPPORTED_HISTORY_RANGE")
+    url = CHART + urllib.parse.quote(symbol, safe="") + "?range=" + history_range + "&interval=1d"
     with urllib.request.urlopen(urllib.request.Request(url, headers=HEADERS), timeout=20) as response:
         result = json.load(response)["chart"]["result"][0]
     quote = result["indicators"]["quote"][0]
