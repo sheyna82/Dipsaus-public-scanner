@@ -39,7 +39,7 @@ class ExistingOhlcvPilotTests(unittest.TestCase):
             record = json.loads(stream.readline())
         record["bars"][40][2] = 80
         with gzip.open(self.path, "wt", encoding="utf-8") as stream:
-            stream.write(json.dumps(record) + "\\n")
+            stream.write(json.dumps(record) + "\n")
         with self.assertRaisesRegex(ValueError, "invalid_pilot_ohlc"):
             evaluate_pilot_artifact(self.path, cutoff=date(2025, 4, 1))
 
