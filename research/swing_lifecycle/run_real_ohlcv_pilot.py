@@ -74,6 +74,21 @@ def run(output, *, cutoff):
                 for n in (1, 2, 3)
             }
             report["diagnostic"] = report["confirmation_sensitivity"]["1"]
+            # Predeclared chronological cutoff sensitivity; never select a rule
+            # by optimizing on any of these later-period observations.
+            report["chronological_cutoff_sensitivity_eur"] = {}
+            for rolling_cutoff in (
+                date(2026, 1, 1), date(2026, 4, 1),
+                date(2026, 7, 1)
+            ):
+                report["chronological_cutoff_sensitivity_eur"][rolling_cutoff.isoformat()] = {
+                    str(n): evaluate_pilot_artifact(
+                        euro_archive, cutoff=rolling_cutoff,
+                        holding_sessions=10, entry_stride=20,
+                        confirmation_sessions=n)
+                    for n in (1, 2, 3)
+                }
+
             if euro_records:
                 report["eur_only_confirmation_sensitivity"] = {
                     str(n): evaluate_pilot_artifact(
