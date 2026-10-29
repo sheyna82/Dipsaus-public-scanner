@@ -14,7 +14,39 @@ from candidate_decision_evidence_gate import assess
 from candidate_portfolio_capacity import simulate
 
 
-def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=None):
+
+def concentration_from_accepted(portfolio, sectors):
+    """Descriptive peak sector occupancy for actually accepted simulated trades."""
+    if not isinstance(sectors, dict):
+        raise ValueError("INVALID_SECTOR_MAPPING")
+    accepted = portfolio["accepted_signals"]
+    for row in accepted:
+        if not isinstance(sectors.get(row["symbol"]), str) or not sectors[row["symbol"]].strip():
+            raise ValueError("MISSING_SECTOR_FOR_ACCEPTED_SIGNAL")
+    if not accepted:
+        return {"status": "NO_ACCEPTED_TRADES", "trade_ready": False, "peak_sector_positions": {},
+                "peak_same_sector_positions": 0, "max_holding_day_units": 0}
+    days = sorted({day for row in accepted for day in range(row["entry_day"], row["exit_day"])})
+    peak = {}
+    max_same = 0
+    for day in days:
+        counts = {}
+        for row in accepted:
+            if row["entry_day"] <= day < row["exit_day"]:
+                sector = sectors[row["symbol"]].strip()
+                counts[sector] = counts.get(sector, 0) + 1
+        for sector, count in counts.items():
+            peak[sector] = max(peak.get(sector, 0), count)
+            max_same = max(max_same, count)
+    return {"status": "DESCRIPTIVE_ACCEPTED_TRADE_EXPOSURE", "trade_ready": False,
+            "peak_sector_positions": dict(sorted(peak.items())),
+            "peak_same_sector_positions": max_same,
+            "max_holding_day_units": max(row["exit_day"] - row["entry_day"] for row in accepted),
+            "limitations": ["Entry/exit integer days are not verified exchange sessions",
+                            "Sector labels are caller supplied, not independently verified",
+                            "No price correlation, FX, intraday exposure or live risk prediction"]}
+
+def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=None, sector_by_symbol=None):
     if not isinstance(snapshot, dict) or not isinstance(snapshot.get("candidates"), list):
         raise ValueError("INVALID_SNAPSHOT")
     if not isinstance(evidence_report, dict) or not isinstance(evidence_report.get("candidates"), list):
@@ -78,6 +110,10 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
             raise ValueError("SIGNAL_NOT_IN_CANDIDATE_SNAPSHOT")
         portfolio = simulate(dated_signals)
         portfolio["limitations"].append("Capacity is descriptive; dated signals must be independently validated and point-in-time eligible")
+    if dated_signals is None or sector_by_symbol is None:
+        concentration = {"status": "NOT_EVALUATED", "reason": "DATED_SIGNALS_AND_SECTOR_MAPPING_REQUIRED", "trade_ready": False}
+    else:
+        concentration = concentration_from_accepted(portfolio, sector_by_symbol)
     if equity_observations is None:
         equity_risk = {"status": "NOT_EVALUATED", "reason": "DATED_EQUITY_MARKS_NOT_PROVIDED", "trade_ready": False}
     else:
@@ -88,6 +124,7 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
             "Not a live portfolio valuation or independent predictive validation",
         ]
     return {
+        "portfolio_concentration": concentration,
         "portfolio_equity_risk": equity_risk,
         "portfolio_capacity_simulation": portfolio,
         "research_only": True, "trade_ready": False, "automatic_orders": False,
