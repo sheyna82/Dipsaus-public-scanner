@@ -8,6 +8,7 @@ import argparse
 import gzip
 import json
 from datetime import date
+from math import isfinite
 from pathlib import Path
 from research.swing_lifecycle.warning_exit_holdout import evaluate_warning_exit_holdout
 
@@ -35,6 +36,19 @@ def evaluate_pilot_artifact(path, *, cutoff, holding_sessions=10,
                              "low": low, "close": close})
             if not isinstance(symbol, str) or not symbol:
                 raise ValueError("missing_symbol")
+            # Reject corrupt or nonchronological provider bars before scoring.
+            previous_day = None
+            for bar in bars:
+                day = date.fromisoformat(bar["date"])
+                prices = [bar[key] for key in ("open", "high", "low", "close")]
+                if (previous_day is not None and day <= previous_day):
+                    raise ValueError("nonchronological_pilot_bars")
+                if (any(isinstance(x, bool) or not isinstance(x, (int, float))
+                        or not isfinite(x) or x <= 0 for x in prices)
+                        or bar["low"] > min(bar["open"], bar["close"])
+                        or bar["high"] < max(bar["open"], bar["close"])):
+                    raise ValueError("invalid_pilot_ohlc")
+                previous_day = day
             if len(bars) < 21 + holding_sessions:
                 skipped.append({"symbol": symbol, "reason": "short_history"})
                 continue
