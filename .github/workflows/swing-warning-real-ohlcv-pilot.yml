@@ -1,5 +1,9 @@
 name: DIPSAUS real OHLCV warning research (manual)
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/swing-warning-real-ohlcv-pilot.yml'
+      - 'research/swing_lifecycle/run_real_ohlcv_pilot.py'
   workflow_dispatch:
 permissions:
   contents: read
