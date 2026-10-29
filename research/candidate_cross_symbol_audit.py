@@ -31,6 +31,16 @@ def audit(data):
             "symbols_with_at_least_15_controls":sum(x["matched_control_n"]>=15 for x,_ in observations),
             "symbols_with_at_least_30_signals":sum(x["signal_n"]>=30 for x,_ in observations),
             "signals_without_matching_controls":sum(max(0,x["signal_n"]-x["matched_control_n"]) for x,_ in observations),
+            "control_coverage_fraction":round(
+                sum(x["matched_control_n"] for x,_ in observations)/
+                sum(x["signal_n"] for x,_ in observations),3
+            ) if sum(x["signal_n"] for x,_ in observations) else None,
+            "symbol_control_coverage_median":(
+                __import__("statistics").median(
+                    x["matched_fraction"] for x,_ in observations
+                ) if observations and all("matched_fraction" in x for x,_ in observations)
+                else None
+            ),
             "risk_status_counts":dict(Counter(x["risk_screen_50bps"]["status"] for x,_ in observations)),
             "pooled_win_rate_not_computed":"Shared dates, sectors and regimes can correlate outcomes",
             "confidence_interval_status":"NOT_ESTIMATED_CORRELATED_EVENTS",
