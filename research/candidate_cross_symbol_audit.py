@@ -16,11 +16,13 @@ def audit(data):
             "patterns":{}}
     for pattern in PATTERNS:
         observations=[]
+        date_counts=Counter()
         for c in candidates:
             if "patterns" not in c:continue
             evaluation=c["patterns"][pattern]["10"]
             metrics=evaluation["cost_scenarios"]["50"]["next_open_signals"]
             observations.append((evaluation,metrics))
+            date_counts.update(set(evaluation.get("signal_dates_utc",[])))
         result["patterns"][pattern]={
             "symbols_evaluated":len(observations),
             "total_nonoverlap_within_symbol_signals":sum(x["signal_n"] for x,_ in observations),
@@ -32,6 +34,10 @@ def audit(data):
             "risk_status_counts":dict(Counter(x["risk_screen_50bps"]["status"] for x,_ in observations)),
             "pooled_win_rate_not_computed":"Shared dates, sectors and regimes can correlate outcomes",
             "confidence_interval_status":"NOT_ESTIMATED_CORRELATED_EVENTS",
+            "distinct_signal_calendar_dates":len(date_counts),
+            "dates_with_multiple_symbols_signaling":sum(n>1 for n in date_counts.values()),
+            "maximum_symbols_signaling_same_day":max(date_counts.values(),default=0),
+            "signal_date_coverage_status":"AVAILABLE" if all("signal_dates_utc" in x for x,_ in observations) else "INCOMPLETE",
             "trade_ready":False}
     return result
 
