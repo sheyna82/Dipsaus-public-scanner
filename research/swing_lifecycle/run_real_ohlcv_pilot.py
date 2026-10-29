@@ -17,6 +17,17 @@ SYMBOLS = (
     ("SAP.DE", "technology"), ("SIE.DE", "industrials"),
     ("SAN.PA", "healthcare"), ("AIR.PA", "industrials"),
     ("NOVN.SW", "healthcare"), ("NESN.SW", "consumer"),
+    ("ASM.AS", "technology"), ("BESI.AS", "technology"),
+    ("IFX.DE", "technology"), ("ADYEN.AS", "technology"),
+    ("BNP.PA", "financials"), ("DBK.DE", "financials"),
+    ("ABN.AS", "financials"), ("ISP.MI", "financials"),
+    ("BAS.DE", "materials"), ("AKE.PA", "materials"),
+    ("MC.PA", "consumer"), ("OR.PA", "consumer"),
+    ("TTE.PA", "energy"), ("ENI.MI", "energy"),
+    ("RWE.DE", "utilities"), ("IBE.MC", "utilities"),
+    ("DHL.DE", "transport"), ("LHA.DE", "transport"),
+    ("ALFEN.AS", "industrials"), ("RHM.DE", "industrials"),
+    ("PHIA.AS", "healthcare"), ("BAYN.DE", "healthcare"),
 )
 
 
