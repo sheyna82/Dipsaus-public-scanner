@@ -56,6 +56,32 @@ class DurationPlaceboTests(unittest.TestCase):
             self.assertEqual(first["rows"][1]["warning_minus_placebo_pp"], 0.0)
             self.assertFalse(first["trade_ready"])
 
+    def test_holdout_warning_duration_does_not_choose_placebo_duration(self):
+        with tempfile.TemporaryDirectory() as folder:
+            cases, archive = self.make_inputs(folder)
+            original = evaluate(cases, archive)
+            with cases.open(newline="", encoding="utf-8") as stream:
+                rows = list(csv.DictReader(stream))
+            dates = []
+            with gzip.open(archive, "rt", encoding="utf-8") as stream:
+                record = json.loads(next(stream))
+                dates = [bar[0] for bar in record["bars"]]
+            entry = dates.index(rows[1]["entry_date"])
+            rows[1]["exit_date"] = dates[entry + 8]
+            with cases.open("w", newline="", encoding="utf-8") as stream:
+                writer = csv.DictWriter(stream, fieldnames=rows[0].keys())
+                writer.writeheader()
+                writer.writerows(rows)
+            changed = evaluate(cases, archive)
+            self.assertEqual(original["rows"][0]["placebo_duration"],
+                             changed["rows"][0]["placebo_duration"])
+
+    def test_empty_holdout_fails_closed(self):
+        with tempfile.TemporaryDirectory() as folder:
+            cases, archive = self.make_inputs(folder)
+            with self.assertRaisesRegex(ValueError, "no_out_of_sample_placebo_candidates"):
+                evaluate(cases, archive, cutoff="2027-01-01")
+
     def test_no_training_warning_is_error(self):
         with tempfile.TemporaryDirectory() as folder:
             cases, archive = self.make_inputs(folder, train_warning=False)
