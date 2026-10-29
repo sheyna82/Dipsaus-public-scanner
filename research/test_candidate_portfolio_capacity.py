@@ -34,6 +34,18 @@ class PortfolioCapacityTests(unittest.TestCase):
         self.assertEqual(result["comparison"]["all_three"]["accepted_n"],1)
         self.assertFalse(result["trade_ready"])
 
+    def test_tie_breaking_changes_selected_trade_not_capacity(self):
+        rows=[{"symbol":"A","entry_day":1,"exit_day":3,"net_return_pct":10},
+              {"symbol":"Z","entry_day":1,"exit_day":3,"net_return_pct":-10}]
+        asc=simulate(rows,max_positions=1,capital=3500,priority_mode="symbol_asc")
+        desc=simulate(rows,max_positions=1,capital=3500,priority_mode="symbol_desc")
+        self.assertEqual(asc["accepted_signals"][0]["symbol"],"A")
+        self.assertEqual(desc["accepted_signals"][0]["symbol"],"Z")
+        self.assertEqual(asc["rejection_reasons"]["CAPACITY_FULL"],1)
+        self.assertNotEqual(asc["realized_return_pct"],desc["realized_return_pct"])
+        self.assertEqual(simulate(rows,max_positions=1,capital=3500,priority_mode="stable_hash"),
+                         simulate(rows,max_positions=1,capital=3500,priority_mode="stable_hash"))
+
     def test_invalid_duplicate_rejected(self):
         row={"symbol":"A","entry_day":1,"exit_day":2,"net_return_pct":1}
         with self.assertRaises(ValueError):
