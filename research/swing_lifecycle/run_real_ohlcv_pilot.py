@@ -53,14 +53,12 @@ def run(output, *, cutoff):
     archive = output / "historical_provider_ohlcv.jsonl.gz"
     with gzip.open(archive, "wt", encoding="utf-8") as stream:
         for record in records:
-            stream.write(json.dumps(record) + "
-")
+            stream.write(json.dumps(record) + "\n")
     euro_records = [record for record in records if record["currency"] == "EUR"]
     euro_archive = output / "historical_eur_only_ohlcv.jsonl.gz"
     with gzip.open(euro_archive, "wt", encoding="utf-8") as stream:
         for record in euro_records:
-            stream.write(json.dumps(record) + "
-")
+            stream.write(json.dumps(record) + "\n")
     report = {
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "requested": len(SYMBOLS),
