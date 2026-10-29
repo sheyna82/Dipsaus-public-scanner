@@ -70,12 +70,15 @@ def evaluate(rows,horizon,pattern,cost_bps=50):
             controls.append(min(candidates,key=lambda j:(abs(j-i),j)))
     # Do not imply pairing if controls could not be found.
     results={"test_start_unix":rows[cutoff]["timestamp"],"signal_n":len(signal),
+             "execution_model":"SIGNAL_CLOSE_ONLY_UNEXECUTABLE_REFERENCE",
+             "next_open_execution_status":"BLOCKED_OPEN_PRICE_MISSING",
              "matched_control_n":len(controls),"matched_fraction":round(len(controls)/len(signal),3) if signal else 0,
              "cost_scenarios":{},"trade_ready":False,
              "inferentially_valid":False,
              "limitations":["Test-only 35% of one year; no training/tuning performed",
                             "Controls exclude all signal windows; matching remains sparse and may not be fully balanced",
                             "No earnings/event or external benchmark controls",
+                            "Source bars lack open prices; close-to-close results are not executable next-open backtests",
                             "Cost scenarios illustrative, not verified DEGIRO fees/FX/spread"]}
     for bps in COST_BPS:
         results["cost_scenarios"][str(bps)]={"signals":summarize(rows,signal,horizon,bps),
