@@ -114,6 +114,11 @@ class IntegratedReadonlyTests(unittest.TestCase):
         }
         result = build(snap, evidence, reconciled_portfolio_inputs=inputs)
         self.assertTrue(result["cross_component_consistency"]["cash_equity_reconciled"])
+        profit = result["reconciled_portfolio_research"]["closed_trade_profit_diagnostics"]
+        self.assertEqual(profit["trade_count"], 1)
+        self.assertEqual(profit["net_profit"], "70.00")
+        self.assertEqual(profit["profit_factor"], "undefined_no_losses")
+        self.assertFalse(profit["independent_real_trade_data_verified"])
         self.assertFalse(result["cross_component_consistency"]["portfolio_evidence_complete"])
         self.assertFalse(result["reconciled_portfolio_research"]["independent_provenance_verified"])
         self.assertFalse(result["trade_ready"])
