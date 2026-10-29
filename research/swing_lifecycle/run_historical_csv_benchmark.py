@@ -47,6 +47,8 @@ def run_historical_csv_benchmark(manifest, *, cutoff, source,
         cases, cutoff=cutoff, embargo_days=embargo_days,
         cost_bps_per_side=cost_bps_per_side)
     report["input_manifest"] = str(manifest)
+    report["trade_candidates_supplied"] = len(cases)
+    report["unique_tickers"] = len({case["ticker"] for case in cases})
     report["source_label"] = source
     report["market_data_provenance_verified"] = False
     report["candidate_selection_independently_verified"] = False
