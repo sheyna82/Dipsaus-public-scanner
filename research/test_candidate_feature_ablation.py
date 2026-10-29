@@ -18,6 +18,20 @@ class AblationTests(unittest.TestCase):
         result=evaluate_ablation(rows(factor=1),rows(factor=1),"breakout_prior20")
         self.assertEqual(result["status"],"INSUFFICIENT_TRAINING_OBSERVATIONS")
 
+    def test_risk_diagnostics_wired_to_ablation(self):
+        from unittest.mock import patch
+        import candidate_feature_ablation as module
+        stock=rows(200,1.03)
+        benchmark=rows(200,1.001)
+        with patch.object(module, 'MIN_TRAIN', 40), patch.object(module, 'features', return_value={'breakout_prior20':True}), patch.object(module, 'pre_entry_features', return_value={'relative_strength_20d_pct':1,'volume_ratio_20d':2,'atr_14_pct':1}), patch.object(module, 'training_median_thresholds', return_value={'status':'TRAINING_ONLY_THRESHOLDS','thresholds':{}}), patch.object(module, 'label', return_value={'status':'RESEARCH_ONLY','passes':{'relative_strength_20d_pct':True,'volume_ratio_20d':True,'atr_14_pct':True}}):
+            result=module.evaluate_ablation(stock,benchmark,'breakout_prior20')
+        self.assertEqual(result['status'],'DESCRIPTIVE_ONLY')
+        risk=result['risk_diagnostics']
+        self.assertFalse(risk['trade_ready'])
+        self.assertEqual(risk['filters']['baseline']['n'],result['cohorts']['baseline']['n'])
+        self.assertIsInstance(risk['filters']['baseline']['mean_net_pct'],float)
+        self.assertIn('mae_breach_fraction',risk['filters']['baseline'])
+
     def test_cohort_keys_predeclared(self):
         self.assertEqual(len(FILTERS),5)
         self.assertIn("all_three",FILTERS)
