@@ -17,7 +17,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run regression tests before provider experiment
-        run: python -m unittest -v research.swing_lifecycle.test_warning_exit_candidate research.swing_lifecycle.test_warning_portfolio_comparison research.swing_lifecycle.test_warning_exit_holdout research.swing_lifecycle.test_synthetic_warning_exit_smoke research.swing_lifecycle.test_ohlc_csv_loader research.swing_lifecycle.test_run_historical_csv_benchmark research.swing_lifecycle.test_evaluate_existing_ohlcv_pilot test_research_swing_failure_warning
+        run: python -m unittest -v research.swing_lifecycle.test_warning_exit_candidate research.swing_lifecycle.test_warning_confirmation research.swing_lifecycle.test_warning_portfolio_comparison research.swing_lifecycle.test_warning_exit_holdout research.swing_lifecycle.test_synthetic_warning_exit_smoke research.swing_lifecycle.test_ohlc_csv_loader research.swing_lifecycle.test_run_historical_csv_benchmark research.swing_lifecycle.test_evaluate_existing_ohlcv_pilot test_research_swing_failure_warning
       - name: Fetch provider OHLCV and evaluate warning exits
         run: python -m research.swing_lifecycle.run_real_ohlcv_pilot --cutoff 2026-04-01
       - name: Upload evidence even if provider fails
