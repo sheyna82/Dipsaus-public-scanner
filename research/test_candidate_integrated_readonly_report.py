@@ -22,6 +22,7 @@ class IntegratedReadonlyTests(unittest.TestCase):
         self.assertIn("PRICE_DATA_UNAVAILABLE", b["blockers"])
         self.assertEqual(a["portfolio_capacity"], "NOT_EVALUATED_WITHOUT_DATED_ELIGIBLE_SIGNALS")
         self.assertEqual(result["portfolio_capacity_simulation"]["status"], "NOT_EVALUATED")
+        self.assertEqual(result["portfolio_equity_risk"]["status"], "NOT_EVALUATED")
 
     def test_no_trade_ready_from_forged_evidence(self):
         snap = {"research_only": True, "candidates": [{"symbol": "ABC", "decision": "BUY", "blocks": []}]}
@@ -45,6 +46,20 @@ class IntegratedReadonlyTests(unittest.TestCase):
         self.assertFalse(result["trade_ready"])
         with self.assertRaises(ValueError):
             build(snapshot, evidence, dated_signals=[{"symbol": "OTHER", "entry_day": 1, "exit_day": 6, "net_return_pct": 2}])
+
+    def test_reuses_existing_equity_drawdown_engine(self):
+        snap = {"research_only": True, "candidates": [{"symbol": "ABC", "decision": "WAIT", "blocks": []}]}
+        evidence = {"research_only": True, "candidates": []}
+        marks = [{"date": "2026-10-01", "equity": 21000},
+                 {"date": "2026-10-02", "equity": 18900},
+                 {"date": "2026-10-05", "equity": 20500}]
+        result = build(snap, evidence, equity_observations=marks)
+        risk = result["portfolio_equity_risk"]
+        self.assertEqual(risk["max_observed_drawdown_pct"], "10.0000")
+        self.assertFalse(risk["trade_ready"])
+        self.assertFalse(result["trade_ready"])
+        with self.assertRaises(ValueError):
+            build(snap, evidence, equity_observations=list(reversed(marks)))
 
     def test_malformed_blockers_fail_closed(self):
         evidence = {"research_only": True, "candidates": []}
