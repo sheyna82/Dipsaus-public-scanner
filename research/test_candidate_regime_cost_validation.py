@@ -44,6 +44,18 @@ class RegimeCostTests(unittest.TestCase):
         self.assertEqual(result["status"], "RESEARCH_ONLY")
         self.assertEqual(result["median_net_pct"], 4.26)
 
+    def test_underwater_days_and_severe_drawdown(self):
+        data = rows()
+        data[101]["open"] = 100
+        data[101]["close"] = 95
+        data[101]["low"] = 94
+        data[102]["close"] = 97
+        data[102]["low"] = 85
+        result = model.summarize_next_open(data, [100], 2, 50)
+        self.assertEqual(result["median_underwater_close_days"], 2)
+        self.assertEqual(result["fraction_mae_below_minus_10pct"], 1)
+        self.assertEqual(result["fraction_negative_net_at_exit"], 1)
+
     def test_next_open_missing_blocks(self):
         result = model.summarize_next_open(rows(), [100], 1, 50)
         self.assertEqual(result["status"], "BLOCKED_OPEN_PRICE_MISSING")
