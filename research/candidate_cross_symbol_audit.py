@@ -17,14 +17,20 @@ def audit(data):
     for pattern in PATTERNS:
         observations=[]
         date_counts=Counter()
+        matching_reasons=Counter()
         for c in candidates:
             if "patterns" not in c:continue
             evaluation=c["patterns"][pattern]["10"]
             metrics=evaluation["cost_scenarios"]["50"]["next_open_signals"]
             observations.append((evaluation,metrics))
             date_counts.update(set(evaluation.get("signal_dates_utc",[])))
+            matching_reasons.update(evaluation.get("matching_diagnostics",{}))
         result["patterns"][pattern]={
             "symbols_evaluated":len(observations),
+            "matching_diagnostic_counts":dict(matching_reasons),
+            "matching_diagnostic_coverage":"COMPLETE" if all(
+                "matching_diagnostics" in x for x,_ in observations
+            ) else "INCOMPLETE",
             "total_nonoverlap_within_symbol_signals":sum(x["signal_n"] for x,_ in observations),
             "total_matched_controls":sum(x["matched_control_n"] for x,_ in observations),
             "positive_symbol_medians":sum(m.get("median_net_pct",float("-inf"))>0 for _,m in observations),
