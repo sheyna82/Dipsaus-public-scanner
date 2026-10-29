@@ -54,5 +54,20 @@ class SignalChainTests(unittest.TestCase):
         self.assertEqual(audit_signal_chain([row])["reconstructable_signals"], 0)
 
 
+    def test_provider_before_generation_rejected(self):
+        row = self.base()
+        row["provider_accepted_utc"] = "2026-10-26T12:59:00Z"
+        result = audit_signal_chain([row])
+        self.assertEqual(result["reconstructable_signals"], 0)
+        self.assertEqual(result["reconstructable_trades"], 0)
+
+    def test_entry_before_decision_rejected(self):
+        row = self.base()
+        row["entry_utc"] = "2026-10-26T12:59:00Z"
+        result = audit_signal_chain([row])
+        self.assertEqual(result["reconstructable_signals"], 0)
+        self.assertEqual(result["reconstructable_trades"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()
