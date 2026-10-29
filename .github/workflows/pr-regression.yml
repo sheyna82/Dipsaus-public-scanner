@@ -33,6 +33,8 @@ on:
       - 'test_migration_safety.py'
       - 'research/candidate_ablation_risk_diagnostics.py'
       - 'research/test_candidate_ablation_risk_diagnostics.py'
+      - 'research/candidate_decision_evidence_gate.py'
+      - 'research/test_candidate_decision_evidence_gate.py'
       - '.github/workflows/pr-regression.yml'
       - '.github/workflows/shadow-prealert.yml'
 permissions:
@@ -192,3 +194,7 @@ jobs:
       - name: Test trade-level ablation risk diagnostics offline
         if: always()
         run: python -m unittest discover -s research -p 'test_candidate_ablation_risk_diagnostics.py' -v
+
+      - name: Test research decision evidence gate offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_decision_evidence_gate.py' -v
