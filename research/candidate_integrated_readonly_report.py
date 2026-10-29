@@ -163,15 +163,35 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
         capacity_keys = sorted((row["symbol"], dates[row["entry_day"]], dates[row["exit_day"]])
                                for row in accepted)
         ledger = verified["cash_accounting"]["ledger"]
-        entries = {(row["ticker"], row["date"]) for row in ledger if row["action"] == "entry"}
-        exits = {(row["ticker"], row["date"]) for row in ledger if row["action"] == "exit"}
-        ledger_keys = sorted((symbol, date.fromisoformat(start), date.fromisoformat(end))
-                             for symbol, start in entries for exit_symbol, end in exits
-                             if symbol == exit_symbol and end > start)
-        if len(ledger_keys) != len(entries) or len(ledger_keys) != len(exits):
-            raise ValueError("AMBIGUOUS_LEDGER_TRADE_PAIRING")
-        if capacity_keys != ledger_keys:
+        active = {}
+        ledger_keys = []
+        for event in ledger:
+            key = event["ticker"]
+            if event["action"] == "entry":
+                if key in active:
+                    raise ValueError("AMBIGUOUS_LEDGER_TRADE_PAIRING")
+                active[key] = event["date"]
+            elif event["action"] == "exit":
+                if key not in active:
+                    raise ValueError("AMBIGUOUS_LEDGER_TRADE_PAIRING")
+                ledger_keys.append((key, date.fromisoformat(active.pop(key)),
+                                    date.fromisoformat(event["date"])))
+        if active or sorted(capacity_keys) != sorted(ledger_keys):
             raise ValueError("CAPACITY_LEDGER_TIMELINE_MISMATCH")
+        from decimal import Decimal
+        capacity_returns = sorted((row["symbol"], dates[row["entry_day"]],
+                                   dates[row["exit_day"]], Decimal(str(row["net_return_pct"])))
+                                  for row in dated_signals
+                                  if (row["symbol"], dates[row["entry_day"]], dates[row["exit_day"]]) in capacity_keys)
+        ledger_returns = sorted((row["ticker"], row["entry_date"], row["exit_date"],
+                                 Decimal(str(row["net_return_pct"])))
+                                for row in reconciled_portfolio_inputs["trades"]
+                                if (row["ticker"], row["entry_date"], row["exit_date"]) in ledger_keys)
+        if capacity_returns != ledger_returns:
+            raise ValueError("CAPACITY_LEDGER_RETURN_MISMATCH")
+        if abs(Decimal(str(portfolio["realized_pnl"])) -
+               Decimal(verified["cash_accounting"]["realized_net_pnl"])) > Decimal("0.011"):
+            raise ValueError("CAPACITY_LEDGER_PNL_MISMATCH")
         timeline_match = True
     checks = {
         "research_only": True,
@@ -180,6 +200,7 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
         "sector_exposure_available": concentration.get("status") == "DESCRIPTIVE_ACCEPTED_TRADE_EXPOSURE",
         "equity_risk_available": equity_risk.get("risk_estimate_type") == "sampled_portfolio_equity_only",
         "capacity_ledger_timeline_matched": timeline_match,
+        "capacity_ledger_net_returns_matched": timeline_match,
         "cash_equity_reconciled": reconciled.get("status") == "ARITHMETIC_RECONCILED_RESEARCH_ONLY",
         "signal_provenance_verified": False,
         "portfolio_evidence_complete": False,
