@@ -6,9 +6,10 @@ import json
 from pathlib import Path
 
 from candidate_decision_evidence_gate import assess
+from candidate_portfolio_capacity import simulate
 
 
-def build(snapshot, evidence_report):
+def build(snapshot, evidence_report, *, dated_signals=None):
     if not isinstance(snapshot, dict) or not isinstance(snapshot.get("candidates"), list):
         raise ValueError("INVALID_SNAPSHOT")
     if not isinstance(evidence_report, dict) or not isinstance(evidence_report.get("candidates"), list):
@@ -57,7 +58,18 @@ def build(snapshot, evidence_report):
                 "No portfolio-capacity inference without independently dated eligible signals",
             ],
         })
+    if dated_signals is None:
+        portfolio = {"status": "NOT_EVALUATED", "reason": "DATED_SIGNALS_NOT_PROVIDED", "trade_ready": False}
+    else:
+        if not isinstance(dated_signals, list):
+            raise ValueError("INVALID_DATED_SIGNALS")
+        allowed = set(seen)
+        if any(not isinstance(row, dict) or row.get("symbol") not in allowed for row in dated_signals):
+            raise ValueError("SIGNAL_NOT_IN_CANDIDATE_SNAPSHOT")
+        portfolio = simulate(dated_signals)
+        portfolio["limitations"].append("Capacity is descriptive; dated signals must be independently validated and point-in-time eligible")
     return {
+        "portfolio_capacity_simulation": portfolio,
         "research_only": True, "trade_ready": False, "automatic_orders": False,
         "source_artifacts": ["candidate_entry_research.json", "candidate_decision_evidence.json"],
         "candidates": output,
