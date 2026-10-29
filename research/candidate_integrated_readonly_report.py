@@ -109,7 +109,10 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
         allowed = set(seen)
         if any(not isinstance(row, dict) or row.get("symbol") not in allowed for row in dated_signals):
             raise ValueError("SIGNAL_NOT_IN_CANDIDATE_SNAPSHOT")
-        portfolio = simulate(dated_signals)
+        shared_selection = reconciled_portfolio_inputs is not None
+        if shared_selection and any(not isinstance(row.get("score"), (int, float)) or isinstance(row.get("score"), bool) for row in dated_signals):
+            raise ValueError("SHARED_SELECTION_REQUIRES_NUMERIC_SCORES")
+        portfolio = simulate(dated_signals, priority_mode="score_desc" if shared_selection else "symbol_asc")
         portfolio["limitations"].append("Capacity is descriptive; dated signals must be independently validated and point-in-time eligible")
     if dated_signals is None or sector_by_symbol is None:
         concentration = {"status": "NOT_EVALUATED", "reason": "DATED_SIGNALS_AND_SECTOR_MAPPING_REQUIRED", "trade_ready": False}
@@ -209,7 +212,7 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
         "equity_risk_available": equity_risk.get("risk_estimate_type") == "sampled_portfolio_equity_only",
         "capacity_ledger_timeline_matched": timeline_match,
         "capacity_ledger_net_returns_matched": timeline_match,
-        "selection_priority_equivalence_verified": False,
+        "selection_priority_equivalence_verified": timeline_match and portfolio.get("priority_mode") == "score_desc",
         "transaction_cost_provenance_verified": False,
         "cash_equity_reconciled": reconciled.get("status") == "ARITHMETIC_RECONCILED_RESEARCH_ONLY",
         "signal_provenance_verified": False,
@@ -218,12 +221,13 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
         "blockers": [
             "SIGNAL_PROVENANCE_NOT_INDEPENDENTLY_VERIFIED",
             "PORTFOLIO_METRICS_NOT_SAME_COHORT_VERIFIED",
-            "SELECTION_PRIORITY_SEMANTICS_DIFFER",
             "TRANSACTION_COST_PROVENANCE_UNVERIFIED",
         ],
     }
     if not timeline_match:
         checks["blockers"].append("CAPACITY_LEDGER_TIMELINE_NOT_MATCHED")
+    if not checks["selection_priority_equivalence_verified"]:
+        checks["blockers"].append("SELECTION_PRIORITY_NOT_RECONCILED")
     if not checks["cash_equity_reconciled"]:
         checks["blockers"].append("CASH_EQUITY_RECONCILIATION_NOT_PROVIDED")
     if not checks["equity_series_matched_to_reconciled_ledger"]:
