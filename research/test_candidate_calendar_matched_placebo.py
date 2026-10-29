@@ -19,6 +19,13 @@ class CalendarPlaceboTests(unittest.TestCase):
                                                   {"session_day": 20101, "excess_pct": 1.0}])
         self.assertEqual(result["status"], "INSUFFICIENT_CALENDAR_MATCHES")
 
+    def test_degenerate_space_blocks_perfect_percentile(self):
+        baseline = [{"session_day": 20000, "excess_pct": float(i)} for i in range(3)]
+        result = calendar_placebo(baseline, baseline[:2])
+        self.assertEqual(result["status"], "INSUFFICIENT_DISTINCT_PLACEBOS")
+        self.assertEqual(result["distinct_possible_placebos"], 3)
+        self.assertNotIn("observed_percentile", result)
+
     def test_invalid_day_blocks(self):
         with self.assertRaises(ValueError):
             calendar_placebo(self.baseline, [{"session_day": 1.5, "excess_pct": 1}])
