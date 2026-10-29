@@ -23,6 +23,18 @@ class CrossSymbolAuditTests(unittest.TestCase):
         self.assertEqual(p["symbols_with_at_least_30_signals"],1)
         self.assertEqual(p["symbols_with_at_least_15_controls"],0)
         self.assertFalse(result["trade_ready"])
+    def test_shared_dates_are_counted_across_symbols(self):
+        a=sample("AAA",30,20,1)
+        b=sample("BBB",30,20,1)
+        for pattern in ("breakout_prior20","recovery_from_prior20_low_3to15pct"):
+            a["patterns"][pattern]["10"]["signal_dates_utc"]=["2026-01-02","2026-01-05"]
+            b["patterns"][pattern]["10"]["signal_dates_utc"]=["2026-01-02","2026-01-06"]
+        p=audit({"candidates":[a,b]})["patterns"]["breakout_prior20"]
+        self.assertEqual(p["distinct_signal_calendar_dates"],3)
+        self.assertEqual(p["dates_with_multiple_symbols_signaling"],1)
+        self.assertEqual(p["maximum_symbols_signaling_same_day"],2)
+        self.assertEqual(p["signal_date_coverage_status"],"AVAILABLE")
+
     def test_blocked_symbols_excluded_not_hidden(self):
         result=audit({"candidates":[sample("AAA",30,20,1),
                                     {"symbol":"BAD","status":"DATA_BLOCKED"}]})
