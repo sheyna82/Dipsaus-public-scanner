@@ -117,6 +117,15 @@ class IntegratedReadonlyTests(unittest.TestCase):
         self.assertFalse(result["cross_component_consistency"]["portfolio_evidence_complete"])
         self.assertFalse(result["reconciled_portfolio_research"]["independent_provenance_verified"])
         self.assertFalse(result["trade_ready"])
+        aligned = [{"date": "2026-10-01", "equity": 21000},
+                   {"date": "2026-10-02", "equity": 21070}]
+        aligned_result = build(snap, evidence, reconciled_portfolio_inputs=inputs,
+                               equity_observations=aligned)
+        self.assertTrue(aligned_result["cross_component_consistency"]["equity_series_matched_to_reconciled_ledger"])
+        with self.assertRaises(ValueError):
+            build(snap, evidence, reconciled_portfolio_inputs=inputs,
+                  equity_observations=[{"date": "2026-10-01", "equity": 21000},
+                                       {"date": "2026-10-02", "equity": 22000}])
         broken = {**inputs, "daily_marks": {}}
         with self.assertRaises(ValueError):
             build(snap, evidence, reconciled_portfolio_inputs=broken)
