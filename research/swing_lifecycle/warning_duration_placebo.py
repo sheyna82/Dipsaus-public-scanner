@@ -53,7 +53,7 @@ def evaluate(cases_path, archive_path, *, cutoff=CUTOFF):
             continue
         bars = histories[symbol]
         key = (symbol + "|" + row["entry_date"]).encode("utf-8")
-        selected = durations[int.from_bytes(hashlib.sha256(key).digest()[:8], "big") % len(durations)]
+        # Hold to day 10 when the warning policy itself would hold.\n        # Thus placebo and warning exit the same number of positions early.\n        selected = (durations[int.from_bytes(hashlib.sha256(key).digest()[:8], "big") % len(durations)]\n                    if row["early_exit"] == "True" else 10)
         entry_open = float(bars[start][1])
         baseline_open = float(bars[end][1])
         placebo_open = float(bars[start + selected][1])
@@ -66,7 +66,7 @@ def evaluate(cases_path, archive_path, *, cutoff=CUTOFF):
             "warning_early": row["early_exit"] == "True",
             "warning_duration": warning_duration,
             "placebo_duration": selected,
-            "warning_minus_hold_pp": float(row["return_difference_pp"]),
+            "warning_minus_hold_pp": float(row["return_difference_pp"]),\n            "warning_minus_placebo_pp": float(row["return_difference_pp"]) - (placebo_open - baseline_open) / entry_open * 100,
             "placebo_minus_hold_pp": (placebo_open - baseline_open) / entry_open * 100,
             "placebo_mae_improvement_pp": (min(lows) / entry_open - 1) * 100 - float(row["baseline_mae_pct"]),
         })
@@ -74,11 +74,11 @@ def evaluate(cases_path, archive_path, *, cutoff=CUTOFF):
         "research_only": True, "trade_ready": False,
         "placebo_selection": "sha256 ticker|entry_date, training-only duration pool",
         "training_duration_counts": dict(sorted(Counter(durations).items())),
-        "test_candidates": len(result),
+        "test_candidates": len(result),\n        "warning_early_exits": sum(r["warning_early"] for r in result),\n        "placebo_early_exits": sum(r["placebo_duration"] < 10 for r in result),\n        "mean_warning_minus_placebo_pp": (sum(r["warning_minus_placebo_pp"] for r in result) / len(result) if result else None),
         "rows": result,
         "limitations": [
-            "Duration distributions match in aggregate, not individual positions.",
-            "Placebo may exit without a warning; comparisons need paired uncertainty.",
+            "Same warning-selected positions exit early; this conditional placebo does not test warning selection against random selection.",\n            "Duration distributions match in aggregate, not individual positions.",
+            "Placebo uses the warning flag to match exposure; paired uncertainty is still required.",
             "Overlapping candidates and common market shocks require clustered inference.",
             "Calendar-spaced entries are not actual DIPSAUS signals."
         ],
