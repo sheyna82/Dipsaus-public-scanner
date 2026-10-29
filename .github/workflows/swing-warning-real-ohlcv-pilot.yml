@@ -1,0 +1,26 @@
+name: DIPSAUS real OHLCV warning research (manual)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-provider-warning-pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Run regression tests before provider experiment
+        run: python -m unittest -v research.swing_lifecycle.test_warning_exit_candidate research.swing_lifecycle.test_warning_portfolio_comparison research.swing_lifecycle.test_warning_exit_holdout research.swing_lifecycle.test_synthetic_warning_exit_smoke research.swing_lifecycle.test_ohlc_csv_loader research.swing_lifecycle.test_run_historical_csv_benchmark research.swing_lifecycle.test_evaluate_existing_ohlcv_pilot test_research_swing_failure_warning
+      - name: Fetch provider OHLCV and evaluate warning exits
+        run: python -m research.swing_lifecycle.run_real_ohlcv_pilot --cutoff 2026-04-01
+      - name: Upload evidence even if provider fails
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: dipsaus-warning-real-ohlcv-pilot
+          path: reports/warning-real-pilot/
+          if-no-files-found: warn
+          retention-days: 30
