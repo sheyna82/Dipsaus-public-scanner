@@ -2,6 +2,7 @@ name: DIPSAUS pull request regression
 on:
   pull_request:
     paths:
+      - 'research/candidate_cross_symbol_audit.py'
       - 'research/candidate_regime_cost_validation.py'
       - 'research/test_candidate_regime_cost_validation.py'
       - 'research/candidate_nonoverlap_validation.py'
@@ -71,6 +72,18 @@ jobs:
         env:
           SCANNER_NOTIFICATIONS_ENABLED: 'false'
         run: python research/candidate_regime_cost_validation.py
+      - name: Audit cross-symbol research breadth
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python research/candidate_cross_symbol_audit.py
+      - name: Upload cross-symbol breadth audit
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cross-symbol-breadth-audit
+          path: reports/candidate_cross_symbol_audit.json
+          if-no-files-found: error
       - name: Upload regime-matched cost sensitivity
         if: github.head_ref == 'research/offline-technical-risk-20261021'
         uses: actions/upload-artifact@v4
