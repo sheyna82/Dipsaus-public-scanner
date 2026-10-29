@@ -21,6 +21,7 @@ class IntegratedReadonlyTests(unittest.TestCase):
         self.assertIn("NO_MATCHING_DESCRIPTIVE_EVIDENCE", b["blockers"])
         self.assertIn("PRICE_DATA_UNAVAILABLE", b["blockers"])
         self.assertEqual(a["portfolio_capacity"], "NOT_EVALUATED_WITHOUT_DATED_ELIGIBLE_SIGNALS")
+        self.assertEqual(result["portfolio_capacity_simulation"]["status"], "NOT_EVALUATED")
 
     def test_no_trade_ready_from_forged_evidence(self):
         snap = {"research_only": True, "candidates": [{"symbol": "ABC", "decision": "BUY", "blocks": []}]}
@@ -30,6 +31,19 @@ class IntegratedReadonlyTests(unittest.TestCase):
         row = build(snap, evidence)["candidates"][0]
         self.assertFalse(row["trade_ready"])
         self.assertIsNone(row["independently_validated_estimates"]["validated_win_probability"])
+
+    def test_reuses_existing_chronological_capacity_simulator(self):
+        snapshot = {"research_only": True, "candidates": [{"symbol": "ABC", "decision": "WAIT", "blocks": []}]}
+        evidence = {"research_only": True, "candidates": []}
+        signals = [{"symbol": "ABC", "entry_day": 1, "exit_day": 6, "net_return_pct": 2.0}]
+        result = build(snapshot, evidence, dated_signals=signals)
+        portfolio = result["portfolio_capacity_simulation"]
+        self.assertEqual(portfolio["accepted_n"], 1)
+        self.assertEqual(portfolio["realized_pnl"], 70.0)
+        self.assertFalse(portfolio["trade_ready"])
+        self.assertFalse(result["trade_ready"])
+        with self.assertRaises(ValueError):
+            build(snapshot, evidence, dated_signals=[{"symbol": "OTHER", "entry_day": 1, "exit_day": 6, "net_return_pct": 2}])
 
     def test_invalid_inputs_and_duplicate_symbols(self):
         with self.assertRaises(ValueError):
