@@ -50,9 +50,13 @@ def run(output, *, cutoff):
     }
     if records:
         try:
-            report["diagnostic"] = evaluate_pilot_artifact(
-                archive, cutoff=cutoff, holding_sessions=10,
-                entry_stride=20)
+            report["confirmation_sensitivity"] = {
+                str(n): evaluate_pilot_artifact(
+                    archive, cutoff=cutoff, holding_sessions=10,
+                    entry_stride=20, confirmation_sessions=n)
+                for n in (1, 2, 3)
+            }
+            report["diagnostic"] = report["confirmation_sensitivity"]["1"]
         except (ValueError, KeyError, IndexError) as exc:
             report["diagnostic_error"] = type(exc).__name__ + ": " + str(exc)
     else:
