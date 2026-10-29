@@ -122,6 +122,24 @@ def evaluate(rows,horizon,pattern,cost_bps=50):
             candidates.append(j)
         if candidates:
             controls.append(min(candidates,key=lambda j:(abs(j-i),j)))
+            matching_diagnostics["matched"]+=1
+        else:
+            base=[j for j in test if j!=i and not f[j][pattern]
+                  and f[j]["regime"]==f[i]["regime"] and abs(j-i)<=20]
+            outside_signal=[j for j in base if all(
+                j+horizon<a or j>b for a,b in signal_windows)]
+            outside_control=[j for j in outside_signal if all(
+                j+horizon<k or j>k+horizon for k in controls)]
+            if not base:
+                matching_diagnostics["no_eligible_same_regime_non_signal"]+=1
+            elif not outside_signal:
+                matching_diagnostics["blocked_by_signal_window"]+=1
+            elif not outside_control:
+                matching_diagnostics["blocked_by_existing_control_window"]+=1
+            else:
+                raise AssertionError("UNCLASSIFIED_MATCHING_FAILURE")
+    assert sum(matching_diagnostics.values())==len(signal)
+    assert matching_diagnostics["matched"]==len(controls)
     # Do not imply pairing if controls could not be found.
     open_complete=bool(signal) and all(rows[i+1].get("open",0)>0 for i in signal+controls)
     results={"test_start_unix":rows[cutoff]["timestamp"],"signal_n":len(signal),
