@@ -176,6 +176,45 @@ class IntegratedReadonlyTests(unittest.TestCase):
             simulate([{**signals[0], "score": float("nan")}],
                      priority_mode="score_desc")
 
+    def test_repeated_entries_cash_and_score_parity(self):
+        from datetime import date, timedelta
+        from candidate_portfolio_capacity import simulate
+        from research_swing_chronological_ledger import simulate_chronological_portfolio
+        origin = date(2026, 10, 1)
+        rows = [
+            ("AAA", 0, 3, 1, 10),
+            ("BBB", 0, 2, 2, 9),
+            ("CCC", 0, 2, 3, 8),
+            ("DDD", 0, 2, 4, 7),
+            ("EEE", 0, 2, 5, 6),
+            ("FFF", 0, 2, 6, 5),
+            ("ZZZ", 0, 2, 7, 100),
+            ("AAA", 1, 4, 8, 99),
+            ("GGG", 2, 4, 9, 101),
+            ("HHH", 3, 5, 10, 102),
+        ]
+        signals = [{"symbol": s, "entry_day": entry, "exit_day": leave,
+                    "net_return_pct": ret, "score": score}
+                   for s, entry, leave, ret, score in rows]
+        trades = [{"ticker": s, "entry_date": origin + timedelta(days=entry),
+                   "exit_date": origin + timedelta(days=leave),
+                   "net_return_pct": ret, "score": score}
+                  for s, entry, leave, ret, score in rows]
+        capacity = simulate(signals, priority_mode="score_desc")
+        ledger = simulate_chronological_portfolio(trades)
+        capacity_accepted = sorted((r["symbol"], r["entry_day"], r["exit_day"])
+                                   for r in capacity["accepted_signals"])
+        ledger_accepted = sorted(
+            (r["ticker"], (date.fromisoformat(r["date"]) - origin).days)
+            for r in ledger["ledger"] if r["action"] == "entry")
+        self.assertEqual([(s, day) for s, day, _ in capacity_accepted], ledger_accepted)
+        self.assertEqual(capacity["rejected_n"], ledger["rejected_count"])
+        self.assertEqual(capacity["accepted_n"], len(ledger_accepted))
+        self.assertAlmostEqual(capacity["realized_pnl"],
+                               float(ledger["realized_net_pnl"]), places=2)
+        self.assertEqual(capacity["rejection_reasons"]["SYMBOL_ALREADY_HELD"], 1)
+        self.assertGreater(capacity["rejection_reasons"]["CAPACITY_FULL"], 0)
+
     def test_malformed_blockers_fail_closed(self):
         evidence = {"research_only": True, "candidates": []}
         for blockers in ("NOT_A_LIST", [None], [123]):
