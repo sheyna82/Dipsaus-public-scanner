@@ -26,8 +26,12 @@ def audit(data):
             "total_nonoverlap_within_symbol_signals":sum(x["signal_n"] for x,_ in observations),
             "total_matched_controls":sum(x["matched_control_n"] for x,_ in observations),
             "positive_symbol_medians":sum(m.get("median_net_pct",float("-inf"))>0 for _,m in observations),
+            "symbols_with_at_least_15_controls":sum(x["matched_control_n"]>=15 for x,_ in observations),
+            "symbols_with_at_least_30_signals":sum(x["signal_n"]>=30 for x,_ in observations),
+            "signals_without_matching_controls":sum(max(0,x["signal_n"]-x["matched_control_n"]) for x,_ in observations),
             "risk_status_counts":dict(Counter(x["risk_screen_50bps"]["status"] for x,_ in observations)),
             "pooled_win_rate_not_computed":"Shared dates, sectors and regimes can correlate outcomes",
+            "confidence_interval_status":"NOT_ESTIMATED_CORRELATED_EVENTS",
             "trade_ready":False}
     return result
 
