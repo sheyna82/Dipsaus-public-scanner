@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'research/candidate_regime_cost_validation.py'
+      - 'research/test_candidate_regime_cost_validation.py'
       - 'research/candidate_nonoverlap_validation.py'
       - 'research/candidate_conditional_cohorts.py'
       - 'research/test_candidate_conditional_cohorts.py'
@@ -109,3 +110,9 @@ jobs:
         env:
           SCANNER_NOTIFICATIONS_ENABLED: 'false'
         run: python -m unittest discover -s research -p 'test_candidate_conditional_cohorts.py' -v
+
+      - name: Test regime-matched cost controls offline
+        if: always()
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python -m unittest discover -s research -p 'test_candidate_regime_cost_validation.py' -v
