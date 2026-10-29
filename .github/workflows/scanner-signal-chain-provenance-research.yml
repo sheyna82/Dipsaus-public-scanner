@@ -4,6 +4,9 @@ on:
     paths:
       - 'research_scanner_signal_chain_provenance_gate.py'
       - 'test_research_scanner_signal_chain_provenance_gate.py'
+      - 'research_scanner_observed_case_provenance_audit.py'
+      - 'test_research_scanner_observed_case_provenance_audit.py'
+      - 'research_notification_signal_cases.py'
       - '.github/workflows/scanner-signal-chain-provenance-research.yml'
   workflow_dispatch:
 permissions:
@@ -19,4 +22,4 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run provenance unit tests
-        run: python -m unittest -v test_research_scanner_signal_chain_provenance_gate
+        run: python -m unittest -v test_research_scanner_signal_chain_provenance_gate test_research_scanner_observed_case_provenance_audit
