@@ -104,6 +104,10 @@ def evaluate(rows,horizon,pattern,cost_bps=50):
     # For MA-defined patterns a matching regime may imply the pattern itself:
     # report zero controls rather than manufacture a comparison.
     controls=[]
+    matching_diagnostics={"no_eligible_same_regime_non_signal":0,
+                          "blocked_by_signal_window":0,
+                          "blocked_by_existing_control_window":0,
+                          "matched":0}
     signal_windows=[(i,i+horizon) for i in signal]
     for i in signal:
         candidates=[]
@@ -123,7 +127,8 @@ def evaluate(rows,horizon,pattern,cost_bps=50):
     results={"test_start_unix":rows[cutoff]["timestamp"],"signal_n":len(signal),
              "execution_model":"NEXT_SESSION_OPEN_TO_HORIZON_CLOSE" if open_complete else "SIGNAL_CLOSE_ONLY_UNEXECUTABLE_REFERENCE",
              "next_open_execution_status":"RESEARCH_ONLY" if open_complete else "BLOCKED_OPEN_PRICE_MISSING",
-             "matched_control_n":len(controls),"matched_fraction":round(len(controls)/len(signal),3) if signal else 0,
+             "matched_control_n":len(controls),
+             "matching_diagnostics":matching_diagnostics,"matched_fraction":round(len(controls)/len(signal),3) if signal else 0,
              "cost_scenarios":{},"trade_ready":False,
              "inferentially_valid":False,
              "limitations":["Test-only last 35% of available five-year window; no training/tuning performed",
