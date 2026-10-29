@@ -20,6 +20,7 @@ class CrossSymbolAuditTests(unittest.TestCase):
         p=result["patterns"]["breakout_prior20"]
         self.assertEqual(p["total_nonoverlap_within_symbol_signals"],60)
         self.assertEqual(p["signals_without_matching_controls"],45)
+        self.assertEqual(p["control_coverage_fraction"],0.25)
         self.assertEqual(p["symbols_with_at_least_30_signals"],1)
         self.assertEqual(p["symbols_with_at_least_15_controls"],0)
         self.assertFalse(result["trade_ready"])
