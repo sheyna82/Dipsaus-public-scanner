@@ -31,6 +31,8 @@ on:
       - 'dipsaus_breakout_distance.py'
       - 'test_dipsaus_breakout_distance.py'
       - 'test_migration_safety.py'
+      - 'research/candidate_ablation_risk_diagnostics.py'
+      - 'research/test_candidate_ablation_risk_diagnostics.py'
       - '.github/workflows/pr-regression.yml'
       - '.github/workflows/shadow-prealert.yml'
 permissions:
@@ -186,3 +188,7 @@ jobs:
       - name: Test single-feature ablation offline
         if: always()
         run: python -m unittest discover -s research -p 'test_candidate_feature_ablation.py' -v
+
+      - name: Test trade-level ablation risk diagnostics offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_ablation_risk_diagnostics.py' -v
