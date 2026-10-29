@@ -53,12 +53,14 @@ def run(output, *, cutoff):
     archive = output / "historical_provider_ohlcv.jsonl.gz"
     with gzip.open(archive, "wt", encoding="utf-8") as stream:
         for record in records:
-            stream.write(json.dumps(record) + "\n")
+            stream.write(json.dumps(record) + "
+")
     euro_records = [record for record in records if record["currency"] == "EUR"]
     euro_archive = output / "historical_eur_only_ohlcv.jsonl.gz"
     with gzip.open(euro_archive, "wt", encoding="utf-8") as stream:
         for record in euro_records:
-            stream.write(json.dumps(record) + "\n")
+            stream.write(json.dumps(record) + "
+")
     report = {
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "requested": len(SYMBOLS),
@@ -112,7 +114,12 @@ def run(output, *, cutoff):
                 (output / "warning_decision_holdout.json").write_text(
                     json.dumps(report["eur_warning_decision_holdout"], indent=2),
                     encoding="utf-8")
-                report["eur_duration_placebo"] = duration_placebo(\n                    output / "warning_risk_cases.csv", euro_archive)\n                (output / "warning_duration_placebo.json").write_text(\n                    json.dumps(report["eur_duration_placebo"], indent=2),\n                    encoding="utf-8")\n                report["eur_only_confirmation_sensitivity"] = {
+                report["eur_duration_placebo"] = duration_placebo(
+                    output / "warning_risk_cases.csv", euro_archive)
+                (output / "warning_duration_placebo.json").write_text(
+                    json.dumps(report["eur_duration_placebo"], indent=2),
+                    encoding="utf-8")
+                report["eur_only_confirmation_sensitivity"] = {
                     str(n): evaluate_pilot_artifact(
                         euro_archive, cutoff=cutoff, holding_sessions=10,
                         entry_stride=20, confirmation_sessions=n)
