@@ -79,7 +79,7 @@ def evaluate(cases_path, archive_path, *, cutoff=CUTOFF):
         "limitations": [
             "Same warning-selected positions exit early; this conditional placebo does not test warning selection against random selection.",\n            "Duration distributions match in aggregate, not individual positions.",
             "Placebo uses the warning flag to match exposure; paired uncertainty is still required.",
-            "Overlapping candidates and common market shocks require clustered inference.",
+            "Equal exit counts make per-exit incremental cost cancel; absolute net returns still incur costs.",\n            "Overlapping candidates and common market shocks require clustered inference.",
             "Calendar-spaced entries are not actual DIPSAUS signals."
         ],
     }
