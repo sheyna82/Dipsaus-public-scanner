@@ -33,6 +33,8 @@ class CrossSymbolAuditTests(unittest.TestCase):
         self.assertEqual(p["distinct_signal_calendar_dates"],3)
         self.assertEqual(p["dates_with_multiple_symbols_signaling"],1)
         self.assertEqual(p["maximum_symbols_signaling_same_day"],2)
+        self.assertEqual(p["signal_events_on_shared_dates"],2)
+        self.assertEqual(p["fraction_signal_events_on_shared_dates"],0.5)
         self.assertEqual(p["signal_date_coverage_status"],"AVAILABLE")
 
     def test_blocked_symbols_excluded_not_hidden(self):
