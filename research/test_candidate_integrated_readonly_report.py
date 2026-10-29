@@ -253,6 +253,16 @@ class IntegratedReadonlyTests(unittest.TestCase):
             for r in ledger["ledger"] if r["action"] == "entry")
         self.assertEqual([(s, day) for s, day, _ in capacity_accepted], ledger_accepted)
         self.assertEqual(capacity["rejected_n"], ledger["rejected_count"])
+        reasons = {"SYMBOL_ALREADY_HELD": "already_held",
+                   "CAPACITY_FULL": "position_cap",
+                   "INSUFFICIENT_CASH": "insufficient_cash"}
+        rejected_capacity = sorted(
+            (row["symbol"], (origin + timedelta(days=row["entry_day"])).isoformat(),
+             reasons[row["reason"]]) for row in capacity["rejected_signals"])
+        rejected_ledger = sorted(
+            (row["ticker"], row["date"], row["reason"])
+            for row in ledger["rejected_entries"])
+        self.assertEqual(rejected_capacity, rejected_ledger)
         self.assertEqual(capacity["accepted_n"], len(ledger_accepted))
         self.assertAlmostEqual(capacity["realized_pnl"],
                                float(ledger["realized_net_pnl"]), places=2)
