@@ -151,12 +151,35 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
                       "limitations": ["Arithmetic reconciliation is not source authentication",
                                       "No verified matching to separate integer-day capacity simulation",
                                       "No broker execution, FX or corporate-action attestation"]}
+    timeline_match = False
+    if dated_signals is not None and reconciled_portfolio_inputs is not None:
+        from datetime import date
+        dates = reconciled_portfolio_inputs["trading_dates"]
+        if any(type(day) is not date for day in dates) or dates != sorted(set(dates)):
+            raise ValueError("INVALID_SHARED_TRADING_CALENDAR")
+        accepted = portfolio["accepted_signals"]
+        if any(row["entry_day"] < 0 or row["exit_day"] >= len(dates) for row in accepted):
+            raise ValueError("CAPACITY_DAY_OUTSIDE_SHARED_CALENDAR")
+        capacity_keys = sorted((row["symbol"], dates[row["entry_day"]], dates[row["exit_day"]])
+                               for row in accepted)
+        ledger = verified["cash_accounting"]["ledger"]
+        entries = {(row["ticker"], row["date"]) for row in ledger if row["action"] == "entry"}
+        exits = {(row["ticker"], row["date"]) for row in ledger if row["action"] == "exit"}
+        ledger_keys = sorted((symbol, date.fromisoformat(start), date.fromisoformat(end))
+                             for symbol, start in entries for exit_symbol, end in exits
+                             if symbol == exit_symbol and end > start)
+        if len(ledger_keys) != len(entries) or len(ledger_keys) != len(exits):
+            raise ValueError("AMBIGUOUS_LEDGER_TRADE_PAIRING")
+        if capacity_keys != ledger_keys:
+            raise ValueError("CAPACITY_LEDGER_TIMELINE_MISMATCH")
+        timeline_match = True
     checks = {
         "research_only": True,
         "trade_ready": False,
         "capacity_available": portfolio.get("status") == "DESCRIPTIVE_PORTFOLIO_SIMULATION",
         "sector_exposure_available": concentration.get("status") == "DESCRIPTIVE_ACCEPTED_TRADE_EXPOSURE",
         "equity_risk_available": equity_risk.get("risk_estimate_type") == "sampled_portfolio_equity_only",
+        "capacity_ledger_timeline_matched": timeline_match,
         "cash_equity_reconciled": reconciled.get("status") == "ARITHMETIC_RECONCILED_RESEARCH_ONLY",
         "signal_provenance_verified": False,
         "portfolio_evidence_complete": False,
@@ -166,6 +189,8 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
             "PORTFOLIO_METRICS_NOT_SAME_COHORT_VERIFIED",
         ],
     }
+    if not timeline_match:
+        checks["blockers"].append("CAPACITY_LEDGER_TIMELINE_NOT_MATCHED")
     if not checks["cash_equity_reconciled"]:
         checks["blockers"].append("CASH_EQUITY_RECONCILIATION_NOT_PROVIDED")
     if not checks["equity_series_matched_to_reconciled_ledger"]:
