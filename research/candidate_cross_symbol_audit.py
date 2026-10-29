@@ -69,6 +69,11 @@ def audit(data):
 
 def main():
     result=audit(json.loads(SOURCE.read_text(encoding="utf-8")))
+    blocked=[p for p,x in result["patterns"].items() if
+             x["matching_diagnostic_consistency"]!="PASS" or
+             x["signal_date_coverage_status"]!="AVAILABLE"]
+    if blocked:
+        raise RuntimeError("RESEARCH_AUDIT_BLOCKED: "+",".join(blocked))
     OUTPUT.parent.mkdir(parents=True,exist_ok=True)
     OUTPUT.write_text(json.dumps(result,indent=2),encoding="utf-8")
     print(json.dumps({"symbols":result["universe_size"],"blocked":len(result["data_blocked"])}))
