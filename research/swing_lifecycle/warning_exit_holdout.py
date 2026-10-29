@@ -11,7 +11,7 @@ from research.swing_lifecycle.warning_portfolio_comparison import compare_warnin
 def evaluate_warning_exit_holdout(cases, *, cutoff, embargo_days=15,
                                   cost_bps_per_side=10,
                                   initial_capital=21000, tranche=3500,
-                                  max_positions=6):
+                                  max_positions=6, confirmation_sessions=1):
     """Keep whole trades on one side of the cutoff; purge crossing trades.
 
     Training trades must finish strictly before cutoff minus embargo.
@@ -36,7 +36,8 @@ def evaluate_warning_exit_holdout(cases, *, cutoff, embargo_days=15,
             purged += 1
     options = dict(cost_bps_per_side=cost_bps_per_side,
                    initial_capital=initial_capital, tranche=tranche,
-                   max_positions=max_positions)
+                   max_positions=max_positions,
+                   confirmation_sessions=confirmation_sessions)
     def summarize(rows):
         if not rows:
             return {"trade_candidates": 0, "result": None}
