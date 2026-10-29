@@ -7,6 +7,7 @@ from candidate_preentry_features import pre_entry_features
 from candidate_feature_thresholds import training_median_thresholds, label, FEATURE_DIRECTIONS
 from candidate_benchmark_excess import PATTERNS, HORIZON, COST_BPS
 from candidate_ablation_risk_diagnostics import compare as compare_risk
+from candidate_matched_count_placebo import placebo
 
 FILTERS=("baseline",)+tuple(FEATURE_DIRECTIONS)+("all_three",)
 
@@ -57,7 +58,9 @@ def evaluate_ablation(stock,benchmark,pattern):
             "training_n":len(training),"test_baseline_n":len(indices),
             "thresholds":fitted["thresholds"],
             "cohorts":{key:summary(records) for key,records in cohorts.items()},
-            "risk_diagnostics":compare_risk(risk_cohorts)}
+            "risk_diagnostics":compare_risk(risk_cohorts),
+            "matched_count_placebo":{key:placebo(risk_cohorts["baseline"], risk_cohorts[key])
+                                      for key in FILTERS if key != "baseline"}}
 
 def main():
     output={"research_only":True,"trade_ready":False,
