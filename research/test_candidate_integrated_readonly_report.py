@@ -30,6 +30,7 @@ class IntegratedReadonlyTests(unittest.TestCase):
         ]}
         row = build(snap, evidence)["candidates"][0]
         self.assertFalse(row["trade_ready"])
+        self.assertIn("UNRECOGNIZED_OR_UNSAFE_SNAPSHOT_DECISION", row["blockers"])
         self.assertIsNone(row["independently_validated_estimates"]["validated_win_probability"])
 
     def test_reuses_existing_chronological_capacity_simulator(self):
@@ -44,6 +45,15 @@ class IntegratedReadonlyTests(unittest.TestCase):
         self.assertFalse(result["trade_ready"])
         with self.assertRaises(ValueError):
             build(snapshot, evidence, dated_signals=[{"symbol": "OTHER", "entry_day": 1, "exit_day": 6, "net_return_pct": 2}])
+
+    def test_malformed_blockers_fail_closed(self):
+        evidence = {"research_only": True, "candidates": []}
+        for blockers in ("NOT_A_LIST", [None], [123]):
+            snapshot = {"research_only": True, "candidates": [
+                {"symbol": "ABC", "decision": "WAIT", "blocks": blockers}
+            ]}
+            with self.assertRaises(ValueError):
+                build(snapshot, evidence)
 
     def test_invalid_inputs_and_duplicate_symbols(self):
         with self.assertRaises(ValueError):
