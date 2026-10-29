@@ -2,6 +2,8 @@ name: DIPSAUS pull request regression
 on:
   pull_request:
     paths:
+      - 'research/candidate_conditional_cohorts.py'
+      - 'research/test_candidate_conditional_cohorts.py'
       - 'research/candidate_entry_snapshot.py'
       - 'research/test_candidate_entry_snapshot.py'
       - 'safe_runner.py'
@@ -51,6 +53,18 @@ jobs:
         env:
           SCANNER_NOTIFICATIONS_ENABLED: 'false'
         run: python research/candidate_entry_snapshot.py
+      - name: Calculate conditional recovery cohorts
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python research/candidate_conditional_cohorts.py
+      - name: Upload conditional recovery cohorts
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        uses: actions/upload-artifact@v4
+        with:
+          name: six-candidate-conditional-cohorts
+          path: reports/candidate_conditional_cohorts.json
+          if-no-files-found: error
       - name: Upload six-candidate market snapshot
         if: github.head_ref == 'research/offline-technical-risk-20261021'
         uses: actions/upload-artifact@v4
@@ -63,3 +77,9 @@ jobs:
         env:
           SCANNER_NOTIFICATIONS_ENABLED: 'false'
         run: python -m unittest discover -s research -p 'test_candidate_entry_snapshot.py' -v
+
+      - name: Test conditional cohorts offline
+        if: always()
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python -m unittest discover -s research -p 'test_candidate_conditional_cohorts.py' -v
