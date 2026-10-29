@@ -46,6 +46,8 @@ class HistoricalCsvBenchmarkTests(unittest.TestCase):
         result = run_historical_csv_benchmark(
             self.manifest([old, new]), cutoff=date(2025, 8, 1),
             source="unit-test-fixture")
+        self.assertEqual(result["trade_candidates_supplied"], 2)
+        self.assertEqual(result["unique_tickers"], 2)
         self.assertEqual(result["training"]["trade_candidates"], 1)
         self.assertEqual(result["holdout"]["trade_candidates"], 1)
         self.assertFalse(result["historical_edge_proven"])
