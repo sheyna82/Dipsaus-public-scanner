@@ -75,10 +75,13 @@ def audit_signal_chain(records):
             "unverified_decision_timestamp", "unverified_generation_timestamp",
             "generation_before_decision", "decision_source_unverified",
             "rule_version_unverified", "point_in_time_inputs_unverified",
-            "market_data_unverified"))
+            "market_data_unverified",
+            "provider_acceptance_before_generation_or_unverified",
+            "entry_before_or_at_decision"))
         trade_reconstructable = signal_reconstructable and not any(x in reasons for x in (
             "entry_before_or_at_decision", "execution_unverified",
-            "entry_timestamp_unverified", "costs_currency_unverified"))
+            "entry_timestamp_unverified", "costs_currency_unverified",
+            "provider_acceptance_before_generation_or_unverified"))
         output.append({"signal_id": signal_id, "symbol": symbol, "family": family,
                        "signal_reconstructable": signal_reconstructable,
                        "trade_reconstructable": trade_reconstructable,
