@@ -120,8 +120,14 @@ def main():
             if len(rows)<750:raise ValueError("INSUFFICIENT_FIVE_YEAR_BARS")
             span_days=(rows[-1]["timestamp"]-rows[0]["timestamp"])/86400
             if span_days<1200:raise ValueError("INSUFFICIENT_FIVE_YEAR_COVERAGE")
+            if any(rows[i]["timestamp"]<=rows[i-1]["timestamp"] for i in range(1,len(rows))):
+                raise ValueError("NON_MONOTONIC_TIMESTAMPS")
+            max_gap_days=max((rows[i]["timestamp"]-rows[i-1]["timestamp"])/86400
+                             for i in range(1,len(rows)))
+            if max_gap_days>10:raise ValueError("EXCESSIVE_HISTORY_GAP")
             output["candidates"].append({"symbol":symbol,"bars":len(rows),
                 "history_span_days":round(span_days,1),
+                "max_observed_bar_gap_days":round(max_gap_days,1),
                 "history_coverage_status":"FIVE_YEAR_RESEARCH_MINIMUM_MET",
                 "patterns":{p:{str(h):evaluate(rows,h,p) for h in HORIZONS} for p in PATTERNS}})
         except Exception as exc:
