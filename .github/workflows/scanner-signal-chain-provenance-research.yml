@@ -7,6 +7,9 @@ on:
       - 'research_scanner_observed_case_provenance_audit.py'
       - 'test_research_scanner_observed_case_provenance_audit.py'
       - 'research_notification_signal_cases.py'
+      - 'research_scanner_private_notification_match.py'
+      - 'test_research_scanner_private_notification_match.py'
+      - 'research_notification_timestamp_extract.py'
       - '.github/workflows/scanner-signal-chain-provenance-research.yml'
   workflow_dispatch:
 permissions:
@@ -22,4 +25,4 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run provenance unit tests
-        run: python -m unittest -v test_research_scanner_signal_chain_provenance_gate test_research_scanner_observed_case_provenance_audit
+        run: python -m unittest -v test_research_scanner_signal_chain_provenance_gate test_research_scanner_observed_case_provenance_audit test_research_scanner_private_notification_match
