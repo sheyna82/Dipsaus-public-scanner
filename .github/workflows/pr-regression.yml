@@ -45,6 +45,8 @@ on:
       - 'research/test_candidate_calendar_matched_placebo.py'
       - 'research/candidate_matched_count_placebo.py'
       - 'research/test_candidate_matched_count_placebo.py'
+      - 'research/candidate_integrated_readonly_report.py'
+      - 'research/test_candidate_integrated_readonly_report.py'
       - 'research/candidate_decision_evidence_report.py'
       - 'research/test_candidate_decision_evidence_report.py'
       - '.github/workflows/pr-regression.yml'
@@ -124,6 +126,16 @@ jobs:
       - name: Generate conservative candidate evidence report
         if: github.head_ref == 'research/offline-technical-risk-20261021'
         run: python research/candidate_decision_evidence_report.py
+      - name: Build integrated read-only candidate dossier
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        run: python research/candidate_integrated_readonly_report.py
+      - name: Upload integrated read-only candidate dossier
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-integrated-readonly
+          path: reports/candidate_integrated_readonly.json
+          if-no-files-found: error
       - name: Upload candidate evidence report
         if: github.head_ref == 'research/offline-technical-risk-20261021'
         uses: actions/upload-artifact@v4
@@ -240,3 +252,7 @@ jobs:
       - name: Test chronological six-position capacity offline
         if: always()
         run: python -m unittest discover -s research -p 'test_candidate_portfolio_capacity.py' -v
+
+      - name: Test integrated read-only dossier offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_integrated_readonly_report.py' -v
