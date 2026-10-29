@@ -38,5 +38,27 @@ class PrivateNotificationMatchTests(unittest.TestCase):
         self.assertNotIn("2026-10-26T12:51:00", str(result))
 
 
+    def test_exact_family_count_does_not_claim_identity(self):
+        state = self.state({
+            "EARLY_RECOVERY|VIST": {"notified_utc": "2026-10-26T12:51:00Z"},
+            "PREALERT|VIST": {"notified_utc": "2026-10-26T12:52:00Z"},
+        })
+        result = match_observed_notifications(state)
+        row = next(r for r in result["cases"] if r["symbol"] == "VIST")
+        self.assertEqual(row["candidate_private_record_count"], 2)
+        self.assertEqual(row["exact_family_candidate_count"], 1)
+        self.assertEqual(row["match_status"], "ambiguous_multiple_utc_day_records")
+        self.assertFalse(row["scanner_decision_verified"])
+
+    def test_different_utc_day_does_not_match(self):
+        state = self.state({
+            "EARLY_RECOVERY|VIST": {"notified_utc": "2026-10-27T00:01:00Z"}
+        })
+        result = match_observed_notifications(state)
+        row = next(r for r in result["cases"] if r["symbol"] == "VIST")
+        self.assertEqual(row["candidate_private_record_count"], 0)
+        self.assertEqual(row["exact_family_candidate_count"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()
