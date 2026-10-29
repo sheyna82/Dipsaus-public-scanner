@@ -47,6 +47,13 @@ def compare_warning_exit_portfolios(cases, *, initial_capital=21000,
                               if bars[i]["date"] == candidate["candidate_exit_date"])
         baseline.append(ledger_trade(end))
         protected.append(ledger_trade(protected_exit))
+        # Counterfactual per candidate, not attribution of portfolio P&L.
+        baseline_open = Decimal(str(bars[end]["open"]))
+        candidate_open = Decimal(str(bars[protected_exit]["open"]))
+        candidate = dict(candidate)
+        candidate["counterfactual_baseline_minus_candidate_pct_points"] = str(
+            (baseline_open - candidate_open) / entry_open * 100)
+        candidate["sessions_capital_released_early"] = end - protected_exit
         diagnostics.append(candidate)
     original = simulate_chronological_portfolio(
         baseline, initial_capital=initial_capital, tranche=tranche,
@@ -65,5 +72,5 @@ def compare_warning_exit_portfolios(cases, *, initial_capital=21000,
             Decimal(guarded["realized_net_pnl"]) -
             Decimal(original["realized_net_pnl"])),
         "candidate_diagnostics": diagnostics,
-        "limitation": "No mark-to-market drawdown, real limit fill, opportunity-cost attribution or walk-forward selection.",
+        "limitation": "Counterfactual is not portfolio P&L attribution; no daily mark-to-market drawdown, real limit fill or walk-forward selection.",
     }
