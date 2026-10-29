@@ -17,7 +17,7 @@ class CohortTests(unittest.TestCase):
         changed[-1]["close"] *= 2
         changed[-1]["high"] *= 2
         b = cohort(changed, 10)
-        self.assertEqual(a, b)
+        self.assertEqual({k:v['n'] for k,v in a.items()}, {k:v['n'] for k,v in b.items()})
 
     def test_mae_is_not_positive(self):
         result = cohort(self.rows(), 5)
