@@ -70,5 +70,20 @@ class PrivateNotificationMatchTests(unittest.TestCase):
         self.assertEqual(row["candidate_private_record_count"], 0)
 
 
+    def test_us_early_key_prefix_is_candidate_for_early_recovery(self):
+        state = self.state({
+            "US-EARLY|VIST|2026-10-26": {
+                "notified_utc": "2026-10-26T13:51:00Z",
+                "delivery": "sent",
+            }
+        })
+        result = match_observed_notifications(state)
+        row = next(r for r in result["cases"] if r["symbol"] == "VIST")
+        self.assertEqual(row["candidate_private_record_count"], 1)
+        self.assertEqual(row["exact_family_candidate_count"], 1)
+        self.assertFalse(row["scanner_decision_verified"])
+        self.assertFalse(row["phone_delivery_verified"])
+
+
 if __name__ == "__main__":
     unittest.main()
