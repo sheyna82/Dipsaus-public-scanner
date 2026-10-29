@@ -10,6 +10,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from research_swing_equity_risk import summarize_equity_curve
 from research_swing_portfolio_with_marks import backtest_portfolio_with_marks
+from research_swing_closed_trade_profit_diagnostics import analyze_closed_trade_pnl
 
 from candidate_decision_evidence_gate import assess
 from candidate_portfolio_capacity import simulate
@@ -147,9 +148,22 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
                 matches = False
             if not matches:
                 raise ValueError("EQUITY_SERIES_RECONCILIATION_MISMATCH")
+        closed_trade_pnls = [row["net_pnl"] for row in verified["cash_accounting"]["ledger"]
+                             if row["action"] == "exit"]
+        closed_trade_diagnostics = (
+            analyze_closed_trade_pnl(closed_trade_pnls) if closed_trade_pnls
+            else {"status": "NO_COMPLETED_TRADES", "trade_ready": False}
+        )
+        if closed_trade_pnls:
+            from decimal import Decimal
+            if Decimal(closed_trade_diagnostics["net_profit"]) != Decimal(
+                    verified["cash_accounting"]["realized_net_pnl"]).quantize(Decimal("0.01")):
+                raise ValueError("CLOSED_TRADE_PNL_RECONCILIATION_MISMATCH")
         reconciled = {"status": "ARITHMETIC_RECONCILED_RESEARCH_ONLY",
                       "cash_equity_reconciliation": verified["cash_equity_reconciliation"],
-                      "equity": verified["equity"], "trade_ready": False,
+                      "equity": verified["equity"],
+                      "closed_trade_profit_diagnostics": closed_trade_diagnostics,
+                      "trade_ready": False,
                       "independent_provenance_verified": False,
                       "limitations": ["Arithmetic reconciliation is not source authentication",
                                       "No verified matching to separate integer-day capacity simulation",
