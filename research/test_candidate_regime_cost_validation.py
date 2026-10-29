@@ -60,6 +60,29 @@ class RegimeCostTests(unittest.TestCase):
         result = model.summarize_next_open(rows(), [100], 1, 50)
         self.assertEqual(result["status"], "BLOCKED_OPEN_PRICE_MISSING")
 
+    def test_risk_screen_requires_sample_and_controls(self):
+        metrics={"status":"RESEARCH_ONLY","n":40,
+                 "fraction_mae_below_minus_10pct":0.05,
+                 "worst_mae_pct":-8,
+                 "fraction_negative_net_at_exit":0.2}
+        self.assertEqual(model.risk_screen(metrics,5)["status"],
+                         "INSUFFICIENT_MATCHED_CONTROLS")
+        metrics["n"]=12
+        self.assertEqual(model.risk_screen(metrics,20)["status"],
+                         "INSUFFICIENT_INDEPENDENT_SIGNALS")
+
+    def test_risk_screen_rejects_deep_losses_and_never_approves(self):
+        metrics={"status":"RESEARCH_ONLY","n":40,
+                 "fraction_mae_below_minus_10pct":0.25,
+                 "worst_mae_pct":-21,
+                 "fraction_negative_net_at_exit":0.2}
+        self.assertEqual(model.risk_screen(metrics,20)["status"],"RISK_REJECTED")
+        metrics["fraction_mae_below_minus_10pct"]=0.05
+        metrics["worst_mae_pct"]=-8
+        self.assertEqual(model.risk_screen(metrics,20)["status"],
+                         "FURTHER_VALIDATION_REQUIRED")
+        self.assertFalse(model.risk_screen(metrics,20)["trade_ready"])
+
     def test_short_holdout_blocks(self):
         self.assertEqual(model.evaluate(rows(120), 15, "breakout_prior20")["status"],
                          "INSUFFICIENT_TEST_WINDOW")
