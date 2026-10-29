@@ -33,6 +33,7 @@ def simulate(signals, *, max_positions=6, capital=21000.0, tranche=3500.0, prior
     positions=[]
     accepted=[]
     rejected=defaultdict(int)
+    rejected_signals=[]
     max_used=0
     # Entry at start of day, exit at end: proceeds cannot fund same-day entries.
     by_day=defaultdict(list)
@@ -54,11 +55,17 @@ def simulate(signals, *, max_positions=6, capital=21000.0, tranche=3500.0, prior
             return (row.get("priority",0),digest,symbol)
         for row in sorted(by_day[day],key=priority):
             if any(p["symbol"]==row["symbol"] for p in positions):
-                rejected["SYMBOL_ALREADY_HELD"]+=1
+                reason="SYMBOL_ALREADY_HELD"
             elif len(positions)>=max_positions:
-                rejected["CAPACITY_FULL"]+=1
+                reason="CAPACITY_FULL"
             elif cash+1e-9<tranche:
-                rejected["INSUFFICIENT_CASH"]+=1
+                reason="INSUFFICIENT_CASH"
+            else:
+                reason=None
+            if reason is not None:
+                rejected[reason]+=1
+                rejected_signals.append({"symbol":row["symbol"],"entry_day":day,
+                                         "exit_day":row["exit_day"],"reason":reason})
             else:
                 cash-=tranche
                 positions.append(row)
@@ -75,6 +82,7 @@ def simulate(signals, *, max_positions=6, capital=21000.0, tranche=3500.0, prior
     return {"status":"DESCRIPTIVE_PORTFOLIO_SIMULATION","trade_ready":False,
             "automatic_orders":False,"priority_mode":priority_mode,"accepted_n":len(accepted),
             "rejected_n":sum(rejected.values()),"rejection_reasons":dict(rejected),
+            "rejected_signals":rejected_signals,
             "max_concurrent_positions":max_used,"initial_capital":round(capital,2),
             "ending_cash":round(cash,2),"realized_pnl":round(pnl,2),
             "realized_return_pct":round(100*pnl/capital,4),
