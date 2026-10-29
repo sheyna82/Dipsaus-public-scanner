@@ -133,6 +133,10 @@ class IntegratedReadonlyTests(unittest.TestCase):
         self.assertTrue(timeline["cross_component_consistency"]["capacity_ledger_timeline_matched"])
         self.assertFalse(timeline["cross_component_consistency"]["portfolio_evidence_complete"])
         self.assertTrue(timeline["cross_component_consistency"]["capacity_ledger_net_returns_matched"])
+        self.assertFalse(timeline["cross_component_consistency"]["selection_priority_equivalence_verified"])
+        self.assertFalse(timeline["cross_component_consistency"]["transaction_cost_provenance_verified"])
+        self.assertIn("SELECTION_PRIORITY_SEMANTICS_DIFFER",
+                      timeline["cross_component_consistency"]["blockers"])
         with self.assertRaises(ValueError):
             build(snap, evidence, reconciled_portfolio_inputs=inputs,
                   dated_signals=[{"symbol": "ABC", "entry_day": 0, "exit_day": 1,
