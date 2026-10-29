@@ -9,6 +9,10 @@ snapshot = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(snapshot)
 
 class SnapshotTests(unittest.TestCase):
+    def test_rejects_unapproved_history_range(self):
+        with self.assertRaisesRegex(ValueError, "UNSUPPORTED_HISTORY_RANGE"):
+            snapshot.bars("AMD", history_range="max")
+
     def test_short_history_blocks(self):
         result = snapshot.analyze("BKD", [])
         self.assertFalse(result["trade_ready"])
