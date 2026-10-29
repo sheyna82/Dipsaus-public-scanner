@@ -61,6 +61,26 @@ class IntegratedReadonlyTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             build(snap, evidence, equity_observations=list(reversed(marks)))
 
+    def test_sector_concentration_and_capital_duration(self):
+        snap = {"research_only": True, "candidates": [
+            {"symbol": "ABC", "decision": "WAIT", "blocks": []},
+            {"symbol": "DEF", "decision": "WAIT", "blocks": []}
+        ]}
+        evidence = {"research_only": True, "candidates": []}
+        signals = [
+            {"symbol": "ABC", "entry_day": 1, "exit_day": 7, "net_return_pct": 1},
+            {"symbol": "DEF", "entry_day": 2, "exit_day": 9, "net_return_pct": -1}
+        ]
+        result = build(snap, evidence, dated_signals=signals,
+                       sector_by_symbol={"ABC": "Technology", "DEF": "Technology"})
+        concentration = result["portfolio_concentration"]
+        self.assertEqual(concentration["peak_same_sector_positions"], 2)
+        self.assertEqual(concentration["peak_sector_positions"]["Technology"], 2)
+        self.assertEqual(concentration["max_holding_day_units"], 7)
+        self.assertFalse(concentration["trade_ready"])
+        with self.assertRaises(ValueError):
+            build(snap, evidence, dated_signals=signals, sector_by_symbol={"ABC": "Technology"})
+
     def test_malformed_blockers_fail_closed(self):
         evidence = {"research_only": True, "candidates": []}
         for blockers in ("NOT_A_LIST", [None], [123]):
