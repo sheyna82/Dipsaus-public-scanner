@@ -9,6 +9,7 @@ import sys
 # Reuse the already-tested root-level equity risk engine.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from research_swing_equity_risk import summarize_equity_curve
+from research_swing_portfolio_with_marks import backtest_portfolio_with_marks
 
 from candidate_decision_evidence_gate import assess
 from candidate_portfolio_capacity import simulate
@@ -46,7 +47,7 @@ def concentration_from_accepted(portfolio, sectors):
                             "Sector labels are caller supplied, not independently verified",
                             "No price correlation, FX, intraday exposure or live risk prediction"]}
 
-def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=None, sector_by_symbol=None):
+def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=None, sector_by_symbol=None, reconciled_portfolio_inputs=None):
     if not isinstance(snapshot, dict) or not isinstance(snapshot.get("candidates"), list):
         raise ValueError("INVALID_SNAPSHOT")
     if not isinstance(evidence_report, dict) or not isinstance(evidence_report.get("candidates"), list):
@@ -123,21 +124,35 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
             "Caller must verify mark provenance, chronology, FX and cash reconciliation",
             "Not a live portfolio valuation or independent predictive validation",
         ]
+    if reconciled_portfolio_inputs is None:
+        reconciled = {"status": "NOT_EVALUATED", "reason": "AUDITABLE_FILLS_MARKS_AND_DATES_NOT_PROVIDED", "trade_ready": False}
+    else:
+        if not isinstance(reconciled_portfolio_inputs, dict) or set(reconciled_portfolio_inputs) != {"trades", "daily_marks", "trading_dates"}:
+            raise ValueError("INVALID_RECONCILIATION_INPUTS")
+        verified = backtest_portfolio_with_marks(**reconciled_portfolio_inputs)
+        reconciled = {"status": "ARITHMETIC_RECONCILED_RESEARCH_ONLY",
+                      "cash_equity_reconciliation": verified["cash_equity_reconciliation"],
+                      "equity": verified["equity"], "trade_ready": False,
+                      "independent_provenance_verified": False,
+                      "limitations": ["Arithmetic reconciliation is not source authentication",
+                                      "No verified matching to separate integer-day capacity simulation",
+                                      "No broker execution, FX or corporate-action attestation"]}
     checks = {
         "research_only": True,
         "trade_ready": False,
         "capacity_available": portfolio.get("status") == "DESCRIPTIVE_PORTFOLIO_SIMULATION",
         "sector_exposure_available": concentration.get("status") == "DESCRIPTIVE_ACCEPTED_TRADE_EXPOSURE",
         "equity_risk_available": equity_risk.get("risk_estimate_type") == "sampled_portfolio_equity_only",
-        "cash_equity_reconciled": False,
+        "cash_equity_reconciled": reconciled.get("status") == "ARITHMETIC_RECONCILED_RESEARCH_ONLY",
         "signal_provenance_verified": False,
         "portfolio_evidence_complete": False,
         "blockers": [
             "SIGNAL_PROVENANCE_NOT_INDEPENDENTLY_VERIFIED",
-            "CASH_EQUITY_RECONCILIATION_NOT_PROVIDED",
             "PORTFOLIO_METRICS_NOT_SAME_COHORT_VERIFIED",
         ],
     }
+    if not checks["cash_equity_reconciled"]:
+        checks["blockers"].append("CASH_EQUITY_RECONCILIATION_NOT_PROVIDED")
     if not checks["capacity_available"]:
         checks["blockers"].append("CAPACITY_NOT_EVALUATED")
     if not checks["sector_exposure_available"]:
@@ -145,6 +160,7 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
     if not checks["equity_risk_available"]:
         checks["blockers"].append("EQUITY_RISK_NOT_EVALUATED")
     return {
+        "reconciled_portfolio_research": reconciled,
         "cross_component_consistency": checks,
         "portfolio_concentration": concentration,
         "portfolio_equity_risk": equity_risk,
