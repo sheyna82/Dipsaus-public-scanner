@@ -48,7 +48,7 @@ class PortfolioWarningComparisonTests(unittest.TestCase):
         second["entry_index"] = 26
         second["baseline_exit_index"] = 30
         result = compare_warning_exit_portfolios(
-            [first, second], initial_capital=3500,
+            [first, second], initial_capital=4000,
             tranche=3500, max_positions=1, cost_bps_per_side=0)
         self.assertEqual(result["baseline"]["rejected_count"], 1)
         self.assertEqual(result["warning_protected"]["rejected_count"], 0)
