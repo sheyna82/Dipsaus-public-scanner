@@ -2,6 +2,7 @@ name: DIPSAUS pull request regression
 on:
   pull_request:
     paths:
+      - 'research/candidate_regime_cost_validation.py'
       - 'research/candidate_nonoverlap_validation.py'
       - 'research/candidate_conditional_cohorts.py'
       - 'research/test_candidate_conditional_cohorts.py'
@@ -64,6 +65,18 @@ jobs:
         env:
           SCANNER_NOTIFICATIONS_ENABLED: 'false'
         run: python research/candidate_nonoverlap_validation.py
+      - name: Calculate regime-matched cost sensitivity
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python research/candidate_regime_cost_validation.py
+      - name: Upload regime-matched cost sensitivity
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        uses: actions/upload-artifact@v4
+        with:
+          name: six-candidate-regime-cost-validation
+          path: reports/candidate_regime_cost_validation.json
+          if-no-files-found: error
       - name: Upload non-overlapping candidate validation
         if: github.head_ref == 'research/offline-technical-risk-20261021'
         uses: actions/upload-artifact@v4
