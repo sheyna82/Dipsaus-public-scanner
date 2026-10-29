@@ -6,6 +6,8 @@ on:
       - 'research/swing_lifecycle/test_warning_exit_candidate.py'
       - 'research/swing_lifecycle/warning_portfolio_comparison.py'
       - 'research/swing_lifecycle/test_warning_portfolio_comparison.py'
+      - 'research/swing_lifecycle/warning_exit_holdout.py'
+      - 'research/swing_lifecycle/test_warning_exit_holdout.py'
       - 'research_swing_failure_warning.py'
       - '.github/workflows/swing-warning-exit-candidate-research.yml'
   workflow_dispatch:
@@ -20,4 +22,4 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run offline warning-to-exit regression tests
-        run: python -m unittest -v research.swing_lifecycle.test_warning_exit_candidate research.swing_lifecycle.test_warning_portfolio_comparison test_research_swing_failure_warning
+        run: python -m unittest -v research.swing_lifecycle.test_warning_exit_candidate research.swing_lifecycle.test_warning_portfolio_comparison research.swing_lifecycle.test_warning_exit_holdout test_research_swing_failure_warning
