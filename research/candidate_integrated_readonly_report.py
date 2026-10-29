@@ -32,7 +32,12 @@ def build(snapshot, evidence_report, *, dated_signals=None):
         seen.add(symbol)
         # Deliberately do not promote descriptive cohort metrics to forecasts.
         gate = assess({"symbol": symbol})
-        blockers = list(dict.fromkeys([*snap.get("blocks", []), *gate["missing_or_failed_gates"]]))
+        raw_blocks = snap.get("blocks", [])
+        if not isinstance(raw_blocks, list) or any(not isinstance(item, str) or not item for item in raw_blocks):
+            raise ValueError("INVALID_SNAPSHOT_BLOCKERS")
+        blockers = list(dict.fromkeys([*raw_blocks, *gate["missing_or_failed_gates"]]))
+        if snap.get("decision") not in ("WAIT", "DATA_BLOCKED"):
+            blockers.append("UNRECOGNIZED_OR_UNSAFE_SNAPSHOT_DECISION")
         if snap.get("decision") == "DATA_BLOCKED":
             blockers.append("PRICE_DATA_UNAVAILABLE")
         if not evidence_by_symbol.get(symbol):
