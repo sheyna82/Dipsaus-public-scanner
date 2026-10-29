@@ -50,20 +50,31 @@ def evaluate(rows,horizon,pattern,cost_bps=50):
     signal=nonoverlap([i for i in test if f[i][pattern]],horizon)
     # Matched controls: same regime, not a signal, deterministic earliest available
     # after each signal; controls must not overlap one another.
-    controls=[];next_free=0
+    # Controls must be disjoint from every signal holding window and each other.
+    # For MA-defined patterns a matching regime may imply the pattern itself:
+    # report zero controls rather than manufacture a comparison.
+    controls=[]
+    signal_windows=[(i,i+horizon) for i in signal]
     for i in signal:
-        candidates=[j for j in test if j>=next_free and j!=i and not f[j][pattern]
-                    and f[j]["regime"]==f[i]["regime"] and abs(j-i)<=20]
+        candidates=[]
+        for j in test:
+            if j==i or f[j][pattern] or f[j]["regime"]!=f[i]["regime"] or abs(j-i)>20:
+                continue
+            window=(j,j+horizon)
+            if any(not (window[1]<a or window[0]>b) for a,b in signal_windows):
+                continue
+            if any(not (window[1]<k or window[0]>k+horizon) for k in controls):
+                continue
+            candidates.append(j)
         if candidates:
-            j=min(candidates,key=lambda j:(abs(j-i),j))
-            controls.append(j);next_free=j+horizon+1
+            controls.append(min(candidates,key=lambda j:(abs(j-i),j)))
     # Do not imply pairing if controls could not be found.
     results={"test_start_unix":rows[cutoff]["timestamp"],"signal_n":len(signal),
              "matched_control_n":len(controls),"matched_fraction":round(len(controls)/len(signal),3) if signal else 0,
              "cost_scenarios":{},"trade_ready":False,
              "inferentially_valid":False,
              "limitations":["Test-only 35% of one year; no training/tuning performed",
-                            "Greedy matched controls may not be contemporaneous or fully balanced",
+                            "Controls exclude all signal windows; matching remains sparse and may not be fully balanced",
                             "No earnings/event or external benchmark controls",
                             "Cost scenarios illustrative, not verified DEGIRO fees/FX/spread"]}
     for bps in COST_BPS:
