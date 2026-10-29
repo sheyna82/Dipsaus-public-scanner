@@ -31,6 +31,8 @@ class RegimeCostTests(unittest.TestCase):
         self.assertEqual(result["matched_control_n"], 0)
         self.assertFalse(result["trade_ready"])
         self.assertFalse(result["inferentially_valid"])
+        self.assertEqual(result["next_open_execution_status"], "BLOCKED_OPEN_PRICE_MISSING")
+        self.assertEqual(result["execution_model"], "SIGNAL_CLOSE_ONLY_UNEXECUTABLE_REFERENCE")
 
     def test_short_holdout_blocks(self):
         self.assertEqual(model.evaluate(rows(120), 15, "breakout_prior20")["status"],
