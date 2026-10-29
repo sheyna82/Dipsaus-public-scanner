@@ -254,6 +254,20 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
         ledger_rejections = verified["cash_accounting"]["rejected_count"]
         if capacity_rejections != ledger_rejections:
             raise ValueError("CAPACITY_LEDGER_REJECTION_COUNT_MISMATCH")
+        reason_map = {"SYMBOL_ALREADY_HELD": "already_held",
+                      "CAPACITY_FULL": "position_cap",
+                      "INSUFFICIENT_CASH": "insufficient_cash"}
+        if any(row["entry_day"] < 0 or row["entry_day"] >= len(dates)
+               for row in portfolio["rejected_signals"]):
+            raise ValueError("REJECTED_DAY_OUTSIDE_SHARED_CALENDAR")
+        capacity_rejected_keys = sorted(
+            (row["symbol"], dates[row["entry_day"]].isoformat(), reason_map[row["reason"]])
+            for row in portfolio["rejected_signals"])
+        ledger_rejected_keys = sorted(
+            (row["ticker"], row["date"], row["reason"])
+            for row in verified["cash_accounting"]["rejected_entries"])
+        if capacity_rejected_keys != ledger_rejected_keys:
+            raise ValueError("CAPACITY_LEDGER_REJECTION_IDENTITY_MISMATCH")
         if abs(Decimal(str(portfolio["realized_pnl"])) -
                Decimal(verified["cash_accounting"]["realized_net_pnl"])) > Decimal("0.011"):
             raise ValueError("CAPACITY_LEDGER_PNL_MISMATCH")
@@ -266,6 +280,7 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
         "equity_risk_available": equity_risk.get("risk_estimate_type") == "sampled_portfolio_equity_only",
         "capacity_ledger_timeline_matched": timeline_match,
         "capacity_ledger_net_returns_matched": timeline_match,
+        "capacity_ledger_rejected_identities_matched": timeline_match,
         "selection_priority_equivalence_verified": timeline_match and portfolio.get("priority_mode") == "score_desc",
         "transaction_cost_provenance_verified": False,
         "cash_equity_reconciled": reconciled.get("status") == "ARITHMETIC_RECONCILED_RESEARCH_ONLY",
