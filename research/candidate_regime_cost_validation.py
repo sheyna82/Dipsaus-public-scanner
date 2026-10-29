@@ -48,11 +48,18 @@ def summarize_next_open(rows,indices,horizon,cost_bps):
              for i in valid]
     adverse=[100*(min(x["low"] for x in rows[i+1:i+horizon+1])/
                   rows[i+1]["open"]-1) for i in valid]
+    # Risk and capital lockup: daily close-to-entry underwater days.
+    underwater_days=[sum(rows[k]["close"]<rows[i+1]["open"]
+                         for k in range(i+1,i+horizon+1)) for i in valid]
+    severe=[a<=-10 for a in adverse]
     return {"n":len(valid),"status":"RESEARCH_ONLY",
             "median_net_pct":round(statistics.median(returns),2),
             "positive_fraction_net":round(sum(x>0 for x in returns)/len(returns),3),
             "median_mae_pct":round(statistics.median(adverse),2),
-            "worst_mae_pct":round(min(adverse),2)}
+            "worst_mae_pct":round(min(adverse),2),
+            "fraction_mae_below_minus_10pct":round(sum(severe)/len(valid),3),
+            "median_underwater_close_days":statistics.median(underwater_days),
+            "fraction_negative_net_at_exit":round(sum(x<0 for x in returns)/len(returns),3)}
 
 def evaluate(rows,horizon,pattern,cost_bps=50):
     """Test-only last 35% of timeline; controls matched on MA20/MA50 regime.
