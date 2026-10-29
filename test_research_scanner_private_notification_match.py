@@ -10,7 +10,7 @@ class PrivateNotificationMatchTests(unittest.TestCase):
     def test_empty_state_has_eight_missing_cases(self):
         result = match_observed_notifications(self.state({}))
         self.assertEqual(result["observation_count"], 8)
-        self.assertTrue(all(r["match_status"] == "no_matching_utc_day_record"
+        self.assertTrue(all(r["match_status"] == "no_candidate_within_adjacent_utc_days"
                             for r in result["cases"]))
 
     def test_unique_candidate_is_not_verified_link(self):
@@ -29,7 +29,7 @@ class PrivateNotificationMatchTests(unittest.TestCase):
         })
         result = match_observed_notifications(state)
         row = next(r for r in result["cases"] if r["symbol"] == "VIST")
-        self.assertEqual(row["match_status"], "ambiguous_multiple_utc_day_records")
+        self.assertEqual(row["match_status"], "ambiguous_multiple_adjacent_utc_days_records")
 
     def test_private_timestamps_not_exported(self):
         state = self.state({"EARLY_RECOVERY|VIST": {
@@ -47,17 +47,27 @@ class PrivateNotificationMatchTests(unittest.TestCase):
         row = next(r for r in result["cases"] if r["symbol"] == "VIST")
         self.assertEqual(row["candidate_private_record_count"], 2)
         self.assertEqual(row["exact_family_candidate_count"], 1)
-        self.assertEqual(row["match_status"], "ambiguous_multiple_utc_day_records")
+        self.assertEqual(row["match_status"], "ambiguous_multiple_adjacent_utc_days_records")
         self.assertFalse(row["scanner_decision_verified"])
 
-    def test_different_utc_day_does_not_match(self):
+    def test_adjacent_utc_day_is_candidate_not_verified(self):
         state = self.state({
             "EARLY_RECOVERY|VIST": {"notified_utc": "2026-10-27T00:01:00Z"}
         })
         result = match_observed_notifications(state)
         row = next(r for r in result["cases"] if r["symbol"] == "VIST")
+        self.assertEqual(row["candidate_private_record_count"], 1)
+        self.assertEqual(row["exact_family_candidate_count"], 1)
+        self.assertFalse(row["screenshot_link_verified"])
+
+
+    def test_two_utc_days_away_is_not_candidate(self):
+        state = self.state({
+            "EARLY_RECOVERY|VIST": {"notified_utc": "2026-10-28T00:01:00Z"}
+        })
+        result = match_observed_notifications(state)
+        row = next(r for r in result["cases"] if r["symbol"] == "VIST")
         self.assertEqual(row["candidate_private_record_count"], 0)
-        self.assertEqual(row["exact_family_candidate_count"], 0)
 
 
 if __name__ == "__main__":
