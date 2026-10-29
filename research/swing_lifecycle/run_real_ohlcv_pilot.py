@@ -15,6 +15,7 @@ from research.swing_lifecycle.evaluate_warning_risk_archive import evaluate_arch
 from research.swing_lifecycle.warning_quarter_robustness import evaluate as quarter_robustness
 from research.swing_lifecycle.warning_preentry_regimes import evaluate as preentry_regimes
 from research.swing_lifecycle.warning_decision_holdout import evaluate as decision_holdout
+from research.swing_lifecycle.warning_duration_placebo import evaluate as duration_placebo
 
 SYMBOLS = (
     ("ASML.AS", "technology"), ("INGA.AS", "financials"),
@@ -111,7 +112,7 @@ def run(output, *, cutoff):
                 (output / "warning_decision_holdout.json").write_text(
                     json.dumps(report["eur_warning_decision_holdout"], indent=2),
                     encoding="utf-8")
-                report["eur_only_confirmation_sensitivity"] = {
+                report["eur_duration_placebo"] = duration_placebo(\n                    output / "warning_risk_cases.csv", euro_archive)\n                (output / "warning_duration_placebo.json").write_text(\n                    json.dumps(report["eur_duration_placebo"], indent=2),\n                    encoding="utf-8")\n                report["eur_only_confirmation_sensitivity"] = {
                     str(n): evaluate_pilot_artifact(
                         euro_archive, cutoff=cutoff, holding_sessions=10,
                         entry_stride=20, confirmation_sessions=n)
