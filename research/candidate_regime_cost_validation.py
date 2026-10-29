@@ -138,8 +138,10 @@ def evaluate(rows,horizon,pattern,cost_bps=50):
                 matching_diagnostics["blocked_by_existing_control_window"]+=1
             else:
                 raise AssertionError("UNCLASSIFIED_MATCHING_FAILURE")
-    assert sum(matching_diagnostics.values())==len(signal)
-    assert matching_diagnostics["matched"]==len(controls)
+    if sum(matching_diagnostics.values())!=len(signal):
+        raise ValueError("MATCHING_DIAGNOSTICS_COUNT_MISMATCH")
+    if matching_diagnostics["matched"]!=len(controls):
+        raise ValueError("MATCHED_CONTROL_COUNT_MISMATCH")
     # Do not imply pairing if controls could not be found.
     open_complete=bool(signal) and all(rows[i+1].get("open",0)>0 for i in signal+controls)
     results={"test_start_unix":rows[cutoff]["timestamp"],"signal_n":len(signal),
