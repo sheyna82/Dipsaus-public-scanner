@@ -6,6 +6,7 @@ from candidate_regime_cost_validation import RESEARCH_UNIVERSE, features, nonove
 from candidate_preentry_features import pre_entry_features
 from candidate_feature_thresholds import training_median_thresholds, label, FEATURE_DIRECTIONS
 from candidate_benchmark_excess import PATTERNS, HORIZON, COST_BPS
+from candidate_ablation_risk_diagnostics import compare as compare_risk
 
 FILTERS=("baseline",)+tuple(FEATURE_DIRECTIONS)+("all_three",)
 
@@ -20,6 +21,7 @@ def evaluate_ablation(stock,benchmark,pattern):
                         if features(stock,i)[pattern]],HORIZON)
     by_day={r["timestamp"]//86400:r for r in benchmark}
     cohorts={key:[] for key in FILTERS}
+    risk_cohorts={key:[] for key in FILTERS}
     for i in indices:
         f=pre_entry_features(stock,benchmark,i)
         decision=label(f,fitted)
@@ -33,10 +35,18 @@ def evaluate_ablation(stock,benchmark,pattern):
         excess=100*(stock[i+HORIZON]["close"]/entry-end["close"]/start["open"])-COST_BPS/100
         mae=100*(min(x["low"] for x in stock[i+1:i+HORIZON+1])/entry-1)
         record=(excess,mae)
+        risk_record={"net_return_pct":100*(stock[i+HORIZON]["close"]/entry-1)-COST_BPS/100,
+                     "excess_pct":excess,"mae_pct":mae,
+                     "session_day":stock[i+1]["timestamp"]//86400}
         cohorts["baseline"].append(record)
+        risk_cohorts["baseline"].append(risk_record)
         for key,passed in decision["passes"].items():
-            if passed:cohorts[key].append(record)
-        if all(decision["passes"].values()):cohorts["all_three"].append(record)
+            if passed:
+                cohorts[key].append(record)
+                risk_cohorts[key].append(risk_record)
+        if all(decision["passes"].values()):
+            cohorts["all_three"].append(record)
+            risk_cohorts["all_three"].append(risk_record)
     def summary(records):
         return {"n":len(records),
                 "median_excess_pct":round(statistics.median(x[0] for x in records),3) if records else None,
@@ -46,7 +56,8 @@ def evaluate_ablation(stock,benchmark,pattern):
     return {"status":"DESCRIPTIVE_ONLY","trade_ready":False,
             "training_n":len(training),"test_baseline_n":len(indices),
             "thresholds":fitted["thresholds"],
-            "cohorts":{key:summary(records) for key,records in cohorts.items()}}
+            "cohorts":{key:summary(records) for key,records in cohorts.items()},
+            "risk_diagnostics":compare_risk(risk_cohorts)}
 
 def main():
     output={"research_only":True,"trade_ready":False,
