@@ -12,6 +12,8 @@ on:
       - 'research/swing_lifecycle/test_synthetic_warning_exit_smoke.py'
       - 'research/swing_lifecycle/ohlc_csv_loader.py'
       - 'research/swing_lifecycle/test_ohlc_csv_loader.py'
+      - 'research/swing_lifecycle/run_historical_csv_benchmark.py'
+      - 'research/swing_lifecycle/test_run_historical_csv_benchmark.py'
       - 'research_swing_failure_warning.py'
       - '.github/workflows/swing-warning-exit-candidate-research.yml'
   workflow_dispatch:
@@ -26,4 +28,4 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run offline warning-to-exit regression tests
-        run: python -m unittest -v research.swing_lifecycle.test_warning_exit_candidate research.swing_lifecycle.test_warning_portfolio_comparison research.swing_lifecycle.test_warning_exit_holdout research.swing_lifecycle.test_synthetic_warning_exit_smoke research.swing_lifecycle.test_ohlc_csv_loader test_research_swing_failure_warning
+        run: python -m unittest -v research.swing_lifecycle.test_warning_exit_candidate research.swing_lifecycle.test_warning_portfolio_comparison research.swing_lifecycle.test_warning_exit_holdout research.swing_lifecycle.test_synthetic_warning_exit_smoke research.swing_lifecycle.test_ohlc_csv_loader research.swing_lifecycle.test_run_historical_csv_benchmark test_research_swing_failure_warning
