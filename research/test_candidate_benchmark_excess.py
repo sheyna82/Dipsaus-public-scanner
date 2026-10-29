@@ -3,7 +3,7 @@ import unittest
 from candidate_benchmark_excess import compare, market
 
 def rows(n=140,base=100):
-    return [{"timestamp":1700000000+i*86400,"open":base+i*.2,
+    return [{"timestamp":1700000000+i*86400,"open":base*1.03**i,
              "close":base+i*.2,"low":(base+i*.2)*.99,
              "high":(base+i*.2)*1.01,"volume":1000} for i in range(n)]
 
