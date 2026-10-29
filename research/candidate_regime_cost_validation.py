@@ -39,6 +39,21 @@ def summarize(rows,indices,horizon,cost_bps):
             "median_mae_pct":round(statistics.median(mae),2),
             "worst_mae_pct":round(min(mae),2)}
 
+def summarize_next_open(rows,indices,horizon,cost_bps):
+    """Signal at day i close; buy at i+1 open; exit at i+horizon close."""
+    valid=[i for i in indices if i+horizon<len(rows) and
+           i+1<len(rows) and rows[i+1].get("open",0)>0]
+    if not valid:return {"n":0,"status":"BLOCKED_OPEN_PRICE_MISSING"}
+    returns=[100*(rows[i+horizon]["close"]/rows[i+1]["open"]-1)-cost_bps/100
+             for i in valid]
+    adverse=[100*(min(x["low"] for x in rows[i+1:i+horizon+1])/
+                  rows[i+1]["open"]-1) for i in valid]
+    return {"n":len(valid),"status":"RESEARCH_ONLY",
+            "median_net_pct":round(statistics.median(returns),2),
+            "positive_fraction_net":round(sum(x>0 for x in returns)/len(returns),3),
+            "median_mae_pct":round(statistics.median(adverse),2),
+            "worst_mae_pct":round(min(adverse),2)}
+
 def evaluate(rows,horizon,pattern,cost_bps=50):
     """Test-only last 35% of timeline; controls matched on MA20/MA50 regime.
     Historical matching uses only features known at entry. No parameter tuning."""
@@ -69,20 +84,23 @@ def evaluate(rows,horizon,pattern,cost_bps=50):
         if candidates:
             controls.append(min(candidates,key=lambda j:(abs(j-i),j)))
     # Do not imply pairing if controls could not be found.
+    open_complete=all(rows[i+1].get("open",0)>0 for i in signal+controls)
     results={"test_start_unix":rows[cutoff]["timestamp"],"signal_n":len(signal),
-             "execution_model":"SIGNAL_CLOSE_ONLY_UNEXECUTABLE_REFERENCE",
-             "next_open_execution_status":"BLOCKED_OPEN_PRICE_MISSING",
+             "execution_model":"NEXT_SESSION_OPEN_TO_HORIZON_CLOSE" if open_complete else "SIGNAL_CLOSE_ONLY_UNEXECUTABLE_REFERENCE",
+             "next_open_execution_status":"RESEARCH_ONLY" if open_complete else "BLOCKED_OPEN_PRICE_MISSING",
              "matched_control_n":len(controls),"matched_fraction":round(len(controls)/len(signal),3) if signal else 0,
              "cost_scenarios":{},"trade_ready":False,
              "inferentially_valid":False,
              "limitations":["Test-only 35% of one year; no training/tuning performed",
                             "Controls exclude all signal windows; matching remains sparse and may not be fully balanced",
                             "No earnings/event or external benchmark controls",
-                            "Source bars lack open prices; close-to-close results are not executable next-open backtests",
+                            "Next-open model uses daily open proxy, not broker-confirmed fills, spreads or slippage",
                             "Cost scenarios illustrative, not verified DEGIRO fees/FX/spread"]}
     for bps in COST_BPS:
         results["cost_scenarios"][str(bps)]={"signals":summarize(rows,signal,horizon,bps),
-                                             "matched_controls":summarize(rows,controls,horizon,bps)}
+                                             "matched_controls":summarize(rows,controls,horizon,bps),
+                                             "next_open_signals":summarize_next_open(rows,signal,horizon,bps),
+                                             "next_open_matched_controls":summarize_next_open(rows,controls,horizon,bps)}
     return results
 
 def main():
