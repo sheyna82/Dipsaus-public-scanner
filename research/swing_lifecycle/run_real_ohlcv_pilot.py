@@ -38,10 +38,16 @@ def run(output, *, cutoff):
     with gzip.open(archive, "wt", encoding="utf-8") as stream:
         for record in records:
             stream.write(json.dumps(record) + "\n")
+    euro_records = [record for record in records if record["currency"] == "EUR"]
+    euro_archive = output / "historical_eur_only_ohlcv.jsonl.gz"
+    with gzip.open(euro_archive, "wt", encoding="utf-8") as stream:
+        for record in euro_records:
+            stream.write(json.dumps(record) + "\n")
     report = {
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "requested": len(SYMBOLS),
         "fetched": len(records),
+        "eur_only_symbols": [record["symbol"] for record in euro_records],
         "source_audit": source_rows,
         "source": "Yahoo chart via existing europe_ohlcv_pilot.fetch",
         "research_only": True,
@@ -57,6 +63,13 @@ def run(output, *, cutoff):
                 for n in (1, 2, 3)
             }
             report["diagnostic"] = report["confirmation_sensitivity"]["1"]
+            if euro_records:
+                report["eur_only_confirmation_sensitivity"] = {
+                    str(n): evaluate_pilot_artifact(
+                        euro_archive, cutoff=cutoff, holding_sessions=10,
+                        entry_stride=20, confirmation_sessions=n)
+                    for n in (1, 2, 3)
+                }
         except (ValueError, KeyError, IndexError) as exc:
             report["diagnostic_error"] = type(exc).__name__ + ": " + str(exc)
     else:
