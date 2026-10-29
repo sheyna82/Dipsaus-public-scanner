@@ -158,6 +158,40 @@ class IntegratedReadonlyTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             build(snap, evidence, reconciled_portfolio_inputs=broken)
 
+    def test_holding_efficiency_overlapping_trades_uses_trading_sessions(self):
+        from datetime import date
+        snap = {"research_only": True, "candidates": [
+            {"symbol": "AAA", "decision": "WAIT", "blocks": []},
+            {"symbol": "BBB", "decision": "WAIT", "blocks": []}]}
+        evidence = {"research_only": True, "candidates": []}
+        thu, fri, mon, tue = [date.fromisoformat(x) for x in
+                              ("2026-10-01", "2026-10-02", "2026-10-05", "2026-10-06")]
+        inputs = {
+            "trades": [
+                {"ticker": "AAA", "entry_date": thu, "exit_date": mon,
+                 "net_return_pct": 2, "score": 10},
+                {"ticker": "BBB", "entry_date": fri, "exit_date": tue,
+                 "net_return_pct": -1, "score": 9},
+            ],
+            "daily_marks": {
+                (thu, "AAA"): 3500,
+                (fri, "AAA"): 3500, (fri, "BBB"): 3500,
+                (mon, "BBB"): 3500,
+            },
+            "trading_dates": [thu, fri, mon, tue],
+        }
+        result = build(snap, evidence, reconciled_portfolio_inputs=inputs)
+        reconciled = result["reconciled_portfolio_research"]
+        holding = reconciled["holding_capital_efficiency"]
+        profit = reconciled["closed_trade_profit_diagnostics"]
+        self.assertEqual(holding["completed_trades"], 2)
+        self.assertEqual(holding["total_invested_tranche_sessions"], 4)
+        self.assertEqual(holding["longest_holding_sessions"], 2)
+        self.assertEqual(holding["capital_session_units"], "14000")
+        self.assertEqual(profit["net_profit"], "35.00")
+        self.assertEqual(holding["net_pnl_per_1000_currency_session_units"], "2.5000")
+        self.assertFalse(result["trade_ready"])
+
     def test_competing_entries_match_ledger_score_priority(self):
         from datetime import date, timedelta
         from candidate_portfolio_capacity import simulate
