@@ -46,6 +46,18 @@ jobs:
           SCANNER_NOTIFICATIONS_ENABLED: 'false'
         run: python -m unittest discover -p 'test*.py'
 
+      - name: Calculate six-candidate daily market snapshot
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python research/candidate_entry_snapshot.py
+      - name: Upload six-candidate market snapshot
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        uses: actions/upload-artifact@v4
+        with:
+          name: six-candidate-market-snapshot
+          path: reports/candidate_entry_research.json
+          if-no-files-found: error
       - name: Run six-candidate offline safety tests
         if: always()
         env:
