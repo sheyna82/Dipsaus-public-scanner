@@ -50,6 +50,15 @@ class CrossSymbolAuditTests(unittest.TestCase):
         self.assertEqual(p["matching_diagnostic_counts"]["matched"],8)
         self.assertEqual(p["matching_diagnostic_counts"]["blocked_by_signal_window"],15)
         self.assertEqual(p["matching_diagnostic_coverage"],"COMPLETE")
+        self.assertEqual(p["matching_diagnostic_consistency"],"PASS")
+
+    def test_inconsistent_matching_diagnostics_block(self):
+        a=sample("AAA",20,5,1)
+        for pattern in ("breakout_prior20","recovery_from_prior20_low_3to15pct"):
+            a["patterns"][pattern]["10"]["matching_diagnostics"]={
+                "matched":4,"blocked_by_signal_window":16}
+        p=audit({"candidates":[a]})["patterns"]["breakout_prior20"]
+        self.assertEqual(p["matching_diagnostic_consistency"],"BLOCKED")
 
     def test_blocked_symbols_excluded_not_hidden(self):
         result=audit({"candidates":[sample("AAA",30,20,1),
