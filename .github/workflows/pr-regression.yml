@@ -31,6 +31,8 @@ on:
       - 'dipsaus_breakout_distance.py'
       - 'test_dipsaus_breakout_distance.py'
       - 'test_migration_safety.py'
+      - 'research/candidate_feature_ablation.py'
+      - 'research/test_candidate_feature_ablation.py'
       - 'research/candidate_ablation_risk_diagnostics.py'
       - 'research/test_candidate_ablation_risk_diagnostics.py'
       - 'research/candidate_decision_evidence_gate.py'
