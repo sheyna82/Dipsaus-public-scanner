@@ -110,8 +110,12 @@ def main():
     for symbol in SYMBOLS:
         try:
             rows=bars(symbol, history_range="5y")
-            if len(rows)<150:raise ValueError("INSUFFICIENT_BARS")
+            if len(rows)<750:raise ValueError("INSUFFICIENT_FIVE_YEAR_BARS")
+            span_days=(rows[-1]["timestamp"]-rows[0]["timestamp"])/86400
+            if span_days<1200:raise ValueError("INSUFFICIENT_FIVE_YEAR_COVERAGE")
             output["candidates"].append({"symbol":symbol,"bars":len(rows),
+                "history_span_days":round(span_days,1),
+                "history_coverage_status":"FIVE_YEAR_RESEARCH_MINIMUM_MET",
                 "patterns":{p:{str(h):evaluate(rows,h,p) for h in HORIZONS} for p in PATTERNS}})
         except Exception as exc:
             output["candidates"].append({"symbol":symbol,"status":"DATA_BLOCKED","error_type":type(exc).__name__})
