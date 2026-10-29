@@ -135,6 +135,13 @@ def evaluate(rows,horizon,pattern,cost_bps=50):
                                              "matched_controls":summarize(rows,controls,horizon,bps),
                                              "next_open_signals":summarize_next_open(rows,signal,horizon,bps),
                                              "next_open_matched_controls":summarize_next_open(rows,controls,horizon,bps)}
+    # Preserve signal dates for cross-symbol clustering; never treat correlated
+    # simultaneous events as independent statistical observations.
+    results["signal_dates_utc"] = [
+        __import__("datetime").datetime.fromtimestamp(
+            rows[i]["timestamp"], __import__("datetime").timezone.utc
+        ).strftime("%Y-%m-%d") for i in signal
+    ]
     results["risk_screen_50bps"] = risk_screen(
         results["cost_scenarios"]["50"]["next_open_signals"],len(controls))
     return results
