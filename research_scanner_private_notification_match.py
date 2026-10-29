@@ -3,7 +3,7 @@
 No raw private state is returned or written. Matching by ticker alone is never
 sufficient to identify one screenshot observation; ambiguity fails closed.
 """
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from research_notification_signal_cases import CASES_2026_10_26
 from research_notification_timestamp_extract import verified_notification_times
 
@@ -16,7 +16,9 @@ def match_observed_notifications(state, cases=CASES_2026_10_26, *,
     by_symbol = {symbol: [] for symbol in symbols}
     for record in notifications:
         stamp = datetime.fromisoformat(record["notification_utc"])
-        if stamp.astimezone(timezone.utc).date() == day:
+        # A screenshot has no attested timezone. Include neighboring UTC dates
+        # for candidate discovery; do not turn this into a verified match.
+        if abs((stamp.astimezone(timezone.utc).date() - day).days) <= 1:
             by_symbol[record["symbol"]].append(record)
     results = []
     for index, case in enumerate(cases):
@@ -25,11 +27,11 @@ def match_observed_notifications(state, cases=CASES_2026_10_26, *,
             record["key_family"] == case.family for record in matches
         )
         if len(matches) == 1:
-            status = "unique_symbol_utc_day_candidate_unverified_link"
+            status = "unique_symbol_adjacent_utc_days_candidate_unverified_link"
         elif len(matches) == 0:
-            status = "no_matching_utc_day_record"
+            status = "no_candidate_within_adjacent_utc_days"
         else:
-            status = "ambiguous_multiple_utc_day_records"
+            status = "ambiguous_multiple_adjacent_utc_days_records"
         # UTC calendar day can differ from the screenshot's local day.
         # Never assign a matched notification to a screenshot or a trade.
         results.append({
@@ -51,7 +53,7 @@ def match_observed_notifications(state, cases=CASES_2026_10_26, *,
         "observation_count": len(results),
         "cases": results,
         "warnings": [
-            "UTC date matching is only a candidate lookup, not screenshot identity proof",
+            "Adjacent UTC date matching is only a candidate lookup, not screenshot identity proof",
             "Exact family matching is descriptive and does not verify scanner origin",
             "Private timestamps, key families and delivery statuses are not exported",
             "No historical profit or execution claim is supported",
