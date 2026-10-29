@@ -6,6 +6,7 @@ on:
       - 'research/swing_lifecycle/run_real_ohlcv_pilot.py'
       - 'research/swing_lifecycle/warning_risk_diagnostics.py'
       - 'research/swing_lifecycle/test_warning_risk_diagnostics.py'
+      - 'research/swing_lifecycle/evaluate_warning_risk_archive.py'
   workflow_dispatch:
 permissions:
   contents: read
