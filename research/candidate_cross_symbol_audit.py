@@ -25,12 +25,17 @@ def audit(data):
             observations.append((evaluation,metrics))
             date_counts.update(set(evaluation.get("signal_dates_utc",[])))
             matching_reasons.update(evaluation.get("matching_diagnostics",{}))
+        diagnostic_complete=all("matching_diagnostics" in x for x,_ in observations)
+        diagnostic_consistent=diagnostic_complete and all(
+            sum(x["matching_diagnostics"].values())==x["signal_n"] and
+            x["matching_diagnostics"].get("matched",0)==x["matched_control_n"]
+            for x,_ in observations
+        )
         result["patterns"][pattern]={
             "symbols_evaluated":len(observations),
             "matching_diagnostic_counts":dict(matching_reasons),
-            "matching_diagnostic_coverage":"COMPLETE" if all(
-                "matching_diagnostics" in x for x,_ in observations
-            ) else "INCOMPLETE",
+            "matching_diagnostic_coverage":"COMPLETE" if diagnostic_complete else "INCOMPLETE",
+            "matching_diagnostic_consistency":"PASS" if diagnostic_consistent else "BLOCKED",
             "total_nonoverlap_within_symbol_signals":sum(x["signal_n"] for x,_ in observations),
             "total_matched_controls":sum(x["matched_control_n"] for x,_ in observations),
             "positive_symbol_medians":sum(m.get("median_net_pct",float("-inf"))>0 for _,m in observations),
