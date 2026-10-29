@@ -95,6 +95,16 @@ jobs:
           name: candidate-feature-oos
           path: reports/candidate_feature_oos.json
           if-no-files-found: error
+      - name: Evaluate single-feature ablations
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        run: python research/candidate_feature_ablation.py
+      - name: Upload single-feature ablation research
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-feature-ablation
+          path: reports/candidate_feature_ablation.json
+          if-no-files-found: error
       - name: Audit cross-symbol research breadth
         if: github.head_ref == 'research/offline-technical-risk-20261021'
         env:
@@ -172,3 +182,7 @@ jobs:
       - name: Test held-out feature filtering offline
         if: always()
         run: python -m unittest discover -s research -p 'test_candidate_feature_oos.py' -v
+
+      - name: Test single-feature ablation offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_feature_ablation.py' -v
