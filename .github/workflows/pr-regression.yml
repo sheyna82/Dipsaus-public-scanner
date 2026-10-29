@@ -37,6 +37,8 @@ on:
       - 'research/test_candidate_ablation_risk_diagnostics.py'
       - 'research/candidate_decision_evidence_gate.py'
       - 'research/test_candidate_decision_evidence_gate.py'
+      - 'research/candidate_portfolio_capacity.py'
+      - 'research/test_candidate_portfolio_capacity.py'
       - 'research/candidate_execution_sensitivity.py'
       - 'research/test_candidate_execution_sensitivity.py'
       - 'research/candidate_calendar_matched_placebo.py'
@@ -234,3 +236,7 @@ jobs:
       - name: Test research-only execution sensitivity offline
         if: always()
         run: python -m unittest discover -s research -p 'test_candidate_execution_sensitivity.py' -v
+
+      - name: Test chronological six-position capacity offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_portfolio_capacity.py' -v
