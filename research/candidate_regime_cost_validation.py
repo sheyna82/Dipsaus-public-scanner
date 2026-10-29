@@ -43,7 +43,10 @@ def summarize_next_open(rows,indices,horizon,cost_bps):
     """Signal at day i close; buy at i+1 open; exit at i+horizon close."""
     valid=[i for i in indices if i+horizon<len(rows) and
            i+1<len(rows) and rows[i+1].get("open",0)>0]
-    if not valid:return {"n":0,"status":"BLOCKED_OPEN_PRICE_MISSING"}
+    if len(valid)!=len(indices):
+        return {"n":0,"status":"BLOCKED_OPEN_PRICE_MISSING",
+                "missing_open_count":len(indices)-len(valid)}
+    if not indices:return {"n":0,"status":"NO_SAMPLES"}
     returns=[100*(rows[i+horizon]["close"]/rows[i+1]["open"]-1)-cost_bps/100
              for i in valid]
     adverse=[100*(min(x["low"] for x in rows[i+1:i+horizon+1])/
@@ -104,7 +107,7 @@ def evaluate(rows,horizon,pattern,cost_bps=50):
         if candidates:
             controls.append(min(candidates,key=lambda j:(abs(j-i),j)))
     # Do not imply pairing if controls could not be found.
-    open_complete=all(rows[i+1].get("open",0)>0 for i in signal+controls)
+    open_complete=bool(signal) and all(rows[i+1].get("open",0)>0 for i in signal+controls)
     results={"test_start_unix":rows[cutoff]["timestamp"],"signal_n":len(signal),
              "execution_model":"NEXT_SESSION_OPEN_TO_HORIZON_CLOSE" if open_complete else "SIGNAL_CLOSE_ONLY_UNEXECUTABLE_REFERENCE",
              "next_open_execution_status":"RESEARCH_ONLY" if open_complete else "BLOCKED_OPEN_PRICE_MISSING",
