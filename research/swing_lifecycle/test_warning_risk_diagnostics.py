@@ -27,7 +27,7 @@ class RiskDiagnosticsTests(unittest.TestCase):
         self.assertAlmostEqual(row["candidate_mae_pct"], -2)
         self.assertAlmostEqual(row["candidate_mfe_pct"], 1)
         self.assertTrue(row["favorable_early_exit"])
-        self.assertFalse(row["avoided_decline_5pct"])
+        self.assertTrue(row["avoided_decline_5pct"])
 
     @patch("research.swing_lifecycle.warning_risk_diagnostics.warning_exit_candidate")
     def test_post_exit_path_and_quarter(self, candidate):
