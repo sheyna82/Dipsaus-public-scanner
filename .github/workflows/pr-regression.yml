@@ -85,6 +85,16 @@ jobs:
           name: candidate-benchmark-excess
           path: reports/candidate_benchmark_excess.json
           if-no-files-found: error
+      - name: Evaluate held-out feature filters
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        run: python research/candidate_feature_oos.py
+      - name: Upload held-out feature filter research
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-feature-oos
+          path: reports/candidate_feature_oos.json
+          if-no-files-found: error
       - name: Audit cross-symbol research breadth
         if: github.head_ref == 'research/offline-technical-risk-20261021'
         env:
