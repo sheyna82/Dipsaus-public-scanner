@@ -67,3 +67,32 @@ def simulate(signals, *, max_positions=6, capital=21000.0, tranche=3500.0):
                            "Fixed tranche and fixed exit; no intra-trade equity or drawdown curve",
                            "No sector concentration or live fill model; priority must be predeclared",
                            "Historical simulation, not independent prospective validation"]}
+
+def compare_ablation_portfolios(report, *, pattern, max_positions=6):
+    """Pool actual held-out dated events across symbols, one filter at a time.
+
+    Never compare the same symbol-pattern twice, and never rank by test returns.
+    Each filter gets identical deterministic symbol-priority tie breaking.
+    """
+    if not isinstance(report,dict) or not isinstance(report.get("candidates"),list):
+        raise ValueError("INVALID_ABLATION_REPORT")
+    from candidate_feature_ablation import FILTERS
+    comparisons={}
+    for key in FILTERS:
+        events=[]
+        for candidate in report["candidates"]:
+            symbol=candidate.get("symbol")
+            detail=candidate.get("patterns",{}).get(pattern,{})
+            if detail.get("status")!="DESCRIPTIVE_ONLY":
+                continue
+            for item in detail.get("portfolio_events_25bps",{}).get(key,[]):
+                events.append({**item,"symbol":symbol})
+        comparisons[key]=simulate(events,max_positions=max_positions)
+    return {"status":"DESCRIPTIVE_ONLY","trade_ready":False,
+            "pattern":pattern,"entry_slippage_bps":25,
+            "costs_included_in_trade_returns":True,
+            "comparison":comparisons,
+            "limitations":["Held-out sample was previously inspected; not fresh out-of-sample evidence",
+                           "One pattern at a time; cross-pattern opportunity competition not modeled",
+                           "Fixed exits and no daily drawdown or equity curve",
+                           "Historical convenience universe and daily open fill assumptions"]}
