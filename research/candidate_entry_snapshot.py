@@ -17,10 +17,11 @@ def bars(symbol):
     rows = []
     for i, stamp in enumerate(result["timestamp"]):
         try:
-            c, h, l, v = (quote[k][i] for k in ("close", "high", "low", "volume"))
-            if any(x is None or not math.isfinite(float(x)) for x in (c, h, l, v)): continue
-            if min(c, h, l) <= 0 or v < 0: continue
-            rows.append({"timestamp": stamp, "close": float(c), "high": float(h), "low": float(l), "volume": int(v)})
+            o, c, h, l, v = (quote[k][i] for k in ("open", "close", "high", "low", "volume"))
+            if any(x is None or not math.isfinite(float(x)) for x in (o, c, h, l, v)): continue
+            if min(o, c, h, l) <= 0 or v < 0: continue
+            if not (l <= o <= h and l <= c <= h): continue
+            rows.append({"timestamp": stamp, "open": float(o), "close": float(c), "high": float(h), "low": float(l), "volume": int(v)})
         except (IndexError, TypeError, ValueError): continue
     return rows
 
