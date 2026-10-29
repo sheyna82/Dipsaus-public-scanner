@@ -37,6 +37,8 @@ on:
       - 'research/test_candidate_ablation_risk_diagnostics.py'
       - 'research/candidate_decision_evidence_gate.py'
       - 'research/test_candidate_decision_evidence_gate.py'
+      - 'research/candidate_execution_sensitivity.py'
+      - 'research/test_candidate_execution_sensitivity.py'
       - 'research/candidate_calendar_matched_placebo.py'
       - 'research/test_candidate_calendar_matched_placebo.py'
       - 'research/candidate_matched_count_placebo.py'
@@ -228,3 +230,7 @@ jobs:
       - name: Test calendar-matched placebo controls offline
         if: always()
         run: python -m unittest discover -s research -p 'test_candidate_calendar_matched_placebo.py' -v
+
+      - name: Test research-only execution sensitivity offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_execution_sensitivity.py' -v
