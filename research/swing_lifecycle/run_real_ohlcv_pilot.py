@@ -12,6 +12,7 @@ from pathlib import Path
 from europe_ohlcv_pilot import fetch
 from research.swing_lifecycle.evaluate_existing_ohlcv_pilot import evaluate_pilot_artifact
 from research.swing_lifecycle.evaluate_warning_risk_archive import evaluate_archive
+from research.swing_lifecycle.warning_quarter_robustness import evaluate as quarter_robustness
 
 SYMBOLS = (
     ("ASML.AS", "technology"), ("INGA.AS", "financials"),
@@ -93,6 +94,11 @@ def run(output, *, cutoff):
             if euro_records:
                 report["eur_warning_risk_diagnostics"] = evaluate_archive(
                     euro_archive, output)
+                report["eur_warning_quarter_robustness"] = quarter_robustness(
+                    output / "warning_risk_cases.csv")
+                (output / "warning_quarter_robustness.json").write_text(
+                    json.dumps(report["eur_warning_quarter_robustness"], indent=2),
+                    encoding="utf-8")
                 report["eur_only_confirmation_sensitivity"] = {
                     str(n): evaluate_pilot_artifact(
                         euro_archive, cutoff=cutoff, holding_sessions=10,
