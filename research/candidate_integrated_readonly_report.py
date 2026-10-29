@@ -190,6 +190,13 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
                                 if (row["ticker"], row["entry_date"], row["exit_date"]) in ledger_keys)
         if capacity_returns != ledger_returns:
             raise ValueError("CAPACITY_LEDGER_RETURN_MISMATCH")
+        # Selection ordering is not interchangeable: the ledger uses score DESC,
+        # while capacity defaults to symbol ASC and optional priority ASC.
+        # Matching accepted trades alone does not prove matching rejected entries.
+        capacity_rejections = portfolio["rejected_n"]
+        ledger_rejections = verified["cash_accounting"]["rejected_count"]
+        if capacity_rejections != ledger_rejections:
+            raise ValueError("CAPACITY_LEDGER_REJECTION_COUNT_MISMATCH")
         if abs(Decimal(str(portfolio["realized_pnl"])) -
                Decimal(verified["cash_accounting"]["realized_net_pnl"])) > Decimal("0.011"):
             raise ValueError("CAPACITY_LEDGER_PNL_MISMATCH")
@@ -202,6 +209,8 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
         "equity_risk_available": equity_risk.get("risk_estimate_type") == "sampled_portfolio_equity_only",
         "capacity_ledger_timeline_matched": timeline_match,
         "capacity_ledger_net_returns_matched": timeline_match,
+        "selection_priority_equivalence_verified": False,
+        "transaction_cost_provenance_verified": False,
         "cash_equity_reconciled": reconciled.get("status") == "ARITHMETIC_RECONCILED_RESEARCH_ONLY",
         "signal_provenance_verified": False,
         "portfolio_evidence_complete": False,
@@ -209,6 +218,8 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
         "blockers": [
             "SIGNAL_PROVENANCE_NOT_INDEPENDENTLY_VERIFIED",
             "PORTFOLIO_METRICS_NOT_SAME_COHORT_VERIFIED",
+            "SELECTION_PRIORITY_SEMANTICS_DIFFER",
+            "TRANSACTION_COST_PROVENANCE_UNVERIFIED",
         ],
     }
     if not timeline_match:
