@@ -14,7 +14,8 @@ from research.swing_lifecycle.warning_exit_holdout import evaluate_warning_exit_
 
 
 def evaluate_pilot_artifact(path, *, cutoff, holding_sessions=10,
-                            entry_stride=20, embargo_days=15):
+                            entry_stride=20, embargo_days=15,
+                            confirmation_sessions=1):
     if type(holding_sessions) is not int or not 5 <= holding_sessions <= 15:
         raise ValueError("invalid_holding_sessions")
     if type(entry_stride) is not int or entry_stride < holding_sessions:
@@ -62,11 +63,13 @@ def evaluate_pilot_artifact(path, *, cutoff, holding_sessions=10,
     # This is a per-symbol trade-candidate comparison, not a calibrated
     # scanner portfolio backtest. Ledger cash accounting is an illustration.
     result = evaluate_warning_exit_holdout(
-        cases, cutoff=cutoff, embargo_days=embargo_days)
+        cases, cutoff=cutoff, embargo_days=embargo_days,
+        confirmation_sessions=confirmation_sessions)
     return {
         "input": str(path),
         "candidate_method": "calendar_spaced_fixed_hold_not_scanner_entries",
         "candidate_count": len(cases),
+        "confirmation_sessions": confirmation_sessions,
         "unique_symbols": len({x["ticker"] for x in cases}),
         "skipped": skipped,
         "result": result,
