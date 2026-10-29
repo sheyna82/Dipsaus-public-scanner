@@ -91,7 +91,7 @@ def evaluate(rows,horizon,pattern,cost_bps=50):
              "matched_control_n":len(controls),"matched_fraction":round(len(controls)/len(signal),3) if signal else 0,
              "cost_scenarios":{},"trade_ready":False,
              "inferentially_valid":False,
-             "limitations":["Test-only 35% of one year; no training/tuning performed",
+             "limitations":["Test-only last 35% of available five-year window; no training/tuning performed",
                             "Controls exclude all signal windows; matching remains sparse and may not be fully balanced",
                             "No earnings/event or external benchmark controls",
                             "Next-open model uses daily open proxy, not broker-confirmed fills, spreads or slippage",
@@ -105,10 +105,11 @@ def evaluate(rows,horizon,pattern,cost_bps=50):
 
 def main():
     output={"research_only":True,"trade_ready":False,"horizons":list(HORIZONS),
-            "cost_bps_round_trip":list(COST_BPS),"candidates":[]}
+            "cost_bps_round_trip":list(COST_BPS),"requested_history":"5y",
+            "costs_are_illustrative":True,"candidates":[]}
     for symbol in SYMBOLS:
         try:
-            rows=bars(symbol)
+            rows=bars(symbol, history_range="5y")
             if len(rows)<150:raise ValueError("INSUFFICIENT_BARS")
             output["candidates"].append({"symbol":symbol,"bars":len(rows),
                 "patterns":{p:{str(h):evaluate(rows,h,p) for h in HORIZONS} for p in PATTERNS}})
