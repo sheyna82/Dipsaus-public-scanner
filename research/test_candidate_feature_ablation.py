@@ -31,6 +31,12 @@ class AblationTests(unittest.TestCase):
         self.assertEqual(risk['filters']['baseline']['n'],result['cohorts']['baseline']['n'])
         self.assertIsInstance(risk['filters']['baseline']['mean_net_pct'],float)
         self.assertIn('mae_breach_fraction',risk['filters']['baseline'])
+        execution=result['execution_sensitivity']['baseline']
+        self.assertFalse(execution['trade_ready'])
+        self.assertEqual(execution['n']+execution['blocked_n'],result['cohorts']['baseline']['n'])
+        if execution['n']:
+            vals=execution['mean_net_pct_by_entry_slippage_bps']
+            self.assertGreaterEqual(vals['0'],vals['50'])
 
     def test_cohort_keys_predeclared(self):
         self.assertEqual(len(FILTERS),5)
