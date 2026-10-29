@@ -12,7 +12,7 @@ def simulate(signals, *, max_positions=6, capital=21000.0, tranche=3500.0, prior
         raise ValueError("INVALID_CAPACITY")
     if not all(isinstance(x, (int,float)) and not isinstance(x,bool) and math.isfinite(x) and x>0 for x in (capital,tranche)):
         raise ValueError("INVALID_CAPITAL")
-    if priority_mode not in ("symbol_asc","symbol_desc","stable_hash"):
+    if priority_mode not in ("symbol_asc","symbol_desc","stable_hash","score_desc"):
         raise ValueError("INVALID_PRIORITY_MODE")
     if not isinstance(signals,list):
         raise ValueError("INVALID_SIGNALS")
@@ -41,6 +41,11 @@ def simulate(signals, *, max_positions=6, capital=21000.0, tranche=3500.0, prior
     for day in sorted(set(by_day)|{x["exit_day"] for x in signals}):
         def priority(row):
             symbol=row["symbol"]
+            if priority_mode=="score_desc":
+                score=row.get("score")
+                if not isinstance(score,(int,float)) or isinstance(score,bool) or not math.isfinite(score):
+                    raise ValueError("INVALID_SELECTION_SCORE")
+                return (-score,symbol)
             if priority_mode=="symbol_asc":
                 return (row.get("priority",0),symbol)
             if priority_mode=="symbol_desc":
