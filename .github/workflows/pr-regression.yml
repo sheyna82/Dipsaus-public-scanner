@@ -150,3 +150,7 @@ jobs:
       - name: Test benchmark-relative sensitivity offline
         if: always()
         run: python -m unittest discover -s research -p 'test_candidate_benchmark_excess.py' -v
+
+      - name: Test pre-entry feature no-lookahead
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_preentry_features.py' -v
