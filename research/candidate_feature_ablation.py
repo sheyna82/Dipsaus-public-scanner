@@ -10,6 +10,7 @@ from candidate_ablation_risk_diagnostics import compare as compare_risk
 from candidate_matched_count_placebo import placebo
 from candidate_calendar_matched_placebo import calendar_placebo
 from candidate_execution_sensitivity import execution_sensitivity
+from candidate_portfolio_capacity import compare_ablation_portfolios
 
 FILTERS=("baseline",)+tuple(FEATURE_DIRECTIONS)+("all_three",)
 
@@ -124,6 +125,7 @@ def main():
         except Exception as exc:
             output["candidates"].append({"symbol":symbol,"status":"DATA_BLOCKED",
                                          "error_type":type(exc).__name__})
+    output["portfolio_capacity_25bps"]={p:compare_ablation_portfolios(output,pattern=p) for p in PATTERNS}
     path=Path("reports/candidate_feature_ablation.json")
     path.parent.mkdir(parents=True,exist_ok=True)
     path.write_text(json.dumps(output,indent=2),encoding="utf-8")
