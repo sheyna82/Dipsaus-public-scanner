@@ -1,0 +1,78 @@
+"""Read-only integration of existing candidate snapshot and evidence artifacts.
+
+No new forecasts, broker connections or orders. Unknown evidence fails closed.
+"""
+import json
+from pathlib import Path
+
+from candidate_decision_evidence_gate import assess
+
+
+def build(snapshot, evidence_report):
+    if not isinstance(snapshot, dict) or not isinstance(snapshot.get("candidates"), list):
+        raise ValueError("INVALID_SNAPSHOT")
+    if not isinstance(evidence_report, dict) or not isinstance(evidence_report.get("candidates"), list):
+        raise ValueError("INVALID_EVIDENCE_REPORT")
+    if snapshot.get("research_only") is not True or evidence_report.get("research_only") is not True:
+        raise ValueError("RESEARCH_ONLY_SOURCE_REQUIRED")
+    evidence_by_symbol = {}
+    for row in evidence_report["candidates"]:
+        if not isinstance(row, dict) or not isinstance(row.get("symbol"), str):
+            raise ValueError("INVALID_EVIDENCE_ROW")
+        evidence_by_symbol.setdefault(row["symbol"], []).append(row)
+    output = []
+    seen = set()
+    for snap in snapshot["candidates"]:
+        if not isinstance(snap, dict) or not isinstance(snap.get("symbol"), str) or not snap["symbol"].strip():
+            raise ValueError("INVALID_SNAPSHOT_ROW")
+        symbol = snap["symbol"].strip()
+        if symbol in seen:
+            raise ValueError("DUPLICATE_SNAPSHOT_SYMBOL")
+        seen.add(symbol)
+        # Deliberately do not promote descriptive cohort metrics to forecasts.
+        gate = assess({"symbol": symbol})
+        blockers = list(dict.fromkeys([*snap.get("blocks", []), *gate["missing_or_failed_gates"]]))
+        if snap.get("decision") == "DATA_BLOCKED":
+            blockers.append("PRICE_DATA_UNAVAILABLE")
+        if not evidence_by_symbol.get(symbol):
+            blockers.append("NO_MATCHING_DESCRIPTIVE_EVIDENCE")
+        output.append({
+            "symbol": symbol,
+            "status": "RESEARCH_ONLY_NOT_TRADE_READY",
+            "trade_ready": False,
+            "automatic_orders": False,
+            "manual_decision_required": True,
+            "snapshot_decision": snap.get("decision"),
+            "last_bar_utc": snap.get("last_bar_utc"),
+            "last_close": snap.get("last_close"),
+            "snapshot_source": snap.get("source"),
+            "descriptive_evidence_rows": len(evidence_by_symbol.get(symbol, [])),
+            "independently_validated_estimates": gate["estimates"],
+            "blockers": list(dict.fromkeys(blockers)),
+            "portfolio_capacity": "NOT_EVALUATED_WITHOUT_DATED_ELIGIBLE_SIGNALS",
+            "limitations": [
+                "Snapshot quote is not a verified executable bid/ask",
+                "Descriptive historical cohorts are not calibrated predictions",
+                "No broker fees, FX, sector risk or live fill verification",
+                "No portfolio-capacity inference without independently dated eligible signals",
+            ],
+        })
+    return {
+        "research_only": True, "trade_ready": False, "automatic_orders": False,
+        "source_artifacts": ["candidate_entry_research.json", "candidate_decision_evidence.json"],
+        "candidates": output,
+    }
+
+
+def main():
+    source_dir = Path("reports")
+    snapshot = json.loads((source_dir / "candidate_entry_research.json").read_text(encoding="utf-8"))
+    evidence = json.loads((source_dir / "candidate_decision_evidence.json").read_text(encoding="utf-8"))
+    result = build(snapshot, evidence)
+    target = source_dir / "candidate_integrated_readonly.json"
+    target.write_text(json.dumps(result, indent=2), encoding="utf-8")
+    print(json.dumps({"status": "RESEARCH_ONLY", "candidates": len(result["candidates"])}))
+
+
+if __name__ == "__main__":
+    main()
