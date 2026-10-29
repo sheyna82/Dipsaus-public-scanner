@@ -132,6 +132,11 @@ class IntegratedReadonlyTests(unittest.TestCase):
         )
         self.assertTrue(timeline["cross_component_consistency"]["capacity_ledger_timeline_matched"])
         self.assertFalse(timeline["cross_component_consistency"]["portfolio_evidence_complete"])
+        self.assertTrue(timeline["cross_component_consistency"]["capacity_ledger_net_returns_matched"])
+        with self.assertRaises(ValueError):
+            build(snap, evidence, reconciled_portfolio_inputs=inputs,
+                  dated_signals=[{"symbol": "ABC", "entry_day": 0, "exit_day": 1,
+                                  "net_return_pct": 3}])
         with self.assertRaises(ValueError):
             build(snap, evidence, reconciled_portfolio_inputs=inputs,
                   dated_signals=[{"symbol": "ABC", "entry_day": 1, "exit_day": 2, "net_return_pct": 2}])
