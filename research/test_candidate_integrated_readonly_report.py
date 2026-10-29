@@ -102,6 +102,25 @@ class IntegratedReadonlyTests(unittest.TestCase):
         self.assertFalse(gate["trade_ready"])
         self.assertIn("PORTFOLIO_METRICS_NOT_SAME_COHORT_VERIFIED", gate["blockers"])
 
+    def test_arithmetic_reconciliation_is_not_source_verification(self):
+        from datetime import date
+        snap = {"research_only": True, "candidates": [{"symbol": "ABC", "decision": "WAIT", "blocks": []}]}
+        evidence = {"research_only": True, "candidates": []}
+        inputs = {
+            "trades": [{"ticker": "ABC", "entry_date": date(2026, 10, 1),
+                        "exit_date": date(2026, 10, 2), "net_return_pct": 2, "score": 1}],
+            "daily_marks": {(date(2026, 10, 1), "ABC"): 3500},
+            "trading_dates": [date(2026, 10, 1), date(2026, 10, 2)]
+        }
+        result = build(snap, evidence, reconciled_portfolio_inputs=inputs)
+        self.assertTrue(result["cross_component_consistency"]["cash_equity_reconciled"])
+        self.assertFalse(result["cross_component_consistency"]["portfolio_evidence_complete"])
+        self.assertFalse(result["reconciled_portfolio_research"]["independent_provenance_verified"])
+        self.assertFalse(result["trade_ready"])
+        broken = {**inputs, "daily_marks": {}}
+        with self.assertRaises(ValueError):
+            build(snap, evidence, reconciled_portfolio_inputs=broken)
+
     def test_malformed_blockers_fail_closed(self):
         evidence = {"research_only": True, "candidates": []}
         for blockers in ("NOT_A_LIST", [None], [123]):
