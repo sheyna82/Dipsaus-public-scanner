@@ -14,6 +14,7 @@ from research.swing_lifecycle.evaluate_existing_ohlcv_pilot import evaluate_pilo
 from research.swing_lifecycle.evaluate_warning_risk_archive import evaluate_archive
 from research.swing_lifecycle.warning_quarter_robustness import evaluate as quarter_robustness
 from research.swing_lifecycle.warning_preentry_regimes import evaluate as preentry_regimes
+from research.swing_lifecycle.warning_decision_holdout import evaluate as decision_holdout
 
 SYMBOLS = (
     ("ASML.AS", "technology"), ("INGA.AS", "financials"),
@@ -104,6 +105,11 @@ def run(output, *, cutoff):
                     output / "warning_risk_cases.csv", euro_archive)
                 (output / "warning_preentry_regimes.json").write_text(
                     json.dumps(report["eur_preentry_regimes"], indent=2),
+                    encoding="utf-8")
+                report["eur_warning_decision_holdout"] = decision_holdout(
+                    output / "warning_risk_cases.csv", euro_archive)
+                (output / "warning_decision_holdout.json").write_text(
+                    json.dumps(report["eur_warning_decision_holdout"], indent=2),
                     encoding="utf-8")
                 report["eur_only_confirmation_sensitivity"] = {
                     str(n): evaluate_pilot_artifact(
