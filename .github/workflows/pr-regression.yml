@@ -37,6 +37,8 @@ on:
       - 'research/test_candidate_ablation_risk_diagnostics.py'
       - 'research/candidate_decision_evidence_gate.py'
       - 'research/test_candidate_decision_evidence_gate.py'
+      - 'research/candidate_matched_count_placebo.py'
+      - 'research/test_candidate_matched_count_placebo.py'
       - 'research/candidate_decision_evidence_report.py'
       - 'research/test_candidate_decision_evidence_report.py'
       - '.github/workflows/pr-regression.yml'
@@ -216,3 +218,7 @@ jobs:
       - name: Test candidate evidence report offline
         if: always()
         run: python -m unittest discover -s research -p 'test_candidate_decision_evidence_report.py' -v
+
+      - name: Test matched-count placebo controls offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_matched_count_placebo.py' -v
