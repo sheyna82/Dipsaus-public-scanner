@@ -46,6 +46,7 @@ def main():
             "method":"NEXT_OPEN_TO_HORIZON_CLOSE_BENCHMARK_EXCESS",
             "horizon_sessions":HORIZON,"stock_roundtrip_cost_bps":COST_BPS,
             "benchmarks":BENCHMARKS,
+            "benchmark_comparability":"US_USD_SAME_CURRENCY; EU_CROSS_CURRENCY_BLOCKED",
             "limitations":["SPY and VGK are broad proxies, not sector-matched controls",
                            "Yahoo daily unadjusted bars; corporate actions and currency unverified",
                            "Overlapping cross-symbol events are correlated",
@@ -59,6 +60,11 @@ def main():
     for symbol in RESEARCH_UNIVERSE:
         key=market(symbol)
         try:
+            if key=="EU":
+                output["candidates"].append({"symbol":symbol,"benchmark":BENCHMARKS[key],
+                    "status":"BLOCKED_CROSS_CURRENCY_BENCHMARK",
+                    "trade_ready":False})
+                continue
             if not bench[key]:raise ValueError("BENCHMARK_DATA_UNAVAILABLE")
             stock=bars(symbol,history_range="5y")
             if len(stock)<750:raise ValueError("INSUFFICIENT_STOCK_HISTORY")
