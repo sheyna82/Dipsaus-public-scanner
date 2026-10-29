@@ -126,6 +126,15 @@ class IntegratedReadonlyTests(unittest.TestCase):
             build(snap, evidence, reconciled_portfolio_inputs=inputs,
                   equity_observations=[{"date": "2026-10-01", "equity": 21000},
                                        {"date": "2026-10-02", "equity": 22000}])
+        timeline = build(
+            snap, evidence, reconciled_portfolio_inputs=inputs,
+            dated_signals=[{"symbol": "ABC", "entry_day": 0, "exit_day": 1, "net_return_pct": 2}]
+        )
+        self.assertTrue(timeline["cross_component_consistency"]["capacity_ledger_timeline_matched"])
+        self.assertFalse(timeline["cross_component_consistency"]["portfolio_evidence_complete"])
+        with self.assertRaises(ValueError):
+            build(snap, evidence, reconciled_portfolio_inputs=inputs,
+                  dated_signals=[{"symbol": "ABC", "entry_day": 1, "exit_day": 2, "net_return_pct": 2}])
         broken = {**inputs, "daily_marks": {}}
         with self.assertRaises(ValueError):
             build(snap, evidence, reconciled_portfolio_inputs=broken)
