@@ -148,6 +148,34 @@ class IntegratedReadonlyTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             build(snap, evidence, reconciled_portfolio_inputs=broken)
 
+    def test_competing_entries_match_ledger_score_priority(self):
+        from datetime import date, timedelta
+        from candidate_portfolio_capacity import simulate
+        from research_swing_chronological_ledger import simulate_chronological_portfolio
+        start = date(2026, 10, 1)
+        end = start + timedelta(days=1)
+        symbols = ["AAA", "BBB", "CCC", "DDD", "EEE", "FFF", "ZZZ"]
+        signals = [{"symbol": symbol, "entry_day": 0, "exit_day": 1,
+                    "net_return_pct": 0, "score": 100 if symbol == "ZZZ" else 1}
+                   for symbol in symbols]
+        trades = [{"ticker": row["symbol"], "entry_date": start, "exit_date": end,
+                   "net_return_pct": row["net_return_pct"], "score": row["score"]}
+                  for row in signals]
+        capacity = simulate(signals, priority_mode="score_desc")
+        ledger = simulate_chronological_portfolio(trades)
+        capacity_symbols = {row["symbol"] for row in capacity["accepted_signals"]}
+        ledger_symbols = {row["ticker"] for row in ledger["ledger"]
+                          if row["action"] == "entry"}
+        self.assertEqual(capacity_symbols, ledger_symbols)
+        self.assertEqual(capacity_symbols, set(symbols) - {"FFF"})
+        self.assertEqual(capacity["rejected_n"], ledger["rejected_count"])
+        self.assertEqual(capacity["realized_pnl"], 0)
+        self.assertEqual(ledger["realized_net_pnl"], "0")
+        self.assertEqual(simulate(signals)["accepted_signals"][-1]["symbol"], "FFF")
+        with self.assertRaises(ValueError):
+            simulate([{**signals[0], "score": float("nan")}],
+                     priority_mode="score_desc")
+
     def test_malformed_blockers_fail_closed(self):
         evidence = {"research_only": True, "candidates": []}
         for blockers in ("NOT_A_LIST", [None], [123]):
