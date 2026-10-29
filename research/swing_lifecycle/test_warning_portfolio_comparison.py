@@ -42,6 +42,20 @@ class PortfolioWarningComparisonTests(unittest.TestCase):
                          if x["action"] == "exit"]
         self.assertLess(guarded_exits[0], original_exits[0])
 
+    def test_released_cash_can_fund_later_trade(self):
+        first = case(ticker="AAA", warning=True)
+        second = case(ticker="BBB")
+        second["entry_index"] = 26
+        second["baseline_exit_index"] = 30
+        result = compare_warning_exit_portfolios(
+            [first, second], initial_capital=3500,
+            tranche=3500, max_positions=1, cost_bps_per_side=0)
+        self.assertEqual(result["baseline"]["rejected_count"], 1)
+        self.assertEqual(result["warning_protected"]["rejected_count"], 0)
+        self.assertEqual(
+            [row["ticker"] for row in result["warning_protected"]["ledger"]
+             if row["action"] == "entry"], ["AAA", "BBB"])
+
     def test_duplicate_trade_rejected(self):
         with self.assertRaisesRegex(ValueError, "duplicate_trade"):
             compare_warning_exit_portfolios([case(), case()])
