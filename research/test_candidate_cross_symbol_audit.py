@@ -52,6 +52,12 @@ class CrossSymbolAuditTests(unittest.TestCase):
         self.assertEqual(p["matching_diagnostic_coverage"],"COMPLETE")
         self.assertEqual(p["matching_diagnostic_consistency"],"PASS")
 
+    def test_missing_diagnostics_are_not_considered_valid(self):
+        a=sample("AAA",20,5,1)
+        p=audit({"candidates":[a]})["patterns"]["breakout_prior20"]
+        self.assertEqual(p["matching_diagnostic_coverage"],"INCOMPLETE")
+        self.assertEqual(p["matching_diagnostic_consistency"],"BLOCKED")
+
     def test_inconsistent_matching_diagnostics_block(self):
         a=sample("AAA",20,5,1)
         for pattern in ("breakout_prior20","recovery_from_prior20_low_3to15pct"):
