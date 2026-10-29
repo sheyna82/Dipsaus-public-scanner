@@ -179,10 +179,11 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
         if active or sorted(capacity_keys) != sorted(ledger_keys):
             raise ValueError("CAPACITY_LEDGER_TIMELINE_MISMATCH")
         from decimal import Decimal
+        accepted_keys = {(row["symbol"], row["entry_day"], row["exit_day"]) for row in accepted}
         capacity_returns = sorted((row["symbol"], dates[row["entry_day"]],
                                    dates[row["exit_day"]], Decimal(str(row["net_return_pct"])))
                                   for row in dated_signals
-                                  if (row["symbol"], dates[row["entry_day"]], dates[row["exit_day"]]) in capacity_keys)
+                                  if (row["symbol"], row["entry_day"], row["exit_day"]) in accepted_keys)
         ledger_returns = sorted((row["ticker"], row["entry_date"], row["exit_date"],
                                  Decimal(str(row["net_return_pct"])))
                                 for row in reconciled_portfolio_inputs["trades"]
