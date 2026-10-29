@@ -27,6 +27,21 @@ class PortfolioWarningComparisonTests(unittest.TestCase):
         self.assertGreater(Decimal(result["difference_realized_pnl"]), 0)
         self.assertEqual(result["candidate_diagnostics"][0]["candidate_holding_sessions"], 4)
 
+    def test_warning_can_destroy_upside_in_rebound(self):
+        example = case(warning=True)
+        example["bars"][29].update(open=120, high=122, low=119, close=121)
+        result = compare_warning_exit_portfolios([example])
+        self.assertLess(Decimal(result["difference_realized_pnl"]), 0)
+        self.assertEqual(result["candidate_diagnostics"][0]["candidate_holding_sessions"], 4)
+
+    def test_warning_releases_capital_earlier(self):
+        result = compare_warning_exit_portfolios([case(warning=True)])
+        original_exits = [x["date"] for x in result["baseline"]["ledger"]
+                          if x["action"] == "exit"]
+        guarded_exits = [x["date"] for x in result["warning_protected"]["ledger"]
+                         if x["action"] == "exit"]
+        self.assertLess(guarded_exits[0], original_exits[0])
+
     def test_duplicate_trade_rejected(self):
         with self.assertRaisesRegex(ValueError, "duplicate_trade"):
             compare_warning_exit_portfolios([case(), case()])
