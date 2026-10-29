@@ -4,12 +4,17 @@ No new forecasts, broker connections or orders. Unknown evidence fails closed.
 """
 import json
 from pathlib import Path
+import sys
+
+# Reuse the already-tested root-level equity risk engine.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from research_swing_equity_risk import summarize_equity_curve
 
 from candidate_decision_evidence_gate import assess
 from candidate_portfolio_capacity import simulate
 
 
-def build(snapshot, evidence_report, *, dated_signals=None):
+def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=None):
     if not isinstance(snapshot, dict) or not isinstance(snapshot.get("candidates"), list):
         raise ValueError("INVALID_SNAPSHOT")
     if not isinstance(evidence_report, dict) or not isinstance(evidence_report.get("candidates"), list):
@@ -73,7 +78,17 @@ def build(snapshot, evidence_report, *, dated_signals=None):
             raise ValueError("SIGNAL_NOT_IN_CANDIDATE_SNAPSHOT")
         portfolio = simulate(dated_signals)
         portfolio["limitations"].append("Capacity is descriptive; dated signals must be independently validated and point-in-time eligible")
+    if equity_observations is None:
+        equity_risk = {"status": "NOT_EVALUATED", "reason": "DATED_EQUITY_MARKS_NOT_PROVIDED", "trade_ready": False}
+    else:
+        equity_risk = summarize_equity_curve(equity_observations)
+        equity_risk["limitations"] = [
+            "Observed close-to-close drawdown is not a forward stress forecast",
+            "Caller must verify mark provenance, chronology, FX and cash reconciliation",
+            "Not a live portfolio valuation or independent predictive validation",
+        ]
     return {
+        "portfolio_equity_risk": equity_risk,
         "portfolio_capacity_simulation": portfolio,
         "research_only": True, "trade_ready": False, "automatic_orders": False,
         "source_artifacts": ["candidate_entry_research.json", "candidate_decision_evidence.json"],
