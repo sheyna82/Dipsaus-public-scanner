@@ -37,6 +37,11 @@ def audit(data):
             "distinct_signal_calendar_dates":len(date_counts),
             "dates_with_multiple_symbols_signaling":sum(n>1 for n in date_counts.values()),
             "maximum_symbols_signaling_same_day":max(date_counts.values(),default=0),
+            "signal_events_on_shared_dates":sum(n for n in date_counts.values() if n>1),
+            "fraction_signal_events_on_shared_dates":round(
+                sum(n for n in date_counts.values() if n>1)/sum(date_counts.values()),3
+            ) if date_counts else None,
+            "unique_dates_as_maximum_independent_calendar_clusters":len(date_counts),
             "signal_date_coverage_status":"AVAILABLE" if all("signal_dates_utc" in x for x,_ in observations) else "INCOMPLETE",
             "trade_ready":False}
     return result
