@@ -81,6 +81,27 @@ class IntegratedReadonlyTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             build(snap, evidence, dated_signals=signals, sector_by_symbol={"ABC": "Technology"})
 
+    def test_cross_component_does_not_claim_reconciliation(self):
+        snap = {"research_only": True, "candidates": [
+            {"symbol": "ABC", "decision": "WAIT", "blocks": []}
+        ]}
+        evidence = {"research_only": True, "candidates": []}
+        result = build(
+            snap, evidence,
+            dated_signals=[{"symbol": "ABC", "entry_day": 1, "exit_day": 3, "net_return_pct": 1}],
+            sector_by_symbol={"ABC": "Technology"},
+            equity_observations=[{"date": "2026-10-01", "equity": 21000},
+                                 {"date": "2026-10-02", "equity": 25000}]
+        )
+        gate = result["cross_component_consistency"]
+        self.assertTrue(gate["capacity_available"])
+        self.assertTrue(gate["sector_exposure_available"])
+        self.assertTrue(gate["equity_risk_available"])
+        self.assertFalse(gate["cash_equity_reconciled"])
+        self.assertFalse(gate["portfolio_evidence_complete"])
+        self.assertFalse(gate["trade_ready"])
+        self.assertIn("PORTFOLIO_METRICS_NOT_SAME_COHORT_VERIFIED", gate["blockers"])
+
     def test_malformed_blockers_fail_closed(self):
         evidence = {"research_only": True, "candidates": []}
         for blockers in ("NOT_A_LIST", [None], [123]):
