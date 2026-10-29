@@ -123,7 +123,29 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
             "Caller must verify mark provenance, chronology, FX and cash reconciliation",
             "Not a live portfolio valuation or independent predictive validation",
         ]
+    checks = {
+        "research_only": True,
+        "trade_ready": False,
+        "capacity_available": portfolio.get("status") == "DESCRIPTIVE_PORTFOLIO_SIMULATION",
+        "sector_exposure_available": concentration.get("status") == "DESCRIPTIVE_ACCEPTED_TRADE_EXPOSURE",
+        "equity_risk_available": equity_risk.get("risk_estimate_type") == "sampled_portfolio_equity_only",
+        "cash_equity_reconciled": False,
+        "signal_provenance_verified": False,
+        "portfolio_evidence_complete": False,
+        "blockers": [
+            "SIGNAL_PROVENANCE_NOT_INDEPENDENTLY_VERIFIED",
+            "CASH_EQUITY_RECONCILIATION_NOT_PROVIDED",
+            "PORTFOLIO_METRICS_NOT_SAME_COHORT_VERIFIED",
+        ],
+    }
+    if not checks["capacity_available"]:
+        checks["blockers"].append("CAPACITY_NOT_EVALUATED")
+    if not checks["sector_exposure_available"]:
+        checks["blockers"].append("SECTOR_EXPOSURE_NOT_EVALUATED")
+    if not checks["equity_risk_available"]:
+        checks["blockers"].append("EQUITY_RISK_NOT_EVALUATED")
     return {
+        "cross_component_consistency": checks,
         "portfolio_concentration": concentration,
         "portfolio_equity_risk": equity_risk,
         "portfolio_capacity_simulation": portfolio,
