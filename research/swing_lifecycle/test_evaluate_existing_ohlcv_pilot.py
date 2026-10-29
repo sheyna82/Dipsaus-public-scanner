@@ -33,6 +33,16 @@ class ExistingOhlcvPilotTests(unittest.TestCase):
         self.assertGreater(report["result"]["holdout"]["trade_candidates"], 0)
         self.assertFalse(report["historical_edge_proven"])
 
+    def test_rejects_corrupt_provider_bar(self):
+        self.write_fixture()
+        with gzip.open(self.path, "rt", encoding="utf-8") as stream:
+            record = json.loads(stream.readline())
+        record["bars"][40][2] = 80
+        with gzip.open(self.path, "wt", encoding="utf-8") as stream:
+            stream.write(json.dumps(record) + "\\n")
+        with self.assertRaisesRegex(ValueError, "invalid_pilot_ohlc"):
+            evaluate_pilot_artifact(self.path, cutoff=date(2025, 4, 1))
+
     def test_rejects_invalid_hold(self):
         self.write_fixture()
         with self.assertRaisesRegex(ValueError, "invalid_holding_sessions"):
