@@ -74,6 +74,9 @@ def evaluate(cases_path, archive_path, *, cutoff=CUTOFF):
             "placebo_minus_hold_pp": (placebo_open - baseline_open) / entry_open * 100,
             "placebo_mae_improvement_pp": (min(lows) / entry_open - 1) * 100 - float(row["baseline_mae_pct"]),
         })
+    if not result:
+        raise ValueError("no_out_of_sample_placebo_candidates")
+
     def aggregate(subset):
         n = len(subset)
         return {
