@@ -3,9 +3,18 @@
 No raw private state is returned or written. Matching by ticker alone is never
 sufficient to identify one screenshot observation; ambiguity fails closed.
 """
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from research_notification_signal_cases import CASES_2026_10_26
 from research_notification_timestamp_extract import verified_notification_times
+
+
+# Scanner state key prefixes are not identical to screenshot research labels.
+# This mapping is only for candidate discovery, never proof of identity.
+KEY_FAMILY_TO_OBSERVED = {
+    "US-EARLY": "EARLY_RECOVERY",
+    "ENTRY": "BREAKOUT_HOLD_RETEST",
+    "EXIT": "EXIT_ZONE_REVIEW",
+}
 
 
 def match_observed_notifications(state, cases=CASES_2026_10_26, *,
@@ -24,7 +33,9 @@ def match_observed_notifications(state, cases=CASES_2026_10_26, *,
     for index, case in enumerate(cases):
         matches = by_symbol[case.symbol]
         exact_family_candidates = sum(
-            record["key_family"] == case.family for record in matches
+            (record["key_family"] == case.family or
+             KEY_FAMILY_TO_OBSERVED.get(record["key_family"]) == case.family)
+            for record in matches
         )
         if len(matches) == 1:
             status = "unique_symbol_adjacent_utc_days_candidate_unverified_link"
@@ -54,7 +65,7 @@ def match_observed_notifications(state, cases=CASES_2026_10_26, *,
         "cases": results,
         "warnings": [
             "Adjacent UTC date matching is only a candidate lookup, not screenshot identity proof",
-            "Exact family matching is descriptive and does not verify scanner origin",
+            "Key-prefix family mapping is approximate and does not verify scanner origin",
             "Private timestamps, key families and delivery statuses are not exported",
             "No historical profit or execution claim is supported",
         ],
