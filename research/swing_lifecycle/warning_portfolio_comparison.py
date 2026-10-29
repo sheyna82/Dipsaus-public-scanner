@@ -11,7 +11,7 @@ from research.swing_lifecycle.warning_exit_candidate import warning_exit_candida
 
 def compare_warning_exit_portfolios(cases, *, initial_capital=21000,
                                     tranche=3500, max_positions=6,
-                                    cost_bps_per_side=10):
+                                    cost_bps_per_side=10, confirmation_sessions=1):
     if not isinstance(cases, (list, tuple)) or not cases:
         raise ValueError("empty_cases")
     if isinstance(cost_bps_per_side, bool) or not isinstance(cost_bps_per_side, (int, float)) or not 0 <= cost_bps_per_side < 10000:
@@ -29,7 +29,8 @@ def compare_warning_exit_portfolios(cases, *, initial_capital=21000,
             raise ValueError("duplicate_trade")
         seen.add(key)
         candidate = warning_exit_candidate(
-            bars, ticker=ticker, entry_index=entry, baseline_exit_index=end)
+            bars, ticker=ticker, entry_index=entry, baseline_exit_index=end,
+            confirmation_sessions=confirmation_sessions)
         entry_open = Decimal(str(bars[entry]["open"]))
         if not entry_open.is_finite() or entry_open <= 0:
             raise ValueError("invalid_entry_open")
