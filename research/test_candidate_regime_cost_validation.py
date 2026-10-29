@@ -95,6 +95,17 @@ class RegimeCostTests(unittest.TestCase):
         result=model.summarize_next_open(rows(),[],10,50)
         self.assertEqual(result["status"],"NO_SAMPLES")
 
+    def test_signal_dates_match_selected_nonoverlapping_holdout(self):
+        data=rows(300)
+        for i in range(50,300):
+            data[i]["close"]=100+i/10
+            data[i]["high"]=data[i]["close"]+1
+            data[i]["low"]=data[i]["close"]-1
+            data[i]["open"]=data[i]["close"]
+        result=model.evaluate(data,5,"above_both_mas")
+        self.assertEqual(len(result["signal_dates_utc"]),result["signal_n"])
+        self.assertEqual(len(set(result["signal_dates_utc"])),result["signal_n"])
+
     def test_short_holdout_blocks(self):
         self.assertEqual(model.evaluate(rows(120), 15, "breakout_prior20")["status"],
                          "INSUFFICIENT_TEST_WINDOW")
