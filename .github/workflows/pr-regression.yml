@@ -154,3 +154,7 @@ jobs:
       - name: Test pre-entry feature no-lookahead
         if: always()
         run: python -m unittest discover -s research -p 'test_candidate_preentry_features.py' -v
+
+      - name: Test training-only feature thresholds
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_feature_thresholds.py' -v
