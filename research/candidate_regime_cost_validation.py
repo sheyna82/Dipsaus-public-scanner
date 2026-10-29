@@ -61,6 +61,19 @@ def summarize_next_open(rows,indices,horizon,cost_bps):
             "median_underwater_close_days":statistics.median(underwater_days),
             "fraction_negative_net_at_exit":round(sum(x<0 for x in returns)/len(returns),3)}
 
+def risk_screen(metrics, matched_n):
+    """Conservative research triage, not a predictive score or buy signal."""
+    if metrics.get("status") != "RESEARCH_ONLY" or metrics.get("n",0)<30:
+        return {"status":"INSUFFICIENT_INDEPENDENT_SIGNALS","trade_ready":False}
+    if matched_n<15:
+        return {"status":"INSUFFICIENT_MATCHED_CONTROLS","trade_ready":False}
+    if (metrics["fraction_mae_below_minus_10pct"]>0.20 or
+        metrics["worst_mae_pct"]<=-20 or
+        metrics["fraction_negative_net_at_exit"]>0.45):
+        return {"status":"RISK_REJECTED","trade_ready":False}
+    return {"status":"FURTHER_VALIDATION_REQUIRED","trade_ready":False}
+
+
 def evaluate(rows,horizon,pattern,cost_bps=50):
     """Test-only last 35% of timeline; controls matched on MA20/MA50 regime.
     Historical matching uses only features known at entry. No parameter tuning."""
@@ -108,6 +121,8 @@ def evaluate(rows,horizon,pattern,cost_bps=50):
                                              "matched_controls":summarize(rows,controls,horizon,bps),
                                              "next_open_signals":summarize_next_open(rows,signal,horizon,bps),
                                              "next_open_matched_controls":summarize_next_open(rows,controls,horizon,bps)}
+    results["risk_screen_50bps"] = risk_screen(
+        results["cost_scenarios"]["50"]["next_open_signals"],len(controls))
     return results
 
 def main():
