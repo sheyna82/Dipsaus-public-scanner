@@ -179,15 +179,23 @@ def main():
     def data_digest(rows):
         payload = json.dumps(rows, sort_keys=True, separators=(',', ':'), allow_nan=False)
         return hashlib.sha256(payload.encode('utf-8')).hexdigest()
+    snapshot = {"format": "DIPSAUS_OOS_OHLCV_V1",
+                "benchmark": {"symbol": "SPY", "bars": benchmark},
+                "stocks": {symbol: portfolio_stocks[symbol] for symbol in sorted(portfolio_stocks)}}
+    snapshot_path = Path("reports/candidate_feature_oos_input_snapshot.json")
+    snapshot_path.parent.mkdir(parents=True, exist_ok=True)
+    snapshot_path.write_text(json.dumps(snapshot, sort_keys=True, separators=(",", ":"), allow_nan=False), encoding="utf-8")
     output["input_data_provenance"] = {
         "hash_algorithm": "sha256_canonical_json_sorted_keys",
         "benchmark": {"symbol": "SPY", "rows": len(benchmark),
                       "sha256": data_digest(benchmark)},
         "stocks": {symbol: {"rows": len(rows), "sha256": data_digest(rows)}
                    for symbol, rows in sorted(portfolio_stocks.items())},
-        "data_frozen": False,
+        "data_frozen": True,
+        "snapshot_file": str(snapshot_path),
+        "snapshot_format": "DIPSAUS_OOS_OHLCV_V1",
         "replay_from_artifact": False,
-        "limitations": ["Hashes detect changes but do not store raw historical bars",
+        "limitations": ["Snapshot retains downloaded raw unadjusted bars but has not been independently verified",
                         "Provider may revise historical unadjusted OHLCV"]}
     output["portfolio_oos"]={
         p:portfolio_oos_pair(portfolio_stocks,benchmark,p)
