@@ -251,6 +251,20 @@ class IntegratedReadonlyTests(unittest.TestCase):
         self.assertFalse(assumptions["independent_cost_provenance_verified"])
         self.assertEqual(set(result["comparison"]), set(FILTERS))
 
+    def test_shared_session_calendar_excludes_weekend_and_rejects_bad_endpoints(self):
+        from candidate_portfolio_capacity import simulate, verified_session_occupancy
+        portfolio=simulate([{"symbol":"ABC","entry_day":1,"exit_day":5,
+                             "net_return_pct":2}])
+        result=verified_session_occupancy(portfolio,[1,2,5])
+        self.assertEqual(result["occupied_tranche_sessions"],3)
+        self.assertEqual(result["capital_session_units"],10500)
+        self.assertEqual(result["longest_holding_sessions"],3)
+        self.assertFalse(result["calendar_provenance_independently_verified"])
+        with self.assertRaisesRegex(ValueError,"TRADE_ENDPOINT_NOT_IN_TRADING_CALENDAR"):
+            verified_session_occupancy(portfolio,[1,2,4])
+        with self.assertRaisesRegex(ValueError,"INVALID_TRADING_SESSION_DAYS"):
+            verified_session_occupancy(portfolio,[5,1,2])
+
     def test_calendar_capital_occupancy_counts_entry_and_exit(self):
         from candidate_portfolio_capacity import simulate, calendar_capital_occupancy
         portfolio=simulate([{"symbol":"ABC","entry_day":10,"exit_day":12,
