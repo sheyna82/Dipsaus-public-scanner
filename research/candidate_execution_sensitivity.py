@@ -6,6 +6,29 @@ or malformed records; do not pretend fills are guaranteed.
 """
 import math
 
+def compare_liquidity_gates(bars, signal_index, *, min_dollar_volume=1_000_000):
+    """Paired historical gate comparison, not an executable entry-day filter.
+
+    The legacy gate is used ONLY for retrospective diagnostic comparison.
+    """
+    if type(signal_index) is not int or signal_index < 0 or signal_index + 1 >= len(bars):
+        raise ValueError("INVALID_SIGNAL_INDEX")
+    def dollar_volume(bar, price_field):
+        if not isinstance(bar, dict):
+            return None
+        price, volume = bar.get(price_field), bar.get("volume")
+        if any(not isinstance(v, (int, float)) or isinstance(v, bool)
+               or not math.isfinite(v) or v < 0 for v in (price, volume)):
+            return None
+        return price * volume if price > 0 else None
+    prior = dollar_volume(bars[signal_index], "close")
+    legacy = dollar_volume(bars[signal_index + 1], "open")
+    return {"signal_gate_pass": prior >= min_dollar_volume if prior is not None else False,
+            "legacy_gate_pass": legacy >= min_dollar_volume if legacy is not None else False,
+            "signal_dollar_volume": prior, "legacy_dollar_volume": legacy,
+            "legacy_is_retrospective": True}
+
+
 def execution_sensitivity(bars, signal_index, *, horizon=10, cost_bps=50,
                           adverse_entry_bps=(0, 10, 25, 50),
                           min_entry_dollar_volume=1_000_000):
