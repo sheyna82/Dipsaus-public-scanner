@@ -6,6 +6,11 @@ on:
       - research/offline-technical-risk-20261021
     paths:
       - '.github/workflows/candidate-feature-oos-report.yml'
+      - 'research/candidate_feature_oos.py'
+      - 'research/candidate_portfolio_quarter_diagnostics.py'
+      - 'research/test_candidate_feature_portfolio_oos_pair.py'
+      - 'research/test_candidate_feature_report_portfolio.py'
+      - 'research/test_candidate_portfolio_quarter_diagnostics.py'
 permissions:
   contents: read
 concurrency:
