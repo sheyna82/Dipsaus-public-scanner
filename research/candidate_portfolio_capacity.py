@@ -186,6 +186,12 @@ def compare_ablation_portfolios(report, *, pattern, max_positions=6, trading_ses
             "return_difference_percentage_points":round(
                 current["realized_return_pct"]-legacy["realized_return_pct"],4),
             "legacy_not_executable_at_next_open":True,
+            "daily_equity_risk":{"status":"NOT_EVALUATED",
+                "reason":"INDEPENDENT_DAILY_MARKS_AND_RECONCILED_FILLS_NOT_PROVIDED",
+                "trade_ready":False,
+                "required_engine":"research_swing_portfolio_with_marks.backtest_portfolio_with_marks",
+                "required_risk_engine":"research_swing_equity_risk.summarize_equity_curve",
+                "synthetic_marks_permitted":False},
             "historical_comparison_only":True}
         priority_sensitivity[key]={"scenarios":{mode:{"accepted_n":result["accepted_n"],
                                                 "realized_return_pct":result["realized_return_pct"],
