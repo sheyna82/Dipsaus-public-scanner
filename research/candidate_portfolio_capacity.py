@@ -86,7 +86,7 @@ def simulate(signals, *, max_positions=6, capital=21000.0, tranche=3500.0, prior
             "max_concurrent_positions":max_used,"initial_capital":round(capital,2),
             "ending_cash":round(cash,2),"realized_pnl":round(pnl,2),
             "realized_return_pct":round(100*pnl/capital,4),
-            "accepted_signals":[{"symbol":r["symbol"],"entry_day":r["entry_day"],"exit_day":r["exit_day"]} for r in accepted],
+            "accepted_signals":[{"symbol":r["symbol"],"entry_day":r["entry_day"],"exit_day":r["exit_day"],"net_return_pct":r["net_return_pct"]} for r in accepted],
             "limitations":["Signals and net returns must be computed independently without lookahead",
                            "Fixed tranche and fixed exit; no intra-trade equity or drawdown curve",
                            "No sector concentration or live fill model; priority must be predeclared",
