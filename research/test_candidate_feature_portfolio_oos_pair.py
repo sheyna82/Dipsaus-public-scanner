@@ -81,6 +81,17 @@ class PortfolioOOSPairTests(unittest.TestCase):
         self.assertTrue(all(t["exit_day"]<=result["common_test_end_day"]
                             for t in result["baseline"]["accepted_signals"]))
 
+    def test_nonoverlapping_histories_block_comparison(self):
+        result=portfolio_oos_pair({"OLD":rows(800),
+                                   "NEW":rows(800,offset=1000)}, [], "recovery")
+        self.assertFalse(result["comparable_calendar"])
+        self.assertEqual(result["comparison_status"],
+                         "BLOCKED_NO_SHARED_OUT_OF_SAMPLE_CALENDAR")
+        self.assertEqual(result["excluded_symbols"]["OLD"],
+                         "NO_SHARED_OUT_OF_SAMPLE_CALENDAR")
+        self.assertEqual(result["baseline"]["accepted_n"],0)
+        self.assertFalse(result["trade_ready"])
+
     def test_multiple_symbols_share_capacity_and_do_not_reuse_same_day_proceeds(self):
         stock=rows()
         symbols={f"S{i:02d}":stock for i in range(7)}
