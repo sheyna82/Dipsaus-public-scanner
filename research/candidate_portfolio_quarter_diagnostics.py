@@ -31,8 +31,18 @@ def summarize(report):
                     "realized_pnl_approx": round(pnl, 2),
                     "positive_trades": sum(r["net_return_pct"] > 0 for r in rows),
                 }
+            total_from_trades = sum(
+                tranche * t["net_return_pct"] / 100 for t in trades)
+            if abs(total_from_trades - paired[arm]["realized_pnl"]) > 0.015:
+                raise ValueError("QUARTER_PNL_LEDGER_RECONCILIATION_FAILED")
+            best_quarter = max(quarters, key=lambda q: quarters[q]["realized_pnl_approx"]) if quarters else None
             arms[arm] = {
                 "accepted_n": len(trades),
+                "best_quarter": best_quarter,
+                "pnl_without_best_quarter_approx": (
+                    round(total_from_trades - quarters[best_quarter]["realized_pnl_approx"], 2)
+                    if best_quarter else None),
+                "total_realized_pnl": paired[arm]["realized_pnl"],
                 "positive_quarters": sum(q["realized_pnl_approx"] > 0 for q in quarters.values()),
                 "negative_quarters": sum(q["realized_pnl_approx"] < 0 for q in quarters.values()),
                 "flat_quarters": sum(q["realized_pnl_approx"] == 0 for q in quarters.values()),
