@@ -49,6 +49,24 @@ class TradeTurnoverAuditTests(unittest.TestCase):
         self.assertEqual(result["2026Q2"]["mean_net_trade_return_pct"], -1)
         self.assertFalse(audit(report)["comparisons"]["baseline"]["quarterly_portfolio_returns_verified"])
 
+    def test_prior_observed_quarter_is_non_actionable(self):
+        from datetime import date
+        epoch = date(1970, 1, 1)
+        q1 = (date(2026, 1, 5) - epoch).days
+        q3 = (date(2026, 7, 6) - epoch).days
+        rows = [
+            {"symbol": "AAA", "entry_day": q1, "exit_day": q1 + 2, "net_return_pct": 2},
+            {"symbol": "BBB", "entry_day": q3, "exit_day": q3 + 2, "net_return_pct": -1},
+        ]
+        report = {"portfolio_capacity_25bps": {"recovery_from_prior20_low_3to15pct":
+            {"comparison": {"baseline": {"accepted_signals": rows,
+                                           "realized_return_pct": 0.1}}}}}
+        result = audit(report)["comparisons"]["baseline"]["prior_observed_quarter_diagnostic"]
+        self.assertIsNone(result["2026Q1"]["prior_observed_quarter"])
+        self.assertEqual(result["2026Q3"]["prior_observed_quarter"], "2026Q1")
+        self.assertEqual(result["2026Q3"]["prior_quarter_mean_net_trade_return_pct"], 2)
+        self.assertFalse(result["2026Q3"]["eligible_for_live_filter_choice"])
+
     def test_duplicate_accepted_trade_rejected(self):
         row = {"symbol": "AAA", "entry_day": 1, "exit_day": 3, "net_return_pct": 4}
         report = {"portfolio_capacity_25bps": {"recovery_from_prior20_low_3to15pct":
