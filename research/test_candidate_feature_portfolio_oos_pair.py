@@ -43,7 +43,7 @@ class PortfolioOOSPairTests(unittest.TestCase):
         self.assertEqual(result["filtered"]["accepted_n"],1)
         self.assertEqual(result["filtered"]["accepted_signals"][0]["entry_day"],
                          stock[601]["timestamp"]//86400)
-        self.assertEqual(result["baseline"]["realized_pnl"],0)
+        self.assertAlmostEqual(result["baseline"]["realized_pnl"],-35.0)
         self.assertTrue(all(i<520 or i in (600,620) for i in calls))
         self.assertFalse(result["daily_mark_to_market_verified"])
 
