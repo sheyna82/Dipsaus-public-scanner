@@ -30,6 +30,12 @@ def assess(candidate):
             if key == "expected_holding_sessions" and value <= 0:
                 raise ValueError("INVALID_HOLDING_DURATION")
         estimates[key] = value
+    if (estimates["expected_net_return_pct"] is not None
+            and estimates["expected_net_return_pct"] < -100):
+        raise ValueError("INVALID_EXPECTED_NET_RETURN")
+    if (estimates["historical_mae_p10_pct"] is not None
+            and estimates["historical_mae_p10_pct"] > 0):
+        raise ValueError("INVALID_HISTORICAL_MAE")
     if any(value is None for value in estimates.values()):
         failed.append("MISSING_VALIDATED_ESTIMATES")
     return {
