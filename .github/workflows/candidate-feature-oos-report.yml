@@ -1,0 +1,37 @@
+name: DIPSAUS candidate feature OOS historical report
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/offline-technical-risk-20261021
+    paths:
+      - '.github/workflows/candidate-feature-oos-report.yml'
+permissions:
+  contents: read
+concurrency:
+  group: candidate-feature-oos-report-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  historical-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Run offline integration tests
+        run: |
+          python -m unittest discover -s research -p 'test_candidate_feature_portfolio_oos_pair.py' -v
+          python -m unittest discover -s research -p 'test_candidate_feature_report_portfolio.py' -v
+      - name: Run historical candidate and portfolio OOS report
+        run: python research/candidate_feature_oos.py
+      - name: Publish research-only report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-feature-oos-historical-report
+          path: reports/candidate_feature_oos.json
+          if-no-files-found: warn
