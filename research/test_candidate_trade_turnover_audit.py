@@ -67,6 +67,22 @@ class TradeTurnoverAuditTests(unittest.TestCase):
         self.assertEqual(result["2026Q3"]["prior_quarter_mean_net_trade_return_pct"], 2)
         self.assertFalse(result["2026Q3"]["eligible_for_live_filter_choice"])
 
+    def test_quarter_stability_excludes_small_cohorts(self):
+        from datetime import date
+        epoch = date(1970, 1, 1)
+        start = (date(2026, 1, 5) - epoch).days
+        rows = [{"symbol": f"S{i}", "entry_day": start + i,
+                 "exit_day": start + i + 2, "net_return_pct": 1}
+                for i in range(20)]
+        report = {"portfolio_capacity_25bps": {"recovery_from_prior20_low_3to15pct":
+            {"comparison": {"baseline": {"accepted_signals": rows,
+                                           "realized_return_pct": 1}}}}}
+        stability = audit(report)["comparisons"]["baseline"]["quarterly_sample_stability"]["baseline"]
+        self.assertEqual(stability["eligible_quarters"], 1)
+        self.assertEqual(stability["positive_eligible_quarters"], 1)
+        self.assertEqual(stability["excluded_low_sample_quarters"], [])
+        self.assertFalse(stability["independent_oos_validation"])
+
     def test_duplicate_accepted_trade_rejected(self):
         row = {"symbol": "AAA", "entry_day": 1, "exit_day": 3, "net_return_pct": 4}
         report = {"portfolio_capacity_25bps": {"recovery_from_prior20_low_3to15pct":
