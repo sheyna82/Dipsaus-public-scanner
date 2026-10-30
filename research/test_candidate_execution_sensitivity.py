@@ -1,5 +1,5 @@
 import unittest
-from candidate_execution_sensitivity import execution_sensitivity
+from candidate_execution_sensitivity import execution_sensitivity, compare_liquidity_gates
 
 class ExecutionTests(unittest.TestCase):
     def setUp(self):
@@ -27,6 +27,19 @@ class ExecutionTests(unittest.TestCase):
         self.assertEqual(result["liquidity_observation"], "signal_session_close_times_volume")
         bars[0]["volume"] = 0
         self.assertEqual(execution_sensitivity(bars, 0)["status"], "INSUFFICIENT_ENTRY_LIQUIDITY")
+
+    def test_paired_liquidity_gates_detect_both_disagreement_directions(self):
+        bars = [dict(x) for x in self.bars]
+        bars[0]["volume"] = 1
+        old_only = compare_liquidity_gates(bars, 0)
+        self.assertFalse(old_only["signal_gate_pass"])
+        self.assertTrue(old_only["legacy_gate_pass"])
+        bars[0]["volume"] = 50000
+        bars[1]["volume"] = 1
+        new_only = compare_liquidity_gates(bars, 0)
+        self.assertTrue(new_only["signal_gate_pass"])
+        self.assertFalse(new_only["legacy_gate_pass"])
+        self.assertTrue(new_only["legacy_is_retrospective"])
 
     def test_no_future_bars_blocks(self):
         self.assertEqual(execution_sensitivity(self.bars, 10)["status"], "INSUFFICIENT_FUTURE_BARS")
