@@ -11,6 +11,8 @@ on:
       - 'research/test_candidate_feature_portfolio_oos_pair.py'
       - 'research/test_candidate_feature_report_portfolio.py'
       - 'research/test_candidate_portfolio_quarter_diagnostics.py'
+      - 'research/candidate_input_reproducibility.py'
+      - 'research/test_candidate_input_reproducibility.py'
 permissions:
   contents: read
 concurrency:
@@ -32,6 +34,7 @@ jobs:
           python -m unittest discover -s research -p 'test_candidate_feature_portfolio_oos_pair.py' -v
           python -m unittest discover -s research -p 'test_candidate_feature_report_portfolio.py' -v
           python -m unittest discover -s research -p 'test_candidate_portfolio_quarter_diagnostics.py' -v
+          python -m unittest discover -s research -p 'test_candidate_input_reproducibility.py' -v
       - name: Run historical candidate and portfolio OOS report
         run: python research/candidate_feature_oos.py
       - name: Produce quarterly robustness diagnostics
