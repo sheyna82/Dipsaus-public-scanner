@@ -136,6 +136,26 @@ def portfolio_oos_pair(stock_by_symbol, benchmark, pattern):
         scenarios = {mode: simulate(events, priority_mode=mode)
                      for mode in ("symbol_asc", "symbol_desc", "stable_hash")}
         returns = [result["realized_return_pct"] for result in scenarios.values()]
+        # Record candidate fate under each neutral priority, without outcome ranking.
+        candidate_decisions = {}
+        for mode, result in scenarios.items():
+            accepted_keys = {(row["symbol"], row["entry_day"])
+                             for row in result["accepted_signals"]}
+            rejected_reasons = {(row["symbol"], row["entry_day"]): row["reason"]
+                                for row in result["rejected_signals"]}
+            if (accepted_keys & set(rejected_reasons) or
+                    len(accepted_keys) + len(rejected_reasons) != len(events)):
+                raise ValueError("PRIORITY_CANDIDATE_ACCOUNTING_MISMATCH")
+            candidate_decisions[mode] = (accepted_keys, rejected_reasons)
+        for row in candidate_audit:
+            key = (row["symbol"], row["entry_day"])
+            if cohort_name == "filtered" and not row["filter_selected"]:
+                row.setdefault("priority_decisions", {})[cohort_name] = {
+                    mode: "NOT_IN_FILTERED_COHORT" for mode in scenarios}
+                continue
+            row.setdefault("priority_decisions", {})[cohort_name] = {
+                mode: ("ACCEPTED" if key in accepted else rejected[key])
+                for mode, (accepted, rejected) in candidate_decisions.items()}
         priority_audit[cohort_name] = {
             "candidate_event_n": len(events),
             "scenarios": {mode: {
