@@ -134,7 +134,29 @@ def verified_session_occupancy(portfolio, trading_session_days, *, tranche=3500.
             "daily_mtm_drawdown_available":False}
 
 
-def compare_ablation_portfolios(report, *, pattern, max_positions=6, trading_session_days=None):
+def audited_equity_risk(portfolio, observations):
+    """Risk from supplied independent close equity, never invented marks."""
+    if observations is None:
+        return {"status":"NOT_EVALUATED",
+                "reason":"INDEPENDENT_DAILY_MARKS_AND_RECONCILED_FILLS_NOT_PROVIDED",
+                "trade_ready":False}
+    from pathlib import Path
+    import sys
+    sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+    from research_swing_equity_risk import summarize_equity_curve
+    risk=summarize_equity_curve(observations)
+    if abs(float(risk["end_equity"])-portfolio["ending_cash"])>0.005:
+        raise ValueError("PAIRED_EQUITY_ENDING_CASH_MISMATCH")
+    risk["independent_source_verification"]=False
+    risk["ledger_reconciliation_verified"]=False
+    risk["limitations"]=["Ending cash checked; full ledger and daily marks not reconciled",
+                         "Caller-supplied equity marks; provenance unverified",
+                         "Not a trade-ready risk estimate"]
+    return risk
+
+
+def compare_ablation_portfolios(report, *, pattern, max_positions=6, trading_session_days=None,
+                               paired_equity_observations=None):
     """Pool actual held-out dated events across symbols, one filter at a time.
 
     Never compare the same symbol-pattern twice, and never rank by test returns.
@@ -174,6 +196,12 @@ def compare_ablation_portfolios(report, *, pattern, max_positions=6, trading_ses
                 "point_in_time":verified_session_occupancy(current,trading_session_days),
                 "legacy_retrospective":verified_session_occupancy(legacy,trading_session_days),
                 "calendar_source_verified":False}
+        supplied_marks=(paired_equity_observations or {}).get(key,{})
+        if supplied_marks and set(supplied_marks)!={"point_in_time","legacy_retrospective"}:
+            raise ValueError("INCOMPLETE_PAIRED_EQUITY_OBSERVATIONS")
+        equity_comparison={
+            "point_in_time":audited_equity_risk(current,supplied_marks.get("point_in_time")),
+            "legacy_retrospective":audited_equity_risk(legacy,supplied_marks.get("legacy_retrospective"))}
         paired_liquidity_portfolios[key]={
             "point_in_time_event_n":len(events),
             "legacy_retrospective_event_n":len(legacy_events),
@@ -186,12 +214,7 @@ def compare_ablation_portfolios(report, *, pattern, max_positions=6, trading_ses
             "return_difference_percentage_points":round(
                 current["realized_return_pct"]-legacy["realized_return_pct"],4),
             "legacy_not_executable_at_next_open":True,
-            "daily_equity_risk":{"status":"NOT_EVALUATED",
-                "reason":"INDEPENDENT_DAILY_MARKS_AND_RECONCILED_FILLS_NOT_PROVIDED",
-                "trade_ready":False,
-                "required_engine":"research_swing_portfolio_with_marks.backtest_portfolio_with_marks",
-                "required_risk_engine":"research_swing_equity_risk.summarize_equity_curve",
-                "synthetic_marks_permitted":False},
+            "daily_equity_risk":equity_comparison,
             "historical_comparison_only":True}
         priority_sensitivity[key]={"scenarios":{mode:{"accepted_n":result["accepted_n"],
                                                 "realized_return_pct":result["realized_return_pct"],
