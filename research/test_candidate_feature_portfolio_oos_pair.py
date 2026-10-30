@@ -65,6 +65,22 @@ class PortfolioOOSPairTests(unittest.TestCase):
                             for t in result["baseline"]["accepted_signals"]))
         self.assertEqual(result["baseline"]["accepted_n"],3)
 
+    def test_common_end_excludes_trades_exiting_after_shortest_history(self):
+        short=rows(750)
+        long=rows(850)
+        def mock_features(data,i):
+            return {"recovery":i in (100,600,760)}
+        with patch("candidate_feature_oos.features",side_effect=mock_features), \
+             patch("candidate_feature_oos.pre_entry_features",return_value={"feature":1}), \
+             patch("candidate_feature_oos.training_median_thresholds",
+                   return_value={"status":"TRAINING_ONLY_THRESHOLDS","thresholds":{}}), \
+             patch("candidate_feature_oos.label",
+                   return_value={"status":"RESEARCH_ONLY","passes":{"feature":True}}):
+            result=portfolio_oos_pair({"SHORT":short,"LONG":long}, [], "recovery")
+        self.assertEqual(result["common_test_end_day"],short[-1]["timestamp"]//86400)
+        self.assertTrue(all(t["exit_day"]<=result["common_test_end_day"]
+                            for t in result["baseline"]["accepted_signals"]))
+
     def test_multiple_symbols_share_capacity_and_do_not_reuse_same_day_proceeds(self):
         stock=rows()
         symbols={f"S{i:02d}":stock for i in range(7)}
