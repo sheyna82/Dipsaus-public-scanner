@@ -251,6 +251,30 @@ class IntegratedReadonlyTests(unittest.TestCase):
         self.assertFalse(assumptions["independent_cost_provenance_verified"])
         self.assertEqual(set(result["comparison"]), set(FILTERS))
 
+    def test_paired_reconciled_risk_uses_existing_ledger(self):
+        from datetime import date
+        from candidate_portfolio_capacity import simulate, reconciled_paired_equity
+        portfolio=simulate([{"symbol":"ABC","entry_day":20727,"exit_day":20728,
+                             "net_return_pct":2}])
+        start=date(2026,10,1)
+        end=date(2026,10,2)
+        # Use actual epoch-day mapping, never assume hardcoded offsets.
+        from datetime import timedelta
+        start=date(1970,1,1)+timedelta(days=20727)
+        end=date(1970,1,1)+timedelta(days=20728)
+        inputs={"trades":[{"ticker":"ABC","entry_date":start,
+                          "exit_date":end,"net_return_pct":2,"score":1}],
+                "daily_marks":{(start,"ABC"):3500},
+                "trading_dates":[start,end]}
+        result=reconciled_paired_equity(portfolio,inputs)
+        self.assertEqual(result["status"],"ARITHMETIC_RECONCILED_RESEARCH_ONLY")
+        self.assertEqual(result["risk"]["end_equity"],"21070")
+        self.assertFalse(result["independent_price_and_calendar_provenance_verified"])
+        wrong=simulate([{"symbol":"XYZ","entry_day":20727,"exit_day":20728,
+                         "net_return_pct":2}])
+        with self.assertRaisesRegex(ValueError,"PAIRED_LEDGER_ACCEPTED_POPULATION_MISMATCH"):
+            reconciled_paired_equity(wrong,inputs)
+
     def test_paired_equity_reuses_risk_engine_and_rejects_wrong_cash(self):
         from candidate_portfolio_capacity import audited_equity_risk, simulate
         portfolio=simulate([{"symbol":"ABC","entry_day":1,"exit_day":3,
