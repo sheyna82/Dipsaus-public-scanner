@@ -9,7 +9,7 @@ from candidate_benchmark_excess import PATTERNS, HORIZON, COST_BPS
 from candidate_ablation_risk_diagnostics import compare as compare_risk
 from candidate_matched_count_placebo import placebo
 from candidate_calendar_matched_placebo import calendar_placebo
-from candidate_execution_sensitivity import execution_sensitivity
+from candidate_execution_sensitivity import execution_sensitivity, compare_liquidity_gates
 from candidate_portfolio_capacity import compare_ablation_portfolios
 
 FILTERS=("baseline",)+tuple(FEATURE_DIRECTIONS)+("all_three",)
@@ -29,6 +29,7 @@ def evaluate_ablation(stock,benchmark,pattern):
     execution_cohorts={key:[] for key in FILTERS}
     execution_blocked={key:0 for key in FILTERS}
     portfolio_events={key:[] for key in FILTERS}
+    liquidity_pairs={key:[] for key in FILTERS}
     for i in indices:
         f=pre_entry_features(stock,benchmark,i)
         decision=label(f,fitted)
@@ -46,6 +47,8 @@ def evaluate_ablation(stock,benchmark,pattern):
                      "excess_pct":excess,"mae_pct":mae,
                      "session_day":stock[i+1]["timestamp"]//86400}
         execution=execution_sensitivity(stock,i,horizon=HORIZON,cost_bps=COST_BPS)
+        liquidity_pair=compare_liquidity_gates(stock,i)
+        liquidity_pairs["baseline"].append(liquidity_pair)
         def add_execution(key):
             if execution["status"]=="DESCRIPTIVE_EXECUTION_SENSITIVITY":
                 execution_cohorts[key].append(execution)
@@ -64,11 +67,13 @@ def evaluate_ablation(stock,benchmark,pattern):
         risk_cohorts["baseline"].append(risk_record)
         for key,passed in decision["passes"].items():
             if passed:
+                liquidity_pairs[key].append(liquidity_pair)
                 add_execution(key)
                 add_portfolio_event(key)
                 cohorts[key].append(record)
                 risk_cohorts[key].append(risk_record)
         if all(decision["passes"].values()):
+            liquidity_pairs["all_three"].append(liquidity_pair)
             add_execution("all_three")
             add_portfolio_event("all_three")
             cohorts["all_three"].append(record)
@@ -88,7 +93,21 @@ def evaluate_ablation(stock,benchmark,pattern):
                     str(bps):round(statistics.mean(next(x["net_return_pct"] for x in row["scenarios"]
                             if x["adverse_entry_bps"]==bps) for row in records),4) if records else None
                     for bps in scenario_bps}}
+    def liquidity_summary(rows):
+        both=sum(r["signal_gate_pass"] and r["legacy_gate_pass"] for r in rows)
+        new_only=sum(r["signal_gate_pass"] and not r["legacy_gate_pass"] for r in rows)
+        old_only=sum(r["legacy_gate_pass"] and not r["signal_gate_pass"] for r in rows)
+        neither=len(rows)-both-new_only-old_only
+        return {"total_events":len(rows), "both_pass":both,
+                "point_in_time_only":new_only, "retrospective_only":old_only,
+                "neither_pass":neither,
+                "point_in_time_pass_n":both+new_only,
+                "legacy_retrospective_pass_n":both+old_only,
+                "net_cohort_change":new_only-old_only,
+                "not_trade_ready":True}
     return {"status":"DESCRIPTIVE_ONLY","trade_ready":False,
+            "liquidity_gate_comparison":{key:liquidity_summary(rows)
+                                         for key,rows in liquidity_pairs.items()},
             "training_n":len(training),"test_baseline_n":len(indices),
             "thresholds":fitted["thresholds"],
             "cohorts":{key:summary(records) for key,records in cohorts.items()},
