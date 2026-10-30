@@ -194,12 +194,11 @@ def reconciled_paired_equity(portfolio, inputs):
             trade_key=(key,entries.pop(key),day)
             actual.add(trade_key)
             pnl_by_trade[trade_key]=Decimal(str(event["net_pnl"]))
-    if pnl_by_trade.keys()!=expected_pnl.keys() or any(
-            abs(pnl_by_trade[key]-expected_pnl[key])>Decimal("0.005")
-            for key in expected_pnl):
-        raise ValueError("PAIRED_LEDGER_TRADE_PNL_MISMATCH")
     if entries or actual!=accepted:
         raise ValueError("PAIRED_LEDGER_ACCEPTED_POPULATION_MISMATCH")
+    if any(abs(pnl_by_trade[key]-expected_pnl[key])>Decimal("0.005")
+           for key in expected_pnl):
+        raise ValueError("PAIRED_LEDGER_TRADE_PNL_MISMATCH")
     if abs(float(verified["cash_accounting"]["realized_net_pnl"])-
            portfolio["realized_pnl"])>0.005:
         raise ValueError("PAIRED_LEDGER_PNL_MISMATCH")
