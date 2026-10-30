@@ -29,7 +29,8 @@ class PortfolioReportTests(unittest.TestCase):
         self.assertEqual(report["input_data_provenance"]["stocks"]["AAA"]["rows"],800)
         self.assertEqual(len(report["input_data_provenance"]["stocks"]["AAA"]["sha256"]),64)
         self.assertEqual(report["input_data_provenance"]["benchmark"]["sha256"],report["input_data_provenance"]["stocks"]["AAA"]["sha256"])
-        self.assertFalse(report["input_data_provenance"]["data_frozen"])
+        self.assertTrue(report["input_data_provenance"]["data_frozen"])
+        self.assertTrue((Path(folder)/"reports/candidate_feature_oos_input_snapshot.json").exists())
         self.assertEqual(paired.call_count,2)
         self.assertEqual(download.call_count,2)  # SPY and AAA, not twice per pattern
         self.assertEqual(report["portfolio_oos_provenance"]["loaded_symbols"],["AAA"])
