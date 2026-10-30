@@ -251,6 +251,17 @@ class IntegratedReadonlyTests(unittest.TestCase):
         self.assertFalse(assumptions["independent_cost_provenance_verified"])
         self.assertEqual(set(result["comparison"]), set(FILTERS))
 
+    def test_ambiguous_equity_sources_fail_closed(self):
+        from candidate_portfolio_capacity import compare_ablation_portfolios
+        report={"candidates":[]}
+        with self.assertRaisesRegex(ValueError,"AMBIGUOUS_PAIRED_EQUITY_SOURCE"):
+            compare_ablation_portfolios(report,pattern="unused",
+                                        paired_equity_observations={},
+                                        paired_reconciled_inputs={})
+        with self.assertRaisesRegex(ValueError,"INVALID_PAIRED_RECONCILIATION_INPUTS"):
+            compare_ablation_portfolios(report,pattern="unused",
+                                        paired_reconciled_inputs=[])
+
     def test_paired_reconciled_risk_uses_existing_ledger(self):
         from datetime import date
         from candidate_portfolio_capacity import simulate, reconciled_paired_equity
