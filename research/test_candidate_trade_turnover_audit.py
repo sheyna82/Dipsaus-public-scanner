@@ -22,6 +22,16 @@ class TradeTurnoverAuditTests(unittest.TestCase):
         self.assertEqual(result["alternative_only_mean_net_return_pct"], 1)
         self.assertFalse(audit(report)["trade_ready"])
 
+    def test_shared_trade_return_mismatch_is_rejected(self):
+        row = {"symbol": "AAA", "entry_day": 1, "exit_day": 3, "net_return_pct": 4}
+        conflicting = {**row, "net_return_pct": 5}
+        report = {"portfolio_capacity_25bps": {"recovery_from_prior20_low_3to15pct":
+            {"comparison": {
+                "baseline": {"accepted_signals": [row], "realized_return_pct": 1},
+                "filter": {"accepted_signals": [conflicting], "realized_return_pct": 2}}}}}
+        with self.assertRaisesRegex(ValueError, "SHARED_TRADE_RETURN_MISMATCH"):
+            audit(report)
+
     def test_duplicate_accepted_trade_rejected(self):
         row = {"symbol": "AAA", "entry_day": 1, "exit_day": 3, "net_return_pct": 4}
         report = {"portfolio_capacity_25bps": {"recovery_from_prior20_low_3to15pct":
