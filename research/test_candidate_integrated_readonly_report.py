@@ -251,6 +251,19 @@ class IntegratedReadonlyTests(unittest.TestCase):
         self.assertFalse(assumptions["independent_cost_provenance_verified"])
         self.assertEqual(set(result["comparison"]), set(FILTERS))
 
+    def test_paired_equity_reuses_risk_engine_and_rejects_wrong_cash(self):
+        from candidate_portfolio_capacity import audited_equity_risk, simulate
+        portfolio=simulate([{"symbol":"ABC","entry_day":1,"exit_day":3,
+                             "net_return_pct":2}])
+        marks=[{"date":"2026-01-01","equity":21000},
+               {"date":"2026-01-02","equity":20000},
+               {"date":"2026-01-05","equity":21070}]
+        risk=audited_equity_risk(portfolio,marks)
+        self.assertEqual(risk["max_observed_drawdown_pct"],"4.7619")
+        self.assertFalse(risk["ledger_reconciliation_verified"])
+        with self.assertRaisesRegex(ValueError,"PAIRED_EQUITY_ENDING_CASH_MISMATCH"):
+            audited_equity_risk(portfolio,marks[:-1])
+
     def test_shared_session_calendar_excludes_weekend_and_rejects_bad_endpoints(self):
         from candidate_portfolio_capacity import simulate, verified_session_occupancy
         portfolio=simulate([{"symbol":"ABC","entry_day":1,"exit_day":5,
@@ -298,10 +311,10 @@ class IntegratedReadonlyTests(unittest.TestCase):
         self.assertEqual(pair["realized_pnl_difference"], 105)
         self.assertTrue(pair["historical_comparison_only"])
         risk=pair["daily_equity_risk"]
-        self.assertEqual(risk["status"],"NOT_EVALUATED")
-        self.assertFalse(risk["trade_ready"])
-        self.assertFalse(risk["synthetic_marks_permitted"])
-        self.assertIn("RECONCILED_FILLS",risk["reason"])
+        for name in ("point_in_time","legacy_retrospective"):
+            self.assertEqual(risk[name]["status"],"NOT_EVALUATED")
+            self.assertFalse(risk[name]["trade_ready"])
+            self.assertIn("RECONCILED_FILLS",risk[name]["reason"])
         self.assertEqual(set(result["paired_liquidity_portfolios"]), set(FILTERS))
 
     def test_repeated_entries_cash_and_score_parity(self):
