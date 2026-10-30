@@ -235,6 +235,21 @@ class IntegratedReadonlyTests(unittest.TestCase):
             simulate([{**signals[0], "score": float("nan")}],
                      priority_mode="score_desc")
 
+    def test_ablation_portfolio_costs_and_liquidity_are_not_execution_verified(self):
+        from candidate_portfolio_capacity import compare_ablation_portfolios
+        from candidate_feature_ablation import FILTERS
+        report = {"candidates": []}
+        result = compare_ablation_portfolios(report, pattern="recovery_from_prior20_low_3to15pct")
+        self.assertFalse(result["trade_ready"])
+        self.assertTrue(result["costs_included_in_trade_returns"])
+        assumptions = result["execution_cost_assumptions"]
+        self.assertEqual(assumptions["roundtrip_fixed_cost_bps"], 50)
+        self.assertEqual(assumptions["adverse_entry_slippage_bps"], 25)
+        self.assertEqual(assumptions["entry_liquidity_filter"], "same_day_full_volume_retrospective")
+        self.assertFalse(assumptions["point_in_time_executable"])
+        self.assertFalse(assumptions["independent_cost_provenance_verified"])
+        self.assertEqual(set(result["comparison"]), set(FILTERS))
+
     def test_repeated_entries_cash_and_score_parity(self):
         from datetime import date, timedelta
         from candidate_portfolio_capacity import simulate
