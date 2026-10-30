@@ -149,6 +149,18 @@ class IntegratedReadonlyTests(unittest.TestCase):
         self.assertFalse(timeline["cross_component_consistency"]["transaction_cost_provenance_verified"])
         self.assertNotIn("SELECTION_PRIORITY_NOT_RECONCILED",
                          timeline["cross_component_consistency"]["blockers"])
+        # Same accepted transaction but different source score must fail closed.
+        with self.assertRaisesRegex(ValueError, "CAPACITY_LEDGER_SOURCE_POPULATION_MISMATCH"):
+            build(snap, evidence, reconciled_portfolio_inputs=inputs,
+                  dated_signals=[{"symbol": "ABC", "entry_day": 0, "exit_day": 1,
+                                  "net_return_pct": 2, "score": 99}])
+        # An extra rejected signal is still a population mismatch.
+        with self.assertRaisesRegex(ValueError, "CAPACITY_LEDGER_SOURCE_POPULATION_MISMATCH"):
+            build(snap, evidence, reconciled_portfolio_inputs=inputs,
+                  dated_signals=[{"symbol": "ABC", "entry_day": 0, "exit_day": 1,
+                                  "net_return_pct": 2, "score": 1},
+                                 {"symbol": "ABC", "entry_day": 0, "exit_day": 1,
+                                  "net_return_pct": 2, "score": 0}])
         with self.assertRaises(ValueError):
             build(snap, evidence, reconciled_portfolio_inputs=inputs,
                   dated_signals=[{"symbol": "ABC", "entry_day": 0, "exit_day": 1,
