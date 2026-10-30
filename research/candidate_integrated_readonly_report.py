@@ -220,6 +220,22 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
         dates = reconciled_portfolio_inputs["trading_dates"]
         if any(type(day) is not date for day in dates) or dates != sorted(set(dates)):
             raise ValueError("INVALID_SHARED_TRADING_CALENDAR")
+        # Compare the complete original signal population, including rejected rows.
+        # Matching accepted trades alone cannot establish same-cohort evidence.
+        from decimal import Decimal
+        if any(row["entry_day"] < 0 or row["exit_day"] >= len(dates)
+               for row in dated_signals):
+            raise ValueError("SIGNAL_DAY_OUTSIDE_SHARED_CALENDAR")
+        capacity_population = sorted(
+            (row["symbol"], dates[row["entry_day"]], dates[row["exit_day"]],
+             Decimal(str(row["net_return_pct"])), Decimal(str(row["score"])))
+            for row in dated_signals)
+        ledger_population = sorted(
+            (row["ticker"], row["entry_date"], row["exit_date"],
+             Decimal(str(row["net_return_pct"])), Decimal(str(row["score"])))
+            for row in reconciled_portfolio_inputs["trades"])
+        if capacity_population != ledger_population:
+            raise ValueError("CAPACITY_LEDGER_SOURCE_POPULATION_MISMATCH")
         accepted = portfolio["accepted_signals"]
         if any(row["entry_day"] < 0 or row["exit_day"] >= len(dates) for row in accepted):
             raise ValueError("CAPACITY_DAY_OUTSIDE_SHARED_CALENDAR")
