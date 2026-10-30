@@ -225,6 +225,20 @@ jobs:
         if: always()
         run: python -m unittest discover -s research -p 'test_candidate_feature_ablation.py' -v
 
+      - name: Audit accepted-trade turnover offline
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        run: python research/candidate_trade_turnover_audit.py reports/candidate_feature_ablation.json > reports/candidate_trade_turnover_audit.json
+      - name: Upload accepted-trade turnover audit
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-trade-turnover-audit
+          path: reports/candidate_trade_turnover_audit.json
+          if-no-files-found: error
+      - name: Test accepted-trade turnover audit offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_trade_turnover_audit.py' -v
+
       - name: Test trade-level ablation risk diagnostics offline
         if: always()
         run: python -m unittest discover -s research -p 'test_candidate_ablation_risk_diagnostics.py' -v
