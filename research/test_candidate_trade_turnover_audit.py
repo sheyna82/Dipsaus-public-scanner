@@ -32,6 +32,23 @@ class TradeTurnoverAuditTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "SHARED_TRADE_RETURN_MISMATCH"):
             audit(report)
 
+    def test_quarter_cohorts_use_epoch_entry_days(self):
+        from datetime import date
+        epoch = date(1970, 1, 1)
+        q1 = (date(2026, 3, 31) - epoch).days
+        q2 = (date(2026, 4, 1) - epoch).days
+        rows = [
+            {"symbol": "AAA", "entry_day": q1, "exit_day": q1 + 2, "net_return_pct": 2},
+            {"symbol": "BBB", "entry_day": q2, "exit_day": q2 + 2, "net_return_pct": -1},
+        ]
+        report = {"portfolio_capacity_25bps": {"recovery_from_prior20_low_3to15pct":
+            {"comparison": {"baseline": {"accepted_signals": rows,
+                                           "realized_return_pct": 0.1}}}}}
+        result = audit(report)["comparisons"]["baseline"]["entry_quarter_cohorts"]["baseline"]
+        self.assertEqual(result["2026Q1"]["n"], 1)
+        self.assertEqual(result["2026Q2"]["mean_net_trade_return_pct"], -1)
+        self.assertFalse(audit(report)["comparisons"]["baseline"]["quarterly_portfolio_returns_verified"])
+
     def test_duplicate_accepted_trade_rejected(self):
         row = {"symbol": "AAA", "entry_day": 1, "exit_day": 3, "net_return_pct": 4}
         report = {"portfolio_capacity_25bps": {"recovery_from_prior20_low_3to15pct":
