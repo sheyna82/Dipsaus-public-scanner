@@ -74,9 +74,15 @@ def portfolio_oos_pair(stock_by_symbol, benchmark, pattern):
     common_test_end_day = min(
         (stock[-1]["timestamp"] // 86400 for stock in eligible.values()),
         default=None)
+    comparable_calendar = (common_test_start_day is not None and
+                           common_test_end_day is not None and
+                           common_test_start_day <= common_test_end_day)
     for symbol, stock in sorted(stock_by_symbol.items()):
         if not isinstance(symbol, str) or not stock or len(stock) < 750:
             exclusions[str(symbol)] = "INSUFFICIENT_HISTORY"
+            continue
+        if not comparable_calendar:
+            exclusions[symbol] = "NO_SHARED_OUT_OF_SAMPLE_CALENDAR"
             continue
         cutoff = max(MIN_TRAIN, int(len(stock) * .65))
         training = [(i, pre_entry_features(stock, benchmark, i))
@@ -116,6 +122,9 @@ def portfolio_oos_pair(stock_by_symbol, benchmark, pattern):
             "cost_bps": COST_BPS, "horizon_sessions": HORIZON,
             "common_test_start_day": common_test_start_day,
             "common_test_end_day": common_test_end_day,
+            "comparable_calendar": comparable_calendar,
+            "comparison_status": ("CALENDAR_MATCHED_DESCRIPTIVE_ONLY" if comparable_calendar
+                                  else "BLOCKED_NO_SHARED_OUT_OF_SAMPLE_CALENDAR"),
             "excluded_symbols": exclusions,
             "baseline": base_result, "filtered": filtered_result,
             "limitations": ["Convenience universe, correlated securities and survivorship bias",
