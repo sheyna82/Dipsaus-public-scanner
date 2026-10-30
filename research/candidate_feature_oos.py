@@ -62,6 +62,7 @@ def portfolio_oos_pair(stock_by_symbol, benchmark, pattern):
     not a mark-to-market drawdown or executable trading system.
     """
     baseline, filtered, exclusions = [], [], {}
+    candidate_audit = []
     # Common calendar start is determined from eligible stock training cutoffs,
     # never from future returns or observed test performance.
     eligible = {symbol: stock for symbol, stock in stock_by_symbol.items()
@@ -110,8 +111,21 @@ def portfolio_oos_pair(stock_by_symbol, benchmark, pattern):
                      "net_return_pct": 100 * (end["close"] / entry["open"] - 1)
                                        - COST_BPS / 100}
             baseline.append(trade)
-            decision = label(pre_entry_features(stock, benchmark, i), fitted)
-            if decision["status"] == "RESEARCH_ONLY" and all(decision["passes"].values()):
+            signal_features = pre_entry_features(stock, benchmark, i)
+            decision = label(signal_features, fitted)
+            selected = (decision["status"] == "RESEARCH_ONLY"
+                        and all(decision["passes"].values()))
+            candidate_audit.append({
+                "symbol": symbol,
+                "signal_day": stock[i]["timestamp"] // 86400,
+                "entry_day": trade["entry_day"],
+                "exit_day": trade["exit_day"],
+                "features_at_signal_close": signal_features,
+                "training_thresholds": fitted["thresholds"],
+                "filter_passes": decision.get("passes"),
+                "filter_selected": selected,
+                "historical_net_return_pct_outcome_not_selection_input": trade["net_return_pct"]})
+            if selected:
                 filtered.append(trade.copy())
     base_result = simulate(baseline)
     filtered_result = simulate(filtered)
@@ -124,6 +138,14 @@ def portfolio_oos_pair(stock_by_symbol, benchmark, pattern):
             "independent_prospective_validation": False,
             "daily_mark_to_market_verified": False,
             "same_baseline_event_pool": True,
+            "candidate_audit": sorted(candidate_audit, key=lambda row: (row["entry_day"], row["symbol"])),
+            "candidate_audit_provenance": {
+                "all_eligible_baseline_events_included": True,
+                "feature_timestamp": "signal_session_close_before_next_session_entry",
+                "training_thresholds": "per_symbol_training_history_only",
+                "future_outcome_not_used_for_filter_selection": True,
+                "selection_priority_audit_not_yet_evaluated": True,
+                "trade_ready": False},
             "cost_bps": COST_BPS, "horizon_sessions": HORIZON,
             "common_test_start_day": common_test_start_day,
             "common_test_end_day": common_test_end_day,
