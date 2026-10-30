@@ -6,6 +6,7 @@ No trading signals are generated; results are descriptive, not causal.
 import json
 import math
 import sys
+from datetime import date, timedelta
 
 
 def audit(report, pattern="recovery_from_prior20_low_3to15pct"):
@@ -19,12 +20,26 @@ def audit(report, pattern="recovery_from_prior20_low_3to15pct"):
                 raise ValueError("DUPLICATE_ACCEPTED_TRADE_IDENTITY")
             indexed[key] = row
         return indexed
+    def quarters(rows):
+        result = {}
+        for row in rows:
+            day = row["entry_day"]
+            if not isinstance(day, int) or isinstance(day, bool) or day < 0:
+                raise ValueError("INVALID_UNIX_EPOCH_ENTRY_DAY")
+            d = date(1970, 1, 1) + timedelta(days=day)
+            key = f"{d.year}Q{(d.month - 1) // 3 + 1}"
+            result.setdefault(key, []).append(float(row["net_return_pct"]))
+        return {key: {"n": len(values), "mean_net_trade_return_pct": round(sum(values) / len(values), 6)}
+                for key, values in sorted(result.items())}
+
     base = index(baseline)
     result = {"research_only": True, "trade_ready": False, "pattern": pattern,
               "limitations": [
                   "Differences are not matched randomized outcomes or causal filter effects",
                   "Different capacity competition changes accepted populations",
                   "No daily mark-to-market drawdown, verified fills or independent OOS test",
+                  "Entry-quarter trade cohorts are not quarterly portfolio returns",
+                  "Entry days are Unix epoch days as produced by the source ablation",
                   "A removed trade may not have been eligible under the alternative portfolio"
               ], "comparisons": {}}
     for name, portfolio in portfolios.items():
@@ -44,6 +59,13 @@ def audit(report, pattern="recovery_from_prior20_low_3to15pct"):
             return (round(sum(float(row["net_return_pct"]) for row in rows) /
                           len(rows), 6) if rows else None)
         result["comparisons"][name] = {
+            "entry_quarter_cohorts": {
+                "baseline": quarters(list(base.values())),
+                "alternative": quarters(list(other.values())),
+                "baseline_only": quarters([base[k] for k in removed]),
+                "alternative_only": quarters([other[k] for k in added]),
+            },
+            "quarterly_portfolio_returns_verified": False,
             "baseline_accepted": len(base),
             "alternative_accepted": len(other),
             "shared_trade_identities": len(shared),
