@@ -54,6 +54,25 @@ def audit(report, pattern="recovery_from_prior20_low_3to15pct"):
             }
         return results
 
+    def stability(rows, minimum_n=20):
+        by_quarter = quarters(rows)
+        eligible = {period: stats for period, stats in by_quarter.items()
+                    if stats["n"] >= minimum_n}
+        return {
+            "minimum_trades_per_quarter": minimum_n,
+            "observed_quarters": len(by_quarter),
+            "eligible_quarters": len(eligible),
+            "excluded_low_sample_quarters": sorted(set(by_quarter) - set(eligible)),
+            "positive_eligible_quarters": sum(
+                stats["mean_net_trade_return_pct"] > 0 for stats in eligible.values()),
+            "negative_eligible_quarters": sum(
+                stats["mean_net_trade_return_pct"] < 0 for stats in eligible.values()),
+            "zero_eligible_quarters": sum(
+                stats["mean_net_trade_return_pct"] == 0 for stats in eligible.values()),
+            "independent_oos_validation": False,
+            "trade_ready": False,
+        }
+
     base = index(baseline)
     result = {"research_only": True, "trade_ready": False, "pattern": pattern,
               "limitations": [
@@ -83,6 +102,10 @@ def audit(report, pattern="recovery_from_prior20_low_3to15pct"):
             return (round(sum(float(row["net_return_pct"]) for row in rows) /
                           len(rows), 6) if rows else None)
         result["comparisons"][name] = {
+            "quarterly_sample_stability": {
+                "baseline": stability(list(base.values())),
+                "alternative": stability(list(other.values())),
+            },
             "prior_observed_quarter_diagnostic": prior_quarter_diagnostic(list(other.values())),
             "entry_quarter_cohorts": {
                 "baseline": quarters(list(base.values())),
