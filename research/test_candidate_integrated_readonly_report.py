@@ -251,6 +251,23 @@ class IntegratedReadonlyTests(unittest.TestCase):
         self.assertFalse(assumptions["independent_cost_provenance_verified"])
         self.assertEqual(set(result["comparison"]), set(FILTERS))
 
+    def test_reconciled_paired_equity_respects_custom_tranche(self):
+        from datetime import date
+        from candidate_portfolio_capacity import simulate, reconciled_paired_equity
+        start=date(2026,10,1)
+        end=date(2026,10,2)
+        epoch=date(1970,1,1)
+        portfolio=simulate([{"symbol":"ABC","entry_day":(start-epoch).days,
+                             "exit_day":(end-epoch).days,"net_return_pct":2}],
+                           capital=10000,tranche=2000,max_positions=2)
+        inputs={"trades":[{"ticker":"ABC","entry_date":start,"exit_date":end,
+                           "net_return_pct":2,"score":1}],
+                "daily_marks":{(start,"ABC"):2000},
+                "trading_dates":[start,end]}
+        result=reconciled_paired_equity(portfolio,inputs)
+        self.assertEqual(result["cash_equity_reconciliation"]["ending_cash"],"10040")
+        self.assertEqual(portfolio["realized_pnl"],40)
+
     def test_ambiguous_equity_sources_fail_closed(self):
         from candidate_portfolio_capacity import compare_ablation_portfolios
         report={"candidates":[]}
