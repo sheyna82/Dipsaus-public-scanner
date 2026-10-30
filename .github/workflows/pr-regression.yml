@@ -35,6 +35,7 @@ on:
       - 'research/test_candidate_feature_ablation.py'
       - 'research/candidate_feature_oos.py'
       - 'research/test_candidate_feature_portfolio_oos_pair.py'
+      - 'research/test_candidate_feature_report_portfolio.py'
       - 'research/candidate_ablation_risk_diagnostics.py'
       - 'research/test_candidate_ablation_risk_diagnostics.py'
       - 'research/candidate_decision_evidence_gate.py'
@@ -276,3 +277,7 @@ jobs:
       - name: Test integrated read-only dossier offline
         if: always()
         run: python -m unittest discover -s research -p 'test_candidate_integrated_readonly_report.py' -v
+
+      - name: Test candidate feature report portfolio integration offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_feature_report_portfolio.py' -v
