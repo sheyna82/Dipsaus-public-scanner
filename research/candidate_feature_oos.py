@@ -129,6 +129,27 @@ def portfolio_oos_pair(stock_by_symbol, benchmark, pattern):
                 filtered.append(trade.copy())
     base_result = simulate(baseline)
     filtered_result = simulate(filtered)
+    # Identical dated candidate pools; neutral tie-breaks expose capacity sensitivity.
+    # No ranking by realized returns, no optimization or claim of predictive skill.
+    priority_audit = {}
+    for cohort_name, events in (("baseline", baseline), ("filtered", filtered)):
+        scenarios = {mode: simulate(events, priority_mode=mode)
+                     for mode in ("symbol_asc", "symbol_desc", "stable_hash")}
+        returns = [result["realized_return_pct"] for result in scenarios.values()]
+        priority_audit[cohort_name] = {
+            "candidate_event_n": len(events),
+            "scenarios": {mode: {
+                "accepted_n": result["accepted_n"],
+                "rejected_n": result["rejected_n"],
+                "realized_pnl": result["realized_pnl"],
+                "realized_return_pct": result["realized_return_pct"],
+                "capital_occupancy": calendar_capital_occupancy(result)}
+                for mode, result in scenarios.items()},
+            "realized_return_range_percentage_points": round(max(returns)-min(returns), 4),
+            "same_candidate_pool_for_all_priorities": True,
+            "neutral_priority_sensitivity_only": True,
+            "independent_predictive_validation": False,
+            "trade_ready": False}
     comparison_status = (
         "BLOCKED_NO_SHARED_OUT_OF_SAMPLE_CALENDAR" if not comparable_calendar
         else "NO_BASELINE_OUT_OF_SAMPLE_SIGNALS" if not baseline
@@ -139,6 +160,7 @@ def portfolio_oos_pair(stock_by_symbol, benchmark, pattern):
             "daily_mark_to_market_verified": False,
             "same_baseline_event_pool": True,
             "candidate_audit": sorted(candidate_audit, key=lambda row: (row["entry_day"], row["symbol"])),
+            "priority_sensitivity": priority_audit,
             "candidate_audit_provenance": {
                 "all_eligible_baseline_events_included": True,
                 "feature_timestamp": "signal_session_close_before_next_session_entry",
