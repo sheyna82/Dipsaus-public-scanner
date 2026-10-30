@@ -41,6 +41,14 @@ class PortfolioOOSPairTests(unittest.TestCase):
             result=portfolio_oos_pair({"ABC":stock}, [], "recovery")
         self.assertEqual(result["baseline"]["accepted_n"],2)
         self.assertEqual(result["filtered"]["accepted_n"],1)
+        audit=result["candidate_audit"]
+        self.assertEqual(len(audit),2)
+        self.assertEqual([row["filter_selected"] for row in audit],[True,False])
+        self.assertEqual([row["features_at_signal_close"]["index"] for row in audit],[600,620])
+        self.assertEqual([row["training_thresholds"]["trained_on"] for row in audit],[100,100])
+        self.assertTrue(all(row["signal_day"] < row["entry_day"] for row in audit))
+        self.assertEqual([row["historical_net_return_pct_outcome_not_selection_input"] for row in audit],[-0.5,-0.5])
+        self.assertTrue(result["candidate_audit_provenance"]["future_outcome_not_used_for_filter_selection"])
         self.assertEqual(result["filtered"]["accepted_signals"][0]["entry_day"],
                          stock[601]["timestamp"]//86400)
         self.assertAlmostEqual(result["baseline"]["realized_pnl"],-35.0)
