@@ -106,7 +106,35 @@ def calendar_capital_occupancy(portfolio, tranche=3500.0):
             "daily_mark_to_market_drawdown_verified":False}
 
 
-def compare_ablation_portfolios(report, *, pattern, max_positions=6):
+def verified_session_occupancy(portfolio, trading_session_days, *, tranche=3500.0):
+    """Count occupied entry-through-exit sessions on a caller-supplied calendar.
+
+    Calendar provenance is NOT established by this function; callers must
+    independently verify the session list and source exchange coverage.
+    """
+    if not isinstance(trading_session_days, (list, tuple)) or (
+            any(type(day) is not int for day in trading_session_days)
+            or list(trading_session_days) != sorted(set(trading_session_days))):
+        raise ValueError("INVALID_TRADING_SESSION_DAYS")
+    sessions=set(trading_session_days)
+    counts=[]
+    for row in portfolio["accepted_signals"]:
+        if row["entry_day"] not in sessions or row["exit_day"] not in sessions:
+            raise ValueError("TRADE_ENDPOINT_NOT_IN_TRADING_CALENDAR")
+        counts.append(sum(row["entry_day"] <= day <= row["exit_day"]
+                          for day in trading_session_days))
+    units=sum(counts)*tranche
+    return {"occupied_tranche_sessions":sum(counts),
+            "capital_session_units":round(units,2),
+            "longest_holding_sessions":max(counts,default=0),
+            "realized_pnl_per_1000_capital_session_units":(
+                round(1000*portfolio["realized_pnl"]/units,6) if units else None),
+            "entry_and_exit_included":True,
+            "calendar_provenance_independently_verified":False,
+            "daily_mtm_drawdown_available":False}
+
+
+def compare_ablation_portfolios(report, *, pattern, max_positions=6, trading_session_days=None):
     """Pool actual held-out dated events across symbols, one filter at a time.
 
     Never compare the same symbol-pattern twice, and never rank by test returns.
@@ -140,12 +168,19 @@ def compare_ablation_portfolios(report, *, pattern, max_positions=6):
                 legacy_events.append({**item,"symbol":symbol})
         legacy=simulate(legacy_events,max_positions=max_positions,priority_mode="symbol_asc")
         current=scenarios["symbol_asc"]
+        session_comparison=None
+        if trading_session_days is not None:
+            session_comparison={
+                "point_in_time":verified_session_occupancy(current,trading_session_days),
+                "legacy_retrospective":verified_session_occupancy(legacy,trading_session_days),
+                "calendar_source_verified":False}
         paired_liquidity_portfolios[key]={
             "point_in_time_event_n":len(events),
             "legacy_retrospective_event_n":len(legacy_events),
             "point_in_time":current,
             "legacy_retrospective":legacy,
             "point_in_time_capital_occupancy":calendar_capital_occupancy(current),
+            "session_occupancy_comparison":session_comparison,
             "legacy_capital_occupancy":calendar_capital_occupancy(legacy),
             "realized_pnl_difference":round(current["realized_pnl"]-legacy["realized_pnl"],2),
             "return_difference_percentage_points":round(
