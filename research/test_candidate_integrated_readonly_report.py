@@ -297,6 +297,11 @@ class IntegratedReadonlyTests(unittest.TestCase):
         self.assertEqual(pair["legacy_retrospective"]["realized_pnl"], -35)
         self.assertEqual(pair["realized_pnl_difference"], 105)
         self.assertTrue(pair["historical_comparison_only"])
+        risk=pair["daily_equity_risk"]
+        self.assertEqual(risk["status"],"NOT_EVALUATED")
+        self.assertFalse(risk["trade_ready"])
+        self.assertFalse(risk["synthetic_marks_permitted"])
+        self.assertIn("RECONCILED_FILLS",risk["reason"])
         self.assertEqual(set(result["paired_liquidity_portfolios"]), set(FILTERS))
 
     def test_repeated_entries_cash_and_score_parity(self):
