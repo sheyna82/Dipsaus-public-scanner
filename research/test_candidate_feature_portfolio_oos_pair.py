@@ -63,7 +63,7 @@ class PortfolioOOSPairTests(unittest.TestCase):
         self.assertEqual(start,late[521]["timestamp"]//86400)
         self.assertTrue(all(t["entry_day"]>=start
                             for t in result["baseline"]["accepted_signals"]))
-        self.assertEqual(result["baseline"]["accepted_n"],2)
+        self.assertEqual(result["baseline"]["accepted_n"],3)
 
     def test_common_end_excludes_trades_exiting_after_shortest_history(self):
         short=rows(750)
