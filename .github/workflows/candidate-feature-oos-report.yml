@@ -28,10 +28,14 @@ jobs:
           python -m unittest discover -s research -p 'test_candidate_feature_report_portfolio.py' -v
       - name: Run historical candidate and portfolio OOS report
         run: python research/candidate_feature_oos.py
+      - name: Produce quarterly robustness diagnostics
+        run: python research/candidate_portfolio_quarter_diagnostics.py
       - name: Publish research-only report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: candidate-feature-oos-historical-report
-          path: reports/candidate_feature_oos.json
+          path: |
+            reports/candidate_feature_oos.json
+            reports/candidate_feature_portfolio_quarters.json
           if-no-files-found: warn
