@@ -33,6 +33,8 @@ on:
       - 'test_migration_safety.py'
       - 'research/candidate_feature_ablation.py'
       - 'research/test_candidate_feature_ablation.py'
+      - 'research/candidate_feature_oos.py'
+      - 'research/test_candidate_feature_portfolio_oos_pair.py'
       - 'research/candidate_ablation_risk_diagnostics.py'
       - 'research/test_candidate_ablation_risk_diagnostics.py'
       - 'research/candidate_decision_evidence_gate.py'
@@ -220,6 +222,10 @@ jobs:
       - name: Test held-out feature filtering offline
         if: always()
         run: python -m unittest discover -s research -p 'test_candidate_feature_oos.py' -v
+
+      - name: Test held-out portfolio integration offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_feature_portfolio_oos_pair.py' -v
 
       - name: Test single-feature ablation offline
         if: always()
