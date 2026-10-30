@@ -26,7 +26,13 @@ def audit(report, pattern="recovery_from_prior20_low_3to15pct"):
             day = row["entry_day"]
             if not isinstance(day, int) or isinstance(day, bool) or day < 0:
                 raise ValueError("INVALID_UNIX_EPOCH_ENTRY_DAY")
-            d = date(1970, 1, 1) + timedelta(days=day)
+            value = row["net_return_pct"]
+            if not isinstance(value, (int, float)) or isinstance(value, bool) or not math.isfinite(value):
+                raise ValueError("INVALID_QUARTER_TRADE_RETURN")
+            try:
+                d = date(1970, 1, 1) + timedelta(days=day)
+            except (OverflowError, ValueError):
+                raise ValueError("INVALID_UNIX_EPOCH_ENTRY_DAY") from None
             key = f"{d.year}Q{(d.month - 1) // 3 + 1}"
             result.setdefault(key, []).append(float(row["net_return_pct"]))
         return {key: {"n": len(values), "mean_net_trade_return_pct": round(sum(values) / len(values), 6)}
