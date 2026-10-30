@@ -174,6 +174,13 @@ def reconciled_paired_equity(portfolio, inputs):
               for row in portfolio["accepted_signals"]}
     entries={}
     actual=set()
+    pnl_by_trade={}
+    from decimal import Decimal
+    expected_pnl={(row["symbol"],date(1970,1,1)+timedelta(days=row["entry_day"]),
+                   date(1970,1,1)+timedelta(days=row["exit_day"])):
+                  Decimal("3500")*Decimal(str(row["net_return_pct"]))/100
+                  for row in portfolio["accepted_signals"]}
+
     for event in verified["cash_accounting"]["ledger"]:
         key=event["ticker"]
         day=date.fromisoformat(event["date"])
@@ -184,7 +191,13 @@ def reconciled_paired_equity(portfolio, inputs):
         elif event["action"]=="exit":
             if key not in entries:
                 raise ValueError("PAIRED_LEDGER_UNMATCHED_EXIT")
-            actual.add((key,entries.pop(key),day))
+            trade_key=(key,entries.pop(key),day)
+            actual.add(trade_key)
+            pnl_by_trade[trade_key]=Decimal(str(event["net_pnl"]))
+    if pnl_by_trade.keys()!=expected_pnl.keys() or any(
+            abs(pnl_by_trade[key]-expected_pnl[key])>Decimal("0.005")
+            for key in expected_pnl):
+        raise ValueError("PAIRED_LEDGER_TRADE_PNL_MISMATCH")
     if entries or actual!=accepted:
         raise ValueError("PAIRED_LEDGER_ACCEPTED_POPULATION_MISMATCH")
     if abs(float(verified["cash_accounting"]["realized_net_pnl"])-
