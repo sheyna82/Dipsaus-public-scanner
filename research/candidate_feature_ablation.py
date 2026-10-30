@@ -30,6 +30,7 @@ def evaluate_ablation(stock,benchmark,pattern):
     execution_blocked={key:0 for key in FILTERS}
     portfolio_events={key:[] for key in FILTERS}
     liquidity_pairs={key:[] for key in FILTERS}
+    legacy_portfolio_events={key:[] for key in FILTERS}
     for i in indices:
         f=pre_entry_features(stock,benchmark,i)
         decision=label(f,fitted)
@@ -49,6 +50,14 @@ def evaluate_ablation(stock,benchmark,pattern):
         execution=execution_sensitivity(stock,i,horizon=HORIZON,cost_bps=COST_BPS)
         liquidity_pair=compare_liquidity_gates(stock,i)
         liquidity_pairs["baseline"].append(liquidity_pair)
+        legacy_event=None
+        if liquidity_pair["legacy_gate_pass"]:
+            legacy_entry=stock[i+1]["open"]*1.0025
+            legacy_event={"entry_day":stock[i+1]["timestamp"]//86400,
+                          "exit_day":stock[i+HORIZON]["timestamp"]//86400,
+                          "net_return_pct":round(100*(stock[i+HORIZON]["close"]/legacy_entry-1)-COST_BPS/100,4)}
+        if legacy_event is not None:
+            legacy_portfolio_events["baseline"].append(legacy_event)
         def add_execution(key):
             if execution["status"]=="DESCRIPTIVE_EXECUTION_SENSITIVITY":
                 execution_cohorts[key].append(execution)
@@ -68,12 +77,16 @@ def evaluate_ablation(stock,benchmark,pattern):
         for key,passed in decision["passes"].items():
             if passed:
                 liquidity_pairs[key].append(liquidity_pair)
+                if legacy_event is not None:
+                    legacy_portfolio_events[key].append(legacy_event)
                 add_execution(key)
                 add_portfolio_event(key)
                 cohorts[key].append(record)
                 risk_cohorts[key].append(risk_record)
         if all(decision["passes"].values()):
             liquidity_pairs["all_three"].append(liquidity_pair)
+            if legacy_event is not None:
+                legacy_portfolio_events["all_three"].append(legacy_event)
             add_execution("all_three")
             add_portfolio_event("all_three")
             cohorts["all_three"].append(record)
@@ -113,6 +126,7 @@ def evaluate_ablation(stock,benchmark,pattern):
             "cohorts":{key:summary(records) for key,records in cohorts.items()},
             "risk_diagnostics":compare_risk(risk_cohorts),
             "portfolio_events_25bps":portfolio_events,
+            "legacy_retrospective_portfolio_events_25bps":legacy_portfolio_events,
             "execution_sensitivity":{key:execution_summary(key) for key in FILTERS},
             "matched_count_placebo":{key:placebo(risk_cohorts["baseline"], risk_cohorts[key])
                                       for key in FILTERS if key != "baseline"},
