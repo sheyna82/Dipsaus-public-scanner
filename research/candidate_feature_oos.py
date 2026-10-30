@@ -10,7 +10,7 @@ from candidate_regime_cost_validation import RESEARCH_UNIVERSE, features, nonove
 from candidate_preentry_features import pre_entry_features
 from candidate_feature_thresholds import training_median_thresholds, label
 from candidate_benchmark_excess import compare, PATTERNS, HORIZON, COST_BPS
-from candidate_portfolio_capacity import simulate
+from candidate_portfolio_capacity import simulate, calendar_capital_occupancy
 
 def evaluate_filtered(stock, benchmark, pattern):
     cutoff=max(MIN_TRAIN,int(len(stock)*.65))
@@ -127,6 +127,13 @@ def portfolio_oos_pair(stock_by_symbol, benchmark, pattern):
                                   else "BLOCKED_NO_SHARED_OUT_OF_SAMPLE_CALENDAR"),
             "excluded_symbols": exclusions,
             "baseline": base_result, "filtered": filtered_result,
+            "capital_occupancy": {
+                "baseline": calendar_capital_occupancy(base_result),
+                "filtered": calendar_capital_occupancy(filtered_result)},
+            "realized_pnl_difference": round(
+                filtered_result["realized_pnl"] - base_result["realized_pnl"], 2),
+            "accepted_trade_count_difference": (
+                filtered_result["accepted_n"] - base_result["accepted_n"]),
             "limitations": ["Convenience universe, correlated securities and survivorship bias",
                             "No daily equity or verified execution fills",
                             "Common calendar start and end enforced; calendar quality unverified",
