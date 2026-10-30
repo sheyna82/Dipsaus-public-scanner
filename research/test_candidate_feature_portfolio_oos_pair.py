@@ -47,6 +47,24 @@ class PortfolioOOSPairTests(unittest.TestCase):
         self.assertTrue(all(i<520 or i in (600,620) for i in calls))
         self.assertFalse(result["daily_mark_to_market_verified"])
 
+    def test_common_calendar_start_excludes_early_held_out_signals(self):
+        early=rows(800)
+        late=rows(800,offset=50)
+        def mock_features(data,i):
+            return {"recovery":i in (100,550,600)}
+        with patch("candidate_feature_oos.features",side_effect=mock_features), \
+             patch("candidate_feature_oos.pre_entry_features",return_value={"feature":1}), \
+             patch("candidate_feature_oos.training_median_thresholds",
+                   return_value={"status":"TRAINING_ONLY_THRESHOLDS","thresholds":{}}), \
+             patch("candidate_feature_oos.label",
+                   return_value={"status":"RESEARCH_ONLY","passes":{"feature":True}}):
+            result=portfolio_oos_pair({"EARLY":early,"LATE":late}, [], "recovery")
+        start=result["common_test_start_day"]
+        self.assertEqual(start,late[521]["timestamp"]//86400)
+        self.assertTrue(all(t["entry_day"]>=start
+                            for t in result["baseline"]["accepted_signals"]))
+        self.assertEqual(result["baseline"]["accepted_n"],3)
+
     def test_multiple_symbols_share_capacity_and_do_not_reuse_same_day_proceeds(self):
         stock=rows()
         symbols={f"S{i:02d}":stock for i in range(7)}
