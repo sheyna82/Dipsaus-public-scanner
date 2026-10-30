@@ -131,6 +131,18 @@ class PortfolioOOSPairTests(unittest.TestCase):
                 self.assertEqual(scenario["rejected_n"],1)
                 self.assertEqual(scenario["accepted_n"]+scenario["rejected_n"],audit["candidate_event_n"])
         self.assertEqual(result["priority_sensitivity"]["baseline"]["realized_return_range_percentage_points"],0)
+        for cohort in ("baseline", "filtered"):
+            for mode in ("symbol_asc", "symbol_desc", "stable_hash"):
+                decisions=[row["priority_decisions"][cohort][mode]
+                           for row in result["candidate_audit"]]
+                self.assertEqual(decisions.count("ACCEPTED"),6)
+                self.assertEqual(decisions.count("CAPACITY_FULL"),1)
+        self.assertEqual(
+            next(row for row in result["candidate_audit"] if row["symbol"]=="S06")
+            ["priority_decisions"]["baseline"]["symbol_asc"], "CAPACITY_FULL")
+        self.assertEqual(
+            next(row for row in result["candidate_audit"] if row["symbol"]=="S00")
+            ["priority_decisions"]["baseline"]["symbol_desc"], "CAPACITY_FULL")
 
 if __name__=="__main__":
     unittest.main()
