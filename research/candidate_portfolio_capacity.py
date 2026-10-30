@@ -84,6 +84,7 @@ def simulate(signals, *, max_positions=6, capital=21000.0, tranche=3500.0, prior
             "rejected_n":sum(rejected.values()),"rejection_reasons":dict(rejected),
             "rejected_signals":rejected_signals,
             "max_concurrent_positions":max_used,"initial_capital":round(capital,2),
+            "tranche":float(tranche),"max_positions":max_positions,
             "ending_cash":round(cash,2),"realized_pnl":round(pnl,2),
             "realized_return_pct":round(100*pnl/capital,4),
             "accepted_signals":[{"symbol":r["symbol"],"entry_day":r["entry_day"],"exit_day":r["exit_day"],"net_return_pct":r["net_return_pct"]} for r in accepted],
@@ -170,7 +171,9 @@ def reconciled_paired_equity(portfolio, inputs):
     from datetime import date, timedelta
     # The accepted-trade ledger alone cannot prove rejected signal population
     # or original priority equivalence. Do not advertise full cohort parity.
-    verified=backtest_portfolio_with_marks(**inputs)
+    verified=backtest_portfolio_with_marks(**inputs, initial_capital=portfolio["initial_capital"],
+                                           tranche=portfolio["tranche"],
+                                           max_positions=portfolio["max_positions"])
     accepted={(row["symbol"],date(1970,1,1)+timedelta(days=row["entry_day"]),
                date(1970,1,1)+timedelta(days=row["exit_day"]))
               for row in portfolio["accepted_signals"]}
@@ -180,7 +183,7 @@ def reconciled_paired_equity(portfolio, inputs):
     from decimal import Decimal
     expected_pnl={(row["symbol"],date(1970,1,1)+timedelta(days=row["entry_day"]),
                    date(1970,1,1)+timedelta(days=row["exit_day"])):
-                  Decimal("3500")*Decimal(str(row["net_return_pct"]))/100
+                  Decimal(str(portfolio["tranche"]))*Decimal(str(row["net_return_pct"]))/100
                   for row in portfolio["accepted_signals"]}
 
     for event in verified["cash_accounting"]["ledger"]:
