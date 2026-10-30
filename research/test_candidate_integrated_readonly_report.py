@@ -266,6 +266,7 @@ class IntegratedReadonlyTests(unittest.TestCase):
                           "exit_date":end,"net_return_pct":2,"score":1}],
                 "daily_marks":{(start,"ABC"):3500},
                 "trading_dates":[start,end]}
+        self.assertEqual(portfolio["accepted_signals"][0]["net_return_pct"],2)
         result=reconciled_paired_equity(portfolio,inputs)
         self.assertEqual(result["status"],"ARITHMETIC_RECONCILED_RESEARCH_ONLY")
         self.assertEqual(result["risk"]["end_equity"],"21070")
