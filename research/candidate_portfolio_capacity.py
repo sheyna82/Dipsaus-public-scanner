@@ -221,6 +221,12 @@ def compare_ablation_portfolios(report, *, pattern, max_positions=6, trading_ses
     Never compare the same symbol-pattern twice, and never rank by test returns.
     Each filter gets identical deterministic symbol-priority tie breaking.
     """
+    if paired_equity_observations is not None and not isinstance(paired_equity_observations,dict):
+        raise ValueError("INVALID_PAIRED_EQUITY_OBSERVATIONS")
+    if paired_reconciled_inputs is not None and not isinstance(paired_reconciled_inputs,dict):
+        raise ValueError("INVALID_PAIRED_RECONCILIATION_INPUTS")
+    if paired_equity_observations is not None and paired_reconciled_inputs is not None:
+        raise ValueError("AMBIGUOUS_PAIRED_EQUITY_SOURCE")
     if not isinstance(report,dict) or not isinstance(report.get("candidates"),list):
         raise ValueError("INVALID_ABLATION_REPORT")
     from candidate_feature_ablation import FILTERS
