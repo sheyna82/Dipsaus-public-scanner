@@ -103,6 +103,7 @@ def compare_ablation_portfolios(report, *, pattern, max_positions=6):
     from candidate_feature_ablation import FILTERS
     comparisons={}
     priority_sensitivity={}
+    paired_liquidity_portfolios={}
     for key in FILTERS:
         events=[]
         for candidate in report["candidates"]:
@@ -115,6 +116,26 @@ def compare_ablation_portfolios(report, *, pattern, max_positions=6):
         scenarios={mode:simulate(events,max_positions=max_positions,priority_mode=mode)
                    for mode in ("symbol_asc","symbol_desc","stable_hash")}
         comparisons[key]=scenarios["symbol_asc"]
+        legacy_events=[]
+        for candidate in report["candidates"]:
+            symbol=candidate.get("symbol")
+            detail=candidate.get("patterns",{}).get(pattern,{})
+            if detail.get("status")!="DESCRIPTIVE_ONLY":
+                continue
+            for item in detail.get("legacy_retrospective_portfolio_events_25bps",{}).get(key,[]):
+                legacy_events.append({**item,"symbol":symbol})
+        legacy=simulate(legacy_events,max_positions=max_positions,priority_mode="symbol_asc")
+        current=scenarios["symbol_asc"]
+        paired_liquidity_portfolios[key]={
+            "point_in_time_event_n":len(events),
+            "legacy_retrospective_event_n":len(legacy_events),
+            "point_in_time":current,
+            "legacy_retrospective":legacy,
+            "realized_pnl_difference":round(current["realized_pnl"]-legacy["realized_pnl"],2),
+            "return_difference_percentage_points":round(
+                current["realized_return_pct"]-legacy["realized_return_pct"],4),
+            "legacy_not_executable_at_next_open":True,
+            "historical_comparison_only":True}
         priority_sensitivity[key]={"scenarios":{mode:{"accepted_n":result["accepted_n"],
                                                 "realized_return_pct":result["realized_return_pct"],
                                                 "rejected_n":result["rejected_n"]}
@@ -136,6 +157,7 @@ def compare_ablation_portfolios(report, *, pattern, max_positions=6):
                 "independent_cost_provenance_verified":False,
             },
             "comparison":comparisons,
+            "paired_liquidity_portfolios":paired_liquidity_portfolios,
             "priority_sensitivity":priority_sensitivity,
             "limitations":["Held-out sample was previously inspected; not fresh out-of-sample evidence",
                            "One pattern at a time; cross-pattern opportunity competition not modeled",
