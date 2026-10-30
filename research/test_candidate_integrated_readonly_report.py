@@ -245,7 +245,8 @@ class IntegratedReadonlyTests(unittest.TestCase):
         assumptions = result["execution_cost_assumptions"]
         self.assertEqual(assumptions["roundtrip_fixed_cost_bps"], 50)
         self.assertEqual(assumptions["adverse_entry_slippage_bps"], 25)
-        self.assertEqual(assumptions["entry_liquidity_filter"], "same_day_full_volume_retrospective")
+        self.assertEqual(assumptions["entry_liquidity_filter"], "signal_session_close_times_volume")
+        self.assertTrue(assumptions["point_in_time_liquidity_input"])
         self.assertFalse(assumptions["point_in_time_executable"])
         self.assertFalse(assumptions["independent_cost_provenance_verified"])
         self.assertEqual(set(result["comparison"]), set(FILTERS))
