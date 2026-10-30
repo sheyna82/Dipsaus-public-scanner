@@ -62,6 +62,15 @@ def portfolio_oos_pair(stock_by_symbol, benchmark, pattern):
     not a mark-to-market drawdown or executable trading system.
     """
     baseline, filtered, exclusions = [], [], {}
+    # Common calendar start is determined from eligible stock training cutoffs,
+    # never from future returns or observed test performance.
+    eligible = {symbol: stock for symbol, stock in stock_by_symbol.items()
+                if isinstance(symbol, str) and stock and len(stock) >= 750}
+    common_test_start_day = max(
+        (stock[max(MIN_TRAIN, int(len(stock) * .65)) + 1]["timestamp"] // 86400
+         for stock in eligible.values()
+         if max(MIN_TRAIN, int(len(stock) * .65)) + 1 < len(stock)),
+        default=None)
     for symbol, stock in sorted(stock_by_symbol.items()):
         if not isinstance(symbol, str) or not stock or len(stock) < 750:
             exclusions[str(symbol)] = "INSUFFICIENT_HISTORY"
@@ -78,6 +87,9 @@ def portfolio_oos_pair(stock_by_symbol, benchmark, pattern):
              if features(stock, i)[pattern]], HORIZON)
         for i in candidates:
             entry, end = stock[i + 1], stock[i + HORIZON]
+            if (common_test_start_day is not None and
+                    entry["timestamp"] // 86400 < common_test_start_day):
+                continue
             if entry["open"] <= 0:
                 exclusions[symbol] = "INVALID_ENTRY_OPEN"
                 continue
@@ -96,11 +108,12 @@ def portfolio_oos_pair(stock_by_symbol, benchmark, pattern):
             "daily_mark_to_market_verified": False,
             "same_baseline_event_pool": True,
             "cost_bps": COST_BPS, "horizon_sessions": HORIZON,
+            "common_test_start_day": common_test_start_day,
             "excluded_symbols": exclusions,
             "baseline": base_result, "filtered": filtered_result,
             "limitations": ["Convenience universe, correlated securities and survivorship bias",
                             "No daily equity or verified execution fills",
-                            "Stock-relative 65/35 splits do not guarantee a common calendar test window",
+                            "Common calendar start enforced; per-symbol end dates may differ",
                             "Filter thresholds fitted separately per stock; no cross-sectional selection calibration"]}
 
 def main():
