@@ -166,7 +166,7 @@ def portfolio_oos_pair(stock_by_symbol, benchmark, pattern):
                 "feature_timestamp": "signal_session_close_before_next_session_entry",
                 "training_thresholds": "per_symbol_training_history_only",
                 "future_outcome_not_used_for_filter_selection": True,
-                "selection_priority_audit_not_yet_evaluated": True,
+                "selection_priority_audit_not_yet_evaluated": False,
                 "trade_ready": False},
             "cost_bps": COST_BPS, "horizon_sessions": HORIZON,
             "common_test_start_day": common_test_start_day,
