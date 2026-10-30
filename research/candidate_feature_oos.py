@@ -10,6 +10,7 @@ from candidate_regime_cost_validation import RESEARCH_UNIVERSE, features, nonove
 from candidate_preentry_features import pre_entry_features
 from candidate_feature_thresholds import training_median_thresholds, label
 from candidate_benchmark_excess import compare, PATTERNS, HORIZON, COST_BPS
+from candidate_portfolio_capacity import simulate
 
 def evaluate_filtered(stock, benchmark, pattern):
     cutoff=max(MIN_TRAIN,int(len(stock)*.65))
@@ -52,6 +53,55 @@ def evaluate_filtered(stock, benchmark, pattern):
             "median_mae_pct":round(statistics.median(adverse),3) if adverse else None,
             "worst_mae_pct":round(min(adverse),3) if adverse else None,
             "inference_valid":False}
+
+
+def portfolio_oos_pair(stock_by_symbol, benchmark, pattern):
+    """Matched per-symbol held-out event pool; no threshold fitting on test dates.
+
+    Dates are Unix epoch days. This is realized closed-trade capacity research,
+    not a mark-to-market drawdown or executable trading system.
+    """
+    baseline, filtered, exclusions = [], [], {}
+    for symbol, stock in sorted(stock_by_symbol.items()):
+        if not isinstance(symbol, str) or not stock or len(stock) < 750:
+            exclusions[str(symbol)] = "INSUFFICIENT_HISTORY"
+            continue
+        cutoff = max(MIN_TRAIN, int(len(stock) * .65))
+        training = [(i, pre_entry_features(stock, benchmark, i))
+                    for i in range(50, cutoff) if features(stock, i)[pattern]]
+        fitted = training_median_thresholds(training)
+        if fitted["status"] != "TRAINING_ONLY_THRESHOLDS":
+            exclusions[symbol] = fitted["status"]
+            continue
+        candidates = nonoverlap(
+            [i for i in range(cutoff, len(stock) - HORIZON)
+             if features(stock, i)[pattern]], HORIZON)
+        for i in candidates:
+            entry, end = stock[i + 1], stock[i + HORIZON]
+            if entry["open"] <= 0:
+                exclusions[symbol] = "INVALID_ENTRY_OPEN"
+                continue
+            trade = {"symbol": symbol, "entry_day": entry["timestamp"] // 86400,
+                     "exit_day": end["timestamp"] // 86400,
+                     "net_return_pct": 100 * (end["close"] / entry["open"] - 1)
+                                       - COST_BPS / 100}
+            baseline.append(trade)
+            decision = label(pre_entry_features(stock, benchmark, i), fitted)
+            if decision["status"] == "RESEARCH_ONLY" and all(decision["passes"].values()):
+                filtered.append(trade.copy())
+    base_result = simulate(baseline)
+    filtered_result = simulate(filtered)
+    return {"research_only": True, "trade_ready": False,
+            "independent_prospective_validation": False,
+            "daily_mark_to_market_verified": False,
+            "same_baseline_event_pool": True,
+            "cost_bps": COST_BPS, "horizon_sessions": HORIZON,
+            "excluded_symbols": exclusions,
+            "baseline": base_result, "filtered": filtered_result,
+            "limitations": ["Convenience universe, correlated securities and survivorship bias",
+                            "No daily equity or verified execution fills",
+                            "Stock-relative 65/35 splits do not guarantee a common calendar test window",
+                            "Filter thresholds fitted separately per stock; no cross-sectional selection calibration"]}
 
 def main():
     output={"research_only":True,"trade_ready":False,
