@@ -46,6 +46,11 @@ class PortfolioOOSPairTests(unittest.TestCase):
         self.assertAlmostEqual(result["baseline"]["realized_pnl"],-35.0)
         self.assertTrue(all(i<520 or i in (600,620) for i in calls))
         self.assertFalse(result["daily_mark_to_market_verified"])
+        self.assertEqual(result["capital_occupancy"]["baseline"]
+                         ["occupied_tranche_calendar_days"],42)
+        self.assertEqual(result["capital_occupancy"]["filtered"]
+                         ["occupied_tranche_calendar_days"],21)
+        self.assertEqual(result["realized_pnl_difference"],17.5)
 
     def test_common_calendar_start_excludes_early_held_out_signals(self):
         early=rows(800)
