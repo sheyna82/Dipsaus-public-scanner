@@ -37,6 +37,22 @@ jobs:
           python -m unittest discover -s research -p 'test_candidate_input_reproducibility.py' -v
       - name: Run historical candidate and portfolio OOS report
         run: python research/candidate_feature_oos.py
+      - name: Replay identical frozen inputs and compare report output
+        run: |
+          cp reports/candidate_feature_oos.json /tmp/candidate_feature_oos_original.json
+          python research/candidate_feature_oos.py --snapshot reports/candidate_feature_oos_input_snapshot.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          original = json.loads(Path("/tmp/candidate_feature_oos_original.json").read_text())
+          replay = json.loads(Path("reports/candidate_feature_oos.json").read_text())
+          assert original["portfolio_oos"] == replay["portfolio_oos"], "PORTFOLIO_REPLAY_MISMATCH"
+          assert original["candidates"] == replay["candidates"], "CANDIDATE_REPLAY_MISMATCH"
+          assert original["input_data_provenance"]["stocks"] == replay["input_data_provenance"]["stocks"], "STOCK_HASH_MISMATCH"
+          assert original["input_data_provenance"]["benchmark"] == replay["input_data_provenance"]["benchmark"], "BENCHMARK_HASH_MISMATCH"
+          assert replay["input_data_provenance"]["replay_from_artifact"] is True
+          print("FROZEN_INPUT_REPLAY_IDENTICAL")
+          PY
       - name: Produce quarterly robustness diagnostics
         run: python research/candidate_portfolio_quarter_diagnostics.py
       - name: Publish research-only report
