@@ -134,6 +134,11 @@ def portfolio_oos_pair(stock_by_symbol, benchmark, pattern):
             "capital_occupancy": {
                 "baseline": calendar_capital_occupancy(base_result),
                 "filtered": calendar_capital_occupancy(filtered_result)},
+            "equity_risk": {
+                "baseline": {"status": "NOT_EVALUATED",
+                             "reason": "INDEPENDENT_DAILY_MARKS_AND_RECONCILED_FILLS_NOT_PROVIDED"},
+                "filtered": {"status": "NOT_EVALUATED",
+                             "reason": "INDEPENDENT_DAILY_MARKS_AND_RECONCILED_FILLS_NOT_PROVIDED"}},
             "realized_pnl_difference": round(
                 filtered_result["realized_pnl"] - base_result["realized_pnl"], 2),
             "accepted_trade_count_difference": (
