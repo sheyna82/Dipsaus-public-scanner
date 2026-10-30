@@ -24,13 +24,14 @@ class PortfolioReportTests(unittest.TestCase):
                        side_effect=lambda p: Path(folder)/p):
                 main()
             report=json.loads((Path(folder)/"reports/candidate_feature_oos.json").read_text())
+            snapshot_exists=(Path(folder)/"reports/candidate_feature_oos_input_snapshot.json").exists()
         self.assertEqual(len(report["portfolio_oos"]),2)
         self.assertEqual(report["input_data_provenance"]["benchmark"]["rows"],800)
         self.assertEqual(report["input_data_provenance"]["stocks"]["AAA"]["rows"],800)
         self.assertEqual(len(report["input_data_provenance"]["stocks"]["AAA"]["sha256"]),64)
         self.assertEqual(report["input_data_provenance"]["benchmark"]["sha256"],report["input_data_provenance"]["stocks"]["AAA"]["sha256"])
         self.assertTrue(report["input_data_provenance"]["data_frozen"])
-        self.assertTrue((Path(folder)/"reports/candidate_feature_oos_input_snapshot.json").exists())
+        self.assertTrue(snapshot_exists)
         self.assertEqual(paired.call_count,2)
         self.assertEqual(download.call_count,2)  # SPY and AAA, not twice per pattern
         self.assertEqual(report["portfolio_oos_provenance"]["loaded_symbols"],["AAA"])
