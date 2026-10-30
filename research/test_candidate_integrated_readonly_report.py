@@ -251,6 +251,26 @@ class IntegratedReadonlyTests(unittest.TestCase):
         self.assertFalse(assumptions["independent_cost_provenance_verified"])
         self.assertEqual(set(result["comparison"]), set(FILTERS))
 
+    def test_paired_liquidity_portfolios_compare_same_calendar(self):
+        from candidate_portfolio_capacity import compare_ablation_portfolios
+        from candidate_feature_ablation import FILTERS
+        pattern = "recovery_from_prior20_low_3to15pct"
+        current = {"entry_day": 1, "exit_day": 3, "net_return_pct": 2}
+        legacy = {"entry_day": 1, "exit_day": 3, "net_return_pct": -1}
+        detail = {"status": "DESCRIPTIVE_ONLY",
+                  "portfolio_events_25bps": {"baseline": [current]},
+                  "legacy_retrospective_portfolio_events_25bps": {"baseline": [legacy]}}
+        report = {"candidates": [{"symbol": "ABC", "patterns": {pattern: detail}}]}
+        result = compare_ablation_portfolios(report, pattern=pattern)
+        pair = result["paired_liquidity_portfolios"]["baseline"]
+        self.assertEqual(pair["point_in_time_event_n"], 1)
+        self.assertEqual(pair["legacy_retrospective_event_n"], 1)
+        self.assertEqual(pair["point_in_time"]["realized_pnl"], 70)
+        self.assertEqual(pair["legacy_retrospective"]["realized_pnl"], -35)
+        self.assertEqual(pair["realized_pnl_difference"], 105)
+        self.assertTrue(pair["historical_comparison_only"])
+        self.assertEqual(set(result["paired_liquidity_portfolios"]), set(FILTERS))
+
     def test_repeated_entries_cash_and_score_parity(self):
         from datetime import date, timedelta
         from candidate_portfolio_capacity import simulate
