@@ -168,6 +168,8 @@ def reconciled_paired_equity(portfolio, inputs):
     from research_swing_portfolio_with_marks import backtest_portfolio_with_marks
     from research_swing_equity_risk import summarize_equity_curve
     from datetime import date, timedelta
+    # The accepted-trade ledger alone cannot prove rejected signal population
+    # or original priority equivalence. Do not advertise full cohort parity.
     verified=backtest_portfolio_with_marks(**inputs)
     accepted={(row["symbol"],date(1970,1,1)+timedelta(days=row["entry_day"]),
                date(1970,1,1)+timedelta(days=row["exit_day"]))
@@ -207,7 +209,9 @@ def reconciled_paired_equity(portfolio, inputs):
     risk=summarize_equity_curve(observations)
     return {"status":"ARITHMETIC_RECONCILED_RESEARCH_ONLY","trade_ready":False,
             "risk":risk,"cash_equity_reconciliation":verified["cash_equity_reconciliation"],
-            "independent_price_and_calendar_provenance_verified":False}
+            "independent_price_and_calendar_provenance_verified":False,
+            "rejected_source_population_verified":False,
+            "selection_priority_equivalence_verified":False}
 
 
 def compare_ablation_portfolios(report, *, pattern, max_positions=6, trading_session_days=None,
