@@ -129,7 +129,8 @@ def compare_ablation_portfolios(report, *, pattern, max_positions=6):
                 "adverse_entry_slippage_bps":25,
                 "entry_price":"next_session_open_adjusted_for_adverse_slippage",
                 "exit_price":"horizon_session_close",
-                "entry_liquidity_filter":"same_day_full_volume_retrospective",
+                "entry_liquidity_filter":"signal_session_close_times_volume",
+                "point_in_time_liquidity_input":True,
                 "point_in_time_executable":False,
                 "broker_fee_fx_spread_exit_slippage_verified":False,
                 "independent_cost_provenance_verified":False,
@@ -141,5 +142,5 @@ def compare_ablation_portfolios(report, *, pattern, max_positions=6):
                            "Fixed exits and no daily drawdown or equity curve",
                            "Three deterministic tie-breakers are sensitivity checks, not randomized inference",
                            "Historical convenience universe and daily open fill assumptions",
-                           "Entry-day full volume liquidity gate is retrospective and cannot be known at next open",
+                           "Signal-session close-times-volume is observable before next open, but historical fills remain unverified",
                            "50 bps fixed costs and 25 bps entry slippage are model assumptions, not verified broker execution"]}
