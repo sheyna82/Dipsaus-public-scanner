@@ -47,4 +47,5 @@ jobs:
           path: |
             reports/candidate_feature_oos.json
             reports/candidate_feature_portfolio_quarters.json
+            reports/candidate_feature_oos_input_snapshot.json
           if-no-files-found: warn
