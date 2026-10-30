@@ -4,6 +4,7 @@ Usage: python research/candidate_trade_turnover_audit.py candidate_feature_ablat
 No trading signals are generated; results are descriptive, not causal.
 """
 import json
+import math
 import sys
 
 
@@ -29,6 +30,14 @@ def audit(report, pattern="recovery_from_prior20_low_3to15pct"):
     for name, portfolio in portfolios.items():
         other = index(portfolio["accepted_signals"])
         shared = base.keys() & other.keys()
+        for key in shared:
+            a = base[key]["net_return_pct"]
+            b = other[key]["net_return_pct"]
+            if not all(isinstance(v, (int, float)) and not isinstance(v, bool)
+                       and math.isfinite(v) for v in (a, b)):
+                raise ValueError("INVALID_SHARED_TRADE_RETURN")
+            if not math.isclose(a, b, rel_tol=0, abs_tol=1e-8):
+                raise ValueError("SHARED_TRADE_RETURN_MISMATCH")
         removed = base.keys() - other.keys()
         added = other.keys() - base.keys()
         def mean(rows):
