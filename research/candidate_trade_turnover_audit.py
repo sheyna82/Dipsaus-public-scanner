@@ -70,6 +70,8 @@ def audit(report, pattern="recovery_from_prior20_low_3to15pct"):
             "zero_eligible_quarters": sum(
                 stats["mean_net_trade_return_pct"] == 0 for stats in eligible.values()),
             "independent_oos_validation": False,
+            "effective_independent_quarters_verified": False,
+            "cross_symbol_dependence_adjusted": False,
             "trade_ready": False,
         }
 
@@ -80,6 +82,7 @@ def audit(report, pattern="recovery_from_prior20_low_3to15pct"):
                   "Different capacity competition changes accepted populations",
                   "No daily mark-to-market drawdown, verified fills or independent OOS test",
                   "Entry-quarter trade cohorts are not quarterly portfolio returns",
+                  "Quarter trade counts do not adjust for correlated stocks or overlapping trades",
                   "Prior observed quarter may not be calendar-adjacent or fully settled at quarter boundary",
                   "No prior-quarter result may be used as a live filter choice without event settlement and OOS checks",
                   "Entry days are Unix epoch days as produced by the source ablation",
