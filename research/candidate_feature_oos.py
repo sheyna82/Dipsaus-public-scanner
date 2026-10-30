@@ -115,6 +115,11 @@ def portfolio_oos_pair(stock_by_symbol, benchmark, pattern):
                 filtered.append(trade.copy())
     base_result = simulate(baseline)
     filtered_result = simulate(filtered)
+    comparison_status = (
+        "BLOCKED_NO_SHARED_OUT_OF_SAMPLE_CALENDAR" if not comparable_calendar
+        else "NO_BASELINE_OUT_OF_SAMPLE_SIGNALS" if not baseline
+        else "NO_CAPACITY_ACCEPTED_BASELINE_SIGNALS" if not base_result["accepted_n"]
+        else "CALENDAR_MATCHED_DESCRIPTIVE_ONLY")
     return {"research_only": True, "trade_ready": False,
             "independent_prospective_validation": False,
             "daily_mark_to_market_verified": False,
@@ -123,8 +128,7 @@ def portfolio_oos_pair(stock_by_symbol, benchmark, pattern):
             "common_test_start_day": common_test_start_day,
             "common_test_end_day": common_test_end_day,
             "comparable_calendar": comparable_calendar,
-            "comparison_status": ("CALENDAR_MATCHED_DESCRIPTIVE_ONLY" if comparable_calendar
-                                  else "BLOCKED_NO_SHARED_OUT_OF_SAMPLE_CALENDAR"),
+            "comparison_status": comparison_status,
             "excluded_symbols": exclusions,
             "baseline": base_result, "filtered": filtered_result,
             "capital_occupancy": {
