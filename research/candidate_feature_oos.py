@@ -3,7 +3,7 @@
 Predeclared median filters are fitted on the first 65% of each stock history;
 the last 35% is never used to set thresholds. SPY is used only for US stocks.
 """
-import json, statistics
+import json, statistics, hashlib
 from pathlib import Path
 from candidate_entry_snapshot import bars
 from candidate_regime_cost_validation import RESEARCH_UNIVERSE, features, nonoverlap, MIN_TRAIN
@@ -176,6 +176,19 @@ def main():
         except Exception as exc:
             output["candidates"].append({"symbol":symbol,"status":"DATA_BLOCKED",
                                          "error_type":type(exc).__name__})
+    def data_digest(rows):
+        payload = json.dumps(rows, sort_keys=True, separators=(',', ':'), allow_nan=False)
+        return hashlib.sha256(payload.encode('utf-8')).hexdigest()
+    output["input_data_provenance"] = {
+        "hash_algorithm": "sha256_canonical_json_sorted_keys",
+        "benchmark": {"symbol": "SPY", "rows": len(benchmark),
+                      "sha256": data_digest(benchmark)},
+        "stocks": {symbol: {"rows": len(rows), "sha256": data_digest(rows)}
+                   for symbol, rows in sorted(portfolio_stocks.items())},
+        "data_frozen": False,
+        "replay_from_artifact": False,
+        "limitations": ["Hashes detect changes but do not store raw historical bars",
+                        "Provider may revise historical unadjusted OHLCV"]}
     output["portfolio_oos"]={
         p:portfolio_oos_pair(portfolio_stocks,benchmark,p)
         for p in PATTERNS}
