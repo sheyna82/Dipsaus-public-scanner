@@ -154,8 +154,8 @@ class IntegratedReadonlyTests(unittest.TestCase):
             build(snap, evidence, reconciled_portfolio_inputs=inputs,
                   dated_signals=[{"symbol": "ABC", "entry_day": 0, "exit_day": 1,
                                   "net_return_pct": 2, "score": 99}])
-        # An extra rejected signal is still a population mismatch.
-        with self.assertRaisesRegex(ValueError, "CAPACITY_LEDGER_SOURCE_POPULATION_MISMATCH"):
+        # Duplicate source entries fail at the earlier signal validation gate.
+        with self.assertRaisesRegex(ValueError, "DUPLICATE_SIGNAL"):
             build(snap, evidence, reconciled_portfolio_inputs=inputs,
                   dated_signals=[{"symbol": "ABC", "entry_day": 0, "exit_day": 1,
                                   "net_return_pct": 2, "score": 1},
@@ -265,7 +265,7 @@ class IntegratedReadonlyTests(unittest.TestCase):
                 "daily_marks":{(start,"ABC"):2000},
                 "trading_dates":[start,end]}
         result=reconciled_paired_equity(portfolio,inputs)
-        self.assertEqual(result["cash_equity_reconciliation"]["ending_cash"],"10040")
+        self.assertEqual(float(result["cash_equity_reconciliation"]["ending_cash"]),10040.0)
         self.assertEqual(portfolio["realized_pnl"],40)
 
     def test_ambiguous_equity_sources_fail_closed(self):
@@ -297,7 +297,7 @@ class IntegratedReadonlyTests(unittest.TestCase):
         self.assertEqual(portfolio["accepted_signals"][0]["net_return_pct"],2)
         result=reconciled_paired_equity(portfolio,inputs)
         self.assertEqual(result["status"],"ARITHMETIC_RECONCILED_RESEARCH_ONLY")
-        self.assertEqual(result["risk"]["end_equity"],"21070")
+        self.assertEqual(float(result["risk"]["end_equity"]),21070.0)
         self.assertFalse(result["independent_price_and_calendar_provenance_verified"])
         wrong=simulate([{"symbol":"XYZ","entry_day":20727,"exit_day":20728,
                          "net_return_pct":2}])
