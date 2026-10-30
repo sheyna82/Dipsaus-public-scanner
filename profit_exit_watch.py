@@ -83,6 +83,18 @@ for symbol,item in cfg.get('positions',{}).items():
                 # Deliberately conjunctive: normal orderly retests stay quiet.
                 fast_crash=bool((drop5<=-2.0 or drop15<=-3.0 or from_high<=-3.5) and (range_expansion>=1.5 or red>=4))
                 fast_metrics={'drop_5m_pct':round(drop5,3),'drop_15m_pct':round(drop15,3),'from_20m_high_pct':round(from_high,3),'range_expansion':round(range_expansion,3),'red_bars_last5':red}
+        # Research-only: observe orderly but persistent intraday deterioration.
+        # Do not alter live alert behavior or emit notifications.
+        downside_research={'status':'DISABLED','trigger':False}
+        if item.get('research_intraday_downside',False) and fresh:
+            today=h[h.index.date==h.index[-1].date()]
+            if len(today)>=31:
+                from portfolio_downside_research import evaluate_intraday_downside
+                downside_research=evaluate_intraday_downside(
+                    today['Close'].tolist(),today['High'].tolist(),
+                    today['Low'].tolist(),today['Open'].tolist(),enabled=True)
+            else:
+                downside_research={'status':'INSUFFICIENT_DATA','trigger':False}
         # Provider-side exit pre-alert for cross-currency broker listings.
         # Never compare USD provider quotes directly with EUR Tradegate exit zones.
         # A configured USD reclaim only asks for a fresh broker check; execution still requires broker bid/ask/spread.
@@ -109,7 +121,7 @@ for symbol,item in cfg.get('positions',{}).items():
             if item.get('dynamic_structure_protection') and structure_report.get('structure_alert') and not fast_crash:
                 reason='CONFIRMED-RECOVERY-STRUCTURE-DETERIORATION'; severity='DEGIRO-STRUCTURE-REVIEW'
         alert=bool(fresh and reason)
-        rows.append({'symbol':symbol,'shares':item.get('shares'),'provider_symbol':provider_symbol,'provider_currency':provider_currency,'broker_currency':item.get('broker_currency'),'provider_quote':price,'provider_quote_utc':ts.isoformat(),'fresh':fresh,'profit_alert':alert,'fast_crash':fast_crash,'fast_crash_metrics':fast_metrics,'exit_prealert':exit_prealert,'exit_prealert_level_usd':exit_prealert_level,'alert_reason':reason,'decision':severity,'status':'FAST-CRASH-DEGIRO-CHECK' if fast_crash else ('WINSTCHECK-NU' if alert else 'PROFIT-WATCH'),'automatic_sell':False,'dynamic_structure':structure_report,'chart_profit_map':candidate_map})
+        rows.append({'symbol':symbol,'shares':item.get('shares'),'provider_symbol':provider_symbol,'provider_currency':provider_currency,'broker_currency':item.get('broker_currency'),'provider_quote':price,'provider_quote_utc':ts.isoformat(),'fresh':fresh,'profit_alert':alert,'fast_crash':fast_crash,'fast_crash_metrics':fast_metrics,'downside_research':downside_research,'exit_prealert':exit_prealert,'exit_prealert_level_usd':exit_prealert_level,'alert_reason':reason,'decision':severity,'status':'FAST-CRASH-DEGIRO-CHECK' if fast_crash else ('WINSTCHECK-NU' if alert else 'PROFIT-WATCH'),'automatic_sell':False,'dynamic_structure':structure_report,'chart_profit_map':candidate_map})
     except Exception as e:
         rows.append({'symbol':symbol,'status':'DATA-BLOCKED','profit_alert':False,'error':type(e).__name__})
 OUT.parent.mkdir(exist_ok=True)

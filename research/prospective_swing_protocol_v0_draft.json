@@ -1,0 +1,46 @@
+{
+  "protocol_id": "dipsaus_prospective_swing_v0_draft",
+  "status": "DRAFT_NOT_FROZEN_NOT_ACTIVE",
+  "research_only": true,
+  "trade_ready": false,
+  "objective": "Maximize out-of-sample net portfolio PnL subject to explicit drawdown and execution constraints",
+  "research_lanes": ["technical_recovery", "event_catalyst"],
+  "entry_decision": {
+    "decision_time": "After verified completed market session; exact timezone-aware timestamp required",
+    "candidate_universe": "TO_BE_PREREGISTERED",
+    "ranking_score": "TO_BE_PREREGISTERED_WITH_VERSION_AND_FORMULA",
+    "entry_execution_assumption": "Next eligible session; price source and fill rule must be frozen before testing",
+    "maximum_concurrent_positions": 6,
+    "default_tranche_eur": 3500,
+    "orders": "RESEARCH_ONLY_NO_AUTOMATED_EXECUTION"
+  },
+  "evaluation": {
+    "completed_trading_session_horizons": [3, 5, 10],
+    "exits_to_compare": ["fixed_horizon", "profit_target_on_close", "trailing_protection_on_close"],
+    "execution_costs": ["spread", "slippage", "commission", "currency_conversion_if_applicable"],
+    "primary_metric": "out_of_sample_net_portfolio_pnl",
+    "secondary_metrics": ["max_drawdown", "profit_factor", "win_rate", "capital_utilization", "turnover"],
+    "benchmarks": ["equal_weight_eligible_candidates", "market_index", "random_candidate_baseline"],
+    "validation": ["chronological_walk_forward", "purged_overlapping_labels", "prospective_immutable_signals", "never_use_future_data_at_entry"]
+  },
+  "required_record_fields": [
+    "protocol_id", "strategy_version", "signal_id", "ticker", "market",
+    "signal_created_at", "score_source_available_at", "score", "source_id",
+    "entry_at", "entry_price", "entry_price_source_available_at",
+    "outcome_source_available_at", "daily_closes", "execution_cost_assumptions",
+    "eligibility", "exclusion_reason", "record_sha256"
+  ],
+  "must_resolve_before_freeze": [
+    "candidate_universe_and_delisting_handling",
+    "independently_verifiable_market_data_source_and_licensing",
+    "rank_score_formula_and_thresholds",
+    "timezone_exchange_calendar_and_corporate_actions",
+    "entry_execution_fill_model",
+    "event_vs_technical_cohort_definitions",
+    "currency_conversion_and_all_costs",
+    "selection_and_exits_without_hindsight",
+    "immutable_artifact_retention_and_timestamp_attestation",
+    "sample_size_and_evaluation_start_date"
+  ],
+  "do_not_modify": "research/prospective_momentum_protocol_v1.json"
+}

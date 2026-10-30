@@ -1,0 +1,66 @@
+name: DIPSAUS prospective archive transport research
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prospective-archive-roundtrip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out research code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Create and verify synthetic archive
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_prospective_archive import archive_ledger, verify_archive
+          root = Path("prospective-transport-smoke")
+          (root / "candidates").mkdir(parents=True)
+          (root / "outcomes").mkdir()
+          (root / "candidates" / "synthetic.json").write_text(
+              json.dumps({"research_only": True, "synthetic_data_only": True,
+                          "trade_ready": False}) + "\n")
+          report = archive_ledger(root / "candidates", root / "outcomes",
+                                  root / "prospective-ledger-synthetic.zip")
+          assert verify_archive(report["archive"])["valid"]
+          print(json.dumps(report))
+          PY
+      - name: Upload synthetic prospective archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: dipsaus-prospective-synthetic-archive
+          path: prospective-transport-smoke/prospective-ledger-synthetic.zip
+          if-no-files-found: error
+          retention-days: 7
+      - name: Download archive within this run
+        uses: actions/download-artifact@v4
+        with:
+          name: dipsaus-prospective-synthetic-archive
+          path: prospective-transport-smoke/downloaded
+      - name: Verify downloaded archive and restore safely
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_prospective_archive_restore import restore_archive
+          from research_prospective_archive import verify_archive
+          root = Path("prospective-transport-smoke")
+          path = root / "downloaded" / "prospective-ledger-synthetic.zip"
+          assert verify_archive(path)["valid"]
+          result = restore_archive(path, root / "restored")
+          assert result["restored_files"] == 1
+          assert json.loads((root / "restored" / "candidates" / "synthetic.json").read_text())["synthetic_data_only"]
+          print(json.dumps({"research_only": True, "roundtrip_pass": True,
+                            "cross_run_persistence_tested": False}))
+          PY

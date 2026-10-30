@@ -2,6 +2,15 @@ name: DIPSAUS pull request regression
 on:
   pull_request:
     paths:
+      - 'research/candidate_cross_symbol_audit.py'
+      - 'research/test_candidate_cross_symbol_audit.py'
+      - 'research/candidate_regime_cost_validation.py'
+      - 'research/test_candidate_regime_cost_validation.py'
+      - 'research/candidate_nonoverlap_validation.py'
+      - 'research/candidate_conditional_cohorts.py'
+      - 'research/test_candidate_conditional_cohorts.py'
+      - 'research/candidate_entry_snapshot.py'
+      - 'research/test_candidate_entry_snapshot.py'
       - 'safe_runner.py'
       - 'us_recovery_pilot.py'
       - 'test_us_recovery_pilot.py'
@@ -22,6 +31,27 @@ on:
       - 'dipsaus_breakout_distance.py'
       - 'test_dipsaus_breakout_distance.py'
       - 'test_migration_safety.py'
+      - 'research/candidate_feature_ablation.py'
+      - 'research/test_candidate_feature_ablation.py'
+      - 'research/candidate_feature_oos.py'
+      - 'research/test_candidate_feature_portfolio_oos_pair.py'
+      - 'research/test_candidate_feature_report_portfolio.py'
+      - 'research/candidate_ablation_risk_diagnostics.py'
+      - 'research/test_candidate_ablation_risk_diagnostics.py'
+      - 'research/candidate_decision_evidence_gate.py'
+      - 'research/test_candidate_decision_evidence_gate.py'
+      - 'research/candidate_portfolio_capacity.py'
+      - 'research/test_candidate_portfolio_capacity.py'
+      - 'research/candidate_execution_sensitivity.py'
+      - 'research/test_candidate_execution_sensitivity.py'
+      - 'research/candidate_calendar_matched_placebo.py'
+      - 'research/test_candidate_calendar_matched_placebo.py'
+      - 'research/candidate_matched_count_placebo.py'
+      - 'research/test_candidate_matched_count_placebo.py'
+      - 'research/candidate_integrated_readonly_report.py'
+      - 'research/test_candidate_integrated_readonly_report.py'
+      - 'research/candidate_decision_evidence_report.py'
+      - 'research/test_candidate_decision_evidence_report.py'
       - '.github/workflows/pr-regression.yml'
       - '.github/workflows/shadow-prealert.yml'
 permissions:
@@ -43,3 +73,211 @@ jobs:
         env:
           SCANNER_NOTIFICATIONS_ENABLED: 'false'
         run: python -m unittest discover -p 'test*.py'
+
+      - name: Calculate six-candidate daily market snapshot
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python research/candidate_entry_snapshot.py
+      - name: Calculate conditional recovery cohorts
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python research/candidate_conditional_cohorts.py
+      - name: Calculate non-overlapping candidate validation
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python research/candidate_nonoverlap_validation.py
+      - name: Calculate regime-matched cost sensitivity
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python research/candidate_regime_cost_validation.py
+      - name: Calculate benchmark-relative sensitivity
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python research/candidate_benchmark_excess.py
+      - name: Upload benchmark-relative sensitivity
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-benchmark-excess
+          path: reports/candidate_benchmark_excess.json
+          if-no-files-found: error
+      - name: Evaluate held-out feature filters
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        run: python research/candidate_feature_oos.py
+      - name: Upload held-out feature filter research
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-feature-oos
+          path: reports/candidate_feature_oos.json
+          if-no-files-found: error
+      - name: Evaluate single-feature ablations
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        run: python research/candidate_feature_ablation.py
+      - name: Upload single-feature ablation research
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-feature-ablation
+          path: reports/candidate_feature_ablation.json
+          if-no-files-found: error
+      - name: Generate conservative candidate evidence report
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        run: python research/candidate_decision_evidence_report.py
+      - name: Build integrated read-only candidate dossier
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        run: python research/candidate_integrated_readonly_report.py
+      - name: Upload integrated read-only candidate dossier
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-integrated-readonly
+          path: reports/candidate_integrated_readonly.json
+          if-no-files-found: error
+      - name: Upload candidate evidence report
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-decision-evidence
+          path: reports/candidate_decision_evidence.json
+          if-no-files-found: error
+      - name: Audit cross-symbol research breadth
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python research/candidate_cross_symbol_audit.py
+      - name: Upload cross-symbol breadth audit
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cross-symbol-breadth-audit
+          path: reports/candidate_cross_symbol_audit.json
+          if-no-files-found: error
+      - name: Upload regime-matched cost sensitivity
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        uses: actions/upload-artifact@v4
+        with:
+          name: six-candidate-regime-cost-validation
+          path: reports/candidate_regime_cost_validation.json
+          if-no-files-found: error
+      - name: Upload non-overlapping candidate validation
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        uses: actions/upload-artifact@v4
+        with:
+          name: six-candidate-nonoverlap-validation
+          path: reports/candidate_nonoverlap_validation.json
+          if-no-files-found: error
+      - name: Upload conditional recovery cohorts
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        uses: actions/upload-artifact@v4
+        with:
+          name: six-candidate-conditional-cohorts
+          path: reports/candidate_conditional_cohorts.json
+          if-no-files-found: error
+      - name: Upload six-candidate market snapshot
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        uses: actions/upload-artifact@v4
+        with:
+          name: six-candidate-market-snapshot
+          path: reports/candidate_entry_research.json
+          if-no-files-found: error
+      - name: Run six-candidate offline safety tests
+        if: always()
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python -m unittest discover -s research -p 'test_candidate_entry_snapshot.py' -v
+
+      - name: Test conditional cohorts offline
+        if: always()
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python -m unittest discover -s research -p 'test_candidate_conditional_cohorts.py' -v
+
+      - name: Test cross-symbol breadth audit offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_cross_symbol_audit.py' -v
+
+      - name: Test regime-matched cost controls offline
+        if: always()
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python -m unittest discover -s research -p 'test_candidate_regime_cost_validation.py' -v
+
+      - name: Test benchmark-relative sensitivity offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_benchmark_excess.py' -v
+
+      - name: Test pre-entry feature no-lookahead
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_preentry_features.py' -v
+
+      - name: Test training-only feature thresholds
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_feature_thresholds.py' -v
+
+      - name: Test held-out feature filtering offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_feature_oos.py' -v
+
+      - name: Test held-out portfolio integration offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_feature_portfolio_oos_pair.py' -v
+
+      - name: Test single-feature ablation offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_feature_ablation.py' -v
+
+      - name: Audit accepted-trade turnover offline
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        run: python research/candidate_trade_turnover_audit.py reports/candidate_feature_ablation.json > reports/candidate_trade_turnover_audit.json
+      - name: Upload accepted-trade turnover audit
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-trade-turnover-audit
+          path: reports/candidate_trade_turnover_audit.json
+          if-no-files-found: error
+      - name: Test accepted-trade turnover audit offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_trade_turnover_audit.py' -v
+
+      - name: Test trade-level ablation risk diagnostics offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_ablation_risk_diagnostics.py' -v
+
+      - name: Test research decision evidence gate offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_decision_evidence_gate.py' -v
+
+      - name: Test candidate evidence report offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_decision_evidence_report.py' -v
+
+      - name: Test matched-count placebo controls offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_matched_count_placebo.py' -v
+
+      - name: Test calendar-matched placebo controls offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_calendar_matched_placebo.py' -v
+
+      - name: Test research-only execution sensitivity offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_execution_sensitivity.py' -v
+
+      - name: Test chronological six-position capacity offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_portfolio_capacity.py' -v
+
+      - name: Test integrated read-only dossier offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_integrated_readonly_report.py' -v
+
+      - name: Test candidate feature report portfolio integration offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_feature_report_portfolio.py' -v

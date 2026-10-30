@@ -1,0 +1,50 @@
+name: DIPSAUS notification case research tests
+on:
+  push:
+    branches:
+      - research/offline-technical-risk-20261021
+    paths:
+      - 'research_notification_signal_cases.py'
+      - 'test_research_notification_signal_cases.py'
+      - 'research_notification_forward_returns.py'
+      - 'test_research_notification_forward_returns.py'
+      - 'research_notification_relative_performance.py'
+      - 'test_research_notification_relative_performance.py'
+      - 'research_notification_pre_signal.py'
+      - 'test_research_notification_pre_signal.py'
+      - 'research_notification_case_report.py'
+      - 'test_research_notification_case_report.py'
+      - 'research_notification_coverage_audit.py'
+      - 'test_research_notification_coverage_audit.py'
+      - 'research_notification_proxy_eligibility.py'
+      - 'test_research_notification_proxy_eligibility.py'
+      - 'research_notification_family_net_comparison.py'
+      - 'test_research_notification_family_net_comparison.py'
+      - 'research_notification_timestamp_extract.py'
+      - 'test_research_notification_timestamp_extract.py'
+      - '.github/workflows/swing-notification-case-research.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'research_notification_signal_cases.py'
+      - 'test_research_notification_signal_cases.py'
+      - 'research_notification_family_net_comparison.py'
+      - 'test_research_notification_family_net_comparison.py'
+      - '.github/workflows/swing-notification-case-research.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  notification-cases:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Run notification case tests
+        run: python -m unittest -v test_research_notification_signal_cases test_research_notification_forward_returns test_research_notification_relative_performance test_research_notification_pre_signal test_research_notification_case_report test_research_notification_coverage_audit test_research_notification_timestamp_extract test_research_notification_family_net_comparison test_research_notification_proxy_eligibility
+      - name: Print research readiness audit
+        run: python -c "import json; from research_notification_signal_cases import audit_cases; print(json.dumps(audit_cases(), indent=2))"

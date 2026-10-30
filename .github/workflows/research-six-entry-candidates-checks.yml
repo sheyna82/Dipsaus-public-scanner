@@ -1,0 +1,23 @@
+name: Research six entry candidate snapshot checks
+on:
+  push:
+    branches:
+      - research/offline-technical-risk-20261021
+    paths:
+      - 'research/candidate_entry_snapshot.py'
+      - 'research/test_candidate_entry_snapshot.py'
+      - '.github/workflows/research-six-entry-candidates-checks.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test snapshot gates without market network
+        run: python -m unittest discover -s research -p 'test_candidate_entry_snapshot.py' -v

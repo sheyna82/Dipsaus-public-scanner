@@ -1,0 +1,742 @@
+name: DIPSAUS one-shot public price acquisition experiment
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/one-shot-price-acquisition-research.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  public-price-probe:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Probe one public Stooq historical series (no credentials)
+        shell: bash
+        run: |
+          mkdir -p research-price-probe
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_event_stooq_acquisition import acquire_stooq_history
+          outcome = {"source": "stooq", "symbol": "AMD", "start": "2026-10-01",
+                     "end": "2026-10-23", "trade_ready": False}
+          try:
+              metadata = acquire_stooq_history(
+                  "AMD", "2026-10-01", "2026-10-23",
+                  "research-price-probe", allow_network=True)
+              outcome.update(status="downloaded_unverified",
+                             observations=metadata["row_count"],
+                             sha256=metadata["content_sha256"])
+          except Exception as exc:
+              outcome.update(status="unavailable", error_type=type(exc).__name__,
+                             error=str(exc)[:160])
+          Path("research-price-probe/result.json").write_text(
+              json.dumps(outcome, indent=2) + "\n", encoding="utf-8")
+          print(json.dumps(outcome))
+          if outcome["status"] != "downloaded_unverified":
+              print("RESEARCH DATA NOT ACQUIRED: workflow job succeeded only as diagnostic")
+          PY
+      - name: Probe official unauthenticated provider endpoints
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from urllib.request import Request, urlopen
+          from urllib.error import HTTPError, URLError
+          targets = {
+              "twelve_data": "https://api.twelvedata.com/time_series?symbol=AMD&interval=1day&outputsize=5",
+              "alpha_vantage": "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=AMD",
+              "tiingo": "https://api.tiingo.com/tiingo/daily/amd/prices?startDate=2026-10-01&endDate=2026-10-23",
+              "yahoo_chart": "https://query1.finance.yahoo.com/v8/finance/chart/AMD?range=1y&interval=1d",
+          }
+          results = []
+          for name, url in targets.items():
+              record = {"provider": name, "symbol": "AMD", "credentials_supplied": False,
+                        "historical_data_validated": False, "trade_ready": False}
+              try:
+                  req = Request(url, headers={"User-Agent": "DIPSAUS-research-probe/1.0"})
+                  with urlopen(req, timeout=8) as response:
+                      record["http_status"] = response.status
+                      sample = response.read(262145)
+                      record["bytes_sampled"] = len(sample)
+                      if len(sample) > 262144:
+                          record["payload_class"] = "response_too_large"
+                          record["outcome"] = "unvalidated_size_limit"
+                          results.append(record)
+                          print(json.dumps(record))
+                          continue
+                      record["outcome"] = "response_received_not_validated"
+                      try:
+                          body = json.loads(sample)
+                          if isinstance(body, dict):
+                              keys = set(body)
+                              if name == "yahoo_chart" and isinstance(body.get("chart"), dict):
+                                  chart = body["chart"]
+                                  if isinstance(chart.get("result"), list) and chart["result"]:
+                                      record["payload_class"] = "chart_result_unverified"
+                                  else:
+                                      record["payload_class"] = "chart_error_or_empty"
+                              elif "Time Series (Daily)" in keys:
+                                  record["payload_class"] = "daily_series_unverified"
+                              elif keys & {"Error Message", "Note", "Information"}:
+                                  record["payload_class"] = "vendor_message_not_prices"
+                              elif body.get("status") == "error":
+                                  record["payload_class"] = "vendor_error_not_prices"
+                              else:
+                                  record["payload_class"] = "unrecognized_json"
+                          elif isinstance(body, list):
+                              record["payload_class"] = "json_list_unverified"
+                          else:
+                              record["payload_class"] = "unexpected_json"
+                      except (ValueError, UnicodeDecodeError):
+                          record["payload_class"] = "non_json_response"
+              except HTTPError as exc:
+                  record.update(http_status=exc.code, outcome="http_error")
+              except (URLError, TimeoutError, OSError) as exc:
+                  record.update(outcome="network_error", error_type=type(exc).__name__)
+              results.append(record)
+              print(json.dumps(record))
+          Path("research-price-probe/provider-access.json").write_text(
+              json.dumps(results, indent=2) + "\n", encoding="utf-8")
+          PY
+      - name: Acquire and validate actual Yahoo AMD daily observations
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from datetime import datetime, timezone
+          from pathlib import Path
+          from urllib.request import Request, urlopen
+          from research_yahoo_chart_daily import parse_yahoo_chart_daily
+          root = Path("research-price-probe")
+          symbols = ("TSLA", "META", "COHU", "AMZN", "PLTR", "AMD", "SPY")
+          results = []
+          for symbol in symbols:
+              url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=1y&interval=1d"
+              outcome = {"provider": "yahoo_chart", "symbol": symbol,
+                         "trade_ready": False, "source_authenticated_independently": False}
+              try:
+                  with urlopen(Request(url, headers={"User-Agent": "DIPSAUS-research-probe/1.0"}), timeout=12) as response:
+                      if response.geturl().split("/")[2] != "query1.finance.yahoo.com":
+                          raise ValueError("unexpected_redirect")
+                      raw = response.read(262145)
+                  if len(raw) > 262144:
+                      raise ValueError("payload_too_large")
+                  rows = parse_yahoo_chart_daily(json.loads(raw), expected_symbol=symbol)
+                  digest = hashlib.sha256(raw).hexdigest()
+                  (root / f"yahoo-{symbol}-raw.json").write_bytes(raw)
+                  (root / f"yahoo-{symbol}-normalized.json").write_text(
+                      json.dumps(rows, indent=2) + "\n", encoding="utf-8")
+                  outcome.update(status="normalized_unverified", observations=len(rows),
+                                 first_date=rows[0]["date"], last_date=rows[-1]["date"],
+                                 raw_sha256=digest, retrieved_at_utc=datetime.now(timezone.utc).isoformat())
+              except Exception as exc:
+                  outcome.update(status="failed", error_type=type(exc).__name__, error=str(exc)[:180])
+              (root / f"yahoo-{symbol}-validation.json").write_text(
+                  json.dumps(outcome, indent=2) + "\n", encoding="utf-8")
+              results.append(outcome)
+              print(json.dumps(outcome))
+          (root / "yahoo-cohort-summary.json").write_text(
+              json.dumps(results, indent=2) + "\n", encoding="utf-8")
+          PY
+      - name: Probe extended five-year research history separately
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from datetime import datetime, timezone
+          from pathlib import Path
+          from urllib.request import Request, urlopen
+          from research_yahoo_chart_daily import parse_yahoo_chart_daily
+          root = Path("research-price-probe")
+          report = {"period": "5y", "research_only": True,
+                    "independently_verified": False, "trade_ready": False, "symbols": []}
+          for symbol in ("COHU", "AMD", "META", "SPY"):
+              result = {"symbol": symbol, "status": "unavailable"}
+              try:
+                  url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=5y&interval=1d"
+                  request = Request(url, headers={"User-Agent": "DIPSAUS-research-probe/1.0"})
+                  with urlopen(request, timeout=15) as response:
+                      if response.geturl().split("/")[2] != "query1.finance.yahoo.com":
+                          raise ValueError("unexpected_redirect")
+                      raw = response.read(524289)
+                  if len(raw) > 524288:
+                      raise ValueError("payload_too_large")
+                  rows = parse_yahoo_chart_daily(json.loads(raw), expected_symbol=symbol)
+                  if len(rows) < 500:
+                      raise ValueError("insufficient_extended_history")
+                  (root / f"yahoo-5y-{symbol}-raw.json").write_bytes(raw)
+                  (root / f"yahoo-5y-{symbol}-normalized.json").write_text(
+                      json.dumps(rows, indent=2) + "\n")
+                  result.update(status="normalized_unverified", observations=len(rows),
+                                first_date=rows[0]["date"], last_date=rows[-1]["date"],
+                                raw_sha256=hashlib.sha256(raw).hexdigest())
+              except Exception as exc:
+                  result.update(error_type=type(exc).__name__, error=str(exc)[:160])
+              report["symbols"].append(result)
+              print(json.dumps(result))
+          report["retrieved_at_utc"] = datetime.now(timezone.utc).isoformat()
+          (root / "yahoo-5y-probe-summary.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          PY
+      - name: Compare five-year historical downside cohorts with chronological holdout
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_downside_evidence_gate import downside_evidence_gate
+          from research_chronological_momentum_holdout import chronological_momentum_holdout
+          root = Path("research-price-probe")
+          summary = json.loads((root / "yahoo-5y-probe-summary.json").read_text())
+          status = {r["symbol"]: r["status"] for r in summary["symbols"]}
+          report = {"period": "5y", "research_only": True,
+                    "independently_verified": False, "predictive_skill_established": False,
+                    "trade_ready": False, "results": [], "skipped": []}
+          if status.get("SPY") != "normalized_unverified":
+              report["skipped"].append("benchmark_unavailable")
+          else:
+              spy = json.loads((root / "yahoo-5y-SPY-normalized.json").read_text())
+              for symbol in ("COHU", "AMD", "META"):
+                  if status.get(symbol) != "normalized_unverified":
+                      report["skipped"].append(symbol)
+                      continue
+                  stock = json.loads((root / f"yahoo-5y-{symbol}-normalized.json").read_text())
+                  report["results"].append({
+                      "symbol": symbol,
+                      "momentum": chronological_momentum_holdout(stock, spy),
+                      "downside_evidence": downside_evidence_gate(stock, spy)})
+          (root / "yahoo-5y-chronological-evaluation.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
+      - name: Five-year chronological split sensitivity (exploratory)
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from decimal import Decimal
+          from research_chronological_momentum_holdout import chronological_momentum_holdout
+          root = Path("research-price-probe")
+          status = {r["symbol"]: r["status"] for r in
+                    json.loads((root / "yahoo-5y-probe-summary.json").read_text())["symbols"]}
+          report = {"research_only": True, "exploratory_multiple_splits": True,
+                    "not_independent_validation": True, "trade_ready": False,
+                    "results": []}
+          if status.get("SPY") == "normalized_unverified":
+              spy = json.loads((root / "yahoo-5y-SPY-normalized.json").read_text())
+              for symbol in ("COHU", "AMD", "META"):
+                  if status.get(symbol) != "normalized_unverified":
+                      continue
+                  stock = json.loads((root / f"yahoo-5y-{symbol}-normalized.json").read_text())
+                  for fraction in (0.6, 0.7, 0.8):
+                      result = chronological_momentum_holdout(
+                          stock, spy, train_fraction=fraction)
+                      h = result["holdout"]
+                      difference = (str(Decimal(h["mean_positive_excess_pp"]) -
+                                        Decimal(h["mean_negative_excess_pp"]))
+                                    if h["mean_positive_excess_pp"] is not None and
+                                       h["mean_negative_excess_pp"] is not None else None)
+                      report["results"].append({
+                          "symbol": symbol, "train_fraction": fraction,
+                          "holdout_start": result["holdout_start"],
+                          "holdout_observations": h["observations"],
+                          "positive_minus_negative_excess_pp": difference})
+          (root / "yahoo-5y-split-sensitivity.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
+      - name: Summarize five-year split instability without selecting a winner
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from decimal import Decimal
+          from pathlib import Path
+          root = Path("research-price-probe")
+          source = json.loads((root / "yahoo-5y-split-sensitivity.json").read_text())
+          results = []
+          for symbol in ("COHU", "AMD", "META"):
+              rows = [r for r in source["results"] if r["symbol"] == symbol]
+              values = [Decimal(r["positive_minus_negative_excess_pp"])
+                        for r in rows if r["positive_minus_negative_excess_pp"] is not None]
+              if len(values) != 3:
+                  results.append({"symbol": symbol, "status": "insufficient_splits"})
+                  continue
+              signs = ["positive" if v > 0 else "negative" if v < 0 else "zero"
+                       for v in values]
+              results.append({"symbol": symbol, "status": "exploratory_only",
+                              "positive_minus_negative_pp": [str(v) for v in values],
+                              "signs": signs, "sign_changes_across_splits": len(set(signs)) > 1,
+                              "range_pp": str(max(values) - min(values)),
+                              "predictive_skill_established": False})
+          report = {"research_only": True, "overlapping_splits": True,
+                    "independent_validation": False, "trade_ready": False,
+                    "results": results}
+          (root / "yahoo-5y-split-stability-summary.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
+      - name: Test calendar-year momentum diagnostics
+        run: python -m unittest -v test_research_calendar_year_momentum
+      - name: Evaluate five-year nonoverlapping calendar cohorts
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_calendar_year_momentum import calendar_year_momentum
+          root = Path("research-price-probe")
+          statuses = {r["symbol"]: r["status"] for r in
+                      json.loads((root / "yahoo-5y-probe-summary.json").read_text())["symbols"]}
+          report = {"research_only": True, "independently_verified": False,
+                    "predictive_skill_established": False, "trade_ready": False,
+                    "results": [], "skipped": []}
+          if statuses.get("SPY") != "normalized_unverified":
+              report["skipped"].append("SPY")
+          else:
+              spy = json.loads((root / "yahoo-5y-SPY-normalized.json").read_text())
+              for symbol in ("COHU", "AMD", "META"):
+                  if statuses.get(symbol) != "normalized_unverified":
+                      report["skipped"].append(symbol)
+                      continue
+                  stock = json.loads((root / f"yahoo-5y-{symbol}-normalized.json").read_text())
+                  report["results"].append({"symbol": symbol,
+                                            **calendar_year_momentum(stock, spy)})
+          (root / "yahoo-5y-calendar-year-momentum.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
+      - name: Inspect yearly momentum cohort sample sizes and stability
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from decimal import Decimal
+          from pathlib import Path
+          root = Path("research-price-probe")
+          source = json.loads((root / "yahoo-5y-calendar-year-momentum.json").read_text())
+          report = {"research_only": True, "descriptive_only": True,
+                    "predictive_skill_established": False, "trade_ready": False,
+                    "results": []}
+          for stock in source["results"]:
+              years = []
+              for year in stock["years"]:
+                  n = min(year["positive_count"], year["negative_count"])
+                  value = year["positive_minus_negative_pp"]
+                  years.append({"year": year["year"], "minimum_group_count": n,
+                                "both_groups_at_least_30": n >= 30,
+                                "positive_minus_negative_pp": value,
+                                "interpretation": "insufficient_samples" if n < 30
+                                    else "descriptive_only_not_predictive"})
+              report["results"].append({"symbol": stock["symbol"], "years": years})
+          (root / "yahoo-5y-yearly-sample-check.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
+      - name: Test annual momentum outlier sensitivity
+        run: python -m unittest -v test_research_yearly_momentum_outliers
+      - name: Inspect annual momentum mean versus median and trimmed mean
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_yearly_momentum_outliers import yearly_momentum_outlier_sensitivity
+          root = Path("research-price-probe")
+          statuses = {r["symbol"]: r["status"] for r in
+                      json.loads((root / "yahoo-5y-probe-summary.json").read_text())["symbols"]}
+          report = {"research_only": True, "independently_verified": False,
+                    "trade_ready": False, "results": []}
+          if statuses.get("SPY") == "normalized_unverified":
+              spy = json.loads((root / "yahoo-5y-SPY-normalized.json").read_text())
+              for symbol in ("COHU", "AMD", "META"):
+                  if statuses.get(symbol) != "normalized_unverified":
+                      continue
+                  stock = json.loads((root / f"yahoo-5y-{symbol}-normalized.json").read_text())
+                  report["results"].append({"symbol": symbol,
+                                            **yearly_momentum_outlier_sensitivity(stock, spy)})
+          (root / "yahoo-5y-yearly-outlier-sensitivity.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
+      - name: Test outlier dependence classification
+        run: python -m unittest -v test_research_yearly_outlier_dependence
+      - name: Classify annual mean versus robust return disagreement
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_yearly_outlier_dependence import summarize_yearly_outlier_dependence
+          root = Path("research-price-probe")
+          source = json.loads((root / "yahoo-5y-yearly-outlier-sensitivity.json").read_text())
+          report = summarize_yearly_outlier_dependence(source)
+          (root / "yahoo-5y-yearly-outlier-dependence.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
+      - name: Test yearly outlier evidence qualification
+        run: python -m unittest -v test_research_yearly_outlier_evidence_review
+      - name: Qualify yearly outlier findings by group size
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_yearly_outlier_evidence_review import yearly_outlier_evidence_review
+          root = Path("research-price-probe")
+          source = json.loads((root / "yahoo-5y-yearly-outlier-dependence.json").read_text())
+          report = yearly_outlier_evidence_review(source)
+          (root / "yahoo-5y-yearly-outlier-evidence-review.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
+      - name: Validate frozen prospective momentum research protocol
+        run: python research_validate_prospective_protocol.py
+      - name: Test prospective signal ledger safety
+        run: python -m unittest -v test_research_prospective_signal_ledger
+      - name: Test prospective batch completeness and duplicate guards
+        run: python -m unittest -v test_research_prospective_batch
+      - name: Test prospective ledger immutability and replay safety
+        run: python -m unittest -v test_research_prospective_ledger_writer
+      - name: Test delayed immutable prospective outcomes
+        run: python -m unittest -v test_research_prospective_outcome_writer
+      - name: Test prospective signal outcome integrity audit
+        run: python -m unittest -v test_research_prospective_ledger_audit
+      - name: Exercise prospective research end-to-end on synthetic data
+        run: python research_prospective_end_to_end_smoke.py
+      - name: Test portable prospective ledger archive integrity
+        run: python -m unittest -v test_research_prospective_archive
+      - name: Test prospective archive restoration and overwrite protection
+        run: python -m unittest -v test_research_prospective_archive_restore
+      - name: Build synthetic prospective archive transport fixture
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_prospective_archive import archive_ledger, verify_archive
+          root = Path("research-price-probe/prospective-transport")
+          (root / "candidates").mkdir(parents=True, exist_ok=True)
+          (root / "outcomes").mkdir(exist_ok=True)
+          (root / "candidates" / "synthetic.json").write_text(
+              json.dumps({"synthetic_data_only": True, "research_only": True,
+                          "trade_ready": False}) + "\n")
+          output = root / "synthetic-prospective-ledger.zip"
+          archive_ledger(root / "candidates", root / "outcomes", output)
+          assert verify_archive(output)["valid"]
+          PY
+      - name: Upload synthetic prospective transport fixture
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: dipsaus-prospective-transport-synthetic
+          path: research-price-probe/prospective-transport/synthetic-prospective-ledger.zip
+          if-no-files-found: error
+          retention-days: 7
+      - name: Download synthetic prospective transport fixture
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: dipsaus-prospective-transport-synthetic
+          path: research-price-probe/prospective-transport/downloaded
+      - name: Verify GitHub artifact roundtrip and restore
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_prospective_archive_restore import restore_archive
+          root = Path("research-price-probe/prospective-transport")
+          result = restore_archive(root / "downloaded" / "synthetic-prospective-ledger.zip",
+                                   root / "restored")
+          assert result["restored_files"] == 1
+          assert json.loads((root / "restored" / "candidates" / "synthetic.json").read_text())["synthetic_data_only"]
+          print(json.dumps({"github_artifact_roundtrip": True,
+                            "cross_run_persistence_tested": False,
+                            "research_only": True, "trade_ready": False}))
+          PY
+      - name: Test prior-run artifact metadata selection
+        run: python -m unittest -v test_research_prospective_previous_run_selection
+      - name: Test read-only prior-run GitHub artifact discovery
+        run: python -m unittest -v test_research_prospective_artifact_discovery
+      - name: Test bounded prior-run GitHub artifact download
+        run: python -m unittest -v test_research_prospective_artifact_download
+      - name: Download and verify archive from a previous GitHub run
+        env:
+          GH_RESEARCH_TOKEN: ${{ github.token }}
+          GH_RESEARCH_REPO: ${{ github.repository }}
+          GH_RESEARCH_RUN_ID: ${{ github.run_id }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          from research_prospective_artifact_discovery import discover_previous_archive
+          from research_prospective_artifact_download import download_previous_archive
+          from research_prospective_archive_restore import restore_archive
+          root = Path("research-price-probe/previous-run-artifact-check")
+          root.mkdir(parents=True, exist_ok=True)
+          report = {"research_only": True, "trade_ready": False,
+                    "prior_run_archive_verified": False}
+          eligible_archive_found = False
+          try:
+              selection = discover_previous_archive(
+                  os.environ["GH_RESEARCH_REPO"],
+                  os.environ["GH_RESEARCH_TOKEN"],
+                  int(os.environ["GH_RESEARCH_RUN_ID"]),
+                  "dipsaus-prospective-transport-synthetic",
+                  datetime.now(timezone.utc).isoformat(),
+                  max_pages=3)
+              report["selection_status"] = selection["selection_status"]
+              if selection["selected_artifact_id"] is not None:
+                  eligible_archive_found = True
+                  download = download_previous_archive(
+                      os.environ["GH_RESEARCH_REPO"],
+                      os.environ["GH_RESEARCH_TOKEN"],
+                      selection["selected_artifact_id"],
+                      root / "downloaded.zip")
+                  restore = restore_archive(root / "downloaded.zip", root / "restored")
+                  assert restore["restored_files"] == 1
+                  payload = json.loads(
+                      (root / "restored" / "candidates" / "synthetic.json").read_text())
+                  assert payload["synthetic_data_only"] is True
+                  report.update(prior_run_archive_verified=True,
+                                source_run_id=selection["selected_source_run_id"],
+                                artifact_id=selection["selected_artifact_id"],
+                                verified_files=download["verified_files"])
+          except Exception as exc:
+              report.update(error_type=type(exc).__name__,
+                            error=str(exc)[:180])
+          (root / "result.json").write_text(json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          if eligible_archive_found and not report["prior_run_archive_verified"]:
+              raise SystemExit("eligible prior-run archive failed integrity restoration")
+          if not report["prior_run_archive_verified"]:
+              print("NO ELIGIBLE PRIOR-RUN ARCHIVE; research-only diagnostic")
+          PY
+      - name: Compare observed seven-symbol returns against SPY
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from decimal import Decimal
+          root = Path("research-price-probe")
+          symbols = ("TSLA", "META", "COHU", "AMZN", "PLTR", "AMD")
+          report = {"status": "descriptive_only", "predictive_skill_established": False,
+                    "independently_verified": False, "trade_ready": False, "comparisons": []}
+          try:
+              data = {}
+              for symbol in (*symbols, "SPY"):
+                  data[symbol] = json.loads((root / f"yahoo-{symbol}-normalized.json").read_text())
+              dates = sorted(set.intersection(*(set(row["date"] for row in series) for series in data.values())))
+              if len(dates) < 6:
+                  raise ValueError("fewer_than_six_shared_sessions")
+              by_symbol = {symbol: {row["date"]: Decimal(row["close"]) for row in rows}
+                           for symbol, rows in data.items()}
+              first, last = dates[0], dates[-1]
+              for symbol in symbols:
+                  stock = by_symbol[symbol]
+                  spy = by_symbol["SPY"]
+                  stock_return = (stock[last] / stock[first] - 1) * 100
+                  spy_return = (spy[last] / spy[first] - 1) * 100
+                  report["comparisons"].append({
+                      "symbol": symbol, "first_session": first, "last_session": last,
+                      "shared_sessions": len(dates),
+                      "stock_return_pct": str(stock_return),
+                      "spy_return_pct": str(spy_return),
+                      "excess_percentage_points": str(stock_return - spy_return)})
+              report["status"] = "computed_unverified"
+          except Exception as exc:
+              report.update(status="unavailable", error_type=type(exc).__name__, error=str(exc)[:180])
+          (root / "yahoo-cohort-vs-spy.json").write_text(json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          if report["status"] != "computed_unverified":
+              raise SystemExit("descriptive_comparison_failed")
+          PY
+      - name: Calculate observed rolling forward excess returns
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_rolling_excess_returns import rolling_excess_returns
+          root = Path("research-price-probe")
+          symbols = ("TSLA", "META", "COHU", "AMZN", "PLTR", "AMD")
+          spy = json.loads((root / "yahoo-SPY-normalized.json").read_text())
+          summary = {"status": "descriptive_only", "predictive_skill_established": False,
+                     "independently_verified": False, "trade_ready": False, "symbols": {}}
+          for symbol in symbols:
+              stock = json.loads((root / f"yahoo-{symbol}-normalized.json").read_text())
+              result = rolling_excess_returns(stock, spy)
+              summary["symbols"][symbol] = {
+                  "observations": len(result["observations"]),
+                  "horizons": [1, 3, 5]}
+              (root / f"yahoo-{symbol}-rolling-excess.json").write_text(
+                  json.dumps(result, indent=2) + "\n")
+          (root / "yahoo-rolling-summary.json").write_text(
+              json.dumps(summary, indent=2) + "\n")
+          print(json.dumps(summary))
+          PY
+      - name: Evaluate simple past-return signal on observed data
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from decimal import Decimal
+          from pathlib import Path
+          from research_past_return_signal_baseline import evaluate_past_return_signal
+          root = Path("research-price-probe")
+          spy = json.loads((root / "yahoo-SPY-normalized.json").read_text())
+          report = {"baseline": "past_relative_momentum", "lookback": 3, "horizon": 3,
+                    "in_sample_only": True, "predictive_skill_established": False,
+                    "trade_ready": False, "results": []}
+          for symbol in ("TSLA", "META", "COHU", "AMZN", "PLTR", "AMD"):
+              stock = json.loads((root / f"yahoo-{symbol}-normalized.json").read_text())
+              evaluation = evaluate_past_return_signal(stock, spy, lookback=3, horizon=3)
+              rows = evaluation["observations"]
+              positive = [row for row in rows if row["signal_positive_past_excess"]]
+              negative = [row for row in rows if not row["signal_positive_past_excess"]]
+              def mean(group):
+                  if not group:
+                      return None
+                  return str(sum(Decimal(row["future_excess_percentage_points"]) for row in group) / len(group))
+              report["results"].append({
+                  "symbol": symbol, "observations": len(rows),
+                  "positive_signals": len(positive), "negative_signals": len(negative),
+                  "mean_future_excess_positive_pp": mean(positive),
+                  "mean_future_excess_negative_pp": mean(negative)})
+          (root / "yahoo-momentum-baseline.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
+      - name: Check nonoverlapping momentum outcome windows
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_nonoverlapping_momentum import nonoverlapping_momentum_summary
+          root = Path("research-price-probe")
+          spy = json.loads((root / "yahoo-SPY-normalized.json").read_text())
+          report = {"method": "nonoverlapping_momentum", "in_sample_only": True,
+                    "predictive_skill_established": False, "trade_ready": False, "results": []}
+          for symbol in ("TSLA", "META", "COHU", "AMZN", "PLTR", "AMD"):
+              stock = json.loads((root / f"yahoo-{symbol}-normalized.json").read_text())
+              result = nonoverlapping_momentum_summary(stock, spy)
+              report["results"].append({"symbol": symbol, **result})
+          (root / "yahoo-nonoverlapping-momentum.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
+      - name: Test chronological holdout research module
+        run: python -m unittest -v test_research_chronological_momentum_holdout
+      - name: Evaluate chronological momentum holdout on observed prices
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_chronological_momentum_holdout import chronological_momentum_holdout
+          root = Path("research-price-probe")
+          spy = json.loads((root / "yahoo-SPY-normalized.json").read_text())
+          report = {"research_only": True, "independently_verified": False,
+                    "predictive_skill_established": False, "trade_ready": False,
+                    "results": []}
+          for symbol in ("TSLA", "META", "COHU", "AMZN", "PLTR", "AMD"):
+              stock = json.loads((root / f"yahoo-{symbol}-normalized.json").read_text())
+              result = chronological_momentum_holdout(stock, spy)
+              report["results"].append({"symbol": symbol, **result})
+          (root / "yahoo-chronological-momentum-holdout.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
+      - name: Test forward downside research module
+        run: python -m unittest -v test_research_momentum_forward_downside
+      - name: Evaluate forward downside of momentum cohorts
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_momentum_forward_downside import momentum_forward_downside
+          root = Path("research-price-probe")
+          spy = json.loads((root / "yahoo-SPY-normalized.json").read_text())
+          report = {"research_only": True, "independently_verified": False,
+                    "predictive_skill_established": False, "trade_ready": False,
+                    "results": []}
+          for symbol in ("TSLA", "META", "COHU", "AMZN", "PLTR", "AMD"):
+              stock = json.loads((root / f"yahoo-{symbol}-normalized.json").read_text())
+              result = momentum_forward_downside(stock, spy)
+              report["results"].append({"symbol": symbol,
+                                        "positive": result["positive"],
+                                        "negative": result["negative"]})
+          (root / "yahoo-momentum-forward-downside.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
+      - name: Evaluate chronological forward downside cohorts
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_momentum_forward_downside import chronological_forward_downside
+          root = Path("research-price-probe")
+          spy = json.loads((root / "yahoo-SPY-normalized.json").read_text())
+          report = {"research_only": True, "independently_verified": False,
+                    "predictive_skill_established": False, "trade_ready": False,
+                    "results": []}
+          for symbol in ("TSLA", "META", "COHU", "AMZN", "PLTR", "AMD"):
+              stock = json.loads((root / f"yahoo-{symbol}-normalized.json").read_text())
+              report["results"].append({"symbol": symbol,
+                                        **chronological_forward_downside(stock, spy)})
+          (root / "yahoo-chronological-forward-downside.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
+      - name: Test conservative downside evidence gate
+        run: python -m unittest -v test_research_downside_evidence_gate
+      - name: Evaluate downside evidence sufficiency
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_downside_evidence_gate import downside_evidence_gate
+          root = Path("research-price-probe")
+          spy = json.loads((root / "yahoo-SPY-normalized.json").read_text())
+          report = {"research_only": True, "predictive_skill_established": False,
+                    "trade_ready": False, "results": []}
+          for symbol in ("TSLA", "META", "COHU", "AMZN", "PLTR", "AMD"):
+              stock = json.loads((root / f"yahoo-{symbol}-normalized.json").read_text())
+              report["results"].append({"symbol": symbol, **downside_evidence_gate(stock, spy)})
+          (root / "yahoo-downside-evidence-gate.json").write_text(
+              json.dumps(report, indent=2) + "\n")
+          print(json.dumps(report))
+          PY
+      - name: Upload experiment evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: dipsaus-one-shot-price-probe
+          path: research-price-probe/
+          if-no-files-found: warn
+          retention-days: 7

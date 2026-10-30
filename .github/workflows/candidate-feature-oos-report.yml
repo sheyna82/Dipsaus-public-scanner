@@ -1,0 +1,67 @@
+name: DIPSAUS candidate feature OOS historical report
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/offline-technical-risk-20261021
+    paths:
+      - '.github/workflows/candidate-feature-oos-report.yml'
+      - 'research/candidate_feature_oos.py'
+      - 'research/candidate_portfolio_quarter_diagnostics.py'
+      - 'research/test_candidate_feature_portfolio_oos_pair.py'
+      - 'research/test_candidate_feature_report_portfolio.py'
+      - 'research/test_candidate_portfolio_quarter_diagnostics.py'
+      - 'research/candidate_input_reproducibility.py'
+      - 'research/test_candidate_input_reproducibility.py'
+permissions:
+  contents: read
+concurrency:
+  group: candidate-feature-oos-report-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  historical-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Run offline integration tests
+        run: |
+          python -m unittest discover -s research -p 'test_candidate_feature_portfolio_oos_pair.py' -v
+          python -m unittest discover -s research -p 'test_candidate_feature_report_portfolio.py' -v
+          python -m unittest discover -s research -p 'test_candidate_portfolio_quarter_diagnostics.py' -v
+          python -m unittest discover -s research -p 'test_candidate_input_reproducibility.py' -v
+      - name: Run historical candidate and portfolio OOS report
+        run: python research/candidate_feature_oos.py
+      - name: Replay identical frozen inputs and compare report output
+        run: |
+          cp reports/candidate_feature_oos.json /tmp/candidate_feature_oos_original.json
+          python research/candidate_feature_oos.py --snapshot reports/candidate_feature_oos_input_snapshot.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          original = json.loads(Path("/tmp/candidate_feature_oos_original.json").read_text())
+          replay = json.loads(Path("reports/candidate_feature_oos.json").read_text())
+          assert original["portfolio_oos"] == replay["portfolio_oos"], "PORTFOLIO_REPLAY_MISMATCH"
+          assert original["candidates"] == replay["candidates"], "CANDIDATE_REPLAY_MISMATCH"
+          assert original["input_data_provenance"]["stocks"] == replay["input_data_provenance"]["stocks"], "STOCK_HASH_MISMATCH"
+          assert original["input_data_provenance"]["benchmark"] == replay["input_data_provenance"]["benchmark"], "BENCHMARK_HASH_MISMATCH"
+          assert replay["input_data_provenance"]["replay_from_artifact"] is True
+          print("FROZEN_INPUT_REPLAY_IDENTICAL")
+          PY
+      - name: Produce quarterly robustness diagnostics
+        run: python research/candidate_portfolio_quarter_diagnostics.py
+      - name: Publish research-only report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-feature-oos-historical-report
+          path: |
+            reports/candidate_feature_oos.json
+            reports/candidate_feature_portfolio_quarters.json
+            reports/candidate_feature_oos_input_snapshot.json
+          if-no-files-found: warn

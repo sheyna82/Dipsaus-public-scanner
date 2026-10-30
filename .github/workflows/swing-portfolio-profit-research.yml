@@ -1,0 +1,23 @@
+name: DIPSAUS portfolio profit reconciliation tests
+on:
+  pull_request:
+    paths:
+      - 'research_swing_portfolio_profit_report.py'
+      - 'test_research_swing_portfolio_profit_report.py'
+      - 'research_swing_closed_trade_profit_diagnostics.py'
+      - 'research_swing_portfolio_benchmark.py'
+      - '.github/workflows/swing-portfolio-profit-research.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  portfolio-profit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - run: python -m unittest -v test_research_swing_portfolio_profit_report

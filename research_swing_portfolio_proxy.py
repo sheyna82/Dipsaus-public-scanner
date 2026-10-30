@@ -1,0 +1,233 @@
+"""Offline six-slot cash-account portfolio proxy; not a live trading system.
+
+Ranks a fixed, aligned universe using prior 20-session close momentum. Buys
+next open; each slot stays reserved through its scheduled exit. A close-only
+warning exits at the next open, with no stop order or same-bar fill.
+"""
+from math import isfinite
+from statistics import mean
+from research_swing_failure_warning import failure_warning_at_close
+from research_swing_diversified_universe import UNIVERSE_V1
+
+SECTOR_BY_SYMBOL=dict(UNIVERSE_V1)
+
+def portfolio_swing_proxy(bars, *, horizon=10, slots=6, round_trip_cost_bps=30,
+                          warning_exits=False, starting_cash=21000, max_exposure_fraction=1.0,
+                          max_positions_per_sector=None, entry_start_index=20, slippage_bps=0, warning_policy="all", max_open_gap_pct=None):
+    if horizon not in (5,10,15) or type(slots) is not int or not 1<=slots<=6:
+        raise ValueError("invalid_parameters")
+    if max_open_gap_pct is not None and (not isinstance(max_open_gap_pct,(int,float)) or not isfinite(max_open_gap_pct) or not 0<=max_open_gap_pct<=100):
+        raise ValueError("invalid_max_open_gap_pct")
+    if warning_policy not in ("all","severe_only","breakdown_only"):
+        raise ValueError("invalid_warning_policy")
+    if not 0<=round_trip_cost_bps<=1000 or not 0<=slippage_bps<=500 or starting_cash<=0 or not 0<max_exposure_fraction<=1:
+        raise ValueError("invalid_cost_or_cash")
+    if max_positions_per_sector is not None and (type(max_positions_per_sector) is not int or not 1<=max_positions_per_sector<=slots):
+        raise ValueError("invalid_sector_cap")
+    if max_positions_per_sector is not None and any(s not in SECTOR_BY_SYMBOL for s in bars):
+        raise ValueError("unmapped_sector")
+    if not bars or len({tuple(r["timestamp"] for r in rows) for rows in bars.values()})!=1:
+        raise ValueError("unaligned_panel")
+    n=len(next(iter(bars.values())))
+    if n<60:
+        raise ValueError("insufficient_history")
+    if type(entry_start_index) is not int or not 20<=entry_start_index<n-1:
+        raise ValueError("invalid_entry_start_index")
+    for rows in bars.values():
+        for bar in rows:
+            if any(not isinstance(bar[k],(int,float)) or not isfinite(bar[k]) or bar[k]<=0
+                   for k in ("open","high","low","close")):
+                raise ValueError("invalid_prices")
+            if bar["low"]>min(bar["open"],bar["close"]) or bar["high"]<max(bar["open"],bar["close"]):
+                raise ValueError("inconsistent_ohlc")
+    cash=float(starting_cash)
+    peak_invested=0
+    positions={}
+    pending=[]
+    trades=[]
+    skipped_gap_entries=0
+    equity=[]
+    max_open=0
+    peak_same_sector_positions=0
+    worst_daily_equity_move_pct=0.0
+    negative_equity_days=0
+    prior_equity=None
+    worst_breadth_day={"index":None,"declining_positions":0,"open_positions":0,"fraction":0.0}
+    days_with_majority_declining=0
+    majority_day_equity_changes=[]
+    other_day_equity_changes=[]
+    regime_daily_changes={"uptrend":[],"downtrend":[],"unknown":[]}
+    regime_days={"uptrend":0,"downtrend":0,"unknown":0}
+    regime_negative_days={"uptrend":0,"downtrend":0,"unknown":0}
+    regime_worst_day={"uptrend":None,"downtrend":None,"unknown":None}
+    regime_loss_days_below_2pct={"uptrend":0,"downtrend":0,"unknown":0}
+    regime_loss_days_below_4pct={"uptrend":0,"downtrend":0,"unknown":0}
+    regime_loss_days_below_2pct_with_majority={"uptrend":0,"downtrend":0,"unknown":0}
+    severe_day_details=[]
+    severe_day_sector_counts=[]
+    worst_trade_pct=0.0
+    loss_buckets={"minus_5_to_minus_8":0,"minus_8_to_minus_15":0,"below_minus_15":0}
+    severe_loss_by_symbol={}
+    severe_loss_by_reason={}
+    for t in range(20,n):
+        # Execute orders at the open, after decisions made at prior close.
+        for order in pending:
+            symbol=order["symbol"]
+            price=bars[symbol][t]["open"]
+            if order["side"]=="sell" and symbol in positions:
+                p=positions.pop(symbol)
+                proceeds=p["shares"]*price*(1-round_trip_cost_bps/20000)*(1-slippage_bps/10000)
+                cash+=proceeds
+                net_pct=100*(proceeds/p["capital"]-1)
+                worst_trade_pct=min(worst_trade_pct,net_pct)
+                if net_pct<=-8:
+                    severe_loss_by_symbol[symbol]=severe_loss_by_symbol.get(symbol,0)+1
+                    reason=order["reason"]
+                    severe_loss_by_reason[reason]=severe_loss_by_reason.get(reason,0)+1
+                if net_pct<=-15:
+                    loss_buckets["below_minus_15"]+=1
+                elif net_pct<=-8:
+                    loss_buckets["minus_8_to_minus_15"]+=1
+                elif net_pct<=-5:
+                    loss_buckets["minus_5_to_minus_8"]+=1
+                trades.append({"symbol":symbol,"entry_index":p["entry_index"],
+                               "exit_index":t,"net_pct":round(net_pct,4),
+                               "reason":order["reason"]})
+            elif order["side"]=="buy" and symbol not in positions and len(positions)<slots:
+                # A next-open gap filter uses only the observed opening print;
+                # skip instead of pretending the prior close was executable.
+                if max_open_gap_pct is not None and abs(100*(price/bars[symbol][t-1]["close"]-1))>max_open_gap_pct:
+                    skipped_gap_entries+=1
+                    continue
+                # Fixed slots: reserve at most 1/slots of starting capital.
+                committed=sum(p["capital"] for p in positions.values())
+                budget=min(starting_cash/slots,cash,
+                           max(0,starting_cash*max_exposure_fraction-committed))
+                if budget>0:
+                    shares=budget/(price*(1+round_trip_cost_bps/20000)*(1+slippage_bps/10000))
+                    positions[symbol]={"shares":shares,"capital":budget,"entry_index":t,
+                                       "scheduled_exit":min(t+horizon-1,n-1)}
+                    cash-=budget
+        pending=[]
+        max_open=max(max_open,len(positions))
+        sector_occupancy={}
+        for held in positions:
+            sector=SECTOR_BY_SYMBOL.get(held,"unmapped")
+            sector_occupancy[sector]=sector_occupancy.get(sector,0)+1
+        peak_same_sector_positions=max(peak_same_sector_positions,*sector_occupancy.values()) if sector_occupancy else peak_same_sector_positions
+        peak_invested=max(peak_invested,sum(p["capital"] for p in positions.values()))
+        marked=cash+sum(p["shares"]*bars[s][t]["close"] for s,p in positions.items())
+        equity.append(marked)
+        majority_declining=False
+        if positions:
+            declining=sum(bars[s][t]["close"]<bars[s][t-1]["close"] for s in positions if t>0)
+            fraction=declining/len(positions)
+            majority_declining=fraction>0.5
+            days_with_majority_declining+=majority_declining
+            if declining>worst_breadth_day["declining_positions"] or (declining==worst_breadth_day["declining_positions"] and fraction>worst_breadth_day["fraction"]):
+                worst_breadth_day={"index":t,"declining_positions":declining,"open_positions":len(positions),"fraction":round(fraction,4)}
+        # Market proxy: equal-weight universe close, classified only with data
+        # known at the previous close (no same-day regime lookahead).
+        if t>=41:
+            previous_mean=sum(bars[s][t-1]["close"]/bars[s][t-21]["close"] for s in bars)/len(bars)
+            regime="uptrend" if previous_mean>=1 else "downtrend"
+        else:
+            regime="unknown"
+        regime_days[regime]+=1
+        if prior_equity is not None:
+            daily_move=100*(marked/prior_equity-1)
+            worst_daily_equity_move_pct=min(worst_daily_equity_move_pct,daily_move)
+            negative_equity_days+=daily_move<0
+            regime_daily_changes[regime].append(daily_move)
+            regime_negative_days[regime]+=daily_move<0
+            regime_loss_days_below_2pct[regime]+=daily_move<=-2
+            regime_loss_days_below_2pct_with_majority[regime]+=(daily_move<=-2 and majority_declining)
+            regime_loss_days_below_4pct[regime]+=daily_move<=-4
+            if daily_move<=-2:
+                sector_counts={}
+                for held_symbol in positions:
+                    sector=SECTOR_BY_SYMBOL.get(held_symbol,"unmapped")
+                    sector_counts[sector]=sector_counts.get(sector,0)+1
+                severe_day_sector_counts.append(sector_counts)
+                severe_day_details.append({"index":t,"equity_change_pct":round(daily_move,4),
+                                           "regime":regime,"open_positions":len(positions),
+                                           "declining_positions":declining if positions else 0,
+                                           "symbols":sorted(positions),"sector_counts":sector_counts})
+            regime_worst_day[regime]=daily_move if regime_worst_day[regime] is None else min(regime_worst_day[regime],daily_move)
+            (majority_day_equity_changes if majority_declining else other_day_equity_changes).append(daily_move)
+        prior_equity=marked
+        if t==n-1:
+            break
+        for s,p in list(positions.items()):
+            if t>=p["scheduled_exit"]:
+                pending.append({"side":"sell","symbol":s,"reason":"time"})
+            elif warning_exits and (lambda signal: signal["warning"] and (warning_policy=="all" or (warning_policy=="severe_only" and signal["gap_pct"]<=-5) or (warning_policy=="breakdown_only" and signal["breakdown"] and signal["close_location"]<=0.25)))(failure_warning_at_close(bars[s],t)):
+                pending.append({"side":"sell","symbol":s,"reason":"warning"})
+        exiting={x["symbol"] for x in pending}
+        free_slots=slots-len(positions)
+        if free_slots>0 and t>=entry_start_index:
+            ranked=sorted(((bars[s][t]["close"]/bars[s][t-20]["close"]-1,s)
+                           for s in bars if s not in positions),reverse=True)
+            planned_sector_counts=dict(sector_occupancy)
+            for _,s in ranked:
+                if sum(order["side"]=="buy" for order in pending)>=free_slots:
+                    break
+                sector=SECTOR_BY_SYMBOL.get(s,"unmapped")
+                if max_positions_per_sector is not None and planned_sector_counts.get(sector,0)>=max_positions_per_sector:
+                    continue
+                pending.append({"side":"buy","symbol":s,"reason":"momentum"})
+                planned_sector_counts[sector]=planned_sector_counts.get(sector,0)+1
+    # Mark remaining positions at final close, with estimated sell cost.
+    final_equity=cash+sum(p["shares"]*bars[s][-1]["close"]*(1-round_trip_cost_bps/20000)*(1-slippage_bps/10000)
+                          for s,p in positions.items())
+    peak=starting_cash
+    worst_drawdown=0
+    holdout_equity=equity[max(0,entry_start_index-20):]+[final_equity]
+    holdout_peak=starting_cash
+    holdout_worst_drawdown=0
+    for value in holdout_equity:
+        holdout_peak=max(holdout_peak,value)
+        holdout_worst_drawdown=min(holdout_worst_drawdown,100*(value/holdout_peak-1))
+    for value in equity+[final_equity]:
+        peak=max(peak,value)
+        worst_drawdown=min(worst_drawdown,100*(value/peak-1))
+    return {"initial_cash":starting_cash,"final_equity":round(final_equity,2),
+            "total_net_return_pct":round(100*(final_equity/starting_cash-1),4),
+            "holdout_max_drawdown_pct":round(holdout_worst_drawdown,4),
+            "max_mark_to_market_drawdown_pct":round(worst_drawdown,4),
+            "worst_daily_equity_move_pct":round(worst_daily_equity_move_pct,4),
+            "negative_equity_days":negative_equity_days,
+            "market_proxy_regime_method":"previous_close_equal_weight_20_day_return",
+            "market_proxy_regime_days":regime_days,
+            "market_proxy_regime_negative_days":regime_negative_days,
+            "market_proxy_regime_days_loss_2pct_or_more":regime_loss_days_below_2pct,
+            "severe_portfolio_day_details":severe_day_details,
+            "market_proxy_regime_days_loss_2pct_with_majority_declining":regime_loss_days_below_2pct_with_majority,
+            "market_proxy_regime_days_loss_4pct_or_more":regime_loss_days_below_4pct,
+            "market_proxy_regime_worst_day_pct":{k:(round(v,4) if v is not None else None) for k,v in regime_worst_day.items()},
+            "market_proxy_regime_mean_daily_equity_pct":{k:(round(mean(v),4) if v else None) for k,v in regime_daily_changes.items()},
+            "days_with_majority_positions_declining":days_with_majority_declining,
+            "mean_equity_change_majority_declining_pct":round(mean(majority_day_equity_changes),4) if majority_day_equity_changes else None,
+            "worst_equity_change_majority_declining_pct":round(min(majority_day_equity_changes),4) if majority_day_equity_changes else None,
+            "mean_equity_change_other_days_pct":round(mean(other_day_equity_changes),4) if other_day_equity_changes else None,
+            "worst_declining_position_breadth":worst_breadth_day,
+            "completed_trades":len(trades),"trade_log":trades,
+            "skipped_gap_entries":skipped_gap_entries,"max_open_gap_pct":max_open_gap_pct,"open_positions_at_end":len(positions),
+            "max_simultaneous_positions":max_open,
+            "max_positions_per_sector":max_positions_per_sector,
+            "entry_start_index":entry_start_index,
+            "peak_same_sector_positions":peak_same_sector_positions,
+            "peak_committed_capital_pct":round(100*peak_invested/starting_cash,4),
+            "max_exposure_fraction":max_exposure_fraction,"slippage_bps_per_side":slippage_bps,"warning_policy":warning_policy,
+            "warning_exit_trades":sum(x["reason"]=="warning" for x in trades),
+            "severe_completed_losses":sum(x["net_pct"]<=-8 for x in trades),
+            "worst_completed_trade_pct":round(worst_trade_pct,4),
+            "completed_loss_buckets":loss_buckets,
+            "severe_loss_by_symbol":dict(sorted(severe_loss_by_symbol.items())),
+            "severe_loss_by_exit_reason":dict(sorted(severe_loss_by_reason.items())),
+            "research_only":True,"trade_ready":False,"edge_proven":False,
+            "dividends_and_fx_modelled":False,"corporate_actions_verified":False,
+            "fractional_shares_assumed":True,"slippage_modelled":False,
+            "entry_selection_bias_controlled":False,
+            "cash_dividends_modelled":False,
+            "risk_adjusted_benchmark_tested":False}
