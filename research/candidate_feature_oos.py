@@ -3,7 +3,7 @@
 Predeclared median filters are fitted on the first 65% of each stock history;
 the last 35% is never used to set thresholds. SPY is used only for US stocks.
 """
-import json, statistics, hashlib
+import json, statistics, hashlib, argparse
 from pathlib import Path
 from candidate_entry_snapshot import bars
 from candidate_regime_cost_validation import RESEARCH_UNIVERSE, features, nonoverlap, MIN_TRAIN
@@ -148,7 +148,19 @@ def portfolio_oos_pair(stock_by_symbol, benchmark, pattern):
                             "Common calendar start and end enforced; calendar quality unverified",
                             "Filter thresholds fitted separately per stock; no cross-sectional selection calibration"]}
 
-def main():
+def main(snapshot_input=None):
+    if snapshot_input is not None:
+        snapshot = json.loads(Path(snapshot_input).read_text(encoding="utf-8"))
+        if snapshot.get("format") != "DIPSAUS_OOS_OHLCV_V1":
+            raise ValueError("INVALID_SNAPSHOT_FORMAT")
+        if snapshot.get("benchmark", {}).get("symbol") != "SPY":
+            raise ValueError("INVALID_SNAPSHOT_BENCHMARK")
+        frozen_benchmark = snapshot["benchmark"]["bars"]
+        frozen_stocks = snapshot["stocks"]
+        if not isinstance(frozen_benchmark, list) or not isinstance(frozen_stocks, dict):
+            raise ValueError("INVALID_SNAPSHOT_CONTENT")
+    else:
+        frozen_benchmark, frozen_stocks = None, None
     output={"research_only":True,"trade_ready":False,
             "method":"TRAINING_MEDIAN_ALL_THREE_FEATURES_OUT_OF_SAMPLE",
             "horizon_sessions":HORIZON,"cost_bps":COST_BPS,
@@ -158,7 +170,7 @@ def main():
                            "No sector or event controls, no broker execution evidence"],
             "candidates":[]}
     portfolio_stocks={}
-    try:benchmark=bars("SPY",history_range="5y")
+    try:benchmark=frozen_benchmark if snapshot_input is not None else bars("SPY",history_range="5y")
     except Exception:benchmark=[]
     for symbol in RESEARCH_UNIVERSE:
         if "." in symbol:
@@ -166,7 +178,8 @@ def main():
             continue
         try:
             if not benchmark:raise ValueError("BENCHMARK_UNAVAILABLE")
-            stock=bars(symbol,history_range="5y")
+            stock=(frozen_stocks[symbol] if snapshot_input is not None
+                   else bars(symbol,history_range="5y"))
             if len(stock)<750:raise ValueError("INSUFFICIENT_HISTORY")
             portfolio_stocks[symbol]=stock
             output["candidates"].append({"symbol":symbol,
@@ -194,7 +207,7 @@ def main():
         "data_frozen": True,
         "snapshot_file": str(snapshot_path),
         "snapshot_format": "DIPSAUS_OOS_OHLCV_V1",
-        "replay_from_artifact": False,
+        "replay_from_artifact": snapshot_input is not None,
         "limitations": ["Snapshot retains downloaded raw unadjusted bars but has not been independently verified",
                         "Provider may revise historical unadjusted OHLCV"]}
     output["portfolio_oos"]={
@@ -213,4 +226,8 @@ def main():
     dest.write_text(json.dumps(output,indent=2),encoding="utf-8")
     print(json.dumps({"research_only":True,"candidates":len(output["candidates"])}))
 
-if __name__=="__main__":main()
+if __name__=="__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--snapshot", help="Replay from archived OHLCV JSON without network")
+    args = parser.parse_args()
+    main(snapshot_input=args.snapshot)
