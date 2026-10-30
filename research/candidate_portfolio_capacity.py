@@ -92,6 +92,20 @@ def simulate(signals, *, max_positions=6, capital=21000.0, tranche=3500.0, prior
                            "No sector concentration or live fill model; priority must be predeclared",
                            "Historical simulation, not independent prospective validation"]}
 
+def calendar_capital_occupancy(portfolio, tranche=3500.0):
+    """Descriptive completed-trade capital-days, not session or MTM exposure."""
+    holds=[row["exit_day"]-row["entry_day"]+1
+           for row in portfolio["accepted_signals"]]
+    units=sum(holds)*tranche
+    return {"occupied_tranche_calendar_days":sum(holds),
+            "capital_calendar_day_units":round(units,2),
+            "longest_calendar_day_hold":max(holds,default=0),
+            "realized_pnl_per_1000_capital_calendar_day_units":(
+                round(1000*portfolio["realized_pnl"]/units,6) if units else None),
+            "calendar_days_not_trading_sessions":True,
+            "daily_mark_to_market_drawdown_verified":False}
+
+
 def compare_ablation_portfolios(report, *, pattern, max_positions=6):
     """Pool actual held-out dated events across symbols, one filter at a time.
 
@@ -131,6 +145,8 @@ def compare_ablation_portfolios(report, *, pattern, max_positions=6):
             "legacy_retrospective_event_n":len(legacy_events),
             "point_in_time":current,
             "legacy_retrospective":legacy,
+            "point_in_time_capital_occupancy":calendar_capital_occupancy(current),
+            "legacy_capital_occupancy":calendar_capital_occupancy(legacy),
             "realized_pnl_difference":round(current["realized_pnl"]-legacy["realized_pnl"],2),
             "return_difference_percentage_points":round(
                 current["realized_return_pct"]-legacy["realized_return_pct"],4),
