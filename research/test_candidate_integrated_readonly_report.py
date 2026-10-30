@@ -272,6 +272,10 @@ class IntegratedReadonlyTests(unittest.TestCase):
         self.assertFalse(result["independent_price_and_calendar_provenance_verified"])
         wrong=simulate([{"symbol":"XYZ","entry_day":20727,"exit_day":20728,
                          "net_return_pct":2}])
+        altered=simulate([{"symbol":"ABC","entry_day":20727,"exit_day":20728,
+                           "net_return_pct":3}])
+        with self.assertRaisesRegex(ValueError,"PAIRED_LEDGER_TRADE_PNL_MISMATCH"):
+            reconciled_paired_equity(altered,inputs)
         with self.assertRaisesRegex(ValueError,"PAIRED_LEDGER_ACCEPTED_POPULATION_MISMATCH"):
             reconciled_paired_equity(wrong,inputs)
 
