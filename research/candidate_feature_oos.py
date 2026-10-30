@@ -71,6 +71,9 @@ def portfolio_oos_pair(stock_by_symbol, benchmark, pattern):
          for stock in eligible.values()
          if max(MIN_TRAIN, int(len(stock) * .65)) + 1 < len(stock)),
         default=None)
+    common_test_end_day = min(
+        (stock[-1]["timestamp"] // 86400 for stock in eligible.values()),
+        default=None)
     for symbol, stock in sorted(stock_by_symbol.items()):
         if not isinstance(symbol, str) or not stock or len(stock) < 750:
             exclusions[str(symbol)] = "INSUFFICIENT_HISTORY"
@@ -89,6 +92,9 @@ def portfolio_oos_pair(stock_by_symbol, benchmark, pattern):
             entry, end = stock[i + 1], stock[i + HORIZON]
             if (common_test_start_day is not None and
                     entry["timestamp"] // 86400 < common_test_start_day):
+                continue
+            if (common_test_end_day is not None and
+                    end["timestamp"] // 86400 > common_test_end_day):
                 continue
             if entry["open"] <= 0:
                 exclusions[symbol] = "INVALID_ENTRY_OPEN"
@@ -109,11 +115,12 @@ def portfolio_oos_pair(stock_by_symbol, benchmark, pattern):
             "same_baseline_event_pool": True,
             "cost_bps": COST_BPS, "horizon_sessions": HORIZON,
             "common_test_start_day": common_test_start_day,
+            "common_test_end_day": common_test_end_day,
             "excluded_symbols": exclusions,
             "baseline": base_result, "filtered": filtered_result,
             "limitations": ["Convenience universe, correlated securities and survivorship bias",
                             "No daily equity or verified execution fills",
-                            "Common calendar start enforced; per-symbol end dates may differ",
+                            "Common calendar start and end enforced; calendar quality unverified",
                             "Filter thresholds fitted separately per stock; no cross-sectional selection calibration"]}
 
 def main():
