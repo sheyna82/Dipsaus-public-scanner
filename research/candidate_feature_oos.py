@@ -157,6 +157,7 @@ def main():
                            "Yahoo unadjusted OHLCV and SPY, no corporate-action audit",
                            "No sector or event controls, no broker execution evidence"],
             "candidates":[]}
+    portfolio_stocks={}
     try:benchmark=bars("SPY",history_range="5y")
     except Exception:benchmark=[]
     for symbol in RESEARCH_UNIVERSE:
@@ -167,6 +168,7 @@ def main():
             if not benchmark:raise ValueError("BENCHMARK_UNAVAILABLE")
             stock=bars(symbol,history_range="5y")
             if len(stock)<750:raise ValueError("INSUFFICIENT_HISTORY")
+            portfolio_stocks[symbol]=stock
             output["candidates"].append({"symbol":symbol,
                 "patterns":{p:{"baseline":compare(stock,benchmark,p),
                                 "filtered":evaluate_filtered(stock,benchmark,p)}
@@ -174,6 +176,17 @@ def main():
         except Exception as exc:
             output["candidates"].append({"symbol":symbol,"status":"DATA_BLOCKED",
                                          "error_type":type(exc).__name__})
+    output["portfolio_oos"]={
+        p:portfolio_oos_pair(portfolio_stocks,benchmark,p)
+        for p in PATTERNS}
+    output["portfolio_oos_provenance"]={
+        "universe":"US-only symbols successfully loaded from RESEARCH_UNIVERSE",
+        "loaded_symbols":sorted(portfolio_stocks),
+        "benchmark":"SPY",
+        "source":"Same five-year OHLCV downloads as candidate-level evaluation",
+        "independent_data_validation":False,
+        "independent_prospective_validation":False,
+        "trade_ready":False}
     dest=Path("reports/candidate_feature_oos.json")
     dest.parent.mkdir(parents=True,exist_ok=True)
     dest.write_text(json.dumps(output,indent=2),encoding="utf-8")
