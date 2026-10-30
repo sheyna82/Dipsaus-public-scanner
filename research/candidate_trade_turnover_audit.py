@@ -38,6 +38,22 @@ def audit(report, pattern="recovery_from_prior20_low_3to15pct"):
         return {key: {"n": len(values), "mean_net_trade_return_pct": round(sum(values) / len(values), 6)}
                 for key, values in sorted(result.items())}
 
+    def prior_quarter_diagnostic(rows):
+        grouped = quarters(rows)
+        periods = sorted(grouped)
+        results = {}
+        for i, period in enumerate(periods):
+            prior = periods[i - 1] if i else None
+            results[period] = {
+                "prior_observed_quarter": prior,
+                "prior_quarter_mean_net_trade_return_pct":
+                    grouped[prior]["mean_net_trade_return_pct"] if prior else None,
+                "current_quarter_mean_net_trade_return_pct":
+                    grouped[period]["mean_net_trade_return_pct"],
+                "eligible_for_live_filter_choice": False,
+            }
+        return results
+
     base = index(baseline)
     result = {"research_only": True, "trade_ready": False, "pattern": pattern,
               "limitations": [
@@ -45,6 +61,8 @@ def audit(report, pattern="recovery_from_prior20_low_3to15pct"):
                   "Different capacity competition changes accepted populations",
                   "No daily mark-to-market drawdown, verified fills or independent OOS test",
                   "Entry-quarter trade cohorts are not quarterly portfolio returns",
+                  "Prior observed quarter may not be calendar-adjacent or fully settled at quarter boundary",
+                  "No prior-quarter result may be used as a live filter choice without event settlement and OOS checks",
                   "Entry days are Unix epoch days as produced by the source ablation",
                   "A removed trade may not have been eligible under the alternative portfolio"
               ], "comparisons": {}}
@@ -65,6 +83,7 @@ def audit(report, pattern="recovery_from_prior20_low_3to15pct"):
             return (round(sum(float(row["net_return_pct"]) for row in rows) /
                           len(rows), 6) if rows else None)
         result["comparisons"][name] = {
+            "prior_observed_quarter_diagnostic": prior_quarter_diagnostic(list(other.values())),
             "entry_quarter_cohorts": {
                 "baseline": quarters(list(base.values())),
                 "alternative": quarters(list(other.values())),
