@@ -163,6 +163,7 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
         from decimal import Decimal
         open_by_symbol = {}
         holding_sessions = []
+        holding_overnight_intervals = []
         for event in verified["cash_accounting"]["ledger"]:
             symbol = event["ticker"]
             if event["action"] == "entry":
@@ -174,10 +175,12 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
                     raise ValueError("AMBIGUOUS_HOLDING_PERIOD")
                 start = open_by_symbol.pop(symbol)
                 finish = date.fromisoformat(event["date"])
-                sessions = sum(start <= day < finish for day in reconciled_portfolio_inputs["trading_dates"])
+                sessions = sum(start <= day <= finish for day in reconciled_portfolio_inputs["trading_dates"])
+                overnight_intervals = sum(start <= day < finish for day in reconciled_portfolio_inputs["trading_dates"])
                 if sessions < 1:
                     raise ValueError("INVALID_HOLDING_SESSION_COUNT")
                 holding_sessions.append(sessions)
+                holding_overnight_intervals.append(overnight_intervals)
         if open_by_symbol:
             raise ValueError("UNCLOSED_HOLDING_PERIOD")
         capital_session_units = sum(Decimal("3500") * n for n in holding_sessions)
@@ -186,6 +189,8 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
             "trade_ready": False,
             "completed_trades": len(holding_sessions),
             "total_invested_tranche_sessions": sum(holding_sessions),
+            "total_overnight_intervals": sum(holding_overnight_intervals),
+            "session_definition": "Inclusive entry and exit trading sessions; entry at open and exit at close",
             "capital_session_units": str(capital_session_units),
             "longest_holding_sessions": max(holding_sessions, default=0),
             "net_pnl_per_1000_currency_session_units": (
@@ -195,6 +200,7 @@ def build(snapshot, evidence_report, *, dated_signals=None, equity_observations=
             "limitations": [
                 "Capital-session efficiency is descriptive, not an annualized return or a forecast",
                 "Uses the research ledger fixed tranche of 3500 and caller-supplied session calendar",
+                "Exit session included in occupied sessions; overnight intervals separately reported",
                 "No intraday capital usage, financing, FX or broker fill verification",
             ],
         }
