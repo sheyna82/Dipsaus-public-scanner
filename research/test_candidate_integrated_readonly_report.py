@@ -251,6 +251,20 @@ class IntegratedReadonlyTests(unittest.TestCase):
         self.assertFalse(assumptions["independent_cost_provenance_verified"])
         self.assertEqual(set(result["comparison"]), set(FILTERS))
 
+    def test_calendar_capital_occupancy_counts_entry_and_exit(self):
+        from candidate_portfolio_capacity import simulate, calendar_capital_occupancy
+        portfolio=simulate([{"symbol":"ABC","entry_day":10,"exit_day":12,
+                             "net_return_pct":2}])
+        result=calendar_capital_occupancy(portfolio)
+        self.assertEqual(result["occupied_tranche_calendar_days"],3)
+        self.assertEqual(result["capital_calendar_day_units"],10500)
+        self.assertEqual(result["longest_calendar_day_hold"],3)
+        self.assertAlmostEqual(result["realized_pnl_per_1000_capital_calendar_day_units"],6.666667)
+        self.assertTrue(result["calendar_days_not_trading_sessions"])
+        self.assertFalse(result["daily_mark_to_market_drawdown_verified"])
+        empty=calendar_capital_occupancy(simulate([]))
+        self.assertIsNone(empty["realized_pnl_per_1000_capital_calendar_day_units"])
+
     def test_paired_liquidity_portfolios_compare_same_calendar(self):
         from candidate_portfolio_capacity import compare_ablation_portfolios
         from candidate_feature_ablation import FILTERS
