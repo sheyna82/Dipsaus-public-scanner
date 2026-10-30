@@ -155,8 +155,51 @@ def audited_equity_risk(portfolio, observations):
     return risk
 
 
+def reconciled_paired_equity(portfolio, inputs):
+    """Require a complete independent fill/mark ledger before claiming drawdown."""
+    if inputs is None:
+        return {"status":"NOT_EVALUATED","trade_ready":False,
+                "reason":"RECONCILED_TRADES_DAILY_MARKS_AND_TRADING_DATES_REQUIRED"}
+    if not isinstance(inputs,dict) or set(inputs)!={"trades","daily_marks","trading_dates"}:
+        raise ValueError("INVALID_PAIRED_RECONCILIATION_INPUTS")
+    from pathlib import Path
+    import sys
+    sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+    from research_swing_portfolio_with_marks import backtest_portfolio_with_marks
+    from research_swing_equity_risk import summarize_equity_curve
+    from datetime import date, timedelta
+    verified=backtest_portfolio_with_marks(**inputs)
+    accepted={(row["symbol"],date(1970,1,1)+timedelta(days=row["entry_day"]),
+               date(1970,1,1)+timedelta(days=row["exit_day"]))
+              for row in portfolio["accepted_signals"]}
+    entries={}
+    actual=set()
+    for event in verified["cash_accounting"]["ledger"]:
+        key=event["ticker"]
+        day=date.fromisoformat(event["date"])
+        if event["action"]=="entry":
+            if key in entries:
+                raise ValueError("PAIRED_LEDGER_DUPLICATE_OPEN")
+            entries[key]=day
+        elif event["action"]=="exit":
+            if key not in entries:
+                raise ValueError("PAIRED_LEDGER_UNMATCHED_EXIT")
+            actual.add((key,entries.pop(key),day))
+    if entries or actual!=accepted:
+        raise ValueError("PAIRED_LEDGER_ACCEPTED_POPULATION_MISMATCH")
+    if abs(float(verified["cash_accounting"]["realized_net_pnl"])-
+           portfolio["realized_pnl"])>0.005:
+        raise ValueError("PAIRED_LEDGER_PNL_MISMATCH")
+    observations=[{"date":row["date"],"equity":row["equity"]}
+                  for row in verified["equity"]["equity_curve"]]
+    risk=summarize_equity_curve(observations)
+    return {"status":"ARITHMETIC_RECONCILED_RESEARCH_ONLY","trade_ready":False,
+            "risk":risk,"cash_equity_reconciliation":verified["cash_equity_reconciliation"],
+            "independent_price_and_calendar_provenance_verified":False}
+
+
 def compare_ablation_portfolios(report, *, pattern, max_positions=6, trading_session_days=None,
-                               paired_equity_observations=None):
+                               paired_equity_observations=None, paired_reconciled_inputs=None):
     """Pool actual held-out dated events across symbols, one filter at a time.
 
     Never compare the same symbol-pattern twice, and never rank by test returns.
@@ -202,6 +245,12 @@ def compare_ablation_portfolios(report, *, pattern, max_positions=6, trading_ses
         equity_comparison={
             "point_in_time":audited_equity_risk(current,supplied_marks.get("point_in_time")),
             "legacy_retrospective":audited_equity_risk(legacy,supplied_marks.get("legacy_retrospective"))}
+        supplied_reconciled=(paired_reconciled_inputs or {}).get(key,{})
+        if supplied_reconciled and set(supplied_reconciled)!={"point_in_time","legacy_retrospective"}:
+            raise ValueError("INCOMPLETE_PAIRED_RECONCILIATION_INPUTS")
+        reconciled_comparison={
+            "point_in_time":reconciled_paired_equity(current,supplied_reconciled.get("point_in_time")),
+            "legacy_retrospective":reconciled_paired_equity(legacy,supplied_reconciled.get("legacy_retrospective"))}
         paired_liquidity_portfolios[key]={
             "point_in_time_event_n":len(events),
             "legacy_retrospective_event_n":len(legacy_events),
@@ -215,6 +264,7 @@ def compare_ablation_portfolios(report, *, pattern, max_positions=6, trading_ses
                 current["realized_return_pct"]-legacy["realized_return_pct"],4),
             "legacy_not_executable_at_next_open":True,
             "daily_equity_risk":equity_comparison,
+            "reconciled_daily_equity_risk":reconciled_comparison,
             "historical_comparison_only":True}
         priority_sensitivity[key]={"scenarios":{mode:{"accepted_n":result["accepted_n"],
                                                 "realized_return_pct":result["realized_return_pct"],
