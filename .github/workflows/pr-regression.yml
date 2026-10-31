@@ -33,6 +33,8 @@ on:
       - 'test_migration_safety.py'
       - 'research/candidate_feature_ablation.py'
       - 'research/test_candidate_feature_ablation.py'
+      - 'research/candidate_capacity_opportunity_audit.py'
+      - 'research/test_candidate_capacity_opportunity_audit.py'
       - 'research/candidate_feature_oos.py'
       - 'research/test_candidate_feature_portfolio_oos_pair.py'
       - 'research/test_candidate_feature_report_portfolio.py'
@@ -115,6 +117,16 @@ jobs:
         with:
           name: candidate-feature-oos
           path: reports/candidate_feature_oos.json
+          if-no-files-found: error
+      - name: Audit capacity opportunity costs (descriptive only)
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        run: python research/candidate_capacity_opportunity_audit.py
+      - name: Upload capacity opportunity audit
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-capacity-opportunity-audit
+          path: reports/candidate_capacity_opportunity_audit.json
           if-no-files-found: error
       - name: Evaluate single-feature ablations
         if: github.head_ref == 'research/offline-technical-risk-20261021'
@@ -223,6 +235,10 @@ jobs:
       - name: Test held-out feature filtering offline
         if: always()
         run: python -m unittest discover -s research -p 'test_candidate_feature_oos.py' -v
+
+      - name: Test capacity opportunity audit offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_capacity_opportunity_audit.py' -v
 
       - name: Test held-out portfolio integration offline
         if: always()
