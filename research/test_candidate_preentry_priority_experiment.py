@@ -1,0 +1,54 @@
+"""Fail-closed tests for pre-entry candidate priority experiments."""
+import unittest
+from candidate_preentry_priority_experiment import priority_experiment
+
+
+def row(symbol, ret, strength, day=10, selected=True):
+    return {
+        "symbol": symbol, "entry_day": day, "exit_day": day + 5,
+        "filter_selected": selected,
+        "historical_net_return_pct_outcome_not_selection_input": ret,
+        "features_at_signal_close": {
+            "relative_strength_20d_pct": strength,
+            "atr_14_pct": 2.0,
+            "volume_ratio_20d": 1.0
+        }
+    }
+
+
+class PreentryPriorityTests(unittest.TestCase):
+    def test_score_uses_features_not_future_outcome(self):
+        rows = [row(f"S{i:02d}", 10.0 if i == 6 else 0.0, float(i)) for i in range(7)]
+        result = priority_experiment({
+            "candidate_audit": rows,
+            "baseline": {"accepted_n": 6, "realized_pnl": 0.0},
+            "filtered": {"accepted_n": 6, "realized_pnl": 0.0}
+        })
+        scenarios = result["cohorts"]["baseline"]["scenarios"]
+        self.assertEqual(scenarios["relative_strength_desc"]["accepted_n"], 6)
+        self.assertEqual(scenarios["relative_strength_desc"]["realized_pnl"], 350.0)
+        self.assertEqual(scenarios["relative_strength_asc"]["realized_pnl"], 0.0)
+        self.assertFalse(result["trade_ready"])
+
+    def test_reference_mismatch_blocks(self):
+        with self.assertRaisesRegex(ValueError, "REFERENCE_RECONCILIATION_FAILED"):
+            priority_experiment({"candidate_audit": [row("AAA", 1.0, 1.0)],
+                                 "baseline": {"accepted_n": 0, "realized_pnl": 0},
+                                 "filtered": {"accepted_n": 0, "realized_pnl": 0}})
+
+    def test_missing_feature_blocks_only_affected_scenario(self):
+        x = row("AAA", 0.0, 1.0)
+        del x["features_at_signal_close"]["atr_14_pct"]
+        result = priority_experiment({"candidate_audit": [x],
+                                      "baseline": {"accepted_n": 1, "realized_pnl": 0},
+                                      "filtered": {"accepted_n": 1, "realized_pnl": 0}})
+        self.assertEqual(result["cohorts"]["baseline"]["scenarios"]["atr_low_first"]["status"],
+                         "BLOCKED_MISSING_PREENTRY_FEATURE")
+
+    def test_missing_reference_blocks(self):
+        with self.assertRaisesRegex(ValueError, "MISSING_REFERENCE_PORTFOLIO"):
+            priority_experiment({"candidate_audit": [], "baseline": {}, "filtered": {}})
+
+
+if __name__ == "__main__":
+    unittest.main()
