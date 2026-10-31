@@ -1,6 +1,6 @@
 """Fail-closed tests for pre-entry candidate priority experiments."""
 import unittest
-from candidate_preentry_priority_experiment import priority_experiment
+from candidate_preentry_priority_experiment import priority_experiment, entry_quarter_attribution
 
 
 def row(symbol, ret, strength, day=10, selected=True):
@@ -29,6 +29,18 @@ class PreentryPriorityTests(unittest.TestCase):
         self.assertEqual(scenarios["relative_strength_desc"]["realized_pnl"], 350.0)
         self.assertEqual(scenarios["relative_strength_asc"]["realized_pnl"], 0.0)
         self.assertFalse(result["trade_ready"])
+
+    def test_entry_quarter_attribution_is_not_portfolio_return(self):
+        from datetime import datetime, timezone
+        day = lambda y, m: int(datetime(y, m, 15, tzinfo=timezone.utc).timestamp() // 86400)
+        sim = {'accepted_signals': [
+            {'entry_day': day(2025, 1), 'net_return_pct': 10},
+            {'entry_day': day(2025, 3), 'net_return_pct': -2},
+            {'entry_day': day(2025, 4), 'net_return_pct': 5}]}
+        quarters = entry_quarter_attribution(sim)
+        self.assertEqual(quarters['2025Q1']['trades_n'], 2)
+        self.assertEqual(quarters['2025Q1']['entry_attributed_pnl'], 280.0)
+        self.assertEqual(quarters['2025Q2']['entry_attributed_pnl'], 175.0)
 
     def test_reference_mismatch_blocks(self):
         with self.assertRaisesRegex(ValueError, "REFERENCE_RECONCILIATION_FAILED"):
