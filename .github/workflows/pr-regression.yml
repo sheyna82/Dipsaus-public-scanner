@@ -33,6 +33,8 @@ on:
       - 'test_migration_safety.py'
       - 'research/candidate_feature_ablation.py'
       - 'research/test_candidate_feature_ablation.py'
+      - 'research/candidate_preentry_priority_experiment.py'
+      - 'research/test_candidate_preentry_priority_experiment.py'
       - 'research/candidate_capacity_opportunity_audit.py'
       - 'research/test_candidate_capacity_opportunity_audit.py'
       - 'research/candidate_feature_oos.py'
@@ -127,6 +129,16 @@ jobs:
         with:
           name: candidate-capacity-opportunity-audit
           path: reports/candidate_capacity_opportunity_audit.json
+          if-no-files-found: error
+      - name: Evaluate pre-entry priority hypotheses (exploratory only)
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        run: python research/candidate_preentry_priority_experiment.py
+      - name: Upload pre-entry priority research
+        if: github.head_ref == 'research/offline-technical-risk-20261021'
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-preentry-priority-experiment
+          path: reports/candidate_preentry_priority_experiment.json
           if-no-files-found: error
       - name: Evaluate single-feature ablations
         if: github.head_ref == 'research/offline-technical-risk-20261021'
@@ -235,6 +247,10 @@ jobs:
       - name: Test held-out feature filtering offline
         if: always()
         run: python -m unittest discover -s research -p 'test_candidate_feature_oos.py' -v
+
+      - name: Test pre-entry priority hypotheses offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_preentry_priority_experiment.py' -v
 
       - name: Test capacity opportunity audit offline
         if: always()
