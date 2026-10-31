@@ -28,6 +28,10 @@ class PreentryPriorityTests(unittest.TestCase):
         self.assertEqual(scenarios["relative_strength_desc"]["accepted_n"], 6)
         self.assertEqual(scenarios["relative_strength_desc"]["realized_pnl"], 350.0)
         self.assertEqual(scenarios["relative_strength_asc"]["realized_pnl"], 0.0)
+        overlap = scenarios["relative_strength_desc"]["accepted_trade_overlap_vs_neutral"]
+        self.assertEqual(overlap["shared_n"], 5)
+        self.assertEqual(overlap["only_neutral_n"], 1)
+        self.assertEqual(overlap["only_priority_n"], 1)
         self.assertFalse(result["trade_ready"])
 
     def test_entry_quarter_attribution_is_not_portfolio_return(self):
