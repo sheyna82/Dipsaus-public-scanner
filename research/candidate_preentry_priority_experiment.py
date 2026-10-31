@@ -68,7 +68,17 @@ def priority_experiment(portfolio):
             signals = [{k: v for k, v in row.items() if k != "features"} |
                        {"score": direction * row["features"][feature]} for row in baseline_events]
             sim = simulate(signals, priority_mode="score_desc")
+            neutral_keys = {(r["symbol"], r["entry_day"]) for r in neutral["accepted_signals"]}
+            selected_keys = {(r["symbol"], r["entry_day"]) for r in sim["accepted_signals"]}
+            overlap = neutral_keys & selected_keys
             scenarios[name] = {
+                "accepted_trade_overlap_vs_neutral": {
+                    "shared_n": len(overlap),
+                    "only_neutral_n": len(neutral_keys - selected_keys),
+                    "only_priority_n": len(selected_keys - neutral_keys),
+                    "jaccard_similarity": round(len(overlap) / len(neutral_keys | selected_keys), 4)
+                    if neutral_keys | selected_keys else None,
+                },
                 "status": "EXPLORATORY_ONLY",
                 "accepted_n": sim["accepted_n"],
                 "rejected_n": sim["rejected_n"],
