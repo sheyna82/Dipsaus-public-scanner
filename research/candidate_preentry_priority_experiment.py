@@ -5,6 +5,20 @@ This is an exploratory sensitivity test on an already inspected historical sampl
 not evidence of predictive skill or a trade recommendation.
 """
 import math
+from datetime import datetime, timezone
+from collections import defaultdict
+
+
+def entry_quarter_attribution(simulation, tranche=3500.0):
+    """Attribute realized trade PnL to entry quarter; NOT a quarterly equity return."""
+    buckets = defaultdict(list)
+    for trade in simulation['accepted_signals']:
+        day = datetime.fromtimestamp(trade['entry_day'] * 86400, tz=timezone.utc)
+        quarter = f'{day.year}Q{(day.month - 1)//3 + 1}'
+        buckets[quarter].append(trade['net_return_pct'] * tranche / 100)
+    return {q: {'trades_n': len(values), 'entry_attributed_pnl': round(sum(values), 2),
+                'positive_trade_n': sum(v > 0 for v in values)}
+            for q, values in sorted(buckets.items())}
 from candidate_portfolio_capacity import simulate, calendar_capital_occupancy
 
 # Fixed before reading outcomes. These are hypotheses, not optimized coefficients.
@@ -42,6 +56,7 @@ def priority_experiment(portfolio):
         neutral = simulate([{k: v for k, v in r.items() if k != "features"} for r in baseline_events])
         if neutral["accepted_n"] != reference["accepted_n"] or abs(neutral["realized_pnl"] - reference["realized_pnl"]) > .011:
             raise ValueError("REFERENCE_RECONCILIATION_FAILED")
+        neutral_quarters = entry_quarter_attribution(neutral)
         scenarios = {}
         for name, (feature, direction) in PRIORITIES.items():
             if any(not isinstance(r["features"].get(feature), (int, float))
@@ -61,11 +76,17 @@ def priority_experiment(portfolio):
                 "realized_return_pct": sim["realized_return_pct"],
                 "pnl_difference_vs_symbol_asc": round(sim["realized_pnl"] - neutral["realized_pnl"], 2),
                 "capital_occupancy": calendar_capital_occupancy(sim),
+                "entry_quarter_attribution": entry_quarter_attribution(sim),
+                "entry_quarter_pnl_difference_vs_neutral": {
+                    q: round(entry_quarter_attribution(sim).get(q, {}).get("entry_attributed_pnl", 0) -
+                             neutral_quarters.get(q, {}).get("entry_attributed_pnl", 0), 2)
+                    for q in sorted(set(neutral_quarters) | set(entry_quarter_attribution(sim)))},
                 "trade_ready": False,
             }
         results[cohort] = {
             "neutral_symbol_asc": {"accepted_n": neutral["accepted_n"],
-                                   "realized_pnl": neutral["realized_pnl"]},
+                                   "realized_pnl": neutral["realized_pnl"],
+                                   "entry_quarter_attribution": neutral_quarters},
             "scenarios": scenarios,
             "predeclared_directions_not_tuned_on_outcomes": True,
             "independent_validation": False,
@@ -76,7 +97,8 @@ def priority_experiment(portfolio):
                             "Single-feature ranking; no walk-forward recalibration",
                             "Fixed exits, no daily marked-to-market risk or live execution",
                             "Feature missingness blocks scenario; never silently imputes",
-                            "No strategy chosen by historical maximum"]}
+                            "No strategy chosen by historical maximum",
+                            "Entry-quarter PnL attribution is not a standalone quarterly portfolio backtest"]}
 
 
 def main():
