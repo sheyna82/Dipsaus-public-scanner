@@ -1,6 +1,6 @@
 """Fail-closed tests for pre-entry candidate priority experiments."""
 import unittest
-from candidate_preentry_priority_experiment import priority_experiment, entry_quarter_attribution, selection_difference_attribution
+from candidate_preentry_priority_experiment import priority_experiment, entry_quarter_attribution, selection_difference_attribution, volume_leave_one_symbol_out
 
 
 def row(symbol, ret, strength, day=10, selected=True):
@@ -33,6 +33,19 @@ class PreentryPriorityTests(unittest.TestCase):
         self.assertEqual(overlap["only_neutral_n"], 1)
         self.assertEqual(overlap["only_priority_n"], 1)
         self.assertFalse(result["trade_ready"])
+
+    def test_volume_leave_one_symbol_out_replays_capacity(self):
+        events = [
+            {"symbol": f"S{i:02d}", "entry_day": 10, "exit_day": 15,
+             "net_return_pct": float(i), "features": {"volume_ratio_20d": float(i)}}
+            for i in range(7)
+        ]
+        report = volume_leave_one_symbol_out(events)
+        self.assertEqual(report["symbol_count"], 7)
+        self.assertEqual(len(report["omissions"]), 7)
+        self.assertEqual(report["positive_count"] + report["nonpositive_count"], 7)
+        self.assertEqual(report["omissions"]["S06"]["difference_eur"], 0)
+        self.assertFalse(report["trade_ready"])
 
     def test_entry_quarter_attribution_is_not_portfolio_return(self):
         from datetime import datetime, timezone
