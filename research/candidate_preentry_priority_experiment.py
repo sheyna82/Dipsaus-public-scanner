@@ -30,6 +30,47 @@ PRIORITIES = {
 }
 
 
+def selection_difference_attribution(neutral, selected, *, tranche=3500.0):
+    """Reconcile descriptive trade-level PnL changes, not causal attribution."""
+    a = {(r["symbol"], r["entry_day"]): r for r in neutral["accepted_signals"]}
+    b = {(r["symbol"], r["entry_day"]): r for r in selected["accepted_signals"]}
+    if len(a) != len(neutral["accepted_signals"]) or len(b) != len(selected["accepted_signals"]):
+        raise ValueError("DUPLICATE_ACCEPTED_TRADE")
+    deltas = {}
+    for key in sorted(set(a) | set(b)):
+        before, after = a.get(key), b.get(key)
+        if before and after and abs(before["net_return_pct"] - after["net_return_pct"]) > 1e-8:
+            raise ValueError("INCONSISTENT_SHARED_OUTCOME")
+        delta = tranche * ((after["net_return_pct"] if after else 0) -
+                           (before["net_return_pct"] if before else 0)) / 100
+        if delta:
+            deltas[key] = delta
+    by_symbol = defaultdict(float)
+    for (symbol, _), delta in deltas.items():
+        by_symbol[symbol] += delta
+    total = round(sum(deltas.values()), 2)
+    if abs(total - (selected["realized_pnl"] - neutral["realized_pnl"])) > .03:
+        raise ValueError("PNL_BRIDGE_RECONCILIATION_FAILED")
+    return {
+        "pnl_bridge_difference": total,
+        "by_symbol_difference": {symbol: round(value, 2)
+                                 for symbol, value in sorted(by_symbol.items())},
+        "largest_absolute_single_event_difference": round(max((abs(v) for v in deltas.values()), default=0), 2),
+        "largest_absolute_symbol_contribution": round(max((abs(v) for v in by_symbol.values()), default=0), 2),
+        "event_difference_count": len(deltas),
+        "additional_cost_sensitivity_bps": {
+            str(bps): round(total - (selected["accepted_n"] - neutral["accepted_n"]) *
+                            tranche * bps / 10000, 2)
+            for bps in (10, 25, 50)
+        },
+        "limitations": [
+            "Historical PnL bridge only, not a causal replacement or independent validation",
+            "Additional costs are per accepted trade, not a spread/slippage fill simulation",
+            "No change to trade selection under cost stress, no path-dependent cash replay"
+        ]
+    }
+
+
 def priority_experiment(portfolio):
     rows = portfolio.get("candidate_audit")
     if not isinstance(rows, list):
