@@ -72,6 +72,7 @@ def priority_experiment(portfolio):
             selected_keys = {(r["symbol"], r["entry_day"]) for r in sim["accepted_signals"]}
             overlap = neutral_keys & selected_keys
             scenarios[name] = {
+                "selection_difference_attribution": selection_difference_attribution(neutral, sim),
                 "accepted_trade_overlap_vs_neutral": {
                     "shared_n": len(overlap),
                     "only_neutral_n": len(neutral_keys - selected_keys),
