@@ -1,6 +1,6 @@
 """Fail-closed tests for pre-entry candidate priority experiments."""
 import unittest
-from candidate_preentry_priority_experiment import priority_experiment, entry_quarter_attribution
+from candidate_preentry_priority_experiment import priority_experiment, entry_quarter_attribution, selection_difference_attribution
 
 
 def row(symbol, ret, strength, day=10, selected=True):
@@ -45,6 +45,25 @@ class PreentryPriorityTests(unittest.TestCase):
         self.assertEqual(quarters['2025Q1']['trades_n'], 2)
         self.assertEqual(quarters['2025Q1']['entry_attributed_pnl'], 280.0)
         self.assertEqual(quarters['2025Q2']['entry_attributed_pnl'], 175.0)
+
+    def test_pnl_bridge_and_extra_cost_stress(self):
+        neutral = {"accepted_signals": [
+            {"symbol": "AAA", "entry_day": 1, "net_return_pct": 2.0}],
+            "accepted_n": 1, "realized_pnl": 70.0}
+        priority = {"accepted_signals": [
+            {"symbol": "BBB", "entry_day": 1, "net_return_pct": 4.0}],
+            "accepted_n": 1, "realized_pnl": 140.0}
+        audit = selection_difference_attribution(neutral, priority)
+        self.assertEqual(audit["pnl_bridge_difference"], 70.0)
+        self.assertEqual(audit["by_symbol_difference"]["AAA"], -70.0)
+        self.assertEqual(audit["by_symbol_difference"]["BBB"], 140.0)
+        self.assertEqual(audit["additional_cost_sensitivity_bps"]["50"], 70.0)
+
+    def test_pnl_bridge_reconciliation_fails_closed(self):
+        neutral = {"accepted_signals": [], "accepted_n": 0, "realized_pnl": 0}
+        priority = {"accepted_signals": [], "accepted_n": 0, "realized_pnl": 50}
+        with self.assertRaisesRegex(ValueError, "PNL_BRIDGE_RECONCILIATION_FAILED"):
+            selection_difference_attribution(neutral, priority)
 
     def test_reference_mismatch_blocks(self):
         with self.assertRaisesRegex(ValueError, "REFERENCE_RECONCILIATION_FAILED"):
