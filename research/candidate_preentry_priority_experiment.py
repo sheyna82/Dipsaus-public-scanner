@@ -71,6 +71,32 @@ def selection_difference_attribution(neutral, selected, *, tranche=3500.0):
     }
 
 
+def volume_leave_one_symbol_out(events):
+    """Exploratory leave-one-symbol-out capacity replay; no model selection."""
+    symbols = sorted({e["symbol"] for e in events})
+    output = {}
+    for omitted in symbols:
+        subset = [e for e in events if e["symbol"] != omitted]
+        base = simulate([{k: v for k, v in e.items() if k != "features"} for e in subset])
+        ranked = simulate([{k: v for k, v in e.items() if k != "features"} |
+                           {"score": e["features"]["volume_ratio_20d"]}
+                           for e in subset], priority_mode="score_desc")
+        output[omitted] = {
+            "neutral_accepted_n": base["accepted_n"],
+            "volume_accepted_n": ranked["accepted_n"],
+            "difference_eur": round(ranked["realized_pnl"] - base["realized_pnl"], 2)
+        }
+    return {
+        "status": "EXPLORATORY_ONLY",
+        "symbol_count": len(symbols),
+        "omissions": output,
+        "positive_count": sum(v["difference_eur"] > 0 for v in output.values()),
+        "nonpositive_count": sum(v["difference_eur"] <= 0 for v in output.values()),
+        "independent_validation": False,
+        "trade_ready": False
+    }
+
+
 def priority_experiment(portfolio):
     rows = portfolio.get("candidate_audit")
     if not isinstance(rows, list):
@@ -114,6 +140,7 @@ def priority_experiment(portfolio):
             overlap = neutral_keys & selected_keys
             scenarios[name] = {
                 "selection_difference_attribution": selection_difference_attribution(neutral, sim),
+                "volume_leave_one_symbol_out": volume_leave_one_symbol_out(baseline_events) if name == "volume_high_first" else None,
                 "accepted_trade_overlap_vs_neutral": {
                     "shared_n": len(overlap),
                     "only_neutral_n": len(neutral_keys - selected_keys),
