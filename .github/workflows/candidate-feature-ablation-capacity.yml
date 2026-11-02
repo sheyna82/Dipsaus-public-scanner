@@ -1,6 +1,16 @@
 name: DIPSAUS single-feature ablation historical research
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - research/offline-technical-risk-20261021
+    paths:
+      - '.github/workflows/candidate-feature-ablation-capacity.yml'
+      - 'research/candidate_feature_ablation.py'
+      - 'research/candidate_portfolio_capacity.py'
+      - 'research/candidate_feature_thresholds.py'
+      - 'research/candidate_preentry_features.py'
+      - 'research/candidate_execution_sensitivity.py'
 permissions:
   contents: read
 concurrency:
