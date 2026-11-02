@@ -19,18 +19,37 @@ def optimal_episode_matches(observed_times, reference_times, tolerance_seconds):
     n, m = len(observed_times), len(reference_times)
     if n > 5000 or m > 5000 or n * m > 1_000_000:
         raise ValueError("MATCHING_INPUT_TOO_LARGE")
-    dp = [[(0, 0.0, ()) for _ in range(m + 1)] for _ in range(n + 1)]
+    # Store scalar scores and one backpointer per cell, not an ever-growing
+    # tuple of prior matches in every cell (which scales poorly).
+    scores = [[(0, 0.0) for _ in range(m + 1)] for _ in range(n + 1)]
+    direction = [[0 for _ in range(m + 1)] for _ in range(n + 1)]
     for i in range(1, n + 1):
         for j in range(1, m + 1):
-            options = [dp[i - 1][j], dp[i][j - 1]]
+            best = scores[i - 1][j]
+            step = 1  # skip detection
+            if scores[i][j - 1] > best:
+                best, step = scores[i][j - 1], 2  # skip reference
             delay = abs((observed_times[i - 1] - reference_times[j - 1]).total_seconds())
             if delay <= tolerance_seconds:
-                count, neg_delay, pairs = dp[i - 1][j - 1]
-                options.append((count + 1, neg_delay - delay,
-                                pairs + ((i - 1, j - 1, delay),)))
-            dp[i][j] = max(options, key=lambda item: (item[0], item[1]))
-    return dp[n][m][2]
-
+                count, neg_delay = scores[i - 1][j - 1]
+                candidate = (count + 1, neg_delay - delay)
+                if candidate > best:
+                    best, step = candidate, 3
+            scores[i][j], direction[i][j] = best, step
+    pairs = []
+    i, j = n, m
+    while i and j:
+        step = direction[i][j]
+        if step == 3:
+            delay = abs((observed_times[i - 1] - reference_times[j - 1]).total_seconds())
+            pairs.append((i - 1, j - 1, delay))
+            i -= 1
+            j -= 1
+        elif step == 1:
+            i -= 1
+        else:
+            j -= 1
+    return tuple(reversed(pairs))
 
 def evaluate(symbol, bars, reference_episodes, *, tolerance_minutes=30):
     """Optimal chronological one-to-one match to external episode-confirmation timestamps.
