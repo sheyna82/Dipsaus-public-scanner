@@ -227,7 +227,7 @@ def main():
         # This does not alter notifications, eligibility, or execution gates.
         from event_quote_gap_summary import summarize_event_quote_gaps
         state['latest_event_quote_gap_research'] = summarize_event_quote_gaps(
-            entries.get('rows'), datetime.now(timezone.utc))
+            entries.get('rows'), datetime.now(timezone.utc), expected_currency=None)
         # Shadow-only: connect only verified, time-stamped PRE-ALERT evidence.
         # Unconnected research gates remain UNKNOWN; never authorize notifications.
         from dipsaus_unified_research import evaluate as evaluate_unified_research
