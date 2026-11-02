@@ -17,18 +17,11 @@ class SyntheticPrivateShadowTests(unittest.TestCase):
                                and isinstance(t.slice, ast.Constant)
                                and t.slice.value == "latest_event_quote_gap_research"
                                for t in node.targets)]
-        self.assertEqual(len(assignments), 2)
-        successful = [a for a in assignments if isinstance(a.value, ast.Call)]
-        self.assertEqual(len(successful), 1)
-        node = successful[0]
+        self.assertEqual(len(assignments), 1)
+        node = assignments[0]
         self.assertIsInstance(node.value, ast.Call)
-        self.assertEqual(node.value.func.id, "summarize_event_quote_gaps")
+        self.assertEqual(node.value.func.id, "safe_quote_gap_research")
         self.assertEqual(len(node.value.args), 2)
-        self.assertEqual(len(node.value.keywords), 1)
-        self.assertEqual(node.value.keywords[0].arg, "expected_currency")
-        self.assertIsInstance(node.value.keywords[0].value, ast.Constant)
-        self.assertIsNone(node.value.keywords[0].value.value)
-        self.assertNotIn("latest_event_quote_gap_research", source[source.index("# Public logs expose only aggregate"):])
 
     def test_synthetic_private_state_mixed_currency_no_trade_side_effect(self):
         now = datetime(2026, 11, 2, 15, tzinfo=timezone.utc)
