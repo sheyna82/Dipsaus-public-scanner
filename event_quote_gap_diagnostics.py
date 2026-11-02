@@ -20,7 +20,7 @@ def diagnose_event_quote_row(row, expected_symbol, now, expected_currency="USD")
     for key in ("symbol", "provider_symbol"):
         if key not in missing and row[key] != expected_symbol:
             invalid.append(key)
-    if "provider_currency" not in missing and row["provider_currency"] != expected_currency:
+    if "provider_currency" not in missing and (expected_currency is not None and row["provider_currency"] != expected_currency):
         invalid.append("provider_currency")
     for key, required in (("provider_freshness_pass", True),
                           ("market_session_verified", True),
