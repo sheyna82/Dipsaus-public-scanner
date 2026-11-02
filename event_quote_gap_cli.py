@@ -14,7 +14,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", help="Local JSON report (never uploaded)")
     parser.add_argument("--now", required=True, help="Timezone-aware ISO 8601 timestamp")
-    parser.add_argument("--currency", default="USD", choices=("USD", "EUR", "GBP", "CHF"))
+    parser.add_argument("--currency", default="USD", choices=("USD", "EUR", "GBP", "CHF", "AUTO"))
     args = parser.parse_args(argv)
     try:
         now = datetime.fromisoformat(args.now.replace("Z", "+00:00"))
@@ -23,7 +23,7 @@ def main(argv=None):
         with open(args.input, encoding="utf-8") as stream:
             payload = json.load(stream)
         rows = payload.get("rows") if isinstance(payload, dict) else payload
-        result = summarize_event_quote_gaps(rows, now, args.currency)
+        result = summarize_event_quote_gaps(rows, now, None if args.currency == "AUTO" else args.currency)
     except (OSError, ValueError, TypeError, json.JSONDecodeError):
         print(json.dumps({"status": "INPUT_ERROR", "execution_ready": False}))
         return 2
