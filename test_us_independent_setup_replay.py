@@ -66,8 +66,8 @@ class ResearchSetupReplayTests(unittest.TestCase):
             replay("CSGP", data)
 
     def test_no_early_confirmation_before_minimum_bars(self):
-        data = bars([100, 99, 99.5, 100.5])
-        self.assertEqual(replay("CSGP", data[:3]), [])
+        data = bars([100, 99, 99.5, 100.0, 100.5])
+        self.assertEqual(replay("CSGP", data[:4]), [])
         self.assertEqual(len(replay("CSGP", data)), 1)
 
 if __name__ == "__main__":
