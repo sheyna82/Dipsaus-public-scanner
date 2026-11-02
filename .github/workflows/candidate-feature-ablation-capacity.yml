@@ -1,0 +1,48 @@
+name: DIPSAUS single-feature ablation historical research
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: candidate-feature-ablation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  historical-ablation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Validate existing ablation and portfolio capacity tests
+        run: |
+          python -m unittest discover -s research -p 'test_candidate_feature_ablation.py' -v
+          python -m unittest discover -s research -p 'test_candidate_portfolio_capacity.py' -v
+      - name: Generate historical single-feature ablation and capacity comparison
+        run: python research/candidate_feature_ablation.py
+      - name: Validate research-only portfolio report contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("reports/candidate_feature_ablation.json")
+          r=json.loads(p.read_text())
+          assert r.get("research_only") is True and r.get("trade_ready") is False
+          assert r.get("candidates"), "NO_CANDIDATES"
+          assert "portfolio_capacity_25bps" in r
+          assert set(r["portfolio_capacity_25bps"]) == {"breakout_prior20", "recovery_from_prior20_low_3to15pct"}
+          for pattern, result in r["portfolio_capacity_25bps"].items():
+              assert result.get("trade_ready") is False, pattern
+              assert set(result["comparisons"]) == set(r["filters"]), pattern
+          print("HISTORICAL_ABLATION_CAPACITY_CONTRACT_OK")
+          PY
+      - name: Publish research-only ablation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-feature-ablation-capacity-historical
+          path: reports/candidate_feature_ablation.json
+          if-no-files-found: error
