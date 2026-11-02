@@ -17,8 +17,10 @@ class SyntheticPrivateShadowTests(unittest.TestCase):
                                and isinstance(t.slice, ast.Constant)
                                and t.slice.value == "latest_event_quote_gap_research"
                                for t in node.targets)]
-        self.assertEqual(len(assignments), 1)
-        node = assignments[0]
+        self.assertEqual(len(assignments), 2)
+        successful = [a for a in assignments if isinstance(a.value, ast.Call)]
+        self.assertEqual(len(successful), 1)
+        node = successful[0]
         self.assertIsInstance(node.value, ast.Call)
         self.assertEqual(node.value.func.id, "summarize_event_quote_gaps")
         self.assertEqual(len(node.value.args), 2)
