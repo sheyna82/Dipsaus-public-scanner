@@ -14,8 +14,26 @@ def _ts(value):
     return dt.astimezone(timezone.utc)
 
 
+def optimal_episode_matches(observed_times, reference_times, tolerance_seconds):
+    """Maximize chronological one-to-one matches, then minimize total delay."""
+    n, m = len(observed_times), len(reference_times)
+    if n > 5000 or m > 5000 or n * m > 1_000_000:
+        raise ValueError("MATCHING_INPUT_TOO_LARGE")
+    dp = [[(0, 0.0, ()) for _ in range(m + 1)] for _ in range(n + 1)]
+    for i in range(1, n + 1):
+        for j in range(1, m + 1):
+            options = [dp[i - 1][j], dp[i][j - 1]]
+            delay = abs((observed_times[i - 1] - reference_times[j - 1]).total_seconds())
+            if delay <= tolerance_seconds:
+                count, neg_delay, pairs = dp[i - 1][j - 1]
+                options.append((count + 1, neg_delay - delay,
+                                pairs + ((i - 1, j - 1, delay),)))
+            dp[i][j] = max(options, key=lambda item: (item[0], item[1]))
+    return dp[n][m][2]
+
+
 def evaluate(symbol, bars, reference_episodes, *, tolerance_minutes=30):
-    """Greedy one-to-one match to external episode-confirmation timestamps.
+    """Optimal chronological one-to-one match to external episode-confirmation timestamps.
 
     Reference episodes: {confirmed_utc: ISO timestamp, source: nonempty string}.
     This is a diagnostic matching contract, not proof labels are independent.
@@ -30,19 +48,14 @@ def evaluate(symbol, bars, reference_episodes, *, tolerance_minutes=30):
     if references != sorted(set(references)):
         raise ValueError("UNSORTED_OR_DUPLICATE_REFERENCES")
     detections = replay(symbol, bars)
-    available = set(range(len(references)))
-    matches = []
-    for detection in detections:
-        observed = _ts(detection["confirmed_utc"])
-        choices = [(abs((observed - references[i]).total_seconds()), i)
-                   for i in available
-                   if abs((observed - references[i]).total_seconds()) <= tolerance_minutes * 60]
-        if not choices:
-            continue
-        delta, index = min(choices)
-        available.remove(index)
-        matches.append({"candidate_setup_id": detection["candidate_setup_id"],
-                        "reference_index": index, "absolute_delay_minutes": round(delta / 60, 3)})
+    pairs = optimal_episode_matches(
+        [_ts(detection["confirmed_utc"]) for detection in detections],
+        references, tolerance_minutes * 60)
+    matches = [
+        {"candidate_setup_id": detections[i]["candidate_setup_id"],
+         "reference_index": j, "absolute_delay_minutes": round(delta / 60, 3)}
+        for i, j, delta in pairs
+    ]
     tp = len(matches)
     fp = len(detections) - tp
     fn = len(references) - tp
