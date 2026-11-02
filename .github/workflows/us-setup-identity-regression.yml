@@ -1,0 +1,36 @@
+name: DIPSAUS US setup identity regression (research only)
+
+on:
+  push:
+    branches:
+      - research/offline-technical-risk-20261021
+    paths:
+      - 'test_us_setup_identity_regression.py'
+      - 'test_us_notification_safety.py'
+      - 'test_migration_safety.py'
+      - 'private_notifications.py'
+      - '.github/workflows/us-setup-identity-regression.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: us-setup-identity-regression-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  identity-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NTFY_TOPIC: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Run isolated notification regression with fake senders
+        run: python -m unittest -v test_us_setup_identity_regression test_us_notification_safety
