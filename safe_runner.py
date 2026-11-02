@@ -225,9 +225,18 @@ def main():
         state['latest_watch_reports'] = {'entries': entries, 'exits': exits}
         # Private research-only evidence gaps; never log individual quotes or tickers.
         # This does not alter notifications, eligibility, or execution gates.
-        from event_quote_gap_summary import summarize_event_quote_gaps
-        state['latest_event_quote_gap_research'] = summarize_event_quote_gaps(
-            entries.get('rows'), datetime.now(timezone.utc), expected_currency=None)
+        try:
+            from event_quote_gap_summary import summarize_event_quote_gaps
+            state['latest_event_quote_gap_research'] = summarize_event_quote_gaps(
+                entries.get('rows'), datetime.now(timezone.utc), expected_currency=None)
+        except Exception:
+            # Research-only diagnostics must not interrupt operational watches.
+            # Never log exception details, report rows, tickers or quotes.
+            state['latest_event_quote_gap_research'] = {
+                'status': 'RESEARCH_ERROR', 'execution_ready': False,
+                'identity_independently_verified': False,
+                'broker_quote_verified': False,
+            }
         # Shadow-only: connect only verified, time-stamped PRE-ALERT evidence.
         # Unconnected research gates remain UNKNOWN; never authorize notifications.
         from dipsaus_unified_research import evaluate as evaluate_unified_research
