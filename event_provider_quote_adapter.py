@@ -15,7 +15,7 @@ def provider_event_quote_metrics(row, expected_symbol, now, expected_currency="U
     if row.get("provider_symbol") != expected_symbol:
         return {}
     currency = row.get("provider_currency")
-    if currency not in ("USD", "EUR", "GBP", "CHF") or currency != expected_currency:
+    if currency not in ("USD", "EUR", "GBP", "CHF") or (expected_currency is not None and currency != expected_currency):
         return {}
     if row.get("provider_freshness_pass") is not True:
         return {}
