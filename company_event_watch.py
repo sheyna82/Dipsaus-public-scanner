@@ -124,7 +124,9 @@ def notify_events(store,state,sender=None,today=None):
     for sym,iso,label,source,confidence in refresh_discovered_events(state,day):
         candidates.setdefault((sym,iso),(label,source,confidence))
     for (sym,iso),(label,source,confidence) in candidates.items():
-        research=event_research_text(sym,iso,day)
+        # Pass only issuer-confirmed dates as verified evidence; provider estimates remain unverified.
+        metrics = {"issuer_confirmed_date": iso} if confidence == "ISSUER_CONFIRMED" else None
+        research=event_research_text(sym,iso,day,metrics=metrics)
         if research is None: continue
         key=f"EVENT_RESEARCH|{sym}|{iso}|{day.isoformat()}"
         if key in signals: continue
