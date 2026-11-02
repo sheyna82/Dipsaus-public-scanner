@@ -25,6 +25,18 @@ class AdapterTests(unittest.TestCase):
                 row = dict(self.row, **{key:value})
                 self.assertEqual(provider_event_quote_metrics(row,"PLTR",self.now),{})
 
+    def test_existing_watch_row_requires_additional_evidence(self):
+        row = {
+            "symbol": "PLTR",
+            "provider_quote": 100.5,
+            "provider_quote_utc": self.observed if hasattr(self, "observed") else "2026-11-02T14:59:00+00:00",
+            "provider_freshness_pass": True,
+        }
+        self.assertEqual(provider_event_quote_metrics(row, "PLTR", self.now), {})
+        row.update(provider_symbol="PLTR", provider_currency="USD",
+                   provider_source="Yahoo Finance 1m")
+        self.assertEqual(provider_event_quote_metrics(row, "PLTR", self.now), {})
+
     def test_missing_identity_and_source_block(self):
         for key in ("symbol", "provider_symbol", "provider_source", "market_session_verified", "provider_delayed"):
             row = dict(self.row)
