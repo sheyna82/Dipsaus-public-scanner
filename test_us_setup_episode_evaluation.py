@@ -1,7 +1,7 @@
 """No-network evaluation contract tests; reference independence is not asserted."""
 import unittest
 from datetime import datetime, timedelta, timezone
-from research.us_setup_episode_evaluation import evaluate
+from research.us_setup_episode_evaluation import evaluate, optimal_episode_matches
 
 
 def bars(prices):
@@ -38,6 +38,22 @@ class EpisodeEvaluationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             evaluate("CSGP", self.data, [ref, ref])
 
+
+    def test_optimal_match_avoids_greedy_false_negative(self):
+        t = datetime(2026, 10, 1, 14, 30, tzinfo=timezone.utc)
+        # Detection at minute 4 is closer to reference minute 5, but
+        # it must match minute 0 to leave minute 5 for the next detection.
+        observed = [t + timedelta(minutes=4), t + timedelta(minutes=8)]
+        references = [t, t + timedelta(minutes=5)]
+        pairs = optimal_episode_matches(observed, references, 5 * 60)
+        self.assertEqual([(i, j) for i, j, _ in pairs], [(0, 0), (1, 1)])
+
+    def test_optimal_match_prefers_shorter_total_delay(self):
+        t = datetime(2026, 10, 1, 14, 30, tzinfo=timezone.utc)
+        observed = [t + timedelta(minutes=5)]
+        references = [t, t + timedelta(minutes=6)]
+        pairs = optimal_episode_matches(observed, references, 10 * 60)
+        self.assertEqual([(i, j) for i, j, _ in pairs], [(0, 1)])
 
 if __name__ == "__main__":
     unittest.main()
