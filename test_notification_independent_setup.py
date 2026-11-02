@@ -30,9 +30,9 @@ class IndependentSetupLifecycleTest(unittest.TestCase):
         sent = []
         state = {"signals": {}}
         send = lambda symbol, body: sent.append((symbol, body))
-        notify(Store(), state, [candidate(verified_setup_id="CSGP-20261102-A")], [], send)
-        notify(Store(), state, [candidate(verified_setup_id="CSGP-20261102-A")], [], send)
-        notify(Store(), state, [candidate(verified_setup_id="CSGP-20261103-B")], [], send)
+        notify(Store(), state, [candidate(verified_setup_id="CSGP-20261102-A", independent_setup_verified=True)], [], send)
+        notify(Store(), state, [candidate(verified_setup_id="CSGP-20261102-A", independent_setup_verified=True)], [], send)
+        notify(Store(), state, [candidate(verified_setup_id="CSGP-20261103-B", independent_setup_verified=True)], [], send)
         self.assertEqual(len(sent), 2)
 
     def test_unverified_setup_label_cannot_bypass_legacy_dedupe(self):
@@ -41,6 +41,14 @@ class IndependentSetupLifecycleTest(unittest.TestCase):
         send = lambda symbol, body: sent.append((symbol, body))
         notify(Store(), state, [candidate()], [], send)
         notify(Store(), state, [candidate(verified_setup_id="bad|unverified")], [], send)
+        self.assertEqual(len(sent), 1)
+
+    def test_unverified_new_setup_cannot_realert_same_phase(self):
+        sent = []
+        state = {"signals": {}}
+        send = lambda symbol, body: sent.append((symbol, body))
+        notify(Store(), state, [candidate(verified_setup_id="A", independent_setup_verified=True)], [], send)
+        notify(Store(), state, [candidate(verified_setup_id="B", independent_setup_verified=False)], [], send)
         self.assertEqual(len(sent), 1)
 
     def test_stale_or_unconfirmed_new_setup_remains_silent(self):
