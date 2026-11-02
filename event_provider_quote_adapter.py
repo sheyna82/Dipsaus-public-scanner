@@ -10,10 +10,11 @@ def provider_event_quote_metrics(row, expected_symbol, now, expected_currency="U
     """
     if not isinstance(row, dict) or not isinstance(expected_symbol, str):
         return {}
-    symbol = row.get("provider_symbol") or row.get("symbol")
-    if not symbol or symbol != expected_symbol:
+    if not expected_symbol or row.get("symbol") != expected_symbol:
         return {}
-    currency = row.get("provider_currency") or row.get("currency")
+    if row.get("provider_symbol") != expected_symbol:
+        return {}
+    currency = row.get("provider_currency")
     if currency not in ("USD", "EUR", "GBP", "CHF") or currency != expected_currency:
         return {}
     if row.get("provider_freshness_pass") is not True:
