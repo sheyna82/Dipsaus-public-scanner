@@ -55,5 +55,18 @@ class EpisodeEvaluationTests(unittest.TestCase):
         pairs = optimal_episode_matches(observed, references, 10 * 60)
         self.assertEqual([(i, j) for i, j, _ in pairs], [(0, 1)])
 
+    def test_many_episodes_still_match_one_to_one(self):
+        t = datetime(2026, 10, 1, 14, 30, tzinfo=timezone.utc)
+        observed = [t + timedelta(minutes=10 * i) for i in range(200)]
+        references = [x + timedelta(minutes=1) for x in observed]
+        pairs = optimal_episode_matches(observed, references, 120)
+        self.assertEqual(len(pairs), 200)
+        self.assertEqual([(i, j) for i, j, _ in pairs], [(i, i) for i in range(200)])
+
+    def test_matcher_rejects_oversized_grid(self):
+        t = datetime(2026, 10, 1, tzinfo=timezone.utc)
+        with self.assertRaises(ValueError):
+            optimal_episode_matches([t] * 1001, [t] * 1001, 60)
+
 if __name__ == "__main__":
     unittest.main()
