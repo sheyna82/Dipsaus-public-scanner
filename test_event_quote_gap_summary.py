@@ -19,6 +19,8 @@ class QuoteGapSummaryTests(unittest.TestCase):
         self.assertNotIn("PLTR", str(result))
         self.assertNotIn("100", str(result))
         self.assertFalse(result["execution_ready"])
+        self.assertIs(result["identity_independently_verified"], False)
+        self.assertIs(result["broker_quote_verified"], False)
 
     def test_explicit_mixed_currency_research_only(self):
         base = {"provider_quote": 100, "provider_quote_utc": "2026-11-02T14:59:00+00:00",
@@ -31,6 +33,8 @@ class QuoteGapSummaryTests(unittest.TestCase):
         self.assertEqual(result["validated_research_only"], 2)
         self.assertEqual(result["blocked"], 1)
         self.assertFalse(result["execution_ready"])
+        self.assertIs(result["identity_independently_verified"], False)
+        self.assertIs(result["broker_quote_verified"], False)
         strict = summarize_event_quote_gaps(rows, self.now)
         self.assertEqual(strict["validated_research_only"], 1)
 
@@ -46,6 +50,8 @@ class QuoteGapSummaryTests(unittest.TestCase):
         result = summarize_event_quote_gaps(rows, self.now)
         self.assertEqual((result["validated_research_only"], result["blocked"]), (1, 1))
         self.assertFalse(result["execution_ready"])
+        self.assertIs(result["identity_independently_verified"], False)
+        self.assertIs(result["broker_quote_verified"], False)
 
 if __name__ == "__main__":
     unittest.main()
