@@ -173,7 +173,15 @@ def notify(store, state, entries, exits, sender=None):
             'ACTIVE-HOLDING-DIP-TURN', 'ACTIVE-HOLDING-BASE-TEST', 'ACTIVE-HOLDING-MULTIDAY-RECOVERY'):
             continue
         symbol = row.get('symbol', 'UNKNOWN'); ph = phase(row)
-        key = f'ENTRY|{market}|{symbol}|PHASE'
+        # A new independently identified setup may re-alert at the same phase.
+        # Never infer a new setup from price movement, time or a free-text label.
+        # Existing candidates without a verified setup identifier retain legacy dedupe.
+        setup_id = row.get('verified_setup_id')
+        if not (isinstance(setup_id, str) and 1 <= len(setup_id) <= 64
+                and all(ch.isalnum() or ch in '-_' for ch in setup_id)):
+            setup_id = None
+        key = (f'ENTRY|{market}|{symbol}|SETUP|{setup_id}|PHASE'
+               if setup_id else f'ENTRY|{market}|{symbol}|PHASE')
         prev = state['signals'].get(key, {})
         if RANK[ph] <= RANK.get(prev.get('phase'), 0): continue
         record = {'phase': ph, 'notification_schema_version': 9,
