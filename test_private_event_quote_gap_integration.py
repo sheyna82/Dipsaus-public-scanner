@@ -15,12 +15,20 @@ class PrivateGapIntegrationTests(unittest.TestCase):
                                and isinstance(t.slice, ast.Constant)
                                and t.slice.value == "latest_event_quote_gap_research"
                                for t in node.targets)]
-        self.assertEqual(len(assignments), 1)
-        call = assignments[0].value
+        self.assertEqual(len(assignments), 2)
+        calls = [a.value for a in assignments if isinstance(a.value, ast.Call)]
+        self.assertEqual(len(calls), 1)
+        call = calls[0]
         self.assertIsInstance(call, ast.Call)
         self.assertIsInstance(call.func, ast.Name)
         self.assertEqual(call.func.id, "summarize_event_quote_gaps")
-        self.assertNotIn("print(", ast.get_source_segment(source, assignments[0]))
+        fallbacks = [a.value for a in assignments if isinstance(a.value, ast.Dict)]
+        self.assertEqual(len(fallbacks), 1)
+        fallback = ast.literal_eval(fallbacks[0])
+        self.assertEqual(fallback["status"], "RESEARCH_ERROR")
+        self.assertIs(fallback["execution_ready"], False)
+        self.assertIs(fallback["broker_quote_verified"], False)
+        self.assertIs(fallback["identity_independently_verified"], False)
 
 if __name__ == "__main__":
     unittest.main()
