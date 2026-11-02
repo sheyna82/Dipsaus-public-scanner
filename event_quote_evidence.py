@@ -33,3 +33,12 @@ def validated_event_quote(price, observed_at, source, now, max_age_seconds=120):
         return None
     return {"price": float(price), "observed_at": observed.isoformat(),
             "source": source.strip(), "age_seconds": age}
+
+
+def event_quote_metrics(price, observed_at, source, now, max_age_seconds=120):
+    """Only a validated quote can satisfy the event research fresh_quote field.
+
+    Returns a research metrics fragment; never supplies other missing evidence.
+    """
+    evidence = validated_event_quote(price, observed_at, source, now, max_age_seconds)
+    return {"fresh_quote": evidence} if evidence is not None else {}
