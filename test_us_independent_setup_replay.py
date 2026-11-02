@@ -44,5 +44,31 @@ class ResearchSetupReplayTests(unittest.TestCase):
                             and not e["independent_setup_verified"] for e in result))
 
 
+
+    def test_sideways_chop_does_not_create_new_episode(self):
+        data = bars([100, 99, 99.2, 99.6, 100.2, 100.5,
+                     100.1, 100.3, 100.0, 100.4, 100.2, 100.6])
+        self.assertEqual(len(replay("CSGP", data)), 1)
+
+    def test_lower_low_without_confirmed_rebound_does_not_realert(self):
+        data = bars([100, 99, 99.2, 99.6, 100.2, 100.5,
+                     97.5, 97.4, 97.6, 97.5, 97.7, 97.6])
+        self.assertEqual(len(replay("CSGP", data)), 1)
+
+    def test_replay_identity_is_deterministic(self):
+        data = bars([100, 99, 99.2, 99.6, 100.2, 100.5])
+        self.assertEqual(replay("CSGP", data), replay("CSGP", data))
+
+    def test_non_finite_price_fails_closed(self):
+        data = bars([100, 99, 99.2])
+        data[1]["low"] = float("nan")
+        with self.assertRaises(ValueError):
+            replay("CSGP", data)
+
+    def test_no_early_confirmation_before_minimum_bars(self):
+        data = bars([100, 99, 99.5, 100.5])
+        self.assertEqual(replay("CSGP", data[:3]), [])
+        self.assertEqual(len(replay("CSGP", data)), 1)
+
 if __name__ == "__main__":
     unittest.main()
