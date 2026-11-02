@@ -186,6 +186,19 @@ def notify(store, state, entries, exits, sender=None):
         key = (f'ENTRY|{market}|{symbol}|SETUP|{setup_id}|PHASE'
                if setup_id else f'ENTRY|{market}|{symbol}|PHASE')
         prev = state['signals'].get(key, {})
+        # A previously verified setup must not be re-announced as an unverified
+        # legacy setup at the same phase. This can happen when upstream loses
+        # setup verification between polling runs. Keep higher-phase upgrades.
+        if setup_id is None:
+            prefix = f'ENTRY|{market}|{symbol}|SETUP|'
+            previous_rank = max(
+                (RANK.get(v.get('phase'), 0)
+                 for k, v in state['signals'].items()
+                 if k.startswith(prefix) and k.endswith('|PHASE')),
+                default=0,
+            )
+            if RANK[ph] <= previous_rank:
+                continue
         if RANK[ph] <= RANK.get(prev.get('phase'), 0): continue
         record = {'phase': ph, 'notification_schema_version': 9,
                   'notified_utc': datetime.now(timezone.utc).isoformat()}
