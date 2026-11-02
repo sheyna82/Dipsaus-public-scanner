@@ -45,7 +45,8 @@ class SyntheticPrivateShadowTests(unittest.TestCase):
         self.assertEqual(report["blocked"], 1)
         self.assertIs(report["execution_ready"], False)
         self.assertNotIn("SYN.", str(report))
-        self.assertNotIn("provider_quote", str(report))
+        self.assertIn("provider_quote", report["missing_counts"])
+        self.assertNotIn("100", str(report))
 
 
 if __name__ == "__main__":
