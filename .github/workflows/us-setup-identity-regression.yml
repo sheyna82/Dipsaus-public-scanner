@@ -7,6 +7,8 @@ on:
     paths:
       - 'test_us_setup_identity_regression.py'
       - 'test_us_independent_setup_replay.py'
+      - 'test_us_setup_episode_evaluation.py'
+      - 'research/us_setup_episode_evaluation.py'
       - 'research/us_independent_setup_replay.py'
       - 'test_us_notification_safety.py'
       - 'test_migration_safety.py'
@@ -35,4 +37,4 @@ jobs:
         with:
           python-version: '3.11'
       - name: Run isolated notification regression with fake senders
-        run: python -m unittest -v test_us_setup_identity_regression test_us_notification_safety test_us_independent_setup_replay
+        run: python -m unittest -v test_us_setup_identity_regression test_us_notification_safety test_us_independent_setup_replay test_us_setup_episode_evaluation
