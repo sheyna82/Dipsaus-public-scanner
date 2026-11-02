@@ -36,7 +36,7 @@ jobs:
           assert set(r["portfolio_capacity_25bps"]) == {"breakout_prior20", "recovery_from_prior20_low_3to15pct"}
           for pattern, result in r["portfolio_capacity_25bps"].items():
               assert result.get("trade_ready") is False, pattern
-              assert set(result["comparisons"]) == set(r["filters"]), pattern
+              assert set(result["comparison"]) == set(r["filters"]), pattern
           print("HISTORICAL_ABLATION_CAPACITY_CONTRACT_OK")
           PY
       - name: Publish research-only ablation report
