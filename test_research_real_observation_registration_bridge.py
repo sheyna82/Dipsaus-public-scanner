@@ -32,6 +32,7 @@ class RealObservationRegistrationBridgeTests(unittest.TestCase):
         result = self.register()
         self.assertEqual(result["status"], "created")
         self.assertFalse(result["independent_market_data_provenance"])
+        self.assertEqual(result["temporal_integrity"]["status"], "late_registration_not_prospective_for_signal_session")
         payload = json.loads(Path(result["path"]).read_text())
         self.assertEqual(payload["source_url"], self.record["source_url"])
         self.assertFalse(payload["registration_clock_proof_independent"])
@@ -44,6 +45,12 @@ class RealObservationRegistrationBridgeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "candidate_already_registered_with_different_payload"):
             self.register()
         self.assertEqual(Path(result["path"]).read_bytes(), original)
+
+    def test_same_day_registration_requires_independent_cutoff_proof(self):
+        self.record["signal_session"] = "2026-11-03"
+        result = self.register()
+        self.assertEqual(result["temporal_integrity"]["status"], "same_day_registration_requires_exchange_cutoff_proof")
+        self.assertFalse(result["temporal_integrity"]["prospective_signal_proven"])
 
     def test_clock_sampled_once_for_validation_and_registration(self):
         calls = []
