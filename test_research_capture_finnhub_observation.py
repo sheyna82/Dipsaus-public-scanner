@@ -6,7 +6,7 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 
-from research_capture_finnhub_observation import capture
+from research_capture_finnhub_observation import capture, NoRedirects
 
 
 class FakeResponse:
@@ -55,6 +55,10 @@ class SourceObservationTests(unittest.TestCase):
         self.run_capture()
         with self.assertRaises(FileExistsError):
             self.run_capture()
+
+    def test_redirect_is_rejected_before_token_can_be_forwarded(self):
+        with self.assertRaisesRegex(ValueError, "source_redirect_forbidden"):
+            NoRedirects().redirect_request(None, None, 302, "Found", {}, "https://other.example/collect")
 
     def test_rejects_missing_token_without_network(self):
         with self.assertRaises(ValueError):
