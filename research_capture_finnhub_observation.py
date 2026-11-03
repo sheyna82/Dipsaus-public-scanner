@@ -21,7 +21,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ALLOWED = {"AAPL", "AMD", "COHU", "CSGP"}
-MAX_RESPONSE_BYTES = 65536
+MAX_RESPONSE_BYTES = 4096
+EXPECTED_FIELDS = frozenset({"c", "d", "dp", "h", "l", "o", "pc", "t"})
 
 
 def capture(symbol, destination, *, token, opener=None, clock=None):
@@ -58,6 +59,10 @@ def capture(symbol, destination, *, token, opener=None, clock=None):
         raise ValueError("source_quote_invalid") from exc
     if not isinstance(body, dict) or not isinstance(body.get("c"), (int, float)) or not math.isfinite(body["c"]) or body["c"] <= 0:
         raise ValueError("source_quote_invalid")
+    if set(body) - EXPECTED_FIELDS:
+        raise ValueError("source_unexpected_fields")
+    if any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) for v in body.values()):
+        raise ValueError("source_unexpected_field_value")
     if isinstance(body["c"], bool):
         raise ValueError("source_quote_invalid")
     if not isinstance(finished, datetime) or finished.tzinfo is None or finished.utcoffset().total_seconds() != 0:
