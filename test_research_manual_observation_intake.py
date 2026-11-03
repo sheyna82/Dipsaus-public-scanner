@@ -42,6 +42,40 @@ class ManualObservationIntakeTests(unittest.TestCase):
         self.assertFalse(result["independent_market_data_provenance"])
         self.assertFalse(result["trade_ready"])
 
+    def test_alpha_vantage_validated_before_registration(self):
+        self.source.write_text(json.dumps({
+            "Meta Data": {"2. Symbol": "AMD"},
+            "Time Series (Daily)": {"2026-11-03": {
+                "1. open": "100", "2. high": "103", "3. low": "99",
+                "4. close": "102", "5. volume": "12345"}}}))
+        with patch("research_manual_observation_intake.datetime") as dt:
+            dt.now.return_value = datetime(2026, 11, 3, 16, tzinfo=timezone.utc)
+            result = run_manual_intake(
+                self.observation, self.source, self.candidates, self.archive,
+                allowed_hosts=["example.org"], provider_format="alpha_vantage_daily")
+        self.assertFalse(result["trade_ready"])
+        self.assertTrue(self.archive.exists())
+
+    def test_alpha_vantage_invalid_bar_does_not_register(self):
+        self.source.write_text(json.dumps({
+            "Meta Data": {"2. Symbol": "AMD"},
+            "Time Series (Daily)": {"2026-11-03": {
+                "1. open": "100", "2. high": "90", "3. low": "99",
+                "4. close": "102", "5. volume": "12345"}}}))
+        with self.assertRaisesRegex(ValueError, "inconsistent_daily_bar"):
+            run_manual_intake(
+                self.observation, self.source, self.candidates, self.archive,
+                allowed_hosts=["example.org"], provider_format="alpha_vantage_daily")
+        self.assertFalse(self.archive.exists())
+        self.assertEqual(list(self.candidates.iterdir()), [])
+
+    def test_unknown_provider_format_fails_closed(self):
+        with self.assertRaisesRegex(ValueError, "unsupported_provider_format"):
+            run_manual_intake(
+                self.observation, self.source, self.candidates, self.archive,
+                allowed_hosts=["example.org"], provider_format="unrecognized")
+        self.assertEqual(list(self.candidates.iterdir()), [])
+
     def test_rejects_missing_source_file(self):
         self.source.unlink()
         with self.assertRaisesRegex(ValueError, "invalid_source_file"):
