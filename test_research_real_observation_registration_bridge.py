@@ -40,6 +40,7 @@ class RealObservationRegistrationBridgeTests(unittest.TestCase):
     def test_re_registration_does_not_overwrite_original(self):
         result = self.register()
         original = Path(result["path"]).read_bytes()
+        self.record["source_name"] = "changed-source-after-registration"
         with self.assertRaisesRegex(ValueError, "candidate_already_registered_with_different_payload"):
             self.register()
         self.assertEqual(Path(result["path"]).read_bytes(), original)
