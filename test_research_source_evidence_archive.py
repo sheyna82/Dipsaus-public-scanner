@@ -39,6 +39,15 @@ class SourceEvidenceArchiveTests(unittest.TestCase):
             self.assertEqual(z.read("source.bin"), self.source)
             self.assertFalse(json.loads(z.read("candidate.json"))["trade_ready"])
 
+    def test_forged_candidate_identity_rejected_before_archive(self):
+        path = Path(self.record["path"])
+        record = json.loads(path.read_text())
+        record["candidate_identity_sha256"] = "0" * 64
+        path.write_text(json.dumps(record))
+        with self.assertRaisesRegex(ValueError, "candidate_identity_digest_mismatch"):
+            archive_source_evidence(path, self.source, self.zip_path)
+        self.assertFalse(self.zip_path.exists())
+
     def test_wrong_source_rejected_before_archive(self):
         with self.assertRaisesRegex(ValueError, "source_candidate_binding_mismatch"):
             archive_source_evidence(self.record["path"], b"modified", self.zip_path)
