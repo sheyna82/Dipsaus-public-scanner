@@ -83,9 +83,11 @@ class DownloadedProviderEvidenceTests(unittest.TestCase):
         source_raw = json.dumps(source, sort_keys=True).encode("utf-8")
         candidate = json.loads(candidate_raw)
         candidate["source_snapshot_sha256"] = hashlib.sha256(source_raw).hexdigest()
+        candidate["source_snapshot_bytes"] = len(source_raw)
         candidate_raw = json.dumps(candidate, sort_keys=True).encode("utf-8")
         manifest["candidate_sha256"] = hashlib.sha256(candidate_raw).hexdigest()
         manifest["source_sha256"] = hashlib.sha256(source_raw).hexdigest()
+        manifest["source_bytes"] = len(source_raw)
         forged_inner = io.BytesIO()
         with ZipFile(forged_inner, "w", ZIP_DEFLATED) as z:
             z.writestr("candidate.json", candidate_raw)
