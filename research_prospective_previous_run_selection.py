@@ -7,10 +7,14 @@ from datetime import datetime, timezone
 
 
 def select_previous_artifact(artifacts, *, current_run_id, artifact_name,
-                             now_iso):
+                             now_iso, expected_source_run_id=None, expected_head_sha=None):
     now = datetime.fromisoformat(now_iso.replace("Z", "+00:00"))
     if now.tzinfo is None:
         raise ValueError("now_must_be_timezone_aware")
+    if expected_source_run_id is not None and (not isinstance(expected_source_run_id, int) or expected_source_run_id <= 0):
+        raise ValueError("invalid_expected_source_run_id")
+    if expected_head_sha is not None and (not isinstance(expected_head_sha, str) or len(expected_head_sha) != 40 or any(c not in "0123456789abcdefABCDEF" for c in expected_head_sha)):
+        raise ValueError("invalid_expected_head_sha")
     eligible = []
     rejected = []
     for item in artifacts:
@@ -20,6 +24,12 @@ def select_previous_artifact(artifacts, *, current_run_id, artifact_name,
         source_run = (item.get("workflow_run") or {}).get("id")
         if source_run is None or source_run == current_run_id:
             rejected.append({"id": artifact_id, "reason": "not_previous_run"})
+            continue
+        if expected_source_run_id is not None and source_run != expected_source_run_id:
+            rejected.append({"id": artifact_id, "reason": "unexpected_source_run"})
+            continue
+        if expected_head_sha is not None and (item.get("workflow_run") or {}).get("head_sha") != expected_head_sha:
+            rejected.append({"id": artifact_id, "reason": "unexpected_source_commit"})
             continue
         if item.get("expired") is not False:
             rejected.append({"id": artifact_id, "reason": "expired_or_unknown"})
