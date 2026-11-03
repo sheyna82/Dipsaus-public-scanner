@@ -1,4 +1,5 @@
 import io
+import hashlib
 import tempfile
 import unittest
 from pathlib import Path
@@ -49,6 +50,39 @@ class ArtifactDownloadTests(unittest.TestCase):
                     opener=lambda request, timeout: Response(outer.getvalue()))
             self.assertFalse(dest.exists())
 
+
+    def test_pinned_digest_accepts_match_and_rejects_mismatch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            a, b = root / "candidates", root / "outcomes"
+            a.mkdir()
+            b.mkdir()
+            (a / "sample.json").write_text('{"synthetic_data_only": true}')
+            inner_path = root / "source.zip"
+            archive_ledger(a, b, inner_path)
+            raw = inner_path.read_bytes()
+            outer = io.BytesIO()
+            with ZipFile(outer, "w") as z:
+                z.writestr("synthetic-prospective-ledger.zip", raw)
+            digest = hashlib.sha256(raw).hexdigest()
+            ok = download_previous_archive(
+                "owner/repo", "fake-token", 42, root / "ok.zip",
+                expected_sha256=digest,
+                opener=lambda request, timeout: Response(outer.getvalue()))
+            self.assertTrue(ok["expected_sha256_verified"])
+            self.assertEqual(ok["sha256"], digest)
+            blocked = root / "blocked.zip"
+            with self.assertRaisesRegex(ValueError, "artifact_expected_sha256_mismatch"):
+                download_previous_archive(
+                    "owner/repo", "fake-token", 42, blocked,
+                    expected_sha256="0" * 64,
+                    opener=lambda request, timeout: Response(outer.getvalue()))
+            self.assertFalse(blocked.exists())
+            with self.assertRaisesRegex(ValueError, "invalid_expected_sha256"):
+                download_previous_archive(
+                    "owner/repo", "fake-token", 42, blocked,
+                    expected_sha256="bad",
+                    opener=lambda request, timeout: Response(outer.getvalue()))
 
 if __name__ == "__main__":
     unittest.main()
