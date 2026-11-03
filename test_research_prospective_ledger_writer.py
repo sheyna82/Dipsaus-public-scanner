@@ -33,6 +33,16 @@ class LedgerWriterTests(unittest.TestCase):
                 write_candidate_batch(batch, tmp)
             self.assertEqual(list(Path(tmp).iterdir()), [])
 
+    def test_invalid_later_candidate_does_not_write_earlier_candidate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            batch = self.batch()
+            batch["results"].append({"symbol": "COHU", "status": "candidate",
+                                     "record": {"symbol": "COHU", "signal_session": "2026-10-26",
+                                                "future_outcome": 1, "trade_ready": False}})
+            with self.assertRaisesRegex(ValueError, "unsafe_candidate"):
+                write_candidate_batch(batch, tmp)
+            self.assertEqual(list(Path(tmp).iterdir()), [])
+
     def test_unsafe_candidate_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             batch = self.batch()
