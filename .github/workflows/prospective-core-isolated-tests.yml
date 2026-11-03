@@ -6,6 +6,8 @@ on:
     paths:
       - 'research_next_open_reference.py'
       - 'test_research_next_open_reference.py'
+      - 'research_capture_candidate_boundary.py'
+      - 'test_research_capture_candidate_boundary.py'
       - 'research_prospective_outcome_writer.py'
       - 'test_research_prospective_outcome_writer.py'
       - '.github/workflows/prospective-core-isolated-tests.yml'
@@ -25,4 +27,4 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run isolated entry and outcome regression tests
-        run: python -m unittest -v test_research_next_open_reference test_research_prospective_outcome_writer
+        run: python -m unittest -v test_research_next_open_reference test_research_capture_candidate_boundary test_research_prospective_outcome_writer
