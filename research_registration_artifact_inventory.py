@@ -19,6 +19,7 @@ def inventory_candidate_artifacts(repo, token, artifact_name, *,
     found = []
     pages = 0
     exhausted = False
+    reported_total = None
     for page in range(1, max_pages + 1):
         url = f"https://api.github.com/repos/{repo}/actions/artifacts?per_page=100&page={page}"
         req = Request(url, headers={
@@ -28,6 +29,13 @@ def inventory_candidate_artifacts(repo, token, artifact_name, *,
             "User-Agent": "DIPSAUS-research-read-only"})
         with opener(req, timeout=15) as response:
             data = json.load(response)
+        total = data.get("total_count")
+        if not isinstance(total, int) or isinstance(total, bool) or total < 0:
+            raise ValueError("invalid_github_artifact_total")
+        if reported_total is None:
+            reported_total = total
+        elif reported_total != total:
+            raise ValueError("artifact_inventory_changed_during_pagination")
         batch = data.get("artifacts")
         if not isinstance(batch, list) or len(batch) > 100:
             raise ValueError("invalid_github_artifacts_response")
@@ -36,12 +44,16 @@ def inventory_candidate_artifacts(repo, token, artifact_name, *,
         if len(batch) < 100:
             exhausted = True
             break
+    if exhausted and len(found) != reported_total:
+        raise ValueError("artifact_inventory_count_mismatch")
     matching = [a for a in found if a.get("name") == artifact_name]
     ids = [a.get("id") for a in matching]
     if any(not isinstance(i, int) or i <= 0 for i in ids) or len(ids) != len(set(ids)):
         raise ValueError("invalid_or_duplicate_artifact_ids")
     return {"status": "metadata_pages_exhausted" if exhausted else "pagination_limit_reached",
             "metadata_pages_checked": pages,
+            "github_reported_total": reported_total,
+            "retrieved_total": len(found),
             "artifact_ids": sorted(ids),
             "metadata_inventory_exhausted": exhausted,
             "historical_run_coverage_proven": False,
