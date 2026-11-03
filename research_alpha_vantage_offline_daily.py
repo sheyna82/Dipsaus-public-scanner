@@ -67,6 +67,8 @@ def inspect_alpha_vantage_daily_bytes(source_bytes, *, expected_symbol, as_of_se
         "bar": parsed[as_of_session], "available_sessions": len(parsed),
         "provider_response_schema_valid": True,
         "provider_authenticity_verified": False,
+        "bar_available_at_observation_time_verified": False,
+        "prospective_signal_proven": False,
         "independent_timestamp_proof": False,
         "trade_ready": False, "research_only": True,
     }
