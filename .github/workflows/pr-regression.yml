@@ -9,6 +9,8 @@ on:
       - 'research/candidate_nonoverlap_validation.py'
       - 'research/candidate_conditional_cohorts.py'
       - 'research/test_candidate_conditional_cohorts.py'
+      - 'research/candidate_us_discovery_completeness.py'
+      - 'research/test_candidate_us_discovery_completeness.py'
       - 'research/candidate_entry_snapshot.py'
       - 'research/test_candidate_entry_snapshot.py'
       - 'safe_runner.py'
@@ -79,6 +81,11 @@ jobs:
         env:
           SCANNER_NOTIFICATIONS_ENABLED: 'false'
         run: python -m unittest discover -p 'test*.py'
+
+      - name: Test US discovery completeness audit (offline only)
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python -m unittest research.test_candidate_us_discovery_completeness
 
       - name: Calculate six-candidate daily market snapshot
         if: github.head_ref == 'research/offline-technical-risk-20261021'
