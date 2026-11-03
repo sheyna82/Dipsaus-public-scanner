@@ -29,20 +29,18 @@ def capture_public_https_source(url, *, clock, allowed_hosts, opener=None, max_b
         raise ValueError("source_host_not_allowlisted")
     if host.lower() == "localhost" or host.endswith(".local"):
         raise ValueError("nonpublic_source_host")
+    if not isinstance(max_bytes, int) or isinstance(max_bytes, bool) or not 0 < max_bytes <= 5_000_000:
+        raise ValueError("invalid_capture_limit")
+    # Never resolve DNS in the disabled live path. An injected opener is a
+    # trusted offline test fixture, not a security boundary for production.
+    if opener is None:
+        raise ValueError("live_https_transport_disabled_pending_dns_pinning")
     try:
         addresses = socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)
     except OSError as exc:
         raise ValueError("source_dns_resolution_failed") from exc
     if not addresses or any(not ipaddress.ip_address(info[4][0]).is_global for info in addresses):
         raise ValueError("nonpublic_source_address")
-    if not isinstance(max_bytes, int) or isinstance(max_bytes, bool) or not 0 < max_bytes <= 5_000_000:
-        raise ValueError("invalid_capture_limit")
-    # Fail closed: DNS validation and the HTTPS connection are not pinned to the
-    # same IP. A later DNS answer could differ (DNS rebinding / TOCTOU).
-    # Until connection-level IP pinning is implemented and audited, this
-    # module accepts only an explicitly injected transport for offline tests.
-    if opener is None:
-        raise ValueError("live_https_transport_disabled_pending_dns_pinning")
     request = Request(url, headers={"User-Agent": "DIPSAUS-research-evidence/1.0", "Accept": "application/json,text/csv,text/plain"})
     try:
         with opener.open(request, timeout=15) as response:
