@@ -5,7 +5,8 @@ on:
   pull_request:
     paths:
       - 'research_registration_archive_bridge.py'
-      - 'test_research_registration_archive_bridge.py'
+      - 'test_research_registration_archive_bridge test_research_registration_multirun_integration.py'
+      - 'test_research_registration_multirun_integration.py'
       - 'research_registration_artifact_inventory.py'
       - 'test_research_registration_artifact_inventory test_research_registration_archive_bridge.py'
       - 'research_registration_artifact_coverage.py'
