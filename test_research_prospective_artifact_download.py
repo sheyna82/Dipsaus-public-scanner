@@ -27,7 +27,7 @@ class ArtifactDownloadTests(unittest.TestCase):
             archive_ledger(a, b, archive)
             outer = io.BytesIO()
             with ZipFile(outer, "w") as z:
-                z.writestr("synthetic-prospective-ledger.zip", archive.read_bytes())
+                z.writestr("prospective-ledger-synthetic.zip", archive.read_bytes())
             dest = root / "restored.zip"
             result = download_previous_archive(
                 "owner/repo", "fake-token", 42, dest,
@@ -63,7 +63,7 @@ class ArtifactDownloadTests(unittest.TestCase):
             raw = inner_path.read_bytes()
             outer = io.BytesIO()
             with ZipFile(outer, "w") as z:
-                z.writestr("synthetic-prospective-ledger.zip", raw)
+                z.writestr("prospective-ledger-synthetic.zip", raw)
             digest = hashlib.sha256(raw).hexdigest()
             ok = download_previous_archive(
                 "owner/repo", "fake-token", 42, root / "ok.zip",
