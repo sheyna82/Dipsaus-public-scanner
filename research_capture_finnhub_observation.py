@@ -11,6 +11,11 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+
+
+class NoRedirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise ValueError("source_redirect_forbidden")
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -34,7 +39,8 @@ def capture(symbol, destination, *, token, opener=None, clock=None):
     request = urllib.request.Request(url, headers={
         "X-Finnhub-Token": token, "Accept": "application/json",
         "User-Agent": "DipsausProspectiveResearch/1.0"})
-    fetch = opener or urllib.request.urlopen
+    # Never forward the API token through an HTTP redirect.
+    fetch = opener or urllib.request.build_opener(NoRedirects()).open
     with fetch(request, timeout=15) as response:
         if response.status != 200:
             raise ValueError("source_http_not_successful")
