@@ -37,6 +37,26 @@ class PreentryPriorityTests(unittest.TestCase):
         self.assertTrue(combined["entry_quarter_attribution"])
         self.assertFalse(combined["trade_ready"])
 
+    def test_combined_leave_one_symbol_out_replays_capacity(self):
+        rows = [row(f"S{i:02d}", 10.0 if i == 6 else 0.0, i / 10.0)
+                for i in range(7)]
+        for event in rows:
+            event["features_at_signal_close"]["status"] = "DESCRIPTIVE_ONLY"
+            event["training_thresholds"] = {
+                "relative_strength_20d_pct": 0.0,
+                "volume_ratio_20d": 1.0, "atr_14_pct": 3.0}
+        result = priority_experiment({
+            "candidate_audit": rows,
+            "baseline": {"accepted_n": 6, "realized_pnl": 0.0},
+            "filtered": {"accepted_n": 6, "realized_pnl": 0.0}
+        })
+        omitted = result["cohorts"]["baseline"]["scenarios"]["combined_predeclared"]["combined_leave_one_symbol_out"]
+        self.assertEqual(omitted["symbol_count"], 7)
+        self.assertEqual(omitted["omissions"]["S06"]["difference_eur"], 0.0)
+        self.assertEqual(omitted["omissions"]["S00"]["difference_eur"], 0.0)
+        self.assertEqual(omitted["omissions"]["S00"]["combined_accepted_n"], 6)
+        self.assertFalse(omitted["trade_ready"])
+
     def test_score_uses_features_not_future_outcome(self):
         rows = [row(f"S{i:02d}", 10.0 if i == 6 else 0.0, float(i)) for i in range(7)]
         result = priority_experiment({
