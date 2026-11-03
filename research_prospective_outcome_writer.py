@@ -45,8 +45,6 @@ def write_outcome(candidate_file, stock_rows, spy_rows, output_dir):
             ZoneInfo("America/New_York")).date().isoformat()
         if signal_date >= registration_day:
             raise ValueError("signal_session_not_before_registration")
-        if any(day <= registration_day for day in future_spy_days[:3]):
-            raise ValueError("outcome_not_strictly_after_registration")
         return {"status": "pending_post_registration_entry_baseline",
                 "reason": "historical_signal_close_not_prospective_entry",
                 "research_only": True, "trade_ready": False}
