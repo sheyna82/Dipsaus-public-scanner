@@ -11,7 +11,8 @@ from research_prospective_previous_run_selection import select_previous_artifact
 
 
 def discover_previous_archive(repo, token, current_run_id, artifact_name,
-                              now_iso, *, opener=urlopen, max_pages=5):
+                              now_iso, *, opener=urlopen, max_pages=5,
+                              expected_source_run_id=None, expected_head_sha=None):
     if not token:
         raise ValueError("github_token_required")
     if len(repo.split("/")) != 2 or any(
@@ -40,7 +41,9 @@ def discover_previous_archive(repo, token, current_run_id, artifact_name,
             break
     selection = select_previous_artifact(
         found, current_run_id=current_run_id,
-        artifact_name=artifact_name, now_iso=now_iso)
+        artifact_name=artifact_name, now_iso=now_iso,
+        expected_source_run_id=expected_source_run_id,
+        expected_head_sha=expected_head_sha)
     selection["metadata_pages_checked"] = page
     selection["metadata_only"] = True
     selection["cross_run_restoration_performed"] = False
