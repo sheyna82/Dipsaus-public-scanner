@@ -9,6 +9,8 @@ on:
       - 'research/candidate_nonoverlap_validation.py'
       - 'research/candidate_conditional_cohorts.py'
       - 'research/test_candidate_conditional_cohorts.py'
+      - 'research/candidate_us_offline_capture.py'
+      - 'research/test_candidate_us_offline_capture.py'
       - 'research/candidate_us_decision_archive.py'
       - 'research/test_candidate_us_decision_archive.py'
       - 'research/candidate_us_decision_record.py'
@@ -100,6 +102,11 @@ jobs:
         env:
           SCANNER_NOTIFICATIONS_ENABLED: 'false'
         run: python -m unittest research.test_candidate_us_decision_archive
+
+      - name: Test US offline capture completeness (no market calls)
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python -m unittest research.test_candidate_us_offline_capture
 
       - name: Calculate six-candidate daily market snapshot
         if: github.head_ref == 'research/offline-technical-risk-20261021'
