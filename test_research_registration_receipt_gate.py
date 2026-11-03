@@ -42,6 +42,21 @@ class ReceiptGateTests(unittest.TestCase):
                          "same_day_receipt_requires_exchange_cutoff_and_input_proof")
         self.assertFalse(result["prospective_signal_proven"])
 
+    def test_pre_session_receipt_requires_content_proof(self):
+        self.candidate["signal_session"] = "2026-11-04"
+        result = self.audit()
+        self.assertEqual(result["receipt_timing_classification"],
+                         "artifact_created_before_signal_session_requires_input_and_content_proof")
+        self.assertFalse(result["prospective_signal_proven"])
+        self.assertFalse(result["trade_ready"])
+
+    def test_same_day_timezone_normalized_to_utc(self):
+        self.candidate["signal_session"] = "2026-11-03"
+        self.artifact["created_at"] = "2026-11-03T17:01:00+02:00"
+        result = self.audit()
+        self.assertEqual(result["receipt_timing_classification"],
+                         "same_day_receipt_requires_exchange_cutoff_and_input_proof")
+
     def test_artifact_predates_local_registration_rejected(self):
         self.artifact["created_at"] = "2026-11-03T14:59:59Z"
         with self.assertRaisesRegex(ValueError, "artifact_predates_local_registration"):
