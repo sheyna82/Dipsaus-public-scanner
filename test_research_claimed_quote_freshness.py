@@ -24,6 +24,7 @@ class ClaimedFreshnessTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             p=Path(d)/"altered.json"
             record=json.loads(CSGP.read_text())
+            record["request_started_utc"]="2026-11-03T19:59:59+00:00"
             record["response_finished_utc"]="2026-11-03T20:00:00+00:00"
             p.write_text(json.dumps(record))
             with self.assertRaisesRegex(ValueError,"provider_timestamp_after_capture"):
