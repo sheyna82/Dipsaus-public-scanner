@@ -48,6 +48,9 @@ def capture(symbol, destination, *, token, opener=None, clock=None):
     finished = now()
     if not raw or len(raw) > MAX_RESPONSE_BYTES:
         raise ValueError("source_response_size_invalid")
+    # Fail closed if a provider response unexpectedly echoes the credential.
+    if token.encode("utf-8") in raw:
+        raise ValueError("source_response_contains_credential")
     body = json.loads(raw)
     if not isinstance(body, dict) or not isinstance(body.get("c"), (int, float)) or body["c"] <= 0:
         raise ValueError("source_quote_invalid")
