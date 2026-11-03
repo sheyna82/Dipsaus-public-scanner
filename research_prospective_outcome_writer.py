@@ -35,6 +35,18 @@ def write_outcome(candidate_file, stock_rows, spy_rows, output_dir):
     if len(future_spy_days) < 3:
         return {"status": "pending_three_future_sessions", "research_only": True}
     future_days = future_spy_days[:3]
+    # Capture-bound candidates must not count a partial registration day as
+    # a fully future session. Legacy synthetic research records lack this field.
+    if candidate.get("registered_at_utc") is not None:
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        registered = datetime.fromisoformat(candidate["registered_at_utc"])
+        if registered.tzinfo is None or registered.utcoffset() is None:
+            raise ValueError("candidate_registration_timezone_required")
+        registration_day = registered.astimezone(
+            ZoneInfo("America/New_York")).date().isoformat()
+        if any(day <= registration_day for day in future_days):
+            raise ValueError("outcome_not_strictly_after_registration")
     if any(d not in stock for d in future_days):
         return {"status": "missing_stock_future_session", "research_only": True}
     end_day = future_days[-1]
