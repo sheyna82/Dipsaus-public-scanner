@@ -6,6 +6,7 @@ truth and its quote timestamp is NOT proof of when the signal was available.
 """
 import hashlib
 import json
+import math
 import os
 import sys
 import urllib.error
@@ -51,11 +52,16 @@ def capture(symbol, destination, *, token, opener=None, clock=None):
     # Fail closed if a provider response unexpectedly echoes the credential.
     if token.encode("utf-8") in raw:
         raise ValueError("source_response_contains_credential")
-    body = json.loads(raw)
-    if not isinstance(body, dict) or not isinstance(body.get("c"), (int, float)) or body["c"] <= 0:
+    try:
+        body = json.loads(raw, parse_constant=lambda _: (_ for _ in ()).throw(ValueError("nonfinite_quote")))
+    except (ValueError, UnicodeDecodeError) as exc:
+        raise ValueError("source_quote_invalid") from exc
+    if not isinstance(body, dict) or not isinstance(body.get("c"), (int, float)) or not math.isfinite(body["c"]) or body["c"] <= 0:
         raise ValueError("source_quote_invalid")
     if isinstance(body["c"], bool):
         raise ValueError("source_quote_invalid")
+    if not isinstance(finished, datetime) or finished.tzinfo is None or finished.utcoffset().total_seconds() != 0:
+        raise ValueError("utc_clock_required")
     if finished < started:
         raise ValueError("clock_moved_backwards")
     record = {
