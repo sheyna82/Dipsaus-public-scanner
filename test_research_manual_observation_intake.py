@@ -61,8 +61,11 @@ class ManualObservationIntakeTests(unittest.TestCase):
             "Time Series (Daily)": {"2026-11-03": {
                 "1. open": "100", "2. high": "103", "3. low": "99",
                 "4. close": "102", "5. volume": "12345"}}}))
+        observation = json.loads(self.observation.read_text())
+        observation["source_observed_at_utc"] = "2026-11-03T22:00:00Z"
+        self.observation.write_text(json.dumps(observation))
         with patch("research_manual_observation_intake.datetime") as dt:
-            dt.now.return_value = datetime(2026, 11, 3, 16, tzinfo=timezone.utc)
+            dt.now.return_value = datetime(2026, 11, 3, 23, tzinfo=timezone.utc)
             result = run_manual_intake(
                 self.observation, self.source, self.candidates, self.archive,
                 allowed_hosts=["example.org"], provider_format="alpha_vantage_daily")
@@ -74,6 +77,19 @@ class ManualObservationIntakeTests(unittest.TestCase):
         self.assertEqual(candidate["provider_bar"]["close"], 102.0)
         self.assertFalse(candidate["bar_available_at_observation_time_verified"])
         self.assertFalse(candidate["prospective_signal_proven"])
+
+    def test_rejects_same_day_daily_close_before_cutoff(self):
+        self.source.write_text(json.dumps({
+            "Meta Data": {"2. Symbol": "AMD"},
+            "Time Series (Daily)": {"2026-11-03": {
+                "1. open": "100", "2. high": "103", "3. low": "99",
+                "4. close": "102", "5. volume": "12345"}}}))
+        with self.assertRaisesRegex(ValueError, "daily_bar_claimed_before_conservative_close"):
+            run_manual_intake(
+                self.observation, self.source, self.candidates, self.archive,
+                allowed_hosts=["example.org"], provider_format="alpha_vantage_daily")
+        self.assertFalse(self.archive.exists())
+        self.assertEqual(list(self.candidates.iterdir()), [])
 
     def test_alpha_vantage_invalid_bar_does_not_register(self):
         self.source.write_text(json.dumps({
