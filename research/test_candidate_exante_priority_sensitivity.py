@@ -1,0 +1,49 @@
+import unittest
+from research.candidate_exante_priority_sensitivity import score_from_signal_close, compare_priorities
+
+
+class ExAntePriorityTests(unittest.TestCase):
+    def setUp(self):
+        self.thresholds = {"relative_strength_20d_pct": 0, "volume_ratio_20d": 1,
+                           "atr_14_pct": 3}
+        self.features = {"status": "DESCRIPTIVE_ONLY", "relative_strength_20d_pct": 1,
+                         "volume_ratio_20d": 2, "atr_14_pct": 2}
+
+    def test_score_directions(self):
+        self.assertGreater(score_from_signal_close(self.features, self.thresholds), 0)
+
+    def test_future_return_not_used_for_ranking(self):
+        rows = []
+        for symbol, outcome in (("AAA", -10), ("ZZZ", 10)):
+            rows.append({"symbol": symbol, "entry_day": 21000, "exit_day": 21010,
+                         "features_at_signal_close": dict(self.features),
+                         "training_thresholds": self.thresholds,
+                         "historical_net_return_pct_outcome_not_selection_input": outcome})
+        first = compare_priorities(rows)
+        rows[0]["historical_net_return_pct_outcome_not_selection_input"] = 20
+        second = compare_priorities(rows)
+        self.assertEqual(first["priority"]["score_desc"]["accepted_n"],
+                         second["priority"]["score_desc"]["accepted_n"])
+        self.assertFalse(first["future_outcomes_used_for_priority"])
+
+    def test_missing_feature_fails_closed(self):
+        features = dict(self.features)
+        del features["volume_ratio_20d"]
+        with self.assertRaises(ValueError):
+            score_from_signal_close(features, self.thresholds)
+
+    def test_invalid_feature_status_fails_closed(self):
+        with self.assertRaises(ValueError):
+            score_from_signal_close({"status": "INSUFFICIENT_LOOKBACK"}, self.thresholds)
+
+    def test_duplicate_event_rejected(self):
+        row = {"symbol": "AAA", "entry_day": 21000, "exit_day": 21010,
+               "features_at_signal_close": self.features,
+               "training_thresholds": self.thresholds,
+               "historical_net_return_pct_outcome_not_selection_input": 5}
+        with self.assertRaises(ValueError):
+            compare_priorities([row, row])
+
+
+if __name__ == "__main__":
+    unittest.main()
