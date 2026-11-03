@@ -36,5 +36,33 @@ class ArtifactDiscoveryTests(unittest.TestCase):
                                       "2026-10-25T10:00:00Z")
 
 
+    def test_discovery_pins_source_run_and_commit(self):
+        sha = "a" * 40
+        def fake_open(request, timeout):
+            payload = {"artifacts": [
+                {"id": 50, "name": "ledger", "expired": False,
+                 "workflow_run": {"id": 10, "head_sha": sha},
+                 "created_at": "2026-10-25T09:00:00Z",
+                 "expires_at": "2026-11-01T09:00:00Z"},
+                {"id": 51, "name": "ledger", "expired": False,
+                 "workflow_run": {"id": 11, "head_sha": "b" * 40},
+                 "created_at": "2026-10-25T10:00:00Z",
+                 "expires_at": "2026-11-01T10:00:00Z"}]}
+            return FakeResponse(json.dumps(payload).encode())
+        result = discover_previous_archive(
+            "sheyna82/Dipsaus-public-scanner", "placeholder-test-token",
+            12, "ledger", "2026-10-25T12:00:00Z",
+            opener=fake_open, expected_source_run_id=10,
+            expected_head_sha=sha)
+        self.assertEqual(result["selected_artifact_id"], 50)
+        self.assertIn("unexpected_source_run",
+                      [item["reason"] for item in result["rejected"]])
+        blocked = discover_previous_archive(
+            "sheyna82/Dipsaus-public-scanner", "placeholder-test-token",
+            12, "ledger", "2026-10-25T12:00:00Z",
+            opener=fake_open, expected_source_run_id=10,
+            expected_head_sha="c" * 40)
+        self.assertIsNone(blocked["selected_artifact_id"])
+
 if __name__ == "__main__":
     unittest.main()
