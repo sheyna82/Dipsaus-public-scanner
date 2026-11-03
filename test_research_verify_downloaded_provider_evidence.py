@@ -1,5 +1,6 @@
 """Regression tests for downloaded synthetic provider evidence."""
 import io
+import hashlib
 import json
 import tempfile
 import unittest
@@ -44,6 +45,31 @@ class DownloadedProviderEvidenceTests(unittest.TestCase):
             z.writestr("sha256.txt", b"0" * 64)
         with self.assertRaisesRegex(ValueError, "oversized_artifact_member"):
             verify_downloaded_provider_artifact(buf.getvalue())
+
+    def test_rejects_forged_candidate_identity_even_with_recomputed_checksums(self):
+        original = self.make_outer()
+        with ZipFile(io.BytesIO(original)) as outer:
+            inner_bytes = outer.read("synthetic-provider-evidence.zip")
+        with ZipFile(io.BytesIO(inner_bytes)) as inner:
+            candidate = json.loads(inner.read("candidate.json"))
+            source = inner.read("source.bin")
+            manifest = json.loads(inner.read("manifest.json"))
+        candidate["protocol_id"] = "forged-protocol-identity"
+        candidate_raw = json.dumps(candidate, sort_keys=True).encode("utf-8")
+        manifest["candidate_sha256"] = hashlib.sha256(candidate_raw).hexdigest()
+        forged_inner = io.BytesIO()
+        with ZipFile(forged_inner, "w", ZIP_DEFLATED) as z:
+            z.writestr("candidate.json", candidate_raw)
+            z.writestr("source.bin", source)
+            z.writestr("manifest.json", json.dumps(manifest))
+        forged_bytes = forged_inner.getvalue()
+        forged_outer = io.BytesIO()
+        with ZipFile(forged_outer, "w", ZIP_DEFLATED) as z:
+            z.writestr("synthetic-provider-evidence.zip", forged_bytes)
+            z.writestr("sha256.txt", hashlib.sha256(forged_bytes).hexdigest()
+                       + "  synthetic-provider-evidence.zip\\n")
+        with self.assertRaisesRegex(ValueError, "identity|digest|manifest"):
+            verify_downloaded_provider_artifact(forged_outer.getvalue())
 
     def test_tampered_checksum_rejected(self):
         original = self.make_outer()
