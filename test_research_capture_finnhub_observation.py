@@ -92,6 +92,18 @@ class SourceObservationTests(unittest.TestCase):
             self.run_capture()
         self.assertFalse(self.path.exists())
 
+    def test_rejects_unexpected_fields_before_publication(self):
+        self.raw = b'{"c":100.25,"personal_data":"unexpected"}'
+        with self.assertRaisesRegex(ValueError, "source_unexpected_fields"):
+            self.run_capture()
+        self.assertFalse(self.path.exists())
+
+    def test_rejects_unexpected_field_values(self):
+        self.raw = b'{"c":100.25,"t":"unverified string"}'
+        with self.assertRaisesRegex(ValueError, "source_unexpected_field_value"):
+            self.run_capture()
+        self.assertFalse(self.path.exists())
+
     def test_rejects_provider_response_echoing_credential(self):
         self.raw = b'{"c":100.25,"unexpected":"dummy-secret"}'
         with self.assertRaisesRegex(ValueError, "source_response_contains_credential"):
