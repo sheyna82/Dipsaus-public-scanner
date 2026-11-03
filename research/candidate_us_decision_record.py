@@ -5,6 +5,7 @@ A self-reported timestamp and digest do not prove independent prospective captur
 """
 import hashlib
 import json
+import math
 from datetime import datetime, timezone
 
 
@@ -35,6 +36,19 @@ def decision_record(symbol, assessment, observed_at_utc, source="Yahoo daily OHL
         raise ValueError("INVALID_SIGNALS")
     if not isinstance(source, str) or not source.strip():
         raise ValueError("INVALID_SOURCE")
+    required = ("drawdown_pct", "rebound_from_low_pct", "early_turn", "established_turn", "signal_count")
+    if any(k not in assessment for k in required):
+        raise ValueError("MISSING_DECISION_FEATURES")
+    drawdown, rebound = assessment["drawdown_pct"], assessment["rebound_from_low_pct"]
+    if any(type(v) not in (int, float) or not math.isfinite(v) for v in (drawdown, rebound)):
+        raise ValueError("INVALID_NUMERIC_FEATURES")
+    if any(type(assessment[k]) is not bool for k in ("early_turn", "established_turn")):
+        raise ValueError("INVALID_TURN_FEATURES")
+    if type(assessment["signal_count"]) is not int or assessment["signal_count"] < 0:
+        raise ValueError("INVALID_SIGNAL_COUNT")
+    expected = drawdown <= -20 and 1.5 <= rebound <= 35 and (assessment["early_turn"] or assessment["established_turn"] or assessment["signal_count"] >= 3)
+    if assessment["pre_screen_match"] != expected:
+        raise ValueError("INCONSISTENT_SELECTION_DECISION")
     reasons = []
     if not assessment["pre_screen_match"]:
         if assessment.get("drawdown_pct") is None or assessment.get("rebound_from_low_pct") is None:
