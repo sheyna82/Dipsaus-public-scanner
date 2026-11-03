@@ -1,6 +1,9 @@
 """Offline smoke tests for the research-only candidate snapshot."""
 import importlib.util
 import pathlib
+import json
+import hashlib
+import tempfile
 import unittest
 
 MODULE_PATH = pathlib.Path(__file__).with_name("candidate_entry_snapshot.py")
@@ -9,6 +12,18 @@ snapshot = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(snapshot)
 
 class SnapshotTests(unittest.TestCase):
+    def test_snapshot_archive_is_create_only_and_hash_verified(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            record = {"generated_utc": "2026-11-04T10:00:00+00:00",
+                      "research_only": True, "candidates": [{"symbol": "AMD", "decision": "WAIT"}]}
+            archived = snapshot.archive_candidate_snapshot(record, pathlib.Path(tmp))
+            self.assertEqual(hashlib.sha256(archived["path"].read_bytes()).hexdigest(),
+                             archived["sha256"])
+            self.assertEqual(json.loads(archived["path"].read_text()), record)
+            with self.assertRaises(FileExistsError):
+                snapshot.archive_candidate_snapshot(record, pathlib.Path(tmp))
+            self.assertEqual(len(list(pathlib.Path(tmp).glob("*.json"))), 1)
+
     def test_rejects_unapproved_history_range(self):
         with self.assertRaisesRegex(ValueError, "UNSUPPORTED_HISTORY_RANGE"):
             snapshot.bars("AMD", history_range="max")
