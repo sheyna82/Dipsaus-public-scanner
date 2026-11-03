@@ -41,9 +41,13 @@ def inventory_candidate_artifacts(repo, token, artifact_name, *,
             raise ValueError("invalid_github_artifacts_response")
         pages += 1
         found.extend(batch)
-        if len(batch) < 100:
+        if len(found) > reported_total:
+            raise ValueError("artifact_inventory_exceeds_reported_total")
+        if len(found) == reported_total:
             exhausted = True
             break
+        if len(batch) < 100:
+            raise ValueError("artifact_inventory_count_mismatch")
     if exhausted and len(found) != reported_total:
         raise ValueError("artifact_inventory_count_mismatch")
     matching = [a for a in found if a.get("name") == artifact_name]
