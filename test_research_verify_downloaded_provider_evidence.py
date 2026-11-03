@@ -98,7 +98,7 @@ class DownloadedProviderEvidenceTests(unittest.TestCase):
         with ZipFile(forged_outer, "w", ZIP_DEFLATED) as z:
             z.writestr("synthetic-provider-evidence.zip", forged_bytes)
             z.writestr("sha256.txt", hashlib.sha256(forged_bytes).hexdigest()
-                       + "  synthetic-provider-evidence.zip\\n")
+                       + "  synthetic-provider-evidence.zip\n")
         with self.assertRaisesRegex(ValueError, "provider_bar_binding_mismatch"):
             verify_downloaded_provider_artifact(forged_outer.getvalue())
 
