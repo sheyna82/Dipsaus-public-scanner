@@ -511,7 +511,8 @@ jobs:
                       os.environ["GH_RESEARCH_REPO"],
                       os.environ["GH_RESEARCH_TOKEN"],
                       selection["selected_artifact_id"],
-                      root / "downloaded.zip")
+                      root / "downloaded.zip",
+                      expected_member="synthetic-prospective-ledger.zip")
                   restore = restore_archive(root / "downloaded.zip", root / "restored")
                   assert restore["restored_files"] == 1
                   payload = json.loads(
