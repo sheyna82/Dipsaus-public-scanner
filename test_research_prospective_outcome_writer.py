@@ -31,6 +31,25 @@ class OutcomeWriterTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "existing_outcome_conflict"):
                 write_outcome(candidate, changed, self.spy, tmp)
 
+    def test_capture_bound_outcome_rejects_registration_day(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            candidate = Path(tmp) / "signal.json"
+            candidate.write_text(json.dumps({"protocol_id": "v1", "symbol": "AMD",
+                "signal_session": self.days[0], "future_outcome": None,
+                "trade_ready": False, "registered_at_utc": "2026-10-27T15:00:00+00:00"}))
+            with self.assertRaisesRegex(ValueError, "outcome_not_strictly_after_registration"):
+                write_outcome(candidate, self.stock, self.spy, tmp)
+            self.assertFalse((Path(tmp) / "signal-outcome.json").exists())
+
+    def test_capture_bound_outcome_requires_timezone(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            candidate = Path(tmp) / "signal.json"
+            candidate.write_text(json.dumps({"protocol_id": "v1", "symbol": "AMD",
+                "signal_session": self.days[0], "future_outcome": None,
+                "trade_ready": False, "registered_at_utc": "2026-10-27T15:00:00"}))
+            with self.assertRaisesRegex(ValueError, "candidate_registration_timezone_required"):
+                write_outcome(candidate, self.stock, self.spy, tmp)
+
     def test_missing_future_stock_session(self):
         with tempfile.TemporaryDirectory() as tmp:
             candidate = Path(tmp) / "signal.json"
