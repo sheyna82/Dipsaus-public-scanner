@@ -11,6 +11,8 @@ from pathlib import Path
 from zipfile import ZipFile
 
 from research_alpha_vantage_offline_daily import inspect_alpha_vantage_daily_bytes
+from research_source_evidence_archive import verify_source_evidence_archive
+import tempfile
 
 
 def verify_downloaded_provider_artifact(outer_bytes):
@@ -20,6 +22,8 @@ def verify_downloaded_provider_artifact(outer_bytes):
         names = outer.namelist()
         if len(names) != 2 or set(names) != {"synthetic-provider-evidence.zip", "sha256.txt"}:
             raise ValueError("unexpected_artifact_members")
+        if any(info.file_size > (5_000_000 if info.filename.endswith(".zip") else 512) for info in outer.infolist()):
+            raise ValueError("oversized_artifact_member")
         inner_bytes = outer.read("synthetic-provider-evidence.zip")
         checksum = outer.read("sha256.txt").decode("ascii")
     expected_line = hashlib.sha256(inner_bytes).hexdigest() + "  synthetic-provider-evidence.zip\n"
@@ -29,9 +33,15 @@ def verify_downloaded_provider_artifact(outer_bytes):
         names = inner.namelist()
         if len(names) != 3 or set(names) != {"candidate.json", "source.bin", "manifest.json"}:
             raise ValueError("unexpected_evidence_members")
+        if any(info.file_size > 5_000_000 for info in inner.infolist()):
+            raise ValueError("oversized_evidence_member")
         candidate_raw = inner.read("candidate.json")
         source_raw = inner.read("source.bin")
         manifest = json.loads(inner.read("manifest.json"))
+    with tempfile.TemporaryDirectory() as tmp:
+        evidence_path = Path(tmp) / "evidence.zip"
+        evidence_path.write_bytes(inner_bytes)
+        verify_source_evidence_archive(evidence_path)
     candidate = json.loads(candidate_raw)
     if (manifest.get("candidate_sha256") != hashlib.sha256(candidate_raw).hexdigest()
             or manifest.get("source_sha256") != hashlib.sha256(source_raw).hexdigest()
