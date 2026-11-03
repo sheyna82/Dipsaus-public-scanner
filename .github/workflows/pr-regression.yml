@@ -9,6 +9,8 @@ on:
       - 'research/candidate_nonoverlap_validation.py'
       - 'research/candidate_conditional_cohorts.py'
       - 'research/test_candidate_conditional_cohorts.py'
+      - 'research/candidate_us_provenance_audit.py'
+      - 'research/test_candidate_us_provenance_audit.py'
       - 'research/candidate_us_offline_capture.py'
       - 'research/test_candidate_us_offline_capture.py'
       - 'research/candidate_us_decision_archive.py'
@@ -102,6 +104,11 @@ jobs:
         env:
           SCANNER_NOTIFICATIONS_ENABLED: 'false'
         run: python -m unittest research.test_candidate_us_decision_archive
+
+      - name: Test US capture provenance chronology (offline only)
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python -m unittest research.test_candidate_us_provenance_audit
 
       - name: Test US offline capture completeness (no market calls)
         env:
