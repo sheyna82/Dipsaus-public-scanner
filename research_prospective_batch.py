@@ -48,3 +48,33 @@ def generate_prospective_batch(stock_rows_by_symbol, spy_rows, *, signal_session
         results.append({"symbol": symbol, "status": "candidate", "record": record})
     return {"signal_session": signal_session, "research_only": True,
             "trade_ready": False, "results": results}
+
+
+def audit_prospective_batch_availability(batch, source_records, *, decision_at):
+    """Audit candidate input availability without claiming authenticated capture.
+
+    Reuses the existing point-in-time gate. A passing metadata check does NOT
+    prove that a prediction was frozen before subsequent market outcomes.
+    """
+    from research_point_in_time_availability_gate import assess_point_in_time_record
+
+    if not isinstance(source_records, dict):
+        raise ValueError("invalid_source_records")
+    candidates = [item["symbol"] for item in batch["results"]
+                  if item["status"] == "candidate"]
+    required = set(candidates) | ({"SPY"} if candidates else set())
+    if set(source_records) != required:
+        raise ValueError("prospective_source_coverage_mismatch")
+    results = {}
+    for symbol in sorted(required):
+        metadata = source_records[symbol]
+        if not isinstance(metadata, dict) or not isinstance(metadata.get("provider"), str) or not metadata["provider"].strip():
+            raise ValueError("missing_prospective_provider")
+        assessment = assess_point_in_time_record(metadata, decision_at=decision_at)
+        results[symbol] = {"accepted": assessment["accepted"],
+                           "reasons": assessment["reasons"],
+                           "source_authenticity_verified": False}
+    return {"research_only": True, "trade_ready": False,
+            "metadata_chronology_accepted": all(x["accepted"] for x in results.values()),
+            "independent_prospective_proof": False,
+            "source_authenticity_verified": False, "symbols": results}
