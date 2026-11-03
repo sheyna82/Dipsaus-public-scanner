@@ -43,6 +43,27 @@ class LedgerWriterTests(unittest.TestCase):
                 write_candidate_batch(batch, tmp)
             self.assertEqual(list(Path(tmp).iterdir()), [])
 
+    def test_later_existing_conflict_does_not_write_earlier_candidate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            batch = self.batch()
+            batch["results"].insert(0, {"symbol": "COHU", "status": "candidate",
+                "record": {"protocol_id": "dipsaus-prospective-momentum-v1",
+                           "symbol": "COHU", "signal_session": "2026-10-26",
+                           "future_outcome": None, "trade_ready": False}})
+            existing = Path(tmp) / "dipsaus-prospective-momentum-v1-AMD-2026-10-26.json"
+            existing.write_text('{"different": true}\\n')
+            with self.assertRaisesRegex(ValueError, "existing_candidate_conflict"):
+                write_candidate_batch(batch, tmp)
+            self.assertEqual(sorted(p.name for p in Path(tmp).iterdir()), [existing.name])
+
+    def test_duplicate_identity_does_not_create_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            batch = self.batch()
+            batch["results"].append(dict(batch["results"][0]))
+            with self.assertRaisesRegex(ValueError, "duplicate_candidate_identity_in_batch"):
+                write_candidate_batch(batch, tmp)
+            self.assertEqual(list(Path(tmp).iterdir()), [])
+
     def test_unsafe_candidate_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             batch = self.batch()
