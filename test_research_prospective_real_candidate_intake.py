@@ -57,6 +57,14 @@ class ProspectiveRealIntakeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "invalid_source_url"):
             self.validate()
 
+    def test_rejects_url_query_credentials(self):
+        for url in ("https://example.org/data?apikey=SECRET",
+                    "https://example.org/data?symbol=AMD"):
+            with self.subTest(url=url):
+                self.record["source_url"] = url
+                with self.assertRaisesRegex(ValueError, "invalid_source_url"):
+                    self.validate()
+
     def test_missing_source_rejected(self):
         self.record.pop("source_name")
         with self.assertRaisesRegex(ValueError, "missing_required_field_source_name"):
