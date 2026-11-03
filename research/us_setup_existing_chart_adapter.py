@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from research.us_setup_intraday_data_preflight import audit_intraday_bars
 
 
-def adapt_us_chart_rows(rows, *, expected_interval_minutes=5):
+def adapt_us_chart_rows(rows, *, expected_interval_minutes=1):
     if expected_interval_minutes not in (1, 2, 5, 15, 30, 60):
         raise ValueError("UNSUPPORTED_INTRADAY_INTERVAL")
     converted = []
@@ -25,7 +25,7 @@ def adapt_us_chart_rows(rows, *, expected_interval_minutes=5):
     times = [datetime.fromisoformat(row["timestamp"]) for row in audit["bars"]]
     gaps = [(b - a).total_seconds() / 60 for a, b in zip(times, times[1:])]
     # Require evidence of the declared granularity. Do not silently accept
-    # daily/15-minute data as 5-minute history.
+    # daily/15-minute data as 1-minute history.
     same_interval = sum(abs(g - expected_interval_minutes) < 0.01 for g in gaps)
     if same_interval < max(3, len(gaps) // 2):
         return {"usable": False, "reason": "INTERVAL_NOT_VERIFIED",
