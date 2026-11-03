@@ -30,6 +30,15 @@ class ArtifactInventoryTests(unittest.TestCase):
         page = [{"id": i + 1, "name": "signals"} for i in range(100)]
         report = inventory_candidate_artifacts("owner/repo", "fake-token", "signals",
             opener=self.opener([page]), max_pages=1)
+        self.assertEqual(report["status"], "metadata_pages_exhausted")
+        self.assertTrue(report["metadata_inventory_exhausted"])
+
+    def test_full_page_at_limit_with_more_pages_is_incomplete(self):
+        page = [{"id": i + 1, "name": "signals"} for i in range(100)]
+        def opener(request, timeout):
+            return FakeResponse(json.dumps({"total_count": 101, "artifacts": page}).encode())
+        report = inventory_candidate_artifacts("owner/repo", "fake-token", "signals",
+            opener=opener, max_pages=1)
         self.assertEqual(report["status"], "pagination_limit_reached")
         self.assertFalse(report["metadata_inventory_exhausted"])
 
