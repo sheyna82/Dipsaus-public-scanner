@@ -75,6 +75,23 @@ class SourceObservationTests(unittest.TestCase):
             self.run_capture()
         self.assertFalse(self.path.exists())
 
+    def test_rejects_nonfinite_quote(self):
+        for raw in (b'{"c":NaN}', b'{"c":Infinity}', b'{"c":1e999}'):
+            with self.subTest(raw=raw):
+                self.raw = raw
+                with self.assertRaisesRegex(ValueError, "source_quote_invalid"):
+                    self.run_capture()
+                self.assertFalse(self.path.exists())
+
+    def test_rejects_non_utc_completion_clock(self):
+        from datetime import timedelta
+        times = iter((datetime(2026, 11, 3, 20, tzinfo=timezone.utc),
+                      datetime(2026, 11, 3, 21, tzinfo=timezone(timedelta(hours=1)))))
+        self.clock = lambda: next(times)
+        with self.assertRaisesRegex(ValueError, "utc_clock_required"):
+            self.run_capture()
+        self.assertFalse(self.path.exists())
+
     def test_rejects_provider_response_echoing_credential(self):
         self.raw = b'{"c":100.25,"unexpected":"dummy-secret"}'
         with self.assertRaisesRegex(ValueError, "source_response_contains_credential"):
