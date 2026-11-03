@@ -17,7 +17,7 @@ def prepare_offline_source_evidence(url, *, source_bytes, captured_at_utc,
     except ValueError as exc:
         raise ValueError("invalid_https_source_url") from exc
     if (parsed.scheme != "https" or not parsed.hostname or parsed.username
-            or parsed.password or parsed.fragment or port not in (None, 443)):
+            or parsed.password or parsed.fragment or parsed.query or port not in (None, 443)):
         raise ValueError("invalid_https_source_url")
     host = parsed.hostname
     if (not isinstance(allowed_hosts, (set, frozenset)) or not allowed_hosts
