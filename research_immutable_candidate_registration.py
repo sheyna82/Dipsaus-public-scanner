@@ -24,27 +24,32 @@ def register_candidate_once(candidate, directory, *, clock=None):
         raise ValueError("utc_clock_required")
     if now.utcoffset().total_seconds() != 0:
         raise ValueError("utc_clock_required")
+    root = Path(directory)
+    if not root.is_dir():
+        raise ValueError("candidate_directory_must_exist")
+    identity = {key: candidate[key] for key in ("protocol_id", "symbol", "signal_session")}
+    identity_digest = hashlib.sha256(
+        json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
     timestamp = now.astimezone(timezone.utc).isoformat()
     record = dict(candidate)
     record["registered_at_utc"] = timestamp
+    record["candidate_identity_sha256"] = identity_digest
     record["registration_clock_proof_independent"] = False
     record["research_only"] = True
     record["trade_ready"] = False
     payload = (json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
-    root = Path(directory)
-    if not root.is_dir():
-        raise ValueError("candidate_directory_must_exist")
-    # Use content-derived identity; the write is exclusive and cannot overwrite.
+    # Exclusive filename is derived from logical identity, not registration time.
     digest = hashlib.sha256(payload).hexdigest()
-    path = root / (digest + ".json")
+    path = root / (identity_digest + ".json")
     try:
         with path.open("xb") as out:
             out.write(payload)
     except FileExistsError:
         if path.read_bytes() != payload:
-            raise ValueError("candidate_hash_collision_or_conflict")
-        return {"status": "duplicate", "path": str(path), "sha256": digest,
+            raise ValueError("candidate_already_registered_with_different_payload")
+        return {"status": "duplicate", "path": str(path), "sha256": digest, "candidate_identity_sha256": identity_digest,
                 "independent_timestamp_proof": False, "trade_ready": False}
-    return {"status": "created", "path": str(path), "sha256": digest,
+    return {"status": "created", "path": str(path), "sha256": digest, "candidate_identity_sha256": identity_digest,
             "registered_at_utc": timestamp, "independent_timestamp_proof": False,
             "trade_ready": False}
