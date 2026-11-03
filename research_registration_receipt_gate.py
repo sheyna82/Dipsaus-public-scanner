@@ -55,8 +55,10 @@ def audit_registration_receipt(candidate, artifact, *, expected_run_id, expected
         raise ValueError("invalid_signal_session") from exc
     if published.date() > signal_day:
         receipt_timing = "artifact_created_after_signal_session_not_prospective_for_that_session"
-    else:
+    elif published.date() == signal_day:
         receipt_timing = "same_day_receipt_requires_exchange_cutoff_and_input_proof"
+    else:
+        receipt_timing = "artifact_created_before_signal_session_requires_input_and_content_proof"
     # The artifact must actually contain this candidate, verified by its
     # content hash and manifest elsewhere; metadata alone cannot prove it.
     return {
