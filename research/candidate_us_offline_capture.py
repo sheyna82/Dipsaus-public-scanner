@@ -28,8 +28,6 @@ def build_records(capture):
         raise ValueError("CONFLICTING_OUTCOMES")
     if set(assessments) | set(failures) != set(symbols):
         raise ValueError("INCOMPLETE_OR_FOREIGN_SYMBOLS")
-    if not assessments:
-        raise ValueError("NO_ASSESSMENTS")
     records = [decision_record(s, assessments[s], observed) for s in sorted(assessments)]
     return {"records": records, "failed_symbols": dict(sorted(failures.items())),
             "requested_count": len(symbols), "assessed_count": len(records),
@@ -38,9 +36,8 @@ def build_records(capture):
 
 def archive_capture(capture, archive_dir):
     result = build_records(capture)
-    if result["failed_symbols"]:
-        raise ValueError("FAILURES_REQUIRE_COMPLETE_CAPTURE_ARCHIVE")
-    archive = archive_decision_batch(result["records"], capture["observed_at_utc"], archive_dir)
+    archive = archive_decision_batch(result["records"], capture["observed_at_utc"], archive_dir,
+                                     failures=result["failed_symbols"], requested_count=result["requested_count"])
     return {**result, "archive": {"path": str(archive["path"]), "sha256": archive["sha256"]}}
 
 
