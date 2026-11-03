@@ -65,3 +65,20 @@ def write_candidate_batch(batch, directory):
             duplicates.append({"symbol": symbol, "file": str(filename), "sha256": digest})
     return {"research_only": True, "trade_ready": False,
             "created": created, "duplicates": duplicates, "rejected": rejected}
+
+
+def write_audited_candidate_batch(batch, directory, source_records, *, decision_at):
+    """Fail closed on source chronology before using the existing ledger writer.
+
+    Metadata is supplied by the caller, not independently authenticated.
+    This route is research-only and does not certify a real-time capture.
+    """
+    from research_prospective_batch import audit_prospective_batch_availability
+
+    audit = audit_prospective_batch_availability(
+        batch, source_records, decision_at=decision_at)
+    if not audit["metadata_chronology_accepted"]:
+        raise ValueError("prospective_source_chronology_blocked")
+    result = write_candidate_batch(batch, directory)
+    return {**result, "source_chronology_audit": audit,
+            "independent_prospective_proof": False}
