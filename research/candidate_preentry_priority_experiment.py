@@ -20,6 +20,7 @@ def entry_quarter_attribution(simulation, tranche=3500.0):
                 'positive_trade_n': sum(v > 0 for v in values)}
             for q, values in sorted(buckets.items())}
 from candidate_portfolio_capacity import simulate, calendar_capital_occupancy
+from candidate_exante_priority_sensitivity import score_from_signal_close
 
 # Fixed before reading outcomes. These are hypotheses, not optimized coefficients.
 PRIORITIES = {
@@ -27,6 +28,7 @@ PRIORITIES = {
     "relative_strength_asc": ("relative_strength_20d_pct", -1),
     "atr_low_first": ("atr_14_pct", -1),
     "volume_high_first": ("volume_ratio_20d", 1),
+    "combined_predeclared": (None, 1),
 }
 
 
@@ -118,7 +120,8 @@ def priority_experiment(portfolio):
             baseline_events.append({
                 "symbol": row["symbol"], "entry_day": row["entry_day"],
                 "exit_day": row["exit_day"], "net_return_pct": ret,
-                "features": f
+                "features": f,
+                "training_thresholds": row.get("training_thresholds")
             })
         neutral = simulate([{k: v for k, v in r.items() if k != "features"} for r in baseline_events])
         if neutral["accepted_n"] != reference["accepted_n"] or abs(neutral["realized_pnl"] - reference["realized_pnl"]) > .011:
@@ -126,14 +129,24 @@ def priority_experiment(portfolio):
         neutral_quarters = entry_quarter_attribution(neutral)
         scenarios = {}
         for name, (feature, direction) in PRIORITIES.items():
-            if any(not isinstance(r["features"].get(feature), (int, float))
+            if feature is not None and any(not isinstance(r["features"].get(feature), (int, float))
                    or isinstance(r["features"].get(feature), bool)
                    or not math.isfinite(r["features"][feature]) for r in baseline_events):
                 scenarios[name] = {"status": "BLOCKED_MISSING_PREENTRY_FEATURE",
                                    "feature": feature, "trade_ready": False}
                 continue
-            signals = [{k: v for k, v in row.items() if k != "features"} |
-                       {"score": direction * row["features"][feature]} for row in baseline_events]
+            if feature is None:
+                try:
+                    scores = [score_from_signal_close(row["features"], row["training_thresholds"])
+                              for row in baseline_events]
+                except ValueError:
+                    scenarios[name] = {"status": "BLOCKED_INVALID_COMBINED_PREENTRY_FEATURE",
+                                       "trade_ready": False}
+                    continue
+            else:
+                scores = [direction * row["features"][feature] for row in baseline_events]
+            signals = [{k: v for k, v in row.items() if k not in ("features", "training_thresholds")} |
+                       {"score": score} for row, score in zip(baseline_events, scores)]
             sim = simulate(signals, priority_mode="score_desc")
             neutral_keys = {(r["symbol"], r["entry_day"]) for r in neutral["accepted_signals"]}
             selected_keys = {(r["symbol"], r["entry_day"]) for r in sim["accepted_signals"]}
@@ -173,7 +186,7 @@ def priority_experiment(portfolio):
         }
     return {"status": "EXPLORATORY_ONLY", "trade_ready": False, "cohorts": results,
             "limitations": ["Previously inspected held-out sample, not independent confirmation",
-                            "Single-feature ranking; no walk-forward recalibration",
+                            "Single-feature and predeclared combined ranking; no walk-forward recalibration",
                             "Fixed exits, no daily marked-to-market risk or live execution",
                             "Feature missingness blocks scenario; never silently imputes",
                             "No strategy chosen by historical maximum",
