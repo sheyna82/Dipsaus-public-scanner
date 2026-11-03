@@ -29,6 +29,19 @@ class ReceiptGateTests(unittest.TestCase):
         self.assertFalse(result["independent_pre_signal_timestamp_proof"])
         self.assertFalse(result["trade_ready"])
 
+    def test_late_github_receipt_is_not_prospective(self):
+        result = self.audit()
+        self.assertEqual(result["receipt_timing_classification"],
+                         "artifact_created_after_signal_session_not_prospective_for_that_session")
+        self.assertFalse(result["prospective_signal_proven"])
+
+    def test_same_day_github_receipt_still_requires_proof(self):
+        self.candidate["signal_session"] = "2026-11-03"
+        result = self.audit()
+        self.assertEqual(result["receipt_timing_classification"],
+                         "same_day_receipt_requires_exchange_cutoff_and_input_proof")
+        self.assertFalse(result["prospective_signal_proven"])
+
     def test_artifact_predates_local_registration_rejected(self):
         self.artifact["created_at"] = "2026-11-03T14:59:59Z"
         with self.assertRaisesRegex(ValueError, "artifact_predates_local_registration"):
