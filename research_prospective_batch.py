@@ -9,6 +9,10 @@ from research_prospective_signal_ledger import build_candidate
 
 def generate_prospective_batch(stock_rows_by_symbol, spy_rows, *, signal_session):
     date.fromisoformat(signal_session)
+    # Candidate inputs must not contain post-signal prices, even if ignored by
+    # the lookback calculation. Outcome prices belong in a separate later step.
+    if any(r["date"] > signal_session for r in spy_rows):
+        raise ValueError("future_benchmark_data_in_candidate_input")
     spy_map = {r["date"]: r["close"] for r in spy_rows}
     if len(spy_map) != len(spy_rows):
         raise ValueError("duplicate_spy_session")
@@ -17,6 +21,9 @@ def generate_prospective_batch(stock_rows_by_symbol, spy_rows, *, signal_session
         stock_rows = stock_rows_by_symbol.get(symbol)
         if stock_rows is None:
             results.append({"symbol": symbol, "status": "missing_symbol_data"})
+            continue
+        if any(r["date"] > signal_session for r in stock_rows):
+            results.append({"symbol": symbol, "status": "future_stock_data_in_candidate_input"})
             continue
         stock_map = {r["date"]: r["close"] for r in stock_rows}
         if len(stock_map) != len(stock_rows):
