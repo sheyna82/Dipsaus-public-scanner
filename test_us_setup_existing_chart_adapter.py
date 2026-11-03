@@ -6,13 +6,13 @@ from research.us_setup_existing_chart_adapter import adapt_us_chart_rows
 class ExistingUSChartAdapterTests(unittest.TestCase):
     def setUp(self):
         start = datetime(2026, 10, 1, 14, 30, tzinfo=timezone.utc)
-        self.rows = [{"ts": (start + timedelta(minutes=5*i)).timestamp(),
+        self.rows = [{"ts": (start + timedelta(minutes=i)).timestamp(),
                       "low": 99, "close": 100} for i in range(25)]
 
     def test_existing_chart_schema_accepted(self):
         result = adapt_us_chart_rows(self.rows)
         self.assertTrue(result["usable"])
-        self.assertEqual(result["interval_minutes"], 5)
+        self.assertEqual(result["interval_minutes"], 1)
         self.assertFalse(result["provider_verified"])
 
     def test_wrong_interval_rejected(self):
