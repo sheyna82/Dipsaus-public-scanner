@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
       - 'research_observation_temporal_integrity.py'
+      - 'research_generate_synthetic_provider_evidence.py'
       - 'research_alpha_vantage_offline_daily.py'
       - 'test_research_alpha_vantage_offline_daily.py'
       - 'research_manual_observation_intake.py'
@@ -110,5 +111,16 @@ jobs:
           path: |
             synthetic-source-evidence/source-evidence-synthetic.zip
             synthetic-source-evidence/sha256.txt
+          if-no-files-found: error
+          retention-days: 7
+      - name: Generate synthetic provider-validated evidence archive
+        run: python research_generate_synthetic_provider_evidence.py
+      - name: Upload synthetic provider-validated evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: dipsaus-provider-validated-synthetic-evidence
+          path: |
+            synthetic-provider-evidence/synthetic-provider-evidence.zip
+            synthetic-provider-evidence/sha256.txt
           if-no-files-found: error
           retention-days: 7
