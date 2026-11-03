@@ -30,13 +30,20 @@ class DownloadedProviderEvidenceTests(unittest.TestCase):
     def test_cli_reads_downloaded_artifact(self):
         from contextlib import redirect_stdout
         output = io.StringIO()
-        root = Path(self.temp.name) if hasattr(self, "temp") else None
         payload = self.make_outer()
         artifact = Path(self.temp.name) / "downloaded.zip"
         artifact.write_bytes(payload)
         with redirect_stdout(output):
             self.assertEqual(main(["--artifact-zip", str(artifact)]), 0)
         self.assertFalse(json.loads(output.getvalue())["trade_ready"])
+
+    def test_rejects_oversized_outer_member_without_decompressing(self):
+        buf = io.BytesIO()
+        with ZipFile(buf, "w", ZIP_DEFLATED) as z:
+            z.writestr("synthetic-provider-evidence.zip", b"x" * 5_000_001)
+            z.writestr("sha256.txt", b"0" * 64)
+        with self.assertRaisesRegex(ValueError, "oversized_artifact_member"):
+            verify_downloaded_provider_artifact(buf.getvalue())
 
     def test_tampered_checksum_rejected(self):
         original = self.make_outer()
