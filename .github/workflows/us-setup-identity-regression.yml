@@ -10,6 +10,8 @@ on:
       - 'test_us_setup_episode_evaluation.py'
       - 'test_us_setup_snapshot_contract.py'
       - 'test_us_setup_intraday_data_preflight.py'
+      - 'test_us_setup_existing_chart_adapter.py'
+      - 'research/us_setup_existing_chart_adapter.py'
       - 'research/us_setup_intraday_data_preflight.py'
       - 'research/us_setup_snapshot_contract.py'
       - 'research/us_setup_episode_evaluation.py'
@@ -41,4 +43,4 @@ jobs:
         with:
           python-version: '3.11'
       - name: Run isolated notification regression with fake senders
-        run: python -m unittest -v test_us_setup_identity_regression test_us_notification_safety test_us_independent_setup_replay test_us_setup_episode_evaluation test_us_setup_snapshot_contract test_us_setup_intraday_data_preflight
+        run: python -m unittest -v test_us_setup_identity_regression test_us_notification_safety test_us_independent_setup_replay test_us_setup_episode_evaluation test_us_setup_snapshot_contract test_us_setup_intraday_data_preflight test_us_setup_existing_chart_adapter
