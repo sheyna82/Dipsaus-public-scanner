@@ -34,6 +34,8 @@ on:
       - 'research/candidate_feature_ablation.py'
       - 'research/test_candidate_feature_ablation.py'
       - 'research/candidate_preentry_priority_experiment.py'
+      - 'research/candidate_exante_priority_sensitivity.py'
+      - 'research/test_candidate_exante_priority_sensitivity.py'
       - 'research/test_candidate_preentry_priority_experiment.py'
       - 'research/candidate_capacity_opportunity_audit.py'
       - 'research/test_candidate_capacity_opportunity_audit.py'
