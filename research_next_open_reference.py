@@ -28,6 +28,12 @@ def assess_next_open_reference(*, registered_at_utc, stock_bar, benchmark_bar):
         if not price.is_finite() or price <= 0:
             raise ValueError("invalid_entry_open")
         return price
+    if not isinstance(stock_bar, dict) or not isinstance(benchmark_bar, dict):
+        raise ValueError("invalid_entry_bars")
+    if not isinstance(stock_bar.get("symbol"), str) or not stock_bar["symbol"]:
+        raise ValueError("invalid_stock_symbol")
+    if not isinstance(stock_bar.get("session"), str) or not isinstance(benchmark_bar.get("session"), str):
+        raise ValueError("invalid_entry_session")
     if stock_bar.get("session") != benchmark_bar.get("session"):
         raise ValueError("entry_sessions_not_aligned")
     stock = check(stock_bar, stock_bar.get("symbol"))
