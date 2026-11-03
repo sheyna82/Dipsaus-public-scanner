@@ -4,7 +4,7 @@ A GitHub artifact receipt proves publication no earlier than its server-reported
 creation time. It does not authenticate the input market data or prove that
 registration preceded the market move. No trading permission is granted.
 """
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 import re
 
 
@@ -49,6 +49,14 @@ def audit_registration_receipt(candidate, artifact, *, expected_run_id, expected
     published = _utc(artifact.get("created_at"))
     if published < local_registration:
         raise ValueError("artifact_predates_local_registration")
+    try:
+        signal_day = date.fromisoformat(candidate["signal_session"])
+    except ValueError as exc:
+        raise ValueError("invalid_signal_session") from exc
+    if published.date() > signal_day:
+        receipt_timing = "artifact_created_after_signal_session_not_prospective_for_that_session"
+    else:
+        receipt_timing = "same_day_receipt_requires_exchange_cutoff_and_input_proof"
     # The artifact must actually contain this candidate, verified by its
     # content hash and manifest elsewhere; metadata alone cannot prove it.
     return {
@@ -57,6 +65,8 @@ def audit_registration_receipt(candidate, artifact, *, expected_run_id, expected
         "github_run_id": expected_run_id,
         "artifact_id": artifact["id"],
         "artifact_created_at_utc": published.isoformat(),
+        "receipt_timing_classification": receipt_timing,
+        "prospective_signal_proven": False,
         "local_registration_at_utc_claimed": local_registration.isoformat(),
         "candidate_in_artifact_verified": False,
         "artifact_bytes_verified": False,
