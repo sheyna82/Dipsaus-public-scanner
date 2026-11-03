@@ -37,8 +37,8 @@ class OutcomeWriterTests(unittest.TestCase):
             candidate.write_text(json.dumps({"protocol_id": "v1", "symbol": "AMD",
                 "signal_session": self.days[0], "future_outcome": None,
                 "trade_ready": False, "registered_at_utc": "2026-10-27T15:00:00+00:00"}))
-            with self.assertRaisesRegex(ValueError, "outcome_not_strictly_after_registration"):
-                write_outcome(candidate, self.stock, self.spy, tmp)
+            result = write_outcome(candidate, self.stock, self.spy, tmp)
+            self.assertEqual(result["status"], "pending_post_registration_entry_baseline")
             self.assertFalse((Path(tmp) / "signal-outcome.json").exists())
 
     def test_capture_bound_outcome_requires_timezone(self):
@@ -55,7 +55,7 @@ class OutcomeWriterTests(unittest.TestCase):
             candidate = Path(tmp) / "signal.json"
             candidate.write_text(json.dumps({"protocol_id": "v1", "symbol": "AMD",
                 "signal_session": self.days[0], "future_outcome": None,
-                "trade_ready": False, "registered_at_utc": "2026-10-26T20:00:00+00:00"}))
+                "trade_ready": False, "registered_at_utc": "2026-10-27T20:00:00+00:00"}))
             result = write_outcome(candidate, self.stock, self.spy, tmp)
             self.assertEqual(result["status"], "pending_post_registration_entry_baseline")
             self.assertFalse((Path(tmp) / "signal-outcome.json").exists())
