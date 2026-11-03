@@ -39,8 +39,21 @@ class ManualObservationIntakeTests(unittest.TestCase):
                 allowed_hosts=["example.org"])
         self.assertEqual(result["status"], "offline_observation_archived_unverified")
         self.assertTrue(self.archive.exists())
+        self.assertEqual(result["timing_classification"], "same_day_registration_requires_exchange_cutoff_proof")
+        self.assertFalse(result["prospective_signal_proven"])
         self.assertFalse(result["independent_market_data_provenance"])
         self.assertFalse(result["trade_ready"])
+
+    def test_late_registration_is_explicitly_nonprospective(self):
+        with patch("research_manual_observation_intake.datetime") as dt:
+            dt.now.return_value = datetime(2026, 11, 4, 16, tzinfo=timezone.utc)
+            result = run_manual_intake(
+                self.observation, self.source, self.candidates, self.archive,
+                allowed_hosts=["example.org"])
+        self.assertEqual(
+            result["timing_classification"],
+            "late_registration_not_prospective_for_signal_session")
+        self.assertFalse(result["prospective_signal_proven"])
 
     def test_alpha_vantage_validated_before_registration(self):
         self.source.write_text(json.dumps({
