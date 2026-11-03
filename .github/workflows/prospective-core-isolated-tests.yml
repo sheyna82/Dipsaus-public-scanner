@@ -4,8 +4,10 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
+      - 'research_registration_artifact_inventory.py'
+      - 'test_research_registration_artifact_inventory.py'
       - 'research_registration_artifact_coverage.py'
-      - 'test_research_registration_artifact_coverage.py'
+      - 'test_research_registration_artifact_coverage test_research_registration_artifact_inventory.py'
       - 'research_candidate_registration_reconciliation.py'
       - 'test_research_candidate_registration_reconciliation test_research_registration_artifact_coverage.py'
       - 'research_immutable_candidate_registration.py'
