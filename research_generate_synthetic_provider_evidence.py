@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from research_manual_observation_intake import run_manual_intake
 from research_source_evidence_archive import verify_source_evidence_archive
+from research_publication_preflight import assess_public_artifact
 
 
 def generate(destination):
@@ -43,6 +44,12 @@ def generate(destination):
                 observation, source, candidates, archive,
                 allowed_hosts=["example.org"], provider_format="alpha_vantage_daily")
     verified = verify_source_evidence_archive(archive)
+    from zipfile import ZipFile
+    with ZipFile(archive) as z:
+        candidate = json.loads(z.read("candidate.json"))
+        preflight = assess_public_artifact(candidate, z.read("source.bin"))
+    if not preflight["public_upload_allowed"]:
+        raise ValueError("synthetic_publication_preflight_denied")
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     (out / "sha256.txt").write_text(
         digest + "  synthetic-provider-evidence.zip\n", encoding="utf-8")
