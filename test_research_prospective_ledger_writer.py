@@ -1,7 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
-from research_prospective_ledger_writer import write_candidate_batch
+from research_prospective_ledger_writer import write_candidate_batch, write_audited_candidate_batch
 
 
 class LedgerWriterTests(unittest.TestCase):
@@ -62,6 +62,39 @@ class LedgerWriterTests(unittest.TestCase):
             batch["results"].append(dict(batch["results"][0]))
             with self.assertRaisesRegex(ValueError, "duplicate_candidate_identity_in_batch"):
                 write_candidate_batch(batch, tmp)
+            self.assertEqual(list(Path(tmp).iterdir()), [])
+
+    def source_records(self):
+        metadata = {"provider": "synthetic-test",
+                    "observed_at": "2026-10-26T20:00:00+00:00",
+                    "published_at": "2026-10-26T20:01:00+00:00",
+                    "ingested_at": "2026-10-26T20:02:00+00:00",
+                    "revision_asof": "2026-10-26T20:01:00+00:00"}
+        return {"AMD": dict(metadata), "SPY": dict(metadata)}
+
+    def test_audited_writer_accepts_complete_synthetic_chronology(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = write_audited_candidate_batch(
+                self.batch(), tmp, self.source_records(),
+                decision_at="2026-10-26T20:03:00+00:00")
+            self.assertEqual(len(result["created"]), 1)
+            self.assertTrue(result["source_chronology_audit"]["metadata_chronology_accepted"])
+            self.assertFalse(result["independent_prospective_proof"])
+
+    def test_audited_writer_blocks_late_ingestion_before_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            sources = self.source_records()
+            sources["AMD"]["ingested_at"] = "2026-10-27T20:02:00+00:00"
+            with self.assertRaisesRegex(ValueError, "prospective_source_chronology_blocked"):
+                write_audited_candidate_batch(self.batch(), tmp, sources,
+                    decision_at="2026-10-26T20:03:00+00:00")
+            self.assertEqual(list(Path(tmp).iterdir()), [])
+
+    def test_audited_writer_blocks_missing_source_before_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaisesRegex(ValueError, "prospective_source_coverage_mismatch"):
+                write_audited_candidate_batch(self.batch(), tmp, {"AMD": self.source_records()["AMD"]},
+                    decision_at="2026-10-26T20:03:00+00:00")
             self.assertEqual(list(Path(tmp).iterdir()), [])
 
     def test_unsafe_candidate_rejected(self):
