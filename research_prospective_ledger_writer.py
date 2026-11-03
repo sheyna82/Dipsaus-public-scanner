@@ -12,6 +12,17 @@ def write_candidate_batch(batch, directory):
     if not root.is_dir():
         raise ValueError("ledger_directory_must_exist")
     created, duplicates, rejected = [], [], []
+    # Validate every candidate before writing any file; prevent partial batches.
+    for item in batch["results"]:
+        if item["status"] != "candidate":
+            continue
+        record = item["record"]
+        if (record.get("future_outcome") is not None
+                or record.get("future_outcome_available") is True
+                or record.get("trade_ready") is not False):
+            raise ValueError("unsafe_candidate")
+        if record["symbol"] != item["symbol"] or record["signal_session"] != batch["signal_session"]:
+            raise ValueError("candidate_identity_mismatch")
     for item in batch["results"]:
         symbol = item["symbol"]
         if item["status"] != "candidate":
