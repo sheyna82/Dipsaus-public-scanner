@@ -11,6 +11,7 @@ from pathlib import Path
 from zipfile import ZipFile
 
 from research_alpha_vantage_offline_daily import inspect_alpha_vantage_daily_bytes
+from research_observation_temporal_integrity import audit_observation_timing
 from research_source_evidence_archive import verify_source_evidence_archive
 import tempfile
 
@@ -54,6 +55,7 @@ def verify_downloaded_provider_artifact(outer_bytes):
             or candidate.get("prospective_signal_proven") is not False
             or candidate.get("bar_available_at_observation_time_verified") is not False):
         raise ValueError("unsafe_or_unexpected_candidate")
+    timing = audit_observation_timing(candidate)
     checked = inspect_alpha_vantage_daily_bytes(
         source_raw, expected_symbol=candidate["symbol"],
         as_of_session=candidate["signal_session"])
@@ -64,6 +66,8 @@ def verify_downloaded_provider_artifact(outer_bytes):
         "candidate_sha256": manifest["candidate_sha256"],
         "source_sha256": manifest["source_sha256"],
         "synthetic_data_only": True,
+        "timing_classification": timing["status"],
+        "prospective_signal_proven": False,
         "independent_source_authentication": False,
         "independent_timestamp_proof": False,
         "trade_ready": False,
