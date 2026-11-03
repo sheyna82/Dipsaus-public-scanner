@@ -13,7 +13,7 @@ Per exit: `totale netto P&L / (96 × 3500 × gemiddelde houdduur in handelsdagen
 | 10 dagen | 8073.87 | 10 | 2.4029 |
 | 15 dagen | 9410.14 | 15 | 1.8671 |
 | 20 dagen | 15122.83 | 20 | 2.2504 |
-| 30 dagen | 18005.32 | 30 | 1.7863 |
+| 30 dagen | 18005.32 | 30 | 1.7862 |
 | 40 dagen | 22491.98 | 40 | 1.6735 |
 | Trailing 8% | 8206.46 | 24.09 gemiddeld | 1.0139 |
 
