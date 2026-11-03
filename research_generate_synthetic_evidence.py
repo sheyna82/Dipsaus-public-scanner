@@ -18,7 +18,8 @@ def generate_synthetic_evidence(output_dir, *, run_id, head_sha):
     (root / "outcomes").mkdir()
     record = {"synthetic_data_only": True, "research_only": True,
               "trade_ready": False, "future_outcome": None,
-              "github_run_id_claimed": str(run_id), "head_sha_claimed": head_sha}
+              "github_run_id_claimed": str(run_id), "workflow_checkout_sha_claimed": head_sha,
+              "workflow_checkout_sha_may_be_pr_merge": True}
     (root / "candidates" / "synthetic.json").write_text(
         json.dumps(record, sort_keys=True) + "\n")
     archive_path = root / "prospective-ledger-synthetic.zip"
