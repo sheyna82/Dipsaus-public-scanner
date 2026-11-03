@@ -5,6 +5,7 @@ archive, verifies its checksummed manifest, and never overwrites an existing
 destination. No live scanner access and no repository writes.
 """
 import io
+import hashlib
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.parse import urlsplit
@@ -35,7 +36,11 @@ def _open_artifact(request, timeout):
 
 def download_previous_archive(repo, token, artifact_id, destination, *,
                               expected_member="synthetic-prospective-ledger.zip",
-                              opener=_open_artifact, max_bytes=8_000_000):
+                              opener=_open_artifact, max_bytes=8_000_000,
+                              expected_sha256=None):
+    if expected_sha256 is not None and (not isinstance(expected_sha256, str) or
+        len(expected_sha256) != 64 or any(c not in "0123456789abcdefABCDEF" for c in expected_sha256)):
+        raise ValueError("invalid_expected_sha256")
     if not token:
         raise ValueError("github_token_required")
     if not isinstance(artifact_id, int) or artifact_id <= 0:
@@ -82,6 +87,9 @@ def download_previous_archive(repo, token, artifact_id, destination, *,
                 raise ValueError("inner_archive_too_large")
     except BadZipFile as exc:
         raise ValueError("invalid_outer_zip") from exc
+    actual_sha256 = hashlib.sha256(inner).hexdigest()
+    if expected_sha256 is not None and actual_sha256 != expected_sha256.lower():
+        raise ValueError("artifact_expected_sha256_mismatch")
     destination.parent.mkdir(parents=True, exist_ok=True)
     with destination.open("xb") as handle:
         handle.write(inner)
@@ -92,6 +100,8 @@ def download_previous_archive(repo, token, artifact_id, destination, *,
         raise
     return {"research_only": True, "trade_ready": False,
             "downloaded_artifact_id": artifact_id,
+            "sha256": actual_sha256,
+            "expected_sha256_verified": expected_sha256 is not None,
             "verified_files": verified["file_count"],
             "cross_run_download_performed": True,
             "destination": str(destination)}
