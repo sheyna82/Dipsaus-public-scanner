@@ -2,6 +2,9 @@ name: DIPSAUS prospective archive transport research
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - research/offline-technical-risk-20261021
 
 permissions:
   contents: read
