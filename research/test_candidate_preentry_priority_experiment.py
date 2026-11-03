@@ -17,6 +17,26 @@ def row(symbol, ret, strength, day=10, selected=True):
 
 
 class PreentryPriorityTests(unittest.TestCase):
+    def test_combined_priority_reuses_quarter_and_pnl_bridge(self):
+        rows = [row(f"S{i:02d}", 10.0 if i == 6 else 0.0, i / 10.0)
+                for i in range(7)]
+        for event in rows:
+            event["features_at_signal_close"]["status"] = "DESCRIPTIVE_ONLY"
+            event["training_thresholds"] = {
+                "relative_strength_20d_pct": 0.0,
+                "volume_ratio_20d": 1.0, "atr_14_pct": 3.0}
+        result = priority_experiment({
+            "candidate_audit": rows,
+            "baseline": {"accepted_n": 6, "realized_pnl": 0.0},
+            "filtered": {"accepted_n": 6, "realized_pnl": 0.0}
+        })
+        combined = result["cohorts"]["baseline"]["scenarios"]["combined_predeclared"]
+        self.assertEqual(combined["accepted_n"], 6)
+        self.assertEqual(combined["realized_pnl"], 350.0)
+        self.assertEqual(combined["selection_difference_attribution"]["pnl_bridge_difference"], 350.0)
+        self.assertTrue(combined["entry_quarter_attribution"])
+        self.assertFalse(combined["trade_ready"])
+
     def test_score_uses_features_not_future_outcome(self):
         rows = [row(f"S{i:02d}", 10.0 if i == 6 else 0.0, float(i)) for i in range(7)]
         result = priority_experiment({
