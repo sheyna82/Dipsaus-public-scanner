@@ -6,6 +6,7 @@ observation; this function never infers a trading signal from source bytes.
 from pathlib import Path
 
 from research_offline_source_evidence import prepare_offline_source_evidence
+from research_source_secret_screen import reject_obvious_secrets
 from research_source_bound_registration import register_observation_with_source_snapshot
 from research_source_evidence_archive import archive_source_evidence
 
@@ -19,6 +20,7 @@ def archive_offline_observation(observation, source_bytes, candidate_directory,
         raise ValueError("missing_source_url")
     if observation.get("source_observed_at_utc") is None:
         raise ValueError("missing_source_observed_at_utc")
+    reject_obvious_secrets(source_bytes)
     now = clock()
     evidence = prepare_offline_source_evidence(
         observation["source_url"], source_bytes=source_bytes,
