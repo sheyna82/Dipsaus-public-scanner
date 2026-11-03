@@ -84,5 +84,17 @@ class ArtifactDownloadTests(unittest.TestCase):
                     expected_sha256="bad",
                     opener=lambda request, timeout: Response(outer.getvalue()))
 
+    def test_invalid_inner_archive_is_removed_after_verification_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outer = io.BytesIO()
+            with ZipFile(outer, "w") as z:
+                z.writestr("prospective-ledger-synthetic.zip", b"not-a-valid-inner-zip")
+            dest = Path(tmp) / "untrusted.zip"
+            with self.assertRaises(Exception):
+                download_previous_archive(
+                    "owner/repo", "fake-token", 42, dest,
+                    opener=lambda request, timeout: Response(outer.getvalue()))
+            self.assertFalse(dest.exists(), "Unverified archives must not remain on disk")
+
 if __name__ == "__main__":
     unittest.main()
