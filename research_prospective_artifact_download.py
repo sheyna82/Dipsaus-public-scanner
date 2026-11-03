@@ -35,7 +35,7 @@ def _open_artifact(request, timeout):
 
 
 def download_previous_archive(repo, token, artifact_id, destination, *,
-                              expected_member="synthetic-prospective-ledger.zip",
+                              expected_member="prospective-ledger-synthetic.zip",
                               opener=_open_artifact, max_bytes=8_000_000,
                               expected_sha256=None):
     if expected_sha256 is not None and (not isinstance(expected_sha256, str) or
