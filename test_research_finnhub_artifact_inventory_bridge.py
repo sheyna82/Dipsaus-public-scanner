@@ -58,6 +58,10 @@ class BridgeTests(unittest.TestCase):
         digest=self.write()
         with self.assertRaisesRegex(ValueError,"source_hash_mismatch"):
             inventory_from_artifact(self.path,expected_zip_sha256=digest)
+    def test_oversized_zip_container(self):
+        self.path.write_bytes(b"x" * 65537)
+        with self.assertRaisesRegex(ValueError,"zip_size_invalid"):
+            inventory_from_artifact(self.path,expected_zip_sha256=hashlib.sha256(self.path.read_bytes()).hexdigest())
     def test_missing_archive(self):
         with self.assertRaisesRegex(ValueError,"zip_size_invalid"):
             inventory_from_artifact(self.path,expected_zip_sha256="0"*64)
