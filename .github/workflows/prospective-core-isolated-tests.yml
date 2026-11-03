@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
+      - 'research_prospective_archive.py'
+      - 'research_prospective_artifact_download.py'
+      - 'test_research_actual_downloader_integration.py'
       - 'research_next_open_reference.py'
       - 'test_research_next_open_reference.py'
       - 'research_capture_candidate_boundary.py'
@@ -41,4 +44,4 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run all isolated research regression tests
-        run: python -m unittest -v test_research_next_open_reference test_research_capture_candidate_boundary test_research_prospective_outcome_writer test_research_prospective_core_integration test_research_immutable_candidate_registration test_research_candidate_registration_reconciliation test_research_registration_artifact_coverage test_research_registration_artifact_inventory test_research_registration_archive_bridge test_research_registration_multirun_integration test_research_registration_transport_integration
+        run: python -m unittest -v test_research_next_open_reference test_research_capture_candidate_boundary test_research_prospective_outcome_writer test_research_prospective_core_integration test_research_immutable_candidate_registration test_research_candidate_registration_reconciliation test_research_registration_artifact_coverage test_research_registration_artifact_inventory test_research_registration_archive_bridge test_research_registration_multirun_integration test_research_registration_transport_integration test_research_actual_downloader_integration
