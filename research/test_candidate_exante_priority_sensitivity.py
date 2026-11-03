@@ -42,6 +42,26 @@ class ExAntePriorityTests(unittest.TestCase):
         self.assertEqual(result["priority"]["score_desc"]["realized_pnl"], 350.0)
         self.assertEqual(result["priority"]["symbol_asc"]["realized_pnl"], 0.0)
 
+    def test_outcome_swap_does_not_change_selection(self):
+        rows = []
+        for i in range(7):
+            features = dict(self.features)
+            features["relative_strength_20d_pct"] = float(i)
+            rows.append({"symbol": f"S{i:02d}", "entry_day": 21000,
+                         "exit_day": 21010, "features_at_signal_close": features,
+                         "training_thresholds": self.thresholds,
+                         "historical_net_return_pct_outcome_not_selection_input": 0.0})
+        rows[0]["historical_net_return_pct_outcome_not_selection_input"] = 10.0
+        first = compare_priorities(rows)
+        rows[0]["historical_net_return_pct_outcome_not_selection_input"] = 0.0
+        rows[6]["historical_net_return_pct_outcome_not_selection_input"] = 10.0
+        second = compare_priorities(rows)
+        # Score prefers S06 regardless of where the future winner is placed.
+        self.assertEqual(first["priority"]["score_desc"]["realized_pnl"], 0.0)
+        self.assertEqual(second["priority"]["score_desc"]["realized_pnl"], 350.0)
+        self.assertEqual(first["priority"]["score_desc"]["accepted_n"], 6)
+        self.assertEqual(second["priority"]["score_desc"]["accepted_n"], 6)
+
     def test_missing_feature_fails_closed(self):
         features = dict(self.features)
         del features["volume_ratio_20d"]
