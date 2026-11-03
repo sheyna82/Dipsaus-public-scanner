@@ -186,6 +186,8 @@ jobs:
               "research-price-probe/yahoo-capture-bound-manifest.json")
           print(json.dumps(result))
           PY
+      - name: Test capture-before-registration and outcome-date boundary
+        run: python -m unittest -v test_research_capture_candidate_boundary
       - name: Probe extended five-year research history separately
         shell: bash
         run: |
