@@ -49,6 +49,14 @@ class PublicHttpsCaptureTests(unittest.TestCase):
             capture_public_https_source(self.url, clock=self.clock,
                                         allowed_hosts={"example.org"})
 
+    def test_disabled_live_transport_does_not_resolve_dns(self):
+        with patch("research_public_https_source_capture.socket.getaddrinfo",
+                   side_effect=AssertionError("DNS must not run")) as resolver:
+            with self.assertRaisesRegex(ValueError, "live_https_transport_disabled_pending_dns_pinning"):
+                capture_public_https_source(self.url, clock=self.clock,
+                                            allowed_hosts={"example.org"})
+            resolver.assert_not_called()
+
     def test_captures_bytes_with_unverified_provenance(self):
         result = self.capture()
         self.assertEqual(result["source_sha256"], hashlib.sha256(b'{"fixture":true}').hexdigest())
