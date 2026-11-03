@@ -25,6 +25,9 @@ def archive_source_evidence(candidate_path, source_bytes, destination):
     identity = record.get("candidate_identity_sha256")
     if not isinstance(identity, str) or len(identity) != 64 or any(c not in "0123456789abcdef" for c in identity):
         raise ValueError("invalid_candidate_identity")
+    expected_identity = hashlib.sha256(json.dumps({key: record[key] for key in ("protocol_id", "symbol", "signal_session")}, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    if identity != expected_identity:
+        raise ValueError("candidate_identity_digest_mismatch")
     destination = Path(destination)
     if destination.exists():
         raise FileExistsError("source_archive_already_exists")
@@ -63,6 +66,12 @@ def verify_source_evidence_archive(path):
         raise ValueError("candidate_archive_digest_mismatch")
     if candidate.get("source_snapshot_sha256") != manifest["source_sha256"] or candidate.get("source_snapshot_bytes") != len(source_raw) or candidate.get("candidate_identity_sha256") != manifest.get("candidate_identity_sha256"):
         raise ValueError("source_candidate_binding_mismatch")
+    try:
+        expected_identity = hashlib.sha256(json.dumps({key: candidate[key] for key in ("protocol_id", "symbol", "signal_session")}, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("invalid_candidate_identity") from exc
+    if expected_identity != candidate["candidate_identity_sha256"]:
+        raise ValueError("candidate_identity_digest_mismatch")
     return {
         "status": "source_bytes_and_candidate_locally_verified",
         "source_sha256": manifest["source_sha256"],
