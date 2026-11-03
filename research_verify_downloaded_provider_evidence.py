@@ -3,9 +3,11 @@
 Checks transport package, candidate/source manifest and the provider bar.
 No independent authenticity or prospective timing claim is made.
 """
+import argparse
 import hashlib
 import io
 import json
+from pathlib import Path
 from zipfile import ZipFile
 
 from research_alpha_vantage_offline_daily import inspect_alpha_vantage_daily_bytes
@@ -56,3 +58,16 @@ def verify_downloaded_provider_artifact(outer_bytes):
         "independent_timestamp_proof": False,
         "trade_ready": False,
     }
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--artifact-zip", required=True, type=Path)
+    args = parser.parse_args(argv)
+    result = verify_downloaded_provider_artifact(args.artifact_zip.read_bytes())
+    print(json.dumps(result, sort_keys=True, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
