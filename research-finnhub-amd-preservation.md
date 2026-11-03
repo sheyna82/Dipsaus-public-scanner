@@ -10,4 +10,4 @@ Research-only reference. This document is not an authenticated quote or a tradin
 - Raw response SHA-256: d0fc09361efffbcd4e001ca8f1c83f14b4f0f81da1eff9ac5113c586ed510e9a
 - Original artifact retention expiry: 2026-11-10 20:24:15 UTC
 
-The source observation and ZIP bytes are NOT included in this document. Retain the separately exported local preservation bundle. This receipt alone cannot reconstruct the data or establish Finnhub identity, price accuracy, prospective signal validity, or trade readiness.
+The original source observation JSON is now retained separately on this isolated research branch at `research-evidence/amd-20261103-source-observation.json` (755 bytes including final newline). Its bytes should be verified against the observation JSON SHA-256 above before use. The original ZIP container bytes are NOT committed; retain the separately exported local preservation bundle for container-level verification. Neither this receipt nor the archived observation independently establishes Finnhub identity, price accuracy, prospective signal validity, or trade readiness.
