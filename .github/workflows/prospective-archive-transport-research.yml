@@ -5,6 +5,18 @@ on:
   push:
     branches:
       - research/offline-technical-risk-20261021
+    paths:
+      - 'research_prospective_archive.py'
+      - 'research_prospective_archive_restore.py'
+      - 'research_prospective_previous_run_selection.py'
+      - 'research_prospective_artifact_discovery.py'
+      - 'research_prospective_artifact_download.py'
+      - 'test_research_prospective_archive.py'
+      - 'test_research_prospective_archive_restore.py'
+      - 'test_research_prospective_previous_run_selection.py'
+      - 'test_research_prospective_artifact_discovery.py'
+      - 'test_research_prospective_artifact_download.py'
+      - '.github/workflows/prospective-archive-transport-research.yml'
 
 permissions:
   contents: read
