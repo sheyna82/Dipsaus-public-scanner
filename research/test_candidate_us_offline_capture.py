@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from research.candidate_us_offline_capture import build_records, archive_capture
+from research.candidate_us_decision_archive import verify_decision_archive
 
 
 def assessment():
@@ -26,6 +27,9 @@ class OfflineCaptureTests(unittest.TestCase):
             self.assertEqual(result["assessed_count"], 1)
             self.assertTrue(Path(result["archive"]["path"]).is_file())
             self.assertFalse(result["prospective_capture_independently_verified"])
+            verified = verify_decision_archive(result["archive"]["path"], result["archive"]["sha256"])
+            self.assertEqual(verified["requested_count"], 1)
+            self.assertTrue(verified["screening_complete"])
 
     def test_missing_rejection_is_blocked(self):
         item = capture()
@@ -45,6 +49,9 @@ class OfflineCaptureTests(unittest.TestCase):
             self.assertEqual(archived["record_count"], 1)
             self.assertFalse(archived["screening_complete"])
             self.assertFalse(archived["trade_ready"])
+            verified = verify_decision_archive(result["archive"]["path"], result["archive"]["sha256"])
+            self.assertEqual(verified["failure_count"], 1)
+            self.assertFalse(verified["screening_complete"])
 
     def test_all_failed_requests_still_archived(self):
         item = capture()
@@ -56,6 +63,15 @@ class OfflineCaptureTests(unittest.TestCase):
             self.assertEqual(archived["record_count"], 0)
             self.assertEqual(archived["failure_count"], 1)
             self.assertFalse(archived["screening_complete"])
+
+    def test_readback_rejects_tampered_archive(self):
+        item = capture()
+        with tempfile.TemporaryDirectory() as directory:
+            result = archive_capture(item, Path(directory))
+            path = Path(result["archive"]["path"])
+            path.write_bytes(path.read_bytes() + b" ")
+            with self.assertRaisesRegex(ValueError, "ARCHIVE_HASH_MISMATCH"):
+                verify_decision_archive(path, result["archive"]["sha256"])
 
     def test_conflicting_outcomes_blocked(self):
         item = capture()
