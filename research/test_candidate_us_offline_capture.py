@@ -1,4 +1,5 @@
 """Offline US capture integration regression."""
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -37,9 +38,24 @@ class OfflineCaptureTests(unittest.TestCase):
         item["sample_symbols"].append("BBB")
         item["failures"]["BBB"] = "TimeoutError"
         with tempfile.TemporaryDirectory() as directory:
-            with self.assertRaisesRegex(ValueError, "FAILURES_REQUIRE_COMPLETE_CAPTURE_ARCHIVE"):
-                archive_capture(item, Path(directory))
-            self.assertFalse(list(Path(directory).iterdir()))
+            result = archive_capture(item, Path(directory))
+            archived = json.loads(Path(result["archive"]["path"]).read_text())
+            self.assertEqual(archived["failed_symbols"], {"BBB": "TimeoutError"})
+            self.assertEqual(archived["requested_count"], 2)
+            self.assertEqual(archived["record_count"], 1)
+            self.assertFalse(archived["screening_complete"])
+            self.assertFalse(archived["trade_ready"])
+
+    def test_all_failed_requests_still_archived(self):
+        item = capture()
+        item["assessments"] = {}
+        item["failures"] = {"AAA": "TimeoutError"}
+        with tempfile.TemporaryDirectory() as directory:
+            result = archive_capture(item, Path(directory))
+            archived = json.loads(Path(result["archive"]["path"]).read_text())
+            self.assertEqual(archived["record_count"], 0)
+            self.assertEqual(archived["failure_count"], 1)
+            self.assertFalse(archived["screening_complete"])
 
     def test_conflicting_outcomes_blocked(self):
         item = capture()
