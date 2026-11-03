@@ -14,8 +14,6 @@ def assess_next_open_reference(*, registered_at_utc, stock_bar, benchmark_bar):
             raise ValueError("entry_symbol_mismatch")
         if bar.get("session") <= registration_day:
             raise ValueError("entry_not_after_registration_day")
-        if bar.get("source_verified_independently") is not True:
-            return None
         observed = datetime.fromisoformat(bar["retrieved_at_utc"])
         if observed.tzinfo is None or observed.utcoffset() is None:
             raise ValueError("entry_receipt_timezone_required")
@@ -40,10 +38,11 @@ def assess_next_open_reference(*, registered_at_utc, stock_bar, benchmark_bar):
     spy = check(benchmark_bar, "SPY")
     if stock_bar.get("symbol") == "SPY":
         raise ValueError("stock_must_differ_from_benchmark")
-    if stock is None or spy is None:
-        return {"status": "unverified_entry_source", "trade_ready": False,
-                "research_only": True, "entry_reference_accepted": False}
-    return {"status": "eligible_research_entry_reference", "research_only": True,
-            "trade_ready": False, "entry_reference_accepted": True,
+    # Caller-controlled verification flags are not proof of vendor authenticity.
+    # Keep price observations as provisional research references only.
+    return {"status": "provisional_unverified_entry_reference",
+            "research_only": True, "trade_ready": False,
+            "entry_reference_accepted": False,
             "entry_session": stock_bar["session"], "stock_open": str(stock),
-            "benchmark_open": str(spy), "execution_price_verified": False}
+            "benchmark_open": str(spy), "execution_price_verified": False,
+            "source_authenticated_independently": False}
