@@ -46,7 +46,7 @@ class ExAntePriorityTests(unittest.TestCase):
         rows = []
         for i in range(7):
             features = dict(self.features)
-            features["relative_strength_20d_pct"] = float(i)
+            features["relative_strength_20d_pct"] = i / 10.0
             rows.append({"symbol": f"S{i:02d}", "entry_day": 21000,
                          "exit_day": 21010, "features_at_signal_close": features,
                          "training_thresholds": self.thresholds,
