@@ -23,6 +23,7 @@ on:
       - 'research_registration_archive_bridge.py'
       - 'test_research_registration_archive_bridge.py'
       - 'test_research_registration_multirun_integration.py'
+      - 'test_research_registration_transport_integration.py'
       - '.github/workflows/prospective-core-isolated-tests.yml'
 
 permissions:
@@ -40,4 +41,4 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run all isolated research regression tests
-        run: python -m unittest -v test_research_next_open_reference test_research_capture_candidate_boundary test_research_prospective_outcome_writer test_research_prospective_core_integration test_research_immutable_candidate_registration test_research_candidate_registration_reconciliation test_research_registration_artifact_coverage test_research_registration_artifact_inventory test_research_registration_archive_bridge test_research_registration_multirun_integration
+        run: python -m unittest -v test_research_next_open_reference test_research_capture_candidate_boundary test_research_prospective_outcome_writer test_research_prospective_core_integration test_research_immutable_candidate_registration test_research_candidate_registration_reconciliation test_research_registration_artifact_coverage test_research_registration_artifact_inventory test_research_registration_archive_bridge test_research_registration_multirun_integration test_research_registration_transport_integration
