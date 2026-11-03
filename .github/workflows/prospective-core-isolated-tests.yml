@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
+      - 'research_prospective_real_candidate_intake.py'
+      - 'test_research_prospective_real_candidate_intake.py'
       - 'research_verify_downloaded_github_artifact.py'
       - 'test_research_verify_downloaded_github_artifact.py'
       - 'research_github_synthetic_artifact_verifier.py'
@@ -60,7 +62,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run all isolated research regression tests
-        run: python -m unittest -v test_research_next_open_reference test_research_capture_candidate_boundary test_research_prospective_outcome_writer test_research_prospective_core_integration test_research_immutable_candidate_registration test_research_candidate_registration_reconciliation test_research_registration_artifact_coverage test_research_registration_artifact_inventory test_research_registration_archive_bridge test_research_registration_multirun_integration test_research_registration_transport_integration test_research_actual_downloader_integration test_research_inventory_download_integration test_research_synthetic_evidence_pair test_research_synthetic_artifact_provenance test_research_registration_receipt_gate test_research_candidate_artifact_content_binding test_research_candidate_receipt_archive_integration test_research_synthetic_transport_verifier test_research_github_synthetic_artifact_verifier test_research_verify_downloaded_github_artifact
+        run: python -m unittest -v test_research_next_open_reference test_research_capture_candidate_boundary test_research_prospective_outcome_writer test_research_prospective_core_integration test_research_immutable_candidate_registration test_research_candidate_registration_reconciliation test_research_registration_artifact_coverage test_research_registration_artifact_inventory test_research_registration_archive_bridge test_research_registration_multirun_integration test_research_registration_transport_integration test_research_actual_downloader_integration test_research_inventory_download_integration test_research_synthetic_evidence_pair test_research_synthetic_artifact_provenance test_research_registration_receipt_gate test_research_candidate_artifact_content_binding test_research_candidate_receipt_archive_integration test_research_synthetic_transport_verifier test_research_github_synthetic_artifact_verifier test_research_verify_downloaded_github_artifact test_research_prospective_real_candidate_intake
       - name: Generate synthetic evidence archive
         run: python research_generate_synthetic_evidence.py
       - name: Upload synthetic research evidence
