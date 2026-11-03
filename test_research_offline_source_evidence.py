@@ -35,6 +35,12 @@ class OfflineSourceEvidenceTests(unittest.TestCase):
             with self.subTest(url=url), self.assertRaises(ValueError):
                 prepare_offline_source_evidence(url, **self.kw)
 
+    def test_rejects_query_strings_before_archiving(self):
+        for url in ("https://example.org/data?apikey=SECRET",
+                    "https://example.org/data?symbol=AMD"):
+            with self.subTest(url=url), self.assertRaisesRegex(ValueError, "invalid_https_source_url"):
+                prepare_offline_source_evidence(url, **self.kw)
+
     def test_rejects_invalid_bytes(self):
         for raw in (b"", "not bytes", b"x" * 1_000_001):
             with self.subTest(size=len(raw)), self.assertRaisesRegex(ValueError, "invalid_source_response_size"):
