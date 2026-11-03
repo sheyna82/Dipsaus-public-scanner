@@ -4,8 +4,10 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
+      - 'research_immutable_candidate_registration.py'
+      - 'test_research_immutable_candidate_registration.py'
       - 'research_prospective_core_integration.py'
-      - 'test_research_prospective_core_integration.py'
+      - 'test_research_prospective_core_integration test_research_immutable_candidate_registration.py'
       - 'research_next_open_reference.py'
       - 'test_research_next_open_reference.py'
       - 'research_capture_candidate_boundary.py'
