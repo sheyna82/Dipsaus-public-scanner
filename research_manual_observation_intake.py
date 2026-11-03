@@ -29,9 +29,20 @@ def run_manual_intake(observation_path, source_path, candidates, archive, *, all
     if provider_format == "alpha_vantage_daily":
         # Parse and validate every daily bar BEFORE creating a candidate.
         # The source URL is caller-supplied, not independent provider proof.
-        inspect_alpha_vantage_daily_bytes(
+        if any(k in observation for k in (
+            "provider_format", "provider_bar", "provider_response_schema_valid",
+            "bar_available_at_observation_time_verified",
+            "prospective_signal_proven")):
+            raise ValueError("caller_supplied_provider_metadata_forbidden")
+        checked = inspect_alpha_vantage_daily_bytes(
             raw, expected_symbol=observation.get("symbol"),
             as_of_session=observation.get("signal_session"))
+        observation = dict(observation)
+        observation["provider_format"] = "alpha_vantage_daily"
+        observation["provider_bar"] = checked["bar"]
+        observation["provider_response_schema_valid"] = True
+        observation["bar_available_at_observation_time_verified"] = False
+        observation["prospective_signal_proven"] = False
     result = archive_offline_observation(
         observation, raw, candidates, archive,
         clock=lambda: datetime.now(timezone.utc),
