@@ -276,6 +276,10 @@ jobs:
           name: candidate-trade-turnover-audit
           path: reports/candidate_trade_turnover_audit.json
           if-no-files-found: error
+      - name: Test combined ex-ante priority sensitivity offline
+        if: always()
+        run: python -m unittest discover -s research -p 'test_candidate_exante_priority_sensitivity.py' -v
+
       - name: Test accepted-trade turnover audit offline
         if: always()
         run: python -m unittest discover -s research -p 'test_candidate_trade_turnover_audit.py' -v
