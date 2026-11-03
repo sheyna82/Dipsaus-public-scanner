@@ -55,6 +55,12 @@ class ManualObservationIntakeTests(unittest.TestCase):
                 allowed_hosts=["example.org"], provider_format="alpha_vantage_daily")
         self.assertFalse(result["trade_ready"])
         self.assertTrue(self.archive.exists())
+        from zipfile import ZipFile
+        with ZipFile(self.archive) as z:
+            candidate = json.loads(z.read("candidate.json"))
+        self.assertEqual(candidate["provider_bar"]["close"], 102.0)
+        self.assertFalse(candidate["bar_available_at_observation_time_verified"])
+        self.assertFalse(candidate["prospective_signal_proven"])
 
     def test_alpha_vantage_invalid_bar_does_not_register(self):
         self.source.write_text(json.dumps({
@@ -67,6 +73,16 @@ class ManualObservationIntakeTests(unittest.TestCase):
                 self.observation, self.source, self.candidates, self.archive,
                 allowed_hosts=["example.org"], provider_format="alpha_vantage_daily")
         self.assertFalse(self.archive.exists())
+        self.assertEqual(list(self.candidates.iterdir()), [])
+
+    def test_rejects_caller_supplied_provider_proof(self):
+        observation = json.loads(self.observation.read_text())
+        observation["prospective_signal_proven"] = True
+        self.observation.write_text(json.dumps(observation))
+        with self.assertRaisesRegex(ValueError, "caller_supplied_provider_metadata_forbidden"):
+            run_manual_intake(
+                self.observation, self.source, self.candidates, self.archive,
+                allowed_hosts=["example.org"], provider_format="alpha_vantage_daily")
         self.assertEqual(list(self.candidates.iterdir()), [])
 
     def test_unknown_provider_format_fails_closed(self):
