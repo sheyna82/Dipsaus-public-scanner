@@ -30,6 +30,14 @@ class AlphaVantageOfflineTests(unittest.TestCase):
         self.assertEqual(result["bar"]["close"], 102)
         self.assertFalse(result["provider_authenticity_verified"])
         self.assertFalse(result["trade_ready"])
+        self.assertFalse(result["bar_available_at_observation_time_verified"])
+        self.assertFalse(result["prospective_signal_proven"])
+
+    def test_rejects_noncanonical_session_date(self):
+        with self.assertRaisesRegex(ValueError, "invalid_daily_payload"):
+            inspect_alpha_vantage_daily_bytes(
+                json.dumps(self.data).encode(), expected_symbol="AMD",
+                as_of_session="2026-11-3")
 
     def test_rejects_provider_error(self):
         self.data = {"Note": "API rate limit"}
