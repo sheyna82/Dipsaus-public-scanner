@@ -69,6 +69,19 @@ def main():
                                          "error_type": type(exc).__name__, "blocks": ["PRICE_DATA_UNAVAILABLE"]})
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(output, indent=2), encoding="utf-8")
+    # Immutable research evidence: preserve every run, never overwrite prior snapshots.
+    # This is not a guarantee of prospective collection or trustworthy exchange timestamps.
+    import hashlib
+    canonical = json.dumps(output, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    archive = OUT.parent / "candidate_entry_snapshots"
+    archive.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.fromisoformat(output["generated_utc"]).strftime("%Y%m%dT%H%M%S%fZ")
+    target = archive / f"{stamp}_{digest}.json"
+    with target.open("x", encoding="utf-8") as handle:
+        handle.write(canonical)
+    output["snapshot_archive_file"] = str(target)
+    output["snapshot_sha256"] = digest
     print(json.dumps({"generated_utc": output["generated_utc"], "statuses":
                       {r["symbol"]: r["decision"] for r in output["candidates"]}}, indent=2))
 
