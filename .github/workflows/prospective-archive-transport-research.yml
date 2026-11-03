@@ -17,6 +17,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Run focused archive and artifact transport unit tests
+        run: |
+          python -m unittest -v \
+            test_research_prospective_archive \
+            test_research_prospective_archive_restore \
+            test_research_prospective_previous_run_selection \
+            test_research_prospective_artifact_discovery \
+            test_research_prospective_artifact_download
       - name: Create and verify synthetic archive
         shell: bash
         run: |
