@@ -25,6 +25,14 @@ class LedgerWriterTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "existing_candidate_conflict"):
                 write_candidate_batch(batch, tmp)
 
+    def test_future_outcome_availability_cannot_be_predeclared(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            batch = self.batch()
+            batch["results"][0]["record"]["future_outcome_available"] = True
+            with self.assertRaisesRegex(ValueError, "unsafe_candidate"):
+                write_candidate_batch(batch, tmp)
+            self.assertEqual(list(Path(tmp).iterdir()), [])
+
     def test_unsafe_candidate_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             batch = self.batch()
