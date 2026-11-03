@@ -78,7 +78,7 @@ class DownloadedCandidateBindingTests(unittest.TestCase):
             self.check()
 
     def test_modified_inner_archive_rejected_even_with_updated_transport_hashes(self):
-        self.build_outer(self.inner + b"extra")
+        self.build_outer(self.inner[:-12])
         self.args["expected_archive_sha256"] = hashlib.sha256(self.inner + b"extra").hexdigest()
         with self.assertRaises(ValueError):
             self.check()
