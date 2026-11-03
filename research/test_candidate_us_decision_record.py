@@ -23,7 +23,18 @@ class DecisionRecordTests(unittest.TestCase):
 
     def test_selected_has_no_rejection(self):
         a = assessment(True)
+        a.update(drawdown_pct=-25, early_turn=True)
         self.assertEqual(decision_record("ABC", a, "2026-11-03T12:00:00Z")["rejection_reasons"], [])
+
+    def test_false_positive_selection_is_blocked(self):
+        with self.assertRaisesRegex(ValueError, "INCONSISTENT_SELECTION_DECISION"):
+            decision_record("ABC", assessment(True), "2026-11-03T12:00:00Z")
+
+    def test_missing_feature_is_blocked(self):
+        a = assessment()
+        del a["signal_count"]
+        with self.assertRaisesRegex(ValueError, "MISSING_DECISION_FEATURES"):
+            decision_record("ABC", a, "2026-11-03T12:00:00Z")
 
     def test_future_bar_fails_closed(self):
         a = assessment()
@@ -38,7 +49,7 @@ class DecisionRecordTests(unittest.TestCase):
     def test_unexplained_rejection_fails_closed(self):
         a = assessment()
         a.update(drawdown_pct=-25, rebound_from_low_pct=4, early_turn=True)
-        with self.assertRaisesRegex(ValueError, "UNEXPLAINED_REJECTION"):
+        with self.assertRaisesRegex(ValueError, "INCONSISTENT_SELECTION_DECISION"):
             decision_record("ABC", a, "2026-11-03T12:00:00Z")
 
 
