@@ -96,5 +96,30 @@ class ArtifactDownloadTests(unittest.TestCase):
                     opener=lambda request, timeout: Response(outer.getvalue()))
             self.assertFalse(dest.exists(), "Unverified archives must not remain on disk")
 
+    def test_explicit_legacy_member_name_remains_strict(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            a, b = root / "candidates", root / "outcomes"
+            a.mkdir()
+            b.mkdir()
+            (a / "synthetic.json").write_text('{"synthetic_data_only": true}')
+            archive = root / "source.zip"
+            archive_ledger(a, b, archive)
+            outer = io.BytesIO()
+            with ZipFile(outer, "w") as z:
+                z.writestr("synthetic-prospective-ledger.zip", archive.read_bytes())
+            restored = root / "legacy.zip"
+            result = download_previous_archive(
+                "owner/repo", "fake-token", 42, restored,
+                expected_member="synthetic-prospective-ledger.zip",
+                opener=lambda request, timeout: Response(outer.getvalue()))
+            self.assertEqual(result["verified_files"], 1)
+            self.assertTrue(restored.exists())
+            with self.assertRaisesRegex(ValueError, "unexpected_outer_artifact_contents"):
+                download_previous_archive(
+                    "owner/repo", "fake-token", 42, root / "wrong-name.zip",
+                    opener=lambda request, timeout: Response(outer.getvalue()))
+            self.assertFalse((root / "wrong-name.zip").exists())
+
 if __name__ == "__main__":
     unittest.main()
