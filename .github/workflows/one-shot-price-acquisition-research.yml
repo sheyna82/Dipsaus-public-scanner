@@ -152,6 +152,28 @@ jobs:
           (root / "yahoo-cohort-summary.json").write_text(
               json.dumps(results, indent=2) + "\n", encoding="utf-8")
           PY
+      - name: Test stored Yahoo evidence integrity and conservative eligibility
+        run: python -m unittest -v test_research_yahoo_probe_evidence_audit
+      - name: Audit captured Yahoo source bytes without creating trade signals
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_yahoo_probe_evidence_audit import audit_yahoo_probe
+          root = Path("research-price-probe")
+          results = []
+          for symbol in ("COHU", "AMD", "META", "SPY"):
+              result = audit_yahoo_probe(root, symbol)
+              results.append(result)
+              print(json.dumps(result))
+          (root / "yahoo-prospective-input-evidence-audit.json").write_text(
+              json.dumps({"research_only": True, "trade_ready": False,
+                          "independent_prospective_proof": False,
+                          "candidate_registered": False, "sources": results}, indent=2) + "\n")
+          if not all(r["accepted"] for r in results):
+              raise SystemExit("required_source_evidence_unavailable")
+          PY
       - name: Probe extended five-year research history separately
         shell: bash
         run: |
