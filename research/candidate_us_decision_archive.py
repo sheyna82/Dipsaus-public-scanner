@@ -2,6 +2,8 @@
 
 Does not call the live scanner or establish independent capture timestamps.
 """
+import hashlib
+import json
 from pathlib import Path
 from research.candidate_entry_snapshot import archive_candidate_snapshot
 
@@ -13,6 +15,11 @@ def archive_decision_batch(records, generated_utc, archive_dir=Path("reports/can
                r.get("trade_ready") is False and isinstance(r.get("sha256"), str)
                for r in records):
         raise ValueError("UNVERIFIED_DECISION_RECORD")
+    for record in records:
+        body = {k: v for k, v in record.items() if k != "sha256"}
+        canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        if hashlib.sha256(canonical.encode("utf-8")).hexdigest() != record["sha256"]:
+            raise ValueError("DECISION_RECORD_HASH_MISMATCH")
     symbols = [r.get("symbol") for r in records]
     if any(not isinstance(s, str) or not s for s in symbols) or len(set(symbols)) != len(symbols):
         raise ValueError("INVALID_OR_DUPLICATE_SYMBOLS")
