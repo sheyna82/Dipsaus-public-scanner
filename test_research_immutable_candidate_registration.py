@@ -19,12 +19,23 @@ class ImmutableRegistrationTests(unittest.TestCase):
             result = register_candidate_once(self.candidate(), tmp, clock=instant)
             self.assertEqual(result["status"], "created")
             path = Path(result["path"])
-            self.assertEqual(path.stem, result["sha256"])
+            self.assertEqual(path.stem, result["candidate_identity_sha256"])
             saved = json.loads(path.read_text())
             self.assertEqual(saved["registered_at_utc"], "2026-11-03T15:00:00+00:00")
             self.assertFalse(saved["registration_clock_proof_independent"])
             self.assertEqual(register_candidate_once(self.candidate(), tmp, clock=instant)["status"],
                              "duplicate")
+
+    def test_second_registration_with_new_clock_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            first = lambda: datetime(2026, 11, 3, 15, tzinfo=timezone.utc)
+            second = lambda: datetime(2026, 11, 3, 16, tzinfo=timezone.utc)
+            initial = register_candidate_once(self.candidate(), tmp, clock=first)
+            with self.assertRaisesRegex(ValueError, "candidate_already_registered_with_different_payload"):
+                register_candidate_once(self.candidate(), tmp, clock=second)
+            self.assertEqual(len(list(Path(tmp).glob("*.json"))), 1)
+            self.assertEqual(json.loads(Path(initial["path"]).read_text())["registered_at_utc"],
+                             "2026-11-03T15:00:00+00:00")
 
     def test_reject_backdated_caller_registration(self):
         with tempfile.TemporaryDirectory() as tmp:
