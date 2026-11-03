@@ -23,6 +23,21 @@ def write_candidate_batch(batch, directory):
             raise ValueError("unsafe_candidate")
         if record["symbol"] != item["symbol"] or record["signal_session"] != batch["signal_session"]:
             raise ValueError("candidate_identity_mismatch")
+    # Preflight deterministic identities and existing files before creating any.
+    # This does not promise filesystem-level atomicity on unexpected I/O errors.
+    seen = set()
+    for item in batch["results"]:
+        if item["status"] != "candidate":
+            continue
+        record = item["record"]
+        identifier = f'{record["protocol_id"]}-{item["symbol"]}-{record["signal_session"]}'
+        if identifier in seen:
+            raise ValueError("duplicate_candidate_identity_in_batch")
+        seen.add(identifier)
+        filename = root / (identifier + ".json")
+        payload = (json.dumps(record, sort_keys=True, indent=2) + "\n").encode("utf-8")
+        if filename.exists() and filename.read_bytes() != payload:
+            raise ValueError("existing_candidate_conflict")
     for item in batch["results"]:
         symbol = item["symbol"]
         if item["status"] != "candidate":
