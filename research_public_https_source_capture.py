@@ -37,7 +37,7 @@ def capture_public_https_source(url, *, clock, allowed_hosts, opener=None, max_b
         raise ValueError("nonpublic_source_address")
     if not isinstance(max_bytes, int) or isinstance(max_bytes, bool) or not 0 < max_bytes <= 5_000_000:
         raise ValueError("invalid_capture_limit")
-    opener = opener or build_opener(RejectRedirects(), HTTPSHandler(context=ssl.create_default_context()))
+    # Fail closed: DNS validation and the HTTPS connection are not pinned to the\n    # same IP. A later DNS answer could differ (DNS rebinding / TOCTOU).\n    # Until connection-level IP pinning is implemented and audited, this\n    # module accepts only an explicitly injected transport for offline tests.\n    if opener is None:\n        raise ValueError("live_https_transport_disabled_pending_dns_pinning")
     request = Request(url, headers={"User-Agent": "DIPSAUS-research-evidence/1.0", "Accept": "application/json,text/csv,text/plain"})
     try:
         with opener.open(request, timeout=15) as response:
