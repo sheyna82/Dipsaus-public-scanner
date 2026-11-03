@@ -99,6 +99,44 @@ def volume_leave_one_symbol_out(events):
     }
 
 
+def combined_leave_one_symbol_out(events):
+    """Re-simulate both capacity ledgers after excluding each symbol (not PnL subtraction)."""
+    symbols = sorted({event["symbol"] for event in events})
+    omissions = {}
+    for symbol in symbols:
+        subset = [event for event in events if event["symbol"] != symbol]
+        neutral = simulate([{k: v for k, v in event.items()
+                             if k not in ("features", "training_thresholds")} for event in subset])
+        try:
+            ranked_events = [{k: v for k, v in event.items()
+                              if k not in ("features", "training_thresholds")} |
+                             {"score": score_from_signal_close(event["features"],
+                                                                event["training_thresholds"])}
+                             for event in subset]
+        except ValueError:
+            return {"status": "BLOCKED_INVALID_COMBINED_PREENTRY_FEATURE",
+                    "trade_ready": False}
+        ranked = simulate(ranked_events, priority_mode="score_desc")
+        omissions[symbol] = {
+            "neutral_accepted_n": neutral["accepted_n"],
+            "combined_accepted_n": ranked["accepted_n"],
+            "neutral_pnl": neutral["realized_pnl"],
+            "combined_pnl": ranked["realized_pnl"],
+            "difference_eur": round(ranked["realized_pnl"] - neutral["realized_pnl"], 2),
+            "neutral_capital_occupancy": calendar_capital_occupancy(neutral),
+            "combined_capital_occupancy": calendar_capital_occupancy(ranked),
+        }
+    return {
+        "status": "EXPLORATORY_ONLY",
+        "symbol_count": len(symbols),
+        "omissions": omissions,
+        "positive_count": sum(v["difference_eur"] > 0 for v in omissions.values()),
+        "nonpositive_count": sum(v["difference_eur"] <= 0 for v in omissions.values()),
+        "independent_validation": False, "trade_ready": False,
+        "limitation": "Same previously inspected OOS sample; capacity is replayed after every omission."
+    }
+
+
 def priority_experiment(portfolio):
     rows = portfolio.get("candidate_audit")
     if not isinstance(rows, list):
@@ -154,6 +192,7 @@ def priority_experiment(portfolio):
             scenarios[name] = {
                 "selection_difference_attribution": selection_difference_attribution(neutral, sim),
                 "volume_leave_one_symbol_out": volume_leave_one_symbol_out(baseline_events) if name == "volume_high_first" else None,
+                "combined_leave_one_symbol_out": combined_leave_one_symbol_out(baseline_events) if name == "combined_predeclared" else None,
                 "accepted_trade_overlap_vs_neutral": {
                     "shared_n": len(overlap),
                     "only_neutral_n": len(neutral_keys - selected_keys),
