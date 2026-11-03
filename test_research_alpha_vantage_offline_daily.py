@@ -55,7 +55,7 @@ class AlphaVantageOfflineTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "requested_session_not_present"):
             inspect_alpha_vantage_daily_bytes(
                 json.dumps(self.data).encode(), expected_symbol="AMD",
-                as_of_session="2026-11-02")
+                as_of_session="2026-11-04")
 
 
 if __name__ == "__main__":
