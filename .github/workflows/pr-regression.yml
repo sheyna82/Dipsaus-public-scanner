@@ -9,6 +9,8 @@ on:
       - 'research/candidate_nonoverlap_validation.py'
       - 'research/candidate_conditional_cohorts.py'
       - 'research/test_candidate_conditional_cohorts.py'
+      - 'research/candidate_us_evidence_gate.py'
+      - 'research/test_candidate_us_evidence_gate.py'
       - 'research/candidate_us_provenance_audit.py'
       - 'research/test_candidate_us_provenance_audit.py'
       - 'research/candidate_us_offline_capture.py'
@@ -104,6 +106,11 @@ jobs:
         env:
           SCANNER_NOTIFICATIONS_ENABLED: 'false'
         run: python -m unittest research.test_candidate_us_decision_archive
+
+      - name: Test combined US evidence gate (offline only)
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python -m unittest research.test_candidate_us_evidence_gate
 
       - name: Test US capture provenance chronology (offline only)
         env:
