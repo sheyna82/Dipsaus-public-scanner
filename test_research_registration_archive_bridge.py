@@ -45,6 +45,21 @@ class ArchiveBridgeTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "invalid_archive_members"):
                 inspect_candidate_archive(archive)
 
+    def test_modified_candidate_bytes_rejected_by_manifest_checksum(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            archive = Path(tmp) / "modified.zip"
+            original = b'{"trade_ready":false,"symbol":"AMD"}'
+            changed = b'{"trade_ready":false,"symbol":"COHU"}'
+            manifest = {"format_version": 1, "trade_ready": False,
+                        "files": [{"path": "candidates/candidate.json",
+                                   "bytes": len(changed),
+                                   "sha256": hashlib.sha256(original).hexdigest()}]}
+            with ZipFile(archive, "w") as z:
+                z.writestr("candidates/candidate.json", changed)
+                z.writestr("manifest.json", json.dumps(manifest))
+            with self.assertRaisesRegex(ValueError, "archive_checksum_mismatch"):
+                inspect_candidate_archive(archive)
+
     def test_conflicting_summaries_rejected(self):
         first = {"status": "archive_manifest_verified",
                  "candidates": [{"identity": "same", "sha256": "a"}]}
