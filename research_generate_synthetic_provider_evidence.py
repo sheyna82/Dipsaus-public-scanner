@@ -24,7 +24,7 @@ def generate(destination):
             "signal_session": "2026-11-03",
             "source_name": "SYNTHETIC_FIXTURE_NOT_REAL_ALPHA_VANTAGE",
             "source_url": "https://example.org/synthetic-fixture",
-            "source_observed_at_utc": "2026-11-03T15:00:00Z",
+            "source_observed_at_utc": "2026-11-03T22:00:00Z",
             "independent_source_authentication": False,
             "independent_timestamp_proof": False,
             "synthetic_data_only": True,
@@ -38,7 +38,7 @@ def generate(destination):
         }), encoding="utf-8")
         archive = out / "synthetic-provider-evidence.zip"
         with patch("research_manual_observation_intake.datetime") as dt:
-            dt.now.return_value = datetime(2026, 11, 3, 16, tzinfo=timezone.utc)
+            dt.now.return_value = datetime(2026, 11, 3, 23, tzinfo=timezone.utc)
             result = run_manual_intake(
                 observation, source, candidates, archive,
                 allowed_hosts=["example.org"], provider_format="alpha_vantage_daily")
