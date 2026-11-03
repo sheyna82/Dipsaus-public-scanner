@@ -9,7 +9,7 @@ This does not download data, infer signals, or establish independent provenance.
 """
 import argparse
 import json
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from research_offline_observation_archive import archive_offline_observation
@@ -38,6 +38,19 @@ def run_manual_intake(observation_path, source_path, candidates, archive, *, all
         checked = inspect_alpha_vantage_daily_bytes(
             raw, expected_symbol=observation.get("symbol"),
             as_of_session=observation.get("signal_session"))
+        # Conservative US daily-bar cutoff: 22:00 UTC is after the
+        # regular NYSE close in both standard and daylight-saving time.
+        # Claimed timestamps remain unverified; this is only a sanity gate.
+        try:
+            observed = datetime.fromisoformat(
+                observation["source_observed_at_utc"].replace("Z", "+00:00"))
+            session = date.fromisoformat(observation["signal_session"])
+        except (KeyError, TypeError, ValueError, AttributeError) as exc:
+            raise ValueError("invalid_provider_observation_time") from exc
+        if observed.tzinfo is None or observed.utcoffset() != timezone.utc.utcoffset(observed):
+            raise ValueError("provider_observation_time_must_be_utc")
+        if observed.date() < session or (observed.date() == session and observed.hour < 22):
+            raise ValueError("daily_bar_claimed_before_conservative_close")
         observation = dict(observation)
         observation["provider_format"] = "alpha_vantage_daily"
         observation["provider_bar"] = checked["bar"]
