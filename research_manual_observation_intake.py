@@ -14,6 +14,7 @@ from pathlib import Path
 
 from research_offline_observation_archive import archive_offline_observation
 from research_alpha_vantage_offline_daily import inspect_alpha_vantage_daily_bytes
+from research_observation_temporal_integrity import audit_observation_timing
 
 
 def run_manual_intake(observation_path, source_path, candidates, archive, *, allowed_hosts, provider_format=None):
@@ -47,8 +48,12 @@ def run_manual_intake(observation_path, source_path, candidates, archive, *, all
         observation, raw, candidates, archive,
         clock=lambda: datetime.now(timezone.utc),
         allowed_hosts=frozenset(allowed_hosts))
+    registered_candidate = json.loads(Path(result["registration"]["path"]).read_text(encoding="utf-8"))
+    timing = audit_observation_timing(registered_candidate)
     return {
         "status": "offline_observation_archived_unverified",
+        "timing_classification": timing["status"],
+        "prospective_signal_proven": False,
         "candidate_sha256": result["registration"]["sha256"],
         "source_sha256": result["source_sha256"],
         "archive_status": result["archive_verification"]["status"],
