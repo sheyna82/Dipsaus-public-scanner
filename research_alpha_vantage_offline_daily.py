@@ -15,6 +15,8 @@ def inspect_alpha_vantage_daily_bytes(source_bytes, *, expected_symbol, as_of_se
         raise ValueError("invalid_expected_symbol")
     try:
         session = date.fromisoformat(as_of_session)
+        if session.isoformat() != as_of_session:
+            raise ValueError("invalid_session_date")
         data = json.loads(source_bytes)
     except (ValueError, TypeError, UnicodeDecodeError) as exc:
         raise ValueError("invalid_daily_payload") from exc
@@ -58,6 +60,8 @@ def inspect_alpha_vantage_daily_bytes(source_bytes, *, expected_symbol, as_of_se
         parsed[day] = {"open": op, "high": hi, "low": lo, "close": close, "volume": int(vol)}
     if as_of_session not in parsed:
         raise ValueError("requested_session_not_present")
+    # The response is untrusted: never equate a historical bar with a
+    # prospectively observed close, even when the requested date is present.
     return {
         "symbol": expected_symbol, "session": as_of_session,
         "bar": parsed[as_of_session], "available_sessions": len(parsed),
