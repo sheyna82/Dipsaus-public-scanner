@@ -27,6 +27,8 @@ class DownloadedProviderEvidenceTests(unittest.TestCase):
         result = verify_downloaded_provider_artifact(self.make_outer())
         self.assertTrue(result["synthetic_data_only"])
         self.assertFalse(result["trade_ready"])
+        self.assertFalse(result["prospective_signal_proven"])
+        self.assertEqual(result["timing_classification"], "same_day_registration_requires_exchange_cutoff_proof")
 
     def test_cli_reads_downloaded_artifact(self):
         from contextlib import redirect_stdout
