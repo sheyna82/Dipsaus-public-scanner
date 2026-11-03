@@ -16,7 +16,7 @@ class ArtifactInventoryTests(unittest.TestCase):
     def opener(self, pages):
         def open_page(request, timeout):
             page = int(request.full_url.split("page=")[-1])
-            return FakeResponse(json.dumps({"artifacts": pages[page - 1]}).encode())
+            return FakeResponse(json.dumps({"total_count": sum(len(p) for p in pages), "artifacts": pages[page - 1]}).encode())
         return open_page
 
     def test_short_page_proves_only_pagination_exhaustion(self):
@@ -38,6 +38,14 @@ class ArtifactInventoryTests(unittest.TestCase):
             inventory_candidate_artifacts("owner/repo", "fake-token", "signals",
                 opener=self.opener([[{"id": 1, "name": "signals"},
                                     {"id": 1, "name": "signals"}]]))
+
+    def test_github_total_count_mismatch_rejected(self):
+        def opener(request, timeout):
+            return FakeResponse(json.dumps({"total_count": 5, "artifacts": [
+                {"id": 1, "name": "signals"}]}).encode())
+        with self.assertRaisesRegex(ValueError, "artifact_inventory_count_mismatch"):
+            inventory_candidate_artifacts("owner/repo", "fake-token", "signals",
+                                          opener=opener)
 
     def test_missing_token_rejected(self):
         with self.assertRaisesRegex(ValueError, "github_token_required"):
