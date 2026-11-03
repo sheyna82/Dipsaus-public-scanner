@@ -71,6 +71,35 @@ class DownloadedProviderEvidenceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "identity|digest|manifest"):
             verify_downloaded_provider_artifact(forged_outer.getvalue())
 
+    def test_rejects_forged_source_bar_with_all_digests_recomputed(self):
+        original = self.make_outer()
+        with ZipFile(io.BytesIO(original)) as outer:
+            inner_bytes = outer.read("synthetic-provider-evidence.zip")
+        with ZipFile(io.BytesIO(inner_bytes)) as inner:
+            candidate_raw = inner.read("candidate.json")
+            source = json.loads(inner.read("source.bin"))
+            manifest = json.loads(inner.read("manifest.json"))
+        source["Time Series (Daily)"]["2026-11-03"]["4. close"] = "103"
+        source_raw = json.dumps(source, sort_keys=True).encode("utf-8")
+        candidate = json.loads(candidate_raw)
+        candidate["source_snapshot_sha256"] = hashlib.sha256(source_raw).hexdigest()
+        candidate_raw = json.dumps(candidate, sort_keys=True).encode("utf-8")
+        manifest["candidate_sha256"] = hashlib.sha256(candidate_raw).hexdigest()
+        manifest["source_sha256"] = hashlib.sha256(source_raw).hexdigest()
+        forged_inner = io.BytesIO()
+        with ZipFile(forged_inner, "w", ZIP_DEFLATED) as z:
+            z.writestr("candidate.json", candidate_raw)
+            z.writestr("source.bin", source_raw)
+            z.writestr("manifest.json", json.dumps(manifest))
+        forged_bytes = forged_inner.getvalue()
+        forged_outer = io.BytesIO()
+        with ZipFile(forged_outer, "w", ZIP_DEFLATED) as z:
+            z.writestr("synthetic-provider-evidence.zip", forged_bytes)
+            z.writestr("sha256.txt", hashlib.sha256(forged_bytes).hexdigest()
+                       + "  synthetic-provider-evidence.zip\\n")
+        with self.assertRaisesRegex(ValueError, "provider_bar_binding_mismatch"):
+            verify_downloaded_provider_artifact(forged_outer.getvalue())
+
     def test_tampered_checksum_rejected(self):
         original = self.make_outer()
         with ZipFile(io.BytesIO(original)) as z:
