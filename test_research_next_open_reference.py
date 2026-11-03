@@ -8,10 +8,11 @@ class EntryReferenceTests(unittest.TestCase):
                 "retrieved_at_utc": "2026-11-04T21:00:00+00:00",
                 "source_verified_independently": verified}
 
-    def test_eligible_but_not_execution_proof(self):
+    def test_self_declared_verification_does_not_approve_reference(self):
         x = assess_next_open_reference(registered_at_utc="2026-11-03T15:00:00+00:00",
             stock_bar=self.bar("AMD"), benchmark_bar=self.bar("SPY"))
-        self.assertTrue(x["entry_reference_accepted"])
+        self.assertFalse(x["entry_reference_accepted"])
+        self.assertEqual(x["status"], "provisional_unverified_entry_reference")
         self.assertFalse(x["execution_price_verified"])
 
     def test_same_day_rejected(self):
@@ -24,6 +25,7 @@ class EntryReferenceTests(unittest.TestCase):
         x = assess_next_open_reference(registered_at_utc="2026-11-03T15:00:00+00:00",
             stock_bar=self.bar("AMD", verified=False), benchmark_bar=self.bar("SPY"))
         self.assertFalse(x["entry_reference_accepted"])
+        self.assertFalse(x["source_authenticated_independently"])
 
     def test_misaligned_sessions_rejected(self):
         with self.assertRaisesRegex(ValueError, "entry_sessions_not_aligned"):
