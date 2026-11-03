@@ -45,6 +45,16 @@ class RealObservationRegistrationBridgeTests(unittest.TestCase):
             self.register()
         self.assertEqual(Path(result["path"]).read_bytes(), original)
 
+    def test_clock_sampled_once_for_validation_and_registration(self):
+        calls = []
+        def changing_clock():
+            calls.append(True)
+            return datetime(2026, 11, 3, 16, tzinfo=timezone.utc)
+        result = register_validated_observation(self.record, self.root, clock=changing_clock)
+        self.assertEqual(len(calls), 1)
+        saved = json.loads(Path(result["path"]).read_text())
+        self.assertEqual(saved["registered_at_utc"], "2026-11-03T16:00:00+00:00")
+
     def test_future_source_rejected_before_file_creation(self):
         self.record["source_observed_at_utc"] = "2026-11-04T15:00:00Z"
         with self.assertRaisesRegex(ValueError, "future_observation"):
