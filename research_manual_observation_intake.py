@@ -13,9 +13,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from research_offline_observation_archive import archive_offline_observation
+from research_alpha_vantage_offline_daily import inspect_alpha_vantage_daily_bytes
 
 
-def run_manual_intake(observation_path, source_path, candidates, archive, *, allowed_hosts):
+def run_manual_intake(observation_path, source_path, candidates, archive, *, allowed_hosts, provider_format=None):
     observation = json.loads(Path(observation_path).read_text(encoding="utf-8"))
     if not isinstance(observation, dict):
         raise ValueError("observation_must_be_object")
@@ -23,6 +24,14 @@ def run_manual_intake(observation_path, source_path, candidates, archive, *, all
     if not source.is_file() or source.stat().st_size > 5_000_000:
         raise ValueError("invalid_source_file")
     raw = source.read_bytes()
+    if provider_format not in (None, "alpha_vantage_daily"):
+        raise ValueError("unsupported_provider_format")
+    if provider_format == "alpha_vantage_daily":
+        # Parse and validate every daily bar BEFORE creating a candidate.
+        # The source URL is caller-supplied, not independent provider proof.
+        inspect_alpha_vantage_daily_bytes(
+            raw, expected_symbol=observation.get("symbol"),
+            as_of_session=observation.get("signal_session"))
     result = archive_offline_observation(
         observation, raw, candidates, archive,
         clock=lambda: datetime.now(timezone.utc),
@@ -45,10 +54,11 @@ def main():
     parser.add_argument("--candidates", required=True)
     parser.add_argument("--archive", required=True)
     parser.add_argument("--allow-host", action="append", required=True)
+    parser.add_argument("--provider-format", choices=["alpha_vantage_daily"])
     args = parser.parse_args()
     print(json.dumps(run_manual_intake(
         args.observation, args.source, args.candidates, args.archive,
-        allowed_hosts=args.allow_host), sort_keys=True))
+        allowed_hosts=args.allow_host, provider_format=args.provider_format), sort_keys=True))
 
 
 if __name__ == "__main__":
