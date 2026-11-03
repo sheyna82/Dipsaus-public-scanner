@@ -8,7 +8,8 @@ from research_immutable_candidate_registration import register_candidate_once
 
 
 def register_validated_observation(observation, directory, *, clock):
-    checked = validate_prospective_observation(observation, now_utc=clock())
+    captured_at = clock()
+    checked = validate_prospective_observation(observation, now_utc=captured_at)
     # The immutable record contains the exact source assertions and the explicit
     # absence of independent provenance proof. Registration adds its own UTC time.
     candidate = dict(observation)
@@ -18,7 +19,7 @@ def register_validated_observation(observation, directory, *, clock):
     candidate["research_only"] = True
     candidate["trade_ready"] = False
     candidate["future_outcome"] = None
-    registered = register_candidate_once(candidate, directory, clock=clock)
+    registered = register_candidate_once(candidate, directory, clock=lambda: captured_at)
     return {
         **registered,
         "source_schema_accepted": True,
