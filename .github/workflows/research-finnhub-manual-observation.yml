@@ -1,0 +1,51 @@
+name: DIPSAUS manual isolated Finnhub source observation
+
+on:
+  workflow_dispatch:
+    inputs:
+      symbol:
+        description: Research-only ticker (no signal generation)
+        required: true
+        type: choice
+        options:
+          - AMD
+          - COHU
+          - CSGP
+          - AAPL
+
+permissions:
+  contents: read
+
+jobs:
+  capture-once:
+    if: github.event_name == 'workflow_dispatch' && github.repository == 'sheyna82/Dipsaus-public-scanner' && github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    concurrency:
+      group: dipsaus-manual-finnhub-research
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          # Pin the audited research code; do not execute arbitrary mutable branch HEAD with a secret.
+          ref: d4a30ea4b820f0072357d502706f74c936b98249
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Validate research module offline
+        run: python -m unittest -q test_research_capture_finnhub_observation
+      - name: Capture one source response without orders or notifications
+        env:
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          RESEARCH_SYMBOL: ${{ inputs.symbol }}
+        run: |
+          mkdir -p research-observation
+          python research_capture_finnhub_observation.py "$RESEARCH_SYMBOL" research-observation/source-observation.json
+      - name: Upload isolated observation (source response is public market data)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: dipsaus-finnhub-research-observation
+          path: research-observation/source-observation.json
+          if-no-files-found: error
+          retention-days: 7
