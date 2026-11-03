@@ -9,17 +9,24 @@ import socket
 import ssl
 from datetime import datetime, timezone
 from urllib.parse import urlsplit
-from urllib.request import Request, build_opener, HTTPSHandler
+from urllib.request import Request, build_opener, HTTPSHandler, HTTPRedirectHandler
 from urllib.error import HTTPError, URLError
 
 
-def capture_public_https_source(url, *, clock, opener=None, max_bytes=1_000_000):
+class RejectRedirects(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise ValueError("redirects_not_supported_for_research_capture")
+
+
+def capture_public_https_source(url, *, clock, allowed_hosts, opener=None, max_bytes=1_000_000):
     parsed = urlsplit(url)
     if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or parsed.fragment:
         raise ValueError("invalid_https_source_url")
     if parsed.port not in (None, 443):
         raise ValueError("nonstandard_https_port")
     host = parsed.hostname
+    if not isinstance(allowed_hosts, (set, frozenset)) or not allowed_hosts or host not in allowed_hosts:
+        raise ValueError("source_host_not_allowlisted")
     if host.lower() == "localhost" or host.endswith(".local"):
         raise ValueError("nonpublic_source_host")
     try:
@@ -30,7 +37,7 @@ def capture_public_https_source(url, *, clock, opener=None, max_bytes=1_000_000)
         raise ValueError("nonpublic_source_address")
     if not isinstance(max_bytes, int) or isinstance(max_bytes, bool) or not 0 < max_bytes <= 5_000_000:
         raise ValueError("invalid_capture_limit")
-    opener = opener or build_opener(HTTPSHandler(context=ssl.create_default_context()))
+    opener = opener or build_opener(RejectRedirects(), HTTPSHandler(context=ssl.create_default_context()))
     request = Request(url, headers={"User-Agent": "DIPSAUS-research-evidence/1.0", "Accept": "application/json,text/csv,text/plain"})
     try:
         with opener.open(request, timeout=15) as response:
