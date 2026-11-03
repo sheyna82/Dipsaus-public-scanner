@@ -1,12 +1,13 @@
 """Regression tests for downloaded synthetic provider evidence."""
 import io
+import json
 import tempfile
 import unittest
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 
 from research_generate_synthetic_provider_evidence import generate
-from research_verify_downloaded_provider_evidence import verify_downloaded_provider_artifact
+from research_verify_downloaded_provider_evidence import verify_downloaded_provider_artifact, main
 
 
 class DownloadedProviderEvidenceTests(unittest.TestCase):
@@ -25,6 +26,17 @@ class DownloadedProviderEvidenceTests(unittest.TestCase):
         result = verify_downloaded_provider_artifact(self.make_outer())
         self.assertTrue(result["synthetic_data_only"])
         self.assertFalse(result["trade_ready"])
+
+    def test_cli_reads_downloaded_artifact(self):
+        from contextlib import redirect_stdout
+        output = io.StringIO()
+        root = Path(self.temp.name) if hasattr(self, "temp") else None
+        payload = self.make_outer()
+        artifact = Path(self.temp.name) / "downloaded.zip"
+        artifact.write_bytes(payload)
+        with redirect_stdout(output):
+            self.assertEqual(main(["--artifact-zip", str(artifact)]), 0)
+        self.assertFalse(json.loads(output.getvalue())["trade_ready"])
 
     def test_tampered_checksum_rejected(self):
         original = self.make_outer()
