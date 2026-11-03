@@ -9,6 +9,8 @@ on:
       - 'research/candidate_nonoverlap_validation.py'
       - 'research/candidate_conditional_cohorts.py'
       - 'research/test_candidate_conditional_cohorts.py'
+      - 'research/candidate_us_decision_archive.py'
+      - 'research/test_candidate_us_decision_archive.py'
       - 'research/candidate_us_decision_record.py'
       - 'research/test_candidate_us_decision_record.py'
       - 'research/candidate_us_discovery_completeness.py'
@@ -93,6 +95,11 @@ jobs:
         env:
           SCANNER_NOTIFICATIONS_ENABLED: 'false'
         run: python -m unittest research.test_candidate_us_decision_record
+
+      - name: Test US decision archive integrity (offline only)
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python -m unittest research.test_candidate_us_decision_archive
 
       - name: Calculate six-candidate daily market snapshot
         if: github.head_ref == 'research/offline-technical-risk-20261021'
