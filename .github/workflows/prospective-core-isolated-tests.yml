@@ -1,0 +1,28 @@
+name: DIPSAUS isolated prospective entry and outcome tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'research_next_open_reference.py'
+      - 'test_research_next_open_reference.py'
+      - 'research_prospective_outcome_writer.py'
+      - 'test_research_prospective_outcome_writer.py'
+      - '.github/workflows/prospective-core-isolated-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-prospective-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Run isolated entry and outcome regression tests
+        run: python -m unittest -v test_research_next_open_reference test_research_prospective_outcome_writer
