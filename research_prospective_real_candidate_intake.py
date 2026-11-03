@@ -32,7 +32,7 @@ def validate_prospective_observation(observation, *, now_utc):
     if observed > now_utc or signal_day > now_utc.date():
         raise ValueError("future_observation")
     url = urlsplit(observation["source_url"])
-    if url.scheme != "https" or not url.hostname or url.username or url.password or url.fragment:
+    if url.scheme != "https" or not url.hostname or url.username or url.password or url.fragment or url.query:
         raise ValueError("invalid_source_url")
     if observation.get("independent_source_authentication") is not False:
         raise ValueError("unsupported_source_authentication_claim")
