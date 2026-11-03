@@ -23,6 +23,19 @@ class ProspectiveBatchTests(unittest.TestCase):
                                             signal_session="2026-10-26")
         self.assertEqual(result["results"][1]["status"], "missing_stock_trading_session")
 
+    def test_future_benchmark_rows_rejected(self):
+        self.spy.append({"date": "2026-10-27", "close": 110})
+        with self.assertRaisesRegex(ValueError, "future_benchmark_data_in_candidate_input"):
+            generate_prospective_batch(self.stock, self.spy,
+                                       signal_session="2026-10-26")
+
+    def test_future_stock_rows_block_only_affected_symbol(self):
+        self.stock["AMD"].append({"date": "2026-10-27", "close": 120})
+        result = generate_prospective_batch(self.stock, self.spy,
+                                            signal_session="2026-10-26")
+        self.assertEqual([r["status"] for r in result["results"]],
+                         ["candidate", "future_stock_data_in_candidate_input", "candidate"])
+
     def test_duplicate_session_rejected(self):
         self.spy.append(self.spy[-1].copy())
         with self.assertRaisesRegex(ValueError, "duplicate_spy_session"):
