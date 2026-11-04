@@ -26,6 +26,24 @@ class CanonicalHoldingsTests(unittest.TestCase):
             self.assertEqual(set(data['positions']), {'FER', 'RENK'})
             self.assertEqual(data['other'], 'preserved')
 
+    def test_closed_swing_is_preserved_without_changing_other_positions(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / 'watch.json'
+            p.write_text(json.dumps({'positions': {
+                'EXE': {'shares': 114, 'status': 'RECOVERY-EXIT-WATCH-NO-ADD'},
+                'RENK': {'shares': 50, 'status': 'PROFIT-WATCH-DYNAMIC'},
+            }, 'other': 'preserved'}))
+            sync_canonical_positions(Store({'positions': {
+                'EXE': {'shares': 114, 'status': 'CLOSED-SWING'},
+                'RENK': {'shares': 50, 'status': 'PROFIT-WATCH-DYNAMIC'},
+                'ALFEN.AS': {'shares': 25, 'status': 'PROFIT-WATCH-DYNAMIC'},
+            }}), p)
+            result = json.loads(p.read_text())
+            self.assertEqual(result['positions']['EXE']['status'], 'CLOSED-SWING')
+            self.assertEqual(result['positions']['RENK']['status'], 'PROFIT-WATCH-DYNAMIC')
+            self.assertEqual(result['positions']['ALFEN.AS']['shares'], 25)
+            self.assertEqual(result['other'], 'preserved')
+
     def test_invalid_canonical_state_never_overwrites_watch(self):
         for positions in ({}, {'FER': {'shares': 0}}, {'FER': {'shares': True}}, {'FER': {'shares': float('inf')}}):
             with self.subTest(positions=positions), tempfile.TemporaryDirectory() as d:
