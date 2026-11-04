@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from safe_runner import sync_canonical_positions
+from safe_runner import sync_canonical_positions, is_active_portfolio_holding
 
 
 class Store:
@@ -25,6 +25,13 @@ class CanonicalHoldingsTests(unittest.TestCase):
             data = json.loads(p.read_text())
             self.assertEqual(set(data['positions']), {'FER', 'RENK'})
             self.assertEqual(data['other'], 'preserved')
+
+    def test_closed_historical_shares_are_not_active_holdings(self):
+        self.assertFalse(is_active_portfolio_holding({'shares': 114, 'status': 'CLOSED-SWING'}))
+        self.assertTrue(is_active_portfolio_holding({'shares': 50, 'status': 'PROFIT-WATCH-DYNAMIC'}))
+        self.assertTrue(is_active_portfolio_holding({'shares': 25, 'status': 'PROFIT-WATCH-DYNAMIC'}))
+        self.assertFalse(is_active_portfolio_holding({'shares': 0, 'status': 'PROFIT-WATCH-DYNAMIC'}))
+        self.assertFalse(is_active_portfolio_holding({'shares': True, 'status': 'PROFIT-WATCH-DYNAMIC'}))
 
     def test_closed_swing_is_preserved_without_changing_other_positions(self):
         with tempfile.TemporaryDirectory() as d:
