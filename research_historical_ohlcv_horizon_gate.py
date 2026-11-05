@@ -23,6 +23,8 @@ def audit_daily_ohlcv_horizon(rows, *, minimum_sessions=16):
             trading_day = date.fromisoformat(row["date"])
         except (KeyError, ValueError, TypeError):
             raise ValueError("INVALID_OHLCV_DATE") from None
+        if trading_day.weekday() >= 5:
+            raise ValueError("WEEKEND_OHLCV_SESSION")
         values = []
         for key in ("open", "high", "low", "close"):
             v = row.get(key)
@@ -44,6 +46,7 @@ def audit_daily_ohlcv_horizon(rows, *, minimum_sessions=16):
             "minimum_sessions_assumption": minimum_sessions,
             "symbols": coverage,
             "all_symbols_eligible": all(v["fifteen_session_outcomes_possible"] for v in coverage.values()),
+            "weekend_sessions_rejected": True,
             "calendar_continuity_verified": False,
             "source_independently_verified": False,
             "trade_ready": False}
