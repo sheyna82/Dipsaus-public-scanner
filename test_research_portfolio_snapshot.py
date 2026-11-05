@@ -122,6 +122,43 @@ class PortfolioSnapshotTests(unittest.TestCase):
                 self.config, {}, as_of_utc="2026-11-06T12:00:00Z",
                 now_utc=datetime(2026, 11, 5, 12, tzinfo=timezone.utc))
 
+    def test_matching_metadata_never_authorizes_alias_merge(self):
+        identity = {"isin": "NL0012817175", "mic": "XAMS",
+                    "currency": "EUR", "instrument_type": "EQUITY"}
+        report = reconcile_broker_positions(
+            self.config, {"ALFEN": 25, "RENK": 50},
+            as_of_utc="2026-11-05T11:30:00Z",
+            now_utc=datetime(2026, 11, 5, 12, tzinfo=timezone.utc),
+            complete_account_snapshot=True,
+            configured_instruments={"ALFEN.AS": identity},
+            broker_instruments={"ALFEN": identity})
+        review = next(x for x in report["instrument_identity_reviews"]
+                      if x["configured_symbol"] == "ALFEN.AS")
+        self.assertEqual(review["status"], "METADATA_MATCH_UNAUTHENTICATED")
+        self.assertFalse(review["automatic_merge_allowed"])
+        self.assertFalse(report["positions_agree"])
+        self.assertFalse(report["portfolio_capacity_usable"])
+
+    def test_conflicting_identity_requires_review(self):
+        a = {"isin": "NL0012817175", "mic": "XAMS",
+             "currency": "EUR", "instrument_type": "EQUITY"}
+        report = reconcile_broker_positions(
+            self.config, {"ALFEN": 25},
+            as_of_utc="2026-11-05T11:30:00Z",
+            now_utc=datetime(2026, 11, 5, 12, tzinfo=timezone.utc),
+            configured_instruments={"ALFEN.AS": a},
+            broker_instruments={"ALFEN": dict(a, mic="XETR")})
+        self.assertEqual(report["instrument_identity_reviews"][0]["status"],
+                         "CONFLICT_REQUIRES_REVIEW")
+
+    def test_unknown_metadata_symbol_fails_closed(self):
+        with self.assertRaisesRegex(ValueError, "UNKNOWN_INSTRUMENT_METADATA_SYMBOL"):
+            reconcile_broker_positions(
+                self.config, {"RENK": 50},
+                as_of_utc="2026-11-05T11:30:00Z",
+                now_utc=datetime(2026, 11, 5, 12, tzinfo=timezone.utc),
+                broker_instruments={"NOT_PRESENT": {"isin": "NL0012817175"}})
+
     def test_capacity_limit_is_not_a_cash_balance(self):
         report = snapshot(self.config, max_positions=2)
         self.assertEqual(report["configured_remaining_slots"], 0)
