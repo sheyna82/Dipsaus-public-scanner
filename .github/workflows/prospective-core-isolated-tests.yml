@@ -1,0 +1,160 @@
+name: DIPSAUS isolated prospective research tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'research_observation_temporal_integrity.py'
+      - 'research_generate_synthetic_provider_evidence.py'
+      - 'research_verify_downloaded_provider_evidence.py'
+      - 'test_research_verify_downloaded_provider_evidence.py'
+      - 'research_alpha_vantage_offline_daily.py'
+      - 'test_research_alpha_vantage_offline_daily.py'
+      - 'research_manual_observation_intake.py'
+      - 'test_research_manual_observation_intake.py'
+      - 'research_offline_observation_archive.py'
+      - 'test_research_offline_observation_archive.py'
+      - 'research_publication_preflight.py'
+      - 'test_research_publication_preflight.py'
+      - 'research_source_secret_screen.py'
+      - 'test_research_source_secret_screen.py'
+      - 'research_offline_source_evidence.py'
+      - 'test_research_offline_source_evidence.py'
+      - 'research_public_https_source_capture.py'
+      - 'test_research_public_https_source_capture.py'
+      - 'research_verify_downloaded_source_evidence.py'
+      - 'test_research_verify_downloaded_source_evidence.py'
+      - 'research_github_source_evidence_verifier.py'
+      - 'test_research_github_source_evidence_verifier.py'
+      - 'research_generate_synthetic_source_evidence.py'
+      - 'test_research_generate_synthetic_source_evidence.py'
+      - 'research_source_evidence_archive.py'
+      - 'test_research_source_evidence_archive.py'
+      - 'research_source_bound_registration.py'
+      - 'test_research_source_bound_registration.py'
+      - 'research_source_snapshot_binding.py'
+      - 'test_research_source_snapshot_binding.py'
+      - 'test_research_real_observation_archive_integration.py'
+      - 'test_research_observation_temporal_integrity.py'
+      - 'research_real_observation_registration_bridge.py'
+      - 'test_research_real_observation_registration_bridge.py'
+      - 'research_prospective_real_candidate_intake.py'
+      - 'test_research_prospective_real_candidate_intake.py'
+      - 'research_verify_downloaded_github_artifact.py'
+      - 'test_research_verify_downloaded_github_artifact.py'
+      - 'research_github_synthetic_artifact_verifier.py'
+      - 'test_research_github_synthetic_artifact_verifier.py'
+      - 'research_synthetic_transport_verifier.py'
+      - 'test_research_synthetic_transport_verifier.py'
+      - 'research_generate_synthetic_evidence.py'
+      - 'research_prospective_archive.py'
+      - 'research_prospective_artifact_download.py'
+      - 'test_research_actual_downloader_integration.py'
+      - 'test_research_inventory_download_integration.py'
+      - 'test_research_synthetic_evidence_pair.py'
+      - 'research_candidate_artifact_content_binding.py'
+      - 'test_research_candidate_receipt_archive_integration.py'
+      - 'test_research_candidate_artifact_content_binding.py'
+      - 'research_preserved_observation_report.py'
+      - 'research_claimed_quote_freshness.py'
+      - 'test_research_claimed_quote_freshness.py'
+      - 'test_research_real_amd_csgp_evidence.py'
+      - 'test_research_preserved_observation_report.py'
+      - 'research_verify_preserved_observation.py'
+      - 'test_research_verify_preserved_observation.py'
+      - 'research-evidence/**'
+      - 'research_export_finnhub_collection.py'
+      - 'test_research_export_finnhub_collection.py'
+      - 'research_finnhub_observation_coverage.py'
+      - 'test_research_finnhub_observation_coverage.py'
+      - 'research_finnhub_artifact_collection.py'
+      - 'test_research_finnhub_artifact_collection.py'
+      - 'research_finnhub_artifact_inventory_bridge.py'
+      - 'test_research_finnhub_artifact_inventory_bridge.py'
+      - 'research_finnhub_observation_inventory.py'
+      - 'test_research_finnhub_observation_inventory.py'
+      - 'research_finnhub_schedule_policy.py'
+      - 'test_research_finnhub_schedule_policy.py'
+      - 'research_verify_finnhub_observation.py'
+      - 'test_research_verify_finnhub_observation.py'
+      - 'research_capture_finnhub_observation.py'
+      - 'test_research_capture_finnhub_observation.py'
+      - 'research_downloaded_candidate_binding.py'
+      - 'test_research_downloaded_candidate_binding.py'
+      - 'research_real_candidate_artifact_verifier.py'
+      - 'test_research_real_candidate_artifact_verifier.py'
+      - 'research_registration_receipt_gate.py'
+      - 'test_research_registration_receipt_gate.py'
+      - 'research_synthetic_artifact_provenance.py'
+      - 'test_research_synthetic_artifact_provenance.py'
+      - 'research_next_open_reference.py'
+      - 'test_research_next_open_reference.py'
+      - 'research_capture_candidate_boundary.py'
+      - 'test_research_capture_candidate_boundary.py'
+      - 'research_prospective_outcome_writer.py'
+      - 'test_research_prospective_outcome_writer.py'
+      - 'research_prospective_core_integration.py'
+      - 'test_research_prospective_core_integration.py'
+      - 'research_immutable_candidate_registration.py'
+      - 'test_research_immutable_candidate_registration.py'
+      - 'research_candidate_registration_reconciliation.py'
+      - 'test_research_candidate_registration_reconciliation.py'
+      - 'research_registration_artifact_coverage.py'
+      - 'test_research_registration_artifact_coverage.py'
+      - 'research_registration_artifact_inventory.py'
+      - 'test_research_registration_artifact_inventory.py'
+      - 'research_registration_archive_bridge.py'
+      - 'test_research_registration_archive_bridge.py'
+      - 'test_research_registration_multirun_integration.py'
+      - 'test_research_registration_transport_integration.py'
+      - '.github/workflows/prospective-core-isolated-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-prospective-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Run all isolated research regression tests
+        run: python -m unittest -v test_research_next_open_reference test_research_capture_candidate_boundary test_research_prospective_outcome_writer test_research_prospective_core_integration test_research_immutable_candidate_registration test_research_candidate_registration_reconciliation test_research_registration_artifact_coverage test_research_registration_artifact_inventory test_research_registration_archive_bridge test_research_registration_multirun_integration test_research_registration_transport_integration test_research_actual_downloader_integration test_research_inventory_download_integration test_research_synthetic_evidence_pair test_research_synthetic_artifact_provenance test_research_registration_receipt_gate test_research_real_candidate_artifact_verifier test_research_downloaded_candidate_binding test_research_capture_finnhub_observation test_research_verify_finnhub_observation test_research_finnhub_schedule_policy test_research_finnhub_observation_inventory test_research_finnhub_artifact_inventory_bridge test_research_finnhub_artifact_collection test_research_finnhub_observation_coverage test_research_export_finnhub_collection test_research_verify_preserved_observation test_research_preserved_observation_report test_research_real_amd_csgp_evidence test_research_claimed_quote_freshness test_research_candidate_artifact_content_binding test_research_candidate_receipt_archive_integration test_research_synthetic_transport_verifier test_research_github_synthetic_artifact_verifier test_research_verify_downloaded_github_artifact test_research_prospective_real_candidate_intake test_research_real_observation_registration_bridge test_research_observation_temporal_integrity test_research_real_observation_archive_integration test_research_source_snapshot_binding test_research_source_bound_registration test_research_source_evidence_archive test_research_generate_synthetic_source_evidence test_research_github_source_evidence_verifier test_research_verify_downloaded_source_evidence test_research_public_https_source_capture test_research_offline_source_evidence test_research_source_secret_screen test_research_publication_preflight test_research_offline_observation_archive test_research_manual_observation_intake test_research_alpha_vantage_offline_daily test_research_verify_downloaded_provider_evidence
+      - name: Generate synthetic evidence archive
+        run: python research_generate_synthetic_evidence.py
+      - name: Upload synthetic research evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: dipsaus-prospective-synthetic-evidence
+          path: |
+            synthetic-evidence/prospective-ledger-synthetic.zip
+            synthetic-evidence/sha256.txt
+          if-no-files-found: error
+          retention-days: 7
+      - name: Generate synthetic source-byte evidence archive
+        run: python research_generate_synthetic_source_evidence.py
+      - name: Upload synthetic source-byte evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: dipsaus-source-bytes-synthetic-evidence
+          path: |
+            synthetic-source-evidence/source-evidence-synthetic.zip
+            synthetic-source-evidence/sha256.txt
+          if-no-files-found: error
+          retention-days: 7
+      - name: Generate synthetic provider-validated evidence archive
+        run: python research_generate_synthetic_provider_evidence.py
+      - name: Upload synthetic provider-validated evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: dipsaus-provider-validated-synthetic-evidence
+          path: |
+            synthetic-provider-evidence/synthetic-provider-evidence.zip
+            synthetic-provider-evidence/sha256.txt
+          if-no-files-found: error
+          retention-days: 7
