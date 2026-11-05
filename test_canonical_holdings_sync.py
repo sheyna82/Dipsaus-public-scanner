@@ -26,6 +26,15 @@ class CanonicalHoldingsTests(unittest.TestCase):
             self.assertEqual(set(data['positions']), {'FER', 'RENK'})
             self.assertEqual(data['other'], 'preserved')
 
+    def test_active_exit_symbols_exclude_closed_historical_position(self):
+        positions = {
+            'EXE': {'shares': 114, 'status': 'CLOSED-SWING'},
+            'RENK': {'shares': 50, 'status': 'PROFIT-WATCH-DYNAMIC'},
+            'ALFEN.AS': {'shares': 25, 'status': 'PROFIT-WATCH-DYNAMIC'},
+        }
+        active = {symbol for symbol, item in positions.items() if is_active_portfolio_holding(item)}
+        self.assertEqual(active, {'RENK', 'ALFEN.AS'})
+
     def test_closed_historical_shares_are_not_active_holdings(self):
         self.assertFalse(is_active_portfolio_holding({'shares': 114, 'status': 'CLOSED-SWING'}))
         self.assertTrue(is_active_portfolio_holding({'shares': 50, 'status': 'PROFIT-WATCH-DYNAMIC'}))
