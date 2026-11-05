@@ -63,7 +63,10 @@ def simulate_settled_cash(candidates, *, starting_settled_cash_eur,
     active = []
     pending = []
     events = []
+    last_entry_date = None
+    accepted_exit_schedule = []
     for entry, _, identifier, end, gross_return, symbol in parsed:
+        last_entry_date = entry
         retained = []
         for closing, held_symbol in active:
             if closing <= entry:
@@ -97,10 +100,17 @@ def simulate_settled_cash(candidates, *, starting_settled_cash_eur,
                     end, lag_business_days=settlement_business_days,
                     holidays=settlement_holidays)["settlement_date"])
             pending.append((release_date, proceeds))
+            accepted_exit_schedule.append((end, release_date, proceeds))
         events.append({"id": identifier, "entry_date": entry.isoformat(),
                        "exit_date": end.isoformat(), "symbol": symbol,
                        "decision": decision,
                        "future_return_used_for_entry": False})
+    # Distinguish future exits from exited-but-unsettled proceeds at last entry.
+    asof = last_entry_date
+    future_exit_proceeds = sum(amount for end, release, amount in accepted_exit_schedule
+                               if asof is not None and end > asof)
+    exited_unsettled_proceeds = sum(amount for end, release, amount in accepted_exit_schedule
+                                   if asof is not None and end <= asof < release)
     rejection_reasons = {reason: sum(event["decision"] == reason for event in events)
                          for reason in ("SYMBOL_ALREADY_HELD", "POSITION_LIMIT",
                                         "INSUFFICIENT_SETTLED_CASH")}
@@ -116,6 +126,10 @@ def simulate_settled_cash(candidates, *, starting_settled_cash_eur,
                                       "INSUFFICIENT_SETTLED_CASH"],
         "cash_after_last_entry_eur": round(cash, 2),
         "unsettled_proceeds_eur": round(sum(amount for _, amount in pending), 2),
+        "unsettled_proceeds_includes_future_exits": True,
+        "asof_last_entry_date": asof.isoformat() if asof is not None else None,
+        "future_not_yet_exited_proceeds_eur": round(future_exit_proceeds, 2),
+        "exited_but_unsettled_proceeds_eur": round(exited_unsettled_proceeds, 2),
         "settlement_calendar_days_assumption": settlement_calendar_days,
         "business_day_settlement_modeled": settlement_business_days is not None,
         "settlement_business_days_assumption": settlement_business_days,
