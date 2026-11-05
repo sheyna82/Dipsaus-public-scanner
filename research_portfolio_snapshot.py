@@ -1,8 +1,9 @@
 """Research-only snapshot of explicitly confirmed holdings; no broker cash inference or orders."""
 import math
+from research_instrument_identity import assess_instrument_identity
 
 
-def reconcile_broker_positions(config, broker_positions, *, as_of_utc, now_utc=None, max_age_hours=24, complete_account_snapshot=False):
+def reconcile_broker_positions(config, broker_positions, *, as_of_utc, now_utc=None, max_age_hours=24, complete_account_snapshot=False, configured_instruments=None, broker_instruments=None):
     """Strict research-only comparison. Broker evidence must be externally verified."""
     from datetime import datetime, timezone
     if not isinstance(as_of_utc, str):
@@ -40,6 +41,27 @@ def reconcile_broker_positions(config, broker_positions, *, as_of_utc, now_utc=N
          for c in configured_symbols for b in broker_symbols
          if c != b and ticker_root(c) == ticker_root(b)],
         key=lambda x: (x["configured_symbol"], x["broker_symbol"]))
+    # Identity assessments are review-only and never modify share comparisons.
+    for records in (configured_instruments, broker_instruments):
+        if records is not None and (not isinstance(records, dict) or
+                any(not isinstance(k, str) or not k for k in records)):
+            raise ValueError("INVALID_INSTRUMENT_METADATA")
+    configured_instruments = configured_instruments or {}
+    broker_instruments = broker_instruments or {}
+    if set(configured_instruments) - configured_symbols or set(broker_instruments) - broker_symbols:
+        raise ValueError("UNKNOWN_INSTRUMENT_METADATA_SYMBOL")
+    identity_reviews = []
+    for configured_symbol in sorted(configured_symbols):
+        for broker_symbol in sorted(broker_symbols):
+            if configured_symbol == broker_symbol or ticker_root(configured_symbol) == ticker_root(broker_symbol):
+                assessment = assess_instrument_identity(
+                    configured_instruments.get(configured_symbol, {}),
+                    broker_instruments.get(broker_symbol, {}))
+                identity_reviews.append({
+                    "configured_symbol": configured_symbol,
+                    "broker_symbol": broker_symbol,
+                    **assessment,
+                })
     verified = {}
     for symbol, shares in broker_positions.items():
         if not isinstance(symbol, str) or not symbol:
@@ -75,6 +97,7 @@ def reconcile_broker_positions(config, broker_positions, *, as_of_utc, now_utc=N
             "actual_remaining_slots_verified": False,
             "position_mismatches": mismatches,
             "possible_symbol_aliases_review_only": alias_review,
+            "instrument_identity_reviews": identity_reviews,
             "configured_positions_not_in_partial_evidence": unobserved_configured,
             "positions_agree": not mismatches if complete_account_snapshot else None,
             "comparison_is_partial": not complete_account_snapshot,
