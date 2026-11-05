@@ -11,7 +11,7 @@ def reconcile_broker_positions(config, broker_positions, *, as_of_utc, now_utc=N
         timestamp = datetime.fromisoformat(as_of_utc.replace("Z", "+00:00"))
     except ValueError:
         raise ValueError("INVALID_BROKER_TIMESTAMP") from None
-    if timestamp.tzinfo is None or timestamp.utcoffset() is None or timestamp > datetime.now(timezone.utc):
+    if timestamp.tzinfo is None or timestamp.utcoffset() is None:
         raise ValueError("INVALID_BROKER_TIMESTAMP")
     if now_utc is None:
         now = datetime.now(timezone.utc)
