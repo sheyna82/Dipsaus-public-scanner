@@ -30,6 +30,16 @@ def reconcile_broker_positions(config, broker_positions, *, as_of_utc, now_utc=N
     if not isinstance(broker_positions, dict):
         raise ValueError("INVALID_BROKER_POSITIONS")
     configured = snapshot(config)
+    # Never silently equate exchange-specific symbols; ambiguous aliases require review.
+    def ticker_root(symbol):
+        return symbol.split(".", 1)[0].upper()
+    configured_symbols = set(configured["configured_active_positions"])
+    broker_symbols = set(broker_positions)
+    alias_review = sorted(
+        [{"configured_symbol": c, "broker_symbol": b}
+         for c in configured_symbols for b in broker_symbols
+         if c != b and ticker_root(c) == ticker_root(b)],
+        key=lambda x: (x["configured_symbol"], x["broker_symbol"]))
     verified = {}
     for symbol, shares in broker_positions.items():
         if not isinstance(symbol, str) or not symbol:
@@ -64,6 +74,7 @@ def reconcile_broker_positions(config, broker_positions, *, as_of_utc, now_utc=N
             "potential_slots_upper_bound": max(0, configured["max_positions"] - len(verified)),
             "actual_remaining_slots_verified": False,
             "position_mismatches": mismatches,
+            "possible_symbol_aliases_review_only": alias_review,
             "configured_positions_not_in_partial_evidence": unobserved_configured,
             "positions_agree": not mismatches if complete_account_snapshot else None,
             "comparison_is_partial": not complete_account_snapshot,
