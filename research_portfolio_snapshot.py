@@ -41,10 +41,12 @@ def reconcile_broker_positions(config, broker_positions, *, as_of_utc, now_utc=N
             verified[symbol] = shares
     configured_shares = {symbol: item["shares_configured"]
                          for symbol, item in configured["configured_active_positions"].items()}
+    comparable_symbols = set(configured_shares) | set(verified) if complete_account_snapshot else set(verified)
     mismatches = {symbol: {"configured": configured_shares.get(symbol, 0),
                            "broker": verified.get(symbol, 0)}
-                  for symbol in sorted(set(configured_shares) | set(verified))
+                  for symbol in sorted(comparable_symbols)
                   if configured_shares.get(symbol, 0) != verified.get(symbol, 0)}
+    unobserved_configured = sorted(set(configured_shares) - set(verified)) if not complete_account_snapshot else []
     return {"status": "RESEARCH_ONLY_BROKER_RECONCILIATION",
             "trade_ready": False, "automatic_orders": False,
             "broker_as_of_utc": timestamp.isoformat(),
@@ -62,6 +64,7 @@ def reconcile_broker_positions(config, broker_positions, *, as_of_utc, now_utc=N
             "potential_slots_upper_bound": max(0, configured["max_positions"] - len(verified)),
             "actual_remaining_slots_verified": False,
             "position_mismatches": mismatches,
+            "configured_positions_not_in_partial_evidence": unobserved_configured,
             "positions_agree": not mismatches if complete_account_snapshot else None,
             "comparison_is_partial": not complete_account_snapshot,
             "portfolio_capacity_usable": False,
