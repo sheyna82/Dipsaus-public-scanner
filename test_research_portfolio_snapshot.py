@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime, timezone
 
 from research_portfolio_snapshot import snapshot, reconcile_broker_positions
 
@@ -47,6 +48,31 @@ class PortfolioSnapshotTests(unittest.TestCase):
             reconcile_broker_positions(self.config, {}, as_of_utc="not-a-date")
         with self.assertRaises(ValueError):
             reconcile_broker_positions(self.config, {"EXE": True}, as_of_utc="2026-11-04T18:00:00Z")
+
+    def test_stale_broker_evidence_never_authorizes_capacity(self):
+        report = reconcile_broker_positions(
+            self.config, {"RENK": 50, "ALFEN.AS": 25},
+            as_of_utc="2026-11-03T12:00:00Z",
+            now_utc=datetime(2026, 11, 5, 12, tzinfo=timezone.utc))
+        self.assertFalse(report["broker_evidence_fresh"])
+        self.assertEqual(report["broker_evidence_age_hours"], 48)
+        self.assertTrue(report["positions_agree"])
+        self.assertFalse(report["portfolio_capacity_usable"])
+
+    def test_recent_broker_evidence_still_requires_authentication(self):
+        report = reconcile_broker_positions(
+            self.config, {"RENK": 50, "ALFEN.AS": 25},
+            as_of_utc="2026-11-05T11:30:00Z",
+            now_utc=datetime(2026, 11, 5, 12, tzinfo=timezone.utc))
+        self.assertTrue(report["broker_evidence_fresh"])
+        self.assertFalse(report["broker_verified_claim"])
+        self.assertFalse(report["portfolio_capacity_usable"])
+
+    def test_future_timestamp_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "FUTURE_BROKER_TIMESTAMP"):
+            reconcile_broker_positions(
+                self.config, {}, as_of_utc="2026-11-06T12:00:00Z",
+                now_utc=datetime(2026, 11, 5, 12, tzinfo=timezone.utc))
 
     def test_capacity_limit_is_not_a_cash_balance(self):
         report = snapshot(self.config, max_positions=2)
