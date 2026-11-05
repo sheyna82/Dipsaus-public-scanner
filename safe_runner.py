@@ -293,7 +293,7 @@ def main():
         if args.live:
             before_sent = sum(1 for value in state.get('signals', {}).values()
                               if isinstance(value, dict) and value.get('delivery') == 'sent')
-            active_exit_symbols = set(json.loads(Path('config/profit_exit_watch.json').read_text()).get('positions', {}))
+            active_exit_symbols = {symbol for symbol, item in json.loads(Path('config/profit_exit_watch.json').read_text()).get('positions', {}).items() if is_active_portfolio_holding(item)}
             active_exits = [row for row in exits['rows'] if row.get('symbol') in active_exit_symbols]
             # Silent, private macro headline context: no additional phone messages. 
             from silent_macro_context import update_silent_context 
