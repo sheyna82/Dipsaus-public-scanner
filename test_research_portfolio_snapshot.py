@@ -84,6 +84,18 @@ class PortfolioSnapshotTests(unittest.TestCase):
         self.assertFalse(report["completeness_independently_verified"])
         self.assertFalse(report["portfolio_capacity_usable"])
 
+    def test_ticker_suffix_alias_requires_review_not_automatic_merge(self):
+        report = reconcile_broker_positions(
+            self.config, {"ALFEN": 25, "RENK": 50},
+            as_of_utc="2026-11-05T11:30:00Z",
+            now_utc=datetime(2026, 11, 5, 12, tzinfo=timezone.utc),
+            complete_account_snapshot=True)
+        self.assertEqual(report["possible_symbol_aliases_review_only"],
+                         [{"configured_symbol": "ALFEN.AS", "broker_symbol": "ALFEN"}])
+        self.assertIn("ALFEN.AS", report["position_mismatches"])
+        self.assertIn("ALFEN", report["position_mismatches"])
+        self.assertFalse(report["positions_agree"])
+
     def test_complete_broker_snapshot_treats_missing_holding_as_mismatch(self):
         report = reconcile_broker_positions(
             self.config, {"RENK": 50}, as_of_utc="2026-11-05T11:30:00Z",
