@@ -14,11 +14,16 @@ class HistoricalHorizonGateTests(unittest.TestCase):
         self.assertEqual(result["symbols"]["TSLA"]["sessions"], 3)
 
     def test_sixteen_sessions_pass_necessary_not_sufficient_gate(self):
-        dates = [date(2026, 9, 1) + timedelta(days=i) for i in range(16)]
+        dates = [date(2026, 9, 1) + timedelta(days=i) for i in range(24)]
+        dates = [d for d in dates if d.weekday() < 5][:16]
         result = audit_daily_ohlcv_horizon([row("AMD", d) for d in dates])
         self.assertTrue(result["all_symbols_eligible"])
         self.assertFalse(result["calendar_continuity_verified"])
         self.assertFalse(result["source_independently_verified"])
+
+    def test_weekend_session_rejected(self):
+        with self.assertRaisesRegex(ValueError, "WEEKEND_OHLCV_SESSION"):
+            audit_daily_ohlcv_horizon([row("AMD", date(2026, 10, 24))])
 
     def test_duplicate_session_rejected(self):
         x = row("AMD", date(2026, 10, 21))
