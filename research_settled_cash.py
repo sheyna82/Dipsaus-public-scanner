@@ -1,12 +1,14 @@
 """Offline cash settlement timing simulation; no brokerage settlement assumptions inferred."""
 from datetime import date, timedelta
 import math
+from research_settlement_calendar import settlement_business_date
 
 
 def simulate_settled_cash(candidates, *, starting_settled_cash_eur,
                           tranche_eur=3500, settlement_calendar_days=2,
                           max_positions=6, initial_open_positions=0,
-                          round_trip_cost_rate=0.005):
+                          round_trip_cost_rate=0.005, settlement_business_days=None,
+                          settlement_holidays=()):
     """No same-day reuse: proceeds become usable on explicit settlement date.
 
     Calendar days are an illustrative parameter, NOT a market-specific settlement
@@ -22,6 +24,11 @@ def simulate_settled_cash(candidates, *, starting_settled_cash_eur,
         raise ValueError("INVALID_TRANCHE")
     if not isinstance(settlement_calendar_days, int) or isinstance(settlement_calendar_days, bool) or settlement_calendar_days < 0:
         raise ValueError("INVALID_SETTLEMENT_DAYS")
+    if settlement_business_days is not None:
+        if not isinstance(settlement_business_days, int) or isinstance(settlement_business_days, bool) or settlement_business_days < 0:
+            raise ValueError("INVALID_BUSINESS_DAY_LAG")
+        if not isinstance(settlement_holidays, (list, tuple, set, frozenset)) or any(not isinstance(d, date) or isinstance(d, __import__('datetime').datetime) for d in settlement_holidays):
+            raise ValueError("INVALID_HOLIDAY_CALENDAR")
     if not isinstance(max_positions, int) or isinstance(max_positions, bool) or max_positions < 1:
         raise ValueError("INVALID_POSITION_LIMIT")
     if not isinstance(initial_open_positions, int) or isinstance(initial_open_positions, bool) or not 0 <= initial_open_positions <= max_positions:
@@ -74,7 +81,13 @@ def simulate_settled_cash(candidates, *, starting_settled_cash_eur,
             cash -= tranche_eur
             active.append(end)
             proceeds = tranche_eur * max(0, 1 + gross_return - round_trip_cost_rate)
-            pending.append((end + timedelta(days=settlement_calendar_days), proceeds))
+            if settlement_business_days is None:
+                release_date = end + timedelta(days=settlement_calendar_days)
+            else:
+                release_date = date.fromisoformat(settlement_business_date(
+                    end, lag_business_days=settlement_business_days,
+                    holidays=settlement_holidays)["settlement_date"])
+            pending.append((release_date, proceeds))
         events.append({"id": identifier, "entry_date": entry.isoformat(),
                        "exit_date": end.isoformat(), "decision": decision,
                        "future_return_used_for_entry": False})
@@ -85,7 +98,9 @@ def simulate_settled_cash(candidates, *, starting_settled_cash_eur,
         "cash_after_last_entry_eur": round(cash, 2),
         "unsettled_proceeds_eur": round(sum(amount for _, amount in pending), 2),
         "settlement_calendar_days_assumption": settlement_calendar_days,
-        "business_day_settlement_modeled": False,
+        "business_day_settlement_modeled": settlement_business_days is not None,
+        "settlement_business_days_assumption": settlement_business_days,
+        "holiday_calendar_coverage_verified": False,
         "actual_broker_cash_verified": False,
         "prospective_validation": False,
         "trade_ready": False,
