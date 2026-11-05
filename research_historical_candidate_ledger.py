@@ -55,3 +55,24 @@ def validate_historical_candidate_ledger(payload):
             "outcomes_independently_verified": False,
             "source_snapshot_bytes_verified": False,
             "trade_ready": False}
+
+
+def verify_historical_source_snapshot(payload, source_bytes):
+    """Validate ledger and compare SHA-256 against exact frozen source bytes.
+
+    Byte match proves only identity with a declared digest, not independent
+    market data quality, provider identity, or historical trading performance.
+    """
+    validated = validate_historical_candidate_ledger(payload)
+    if not isinstance(source_bytes, bytes):
+        raise ValueError("INVALID_SOURCE_BYTES")
+    if not source_bytes:
+        raise ValueError("EMPTY_SOURCE_SNAPSHOT")
+    actual = sha256(source_bytes).hexdigest()
+    if actual != validated["source_snapshot_sha256"]:
+        raise ValueError("SOURCE_SNAPSHOT_DIGEST_MISMATCH")
+    return {**validated, "source_snapshot_bytes_verified": True,
+            "source_snapshot_byte_length": len(source_bytes),
+            "source_independently_verified": False,
+            "outcomes_independently_verified": False,
+            "trade_ready": False}
