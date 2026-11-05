@@ -74,6 +74,8 @@ class PortfolioSnapshotTests(unittest.TestCase):
             self.config, {"RENK": 50}, as_of_utc="2026-11-05T11:30:00Z",
             now_utc=datetime(2026, 11, 5, 12, tzinfo=timezone.utc))
         self.assertTrue(report["comparison_is_partial"])
+        self.assertEqual(report["position_mismatches"], {})
+        self.assertEqual(report["configured_positions_not_in_partial_evidence"], ["ALFEN.AS"])
         self.assertIsNone(report["broker_remaining_slots"])
         self.assertEqual(report["observed_position_count_lower_bound"], 1)
         self.assertEqual(report["potential_slots_upper_bound"], 5)
@@ -81,6 +83,15 @@ class PortfolioSnapshotTests(unittest.TestCase):
         self.assertIsNone(report["positions_agree"])
         self.assertFalse(report["completeness_independently_verified"])
         self.assertFalse(report["portfolio_capacity_usable"])
+
+    def test_complete_broker_snapshot_treats_missing_holding_as_mismatch(self):
+        report = reconcile_broker_positions(
+            self.config, {"RENK": 50}, as_of_utc="2026-11-05T11:30:00Z",
+            now_utc=datetime(2026, 11, 5, 12, tzinfo=timezone.utc),
+            complete_account_snapshot=True)
+        self.assertIn("ALFEN.AS", report["position_mismatches"])
+        self.assertEqual(report["configured_positions_not_in_partial_evidence"], [])
+        self.assertFalse(report["positions_agree"])
 
     def test_claimed_complete_snapshot_still_not_authenticated(self):
         report = reconcile_broker_positions(
