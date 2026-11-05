@@ -1,0 +1,80 @@
+"""Research-only prospective batch candidates from verified-shaped daily close rows.
+
+Requires four consecutive *common* sessions per symbol and benchmark. Gaps in
+the two sources are not silently filled. No external fetch or live writes.
+"""
+from datetime import date
+from research_prospective_signal_ledger import build_candidate
+
+
+def generate_prospective_batch(stock_rows_by_symbol, spy_rows, *, signal_session):
+    date.fromisoformat(signal_session)
+    # Candidate inputs must not contain post-signal prices, even if ignored by
+    # the lookback calculation. Outcome prices belong in a separate later step.
+    if any(r["date"] > signal_session for r in spy_rows):
+        raise ValueError("future_benchmark_data_in_candidate_input")
+    spy_map = {r["date"]: r["close"] for r in spy_rows}
+    if len(spy_map) != len(spy_rows):
+        raise ValueError("duplicate_spy_session")
+    results = []
+    for symbol in ("COHU", "AMD", "META"):
+        stock_rows = stock_rows_by_symbol.get(symbol)
+        if stock_rows is None:
+            results.append({"symbol": symbol, "status": "missing_symbol_data"})
+            continue
+        if any(r["date"] > signal_session for r in stock_rows):
+            results.append({"symbol": symbol, "status": "future_stock_data_in_candidate_input"})
+            continue
+        stock_map = {r["date"]: r["close"] for r in stock_rows}
+        if len(stock_map) != len(stock_rows):
+            results.append({"symbol": symbol, "status": "duplicate_stock_session"})
+            continue
+        if signal_session not in spy_map or signal_session not in stock_map:
+            results.append({"symbol": symbol, "status": "missing_signal_session"})
+            continue
+        # Use the benchmark's last four sessions to identify gaps in stock data.
+        benchmark_sessions = sorted(day for day in spy_map if day <= signal_session)
+        if len(benchmark_sessions) < 4:
+            results.append({"symbol": symbol, "status": "insufficient_benchmark_history"})
+            continue
+        sessions = benchmark_sessions[-4:]
+        if any(day not in stock_map for day in sessions):
+            results.append({"symbol": symbol, "status": "missing_stock_trading_session"})
+            continue
+        record = build_candidate(symbol, signal_session,
+                                 [stock_map[day] for day in sessions],
+                                 [spy_map[day] for day in sessions])
+        record["input_sessions"] = sessions
+        results.append({"symbol": symbol, "status": "candidate", "record": record})
+    return {"signal_session": signal_session, "research_only": True,
+            "trade_ready": False, "results": results}
+
+
+def audit_prospective_batch_availability(batch, source_records, *, decision_at):
+    """Audit candidate input availability without claiming authenticated capture.
+
+    Reuses the existing point-in-time gate. A passing metadata check does NOT
+    prove that a prediction was frozen before subsequent market outcomes.
+    """
+    from research_point_in_time_availability_gate import assess_point_in_time_record
+
+    if not isinstance(source_records, dict):
+        raise ValueError("invalid_source_records")
+    candidates = [item["symbol"] for item in batch["results"]
+                  if item["status"] == "candidate"]
+    required = set(candidates) | ({"SPY"} if candidates else set())
+    if set(source_records) != required:
+        raise ValueError("prospective_source_coverage_mismatch")
+    results = {}
+    for symbol in sorted(required):
+        metadata = source_records[symbol]
+        if not isinstance(metadata, dict) or not isinstance(metadata.get("provider"), str) or not metadata["provider"].strip():
+            raise ValueError("missing_prospective_provider")
+        assessment = assess_point_in_time_record(metadata, decision_at=decision_at)
+        results[symbol] = {"accepted": assessment["accepted"],
+                           "reasons": assessment["reasons"],
+                           "source_authenticity_verified": False}
+    return {"research_only": True, "trade_ready": False,
+            "metadata_chronology_accepted": all(x["accepted"] for x in results.values()),
+            "independent_prospective_proof": False,
+            "source_authenticity_verified": False, "symbols": results}

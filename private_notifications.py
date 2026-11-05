@@ -173,8 +173,32 @@ def notify(store, state, entries, exits, sender=None):
             'ACTIVE-HOLDING-DIP-TURN', 'ACTIVE-HOLDING-BASE-TEST', 'ACTIVE-HOLDING-MULTIDAY-RECOVERY'):
             continue
         symbol = row.get('symbol', 'UNKNOWN'); ph = phase(row)
-        key = f'ENTRY|{market}|{symbol}|PHASE'
+        # A new independently identified setup may re-alert at the same phase.
+        # Never infer a new setup from price movement, time or a free-text label.
+        # Existing candidates without a verified setup identifier retain legacy dedupe.
+        setup_id = row.get('verified_setup_id')
+        if not (row.get('independent_setup_verified') is True
+                and row.get('provider_freshness_pass') is True
+                and row.get('structure_available') is True
+                and isinstance(setup_id, str) and 1 <= len(setup_id) <= 64
+                and all(ch.isalnum() or ch in '-_' for ch in setup_id)):
+            setup_id = None
+        key = (f'ENTRY|{market}|{symbol}|SETUP|{setup_id}|PHASE'
+               if setup_id else f'ENTRY|{market}|{symbol}|PHASE')
         prev = state['signals'].get(key, {})
+        # A previously verified setup must not be re-announced as an unverified
+        # legacy setup at the same phase. This can happen when upstream loses
+        # setup verification between polling runs. Keep higher-phase upgrades.
+        if setup_id is None:
+            prefix = f'ENTRY|{market}|{symbol}|SETUP|'
+            previous_rank = max(
+                (RANK.get(v.get('phase'), 0)
+                 for k, v in state['signals'].items()
+                 if k.startswith(prefix) and k.endswith('|PHASE')),
+                default=0,
+            )
+            if RANK[ph] <= previous_rank:
+                continue
         if RANK[ph] <= RANK.get(prev.get('phase'), 0): continue
         record = {'phase': ph, 'notification_schema_version': 9,
                   'notified_utc': datetime.now(timezone.utc).isoformat()}

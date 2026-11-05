@@ -1,0 +1,73 @@
+{
+  "protocol_id": "DIPSAUS-EXIT-PROSPECTIVE-V1",
+  "frozen_utc": "2026-10-29T11:53:00Z",
+  "status": "research_only",
+  "trade_ready": false,
+  "objective": "Compare early warning and two-session confirmation against hold on genuinely prospective, timestamped scanner candidates, avoiding reuse of explored historical holdout.",
+  "signal_eligibility": {
+    "source": "original scanner decision log only; calendar proxy and screenshot excluded",
+    "required": [
+      "symbol",
+      "market",
+      "signal_family",
+      "decision_utc",
+      "provider_quote_utc",
+      "provider",
+      "input_snapshot_hash",
+      "rule_version",
+      "observed_utc"
+    ],
+    "chronology": "provider_quote_utc <= decision_utc <= observed_utc; reject missing/naive timestamps",
+    "delivery": "ntfy notified_utc is reservation/send-attempt timestamp, not phone receipt"
+  },
+  "cohort": {
+    "entry": "verified contemporaneous entry decision only",
+    "exit": "existing position exit warnings evaluated separately, never relabeled as entries",
+    "duplicate": "one candidate per symbol, family, decision timestamp and rule version",
+    "benchmark": "hold from same hypothetical executable entry, same time horizon"
+  },
+  "policies": [
+    {
+      "id": "warn_1",
+      "description": "One-session deterioration: informational warning only"
+    },
+    {
+      "id": "confirm_2",
+      "description": "Two consecutive qualifying sessions: research review signal, not an order"
+    },
+    {
+      "id": "hold",
+      "description": "No early-exit intervention"
+    }
+  ],
+  "horizons_trading_sessions": [
+    5,
+    10,
+    15
+  ],
+  "outcomes": [
+    "net_return_after_commission_spread_slippage_fx",
+    "maximum_adverse_excursion",
+    "drawdown_ge_5pct",
+    "missed_rebound_ge_5pct",
+    "time_in_trade",
+    "exits_per_100_signals",
+    "missingness_and_coverage"
+  ],
+  "costs": "Report observed broker-specific costs when available; otherwise label all cost assumptions and stress test 10/25/50 bps.",
+  "validation": {
+    "registration": "Commit before evaluating new candidate outcomes; no retrospective backfilling",
+    "analysis_unit": "entry date / market regime block, not independent stock rows",
+    "comparison": "paired within same candidate and common horizon",
+    "uncertainty": "date-cluster and contiguous block bootstrap; report sample sizes and intervals",
+    "selection": "No strategy promotion based on explored 2024-2026 holdout; require new untouched prospective data",
+    "minimum_evidence": "Do not assert edge until adequate independent time blocks, coverage, execution assumptions, and stability documented"
+  },
+  "guardrails": [
+    "No automatic orders",
+    "No stop-loss or stop-limit instructions",
+    "No merge to main without explicit approval",
+    "No private state, tokens, holdings or user identifiers in public repo",
+    "Do not claim live signal or trade without independent provenance"
+  ]
+}

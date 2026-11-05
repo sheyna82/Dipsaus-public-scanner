@@ -1,0 +1,48 @@
+"""Offline-only command line audit for a locally held licensed OHLCV CSV.
+
+Reads local files, emits metadata only. No networking, no price rows in output.
+Never treat structural acceptance as source authentication.
+"""
+import argparse
+import json
+import stat
+from pathlib import Path
+
+from research_historical_price_ingest_gate import audit_historical_price_dataset
+
+MAX_MANIFEST_BYTES = 65536
+MAX_CSV_BYTES = 25 * 1024 * 1024
+
+
+def audit_local_files(manifest_path, csv_path):
+    for name in (manifest_path, csv_path):
+        path = Path(name)
+        if path.is_symlink() or not stat.S_ISREG(path.stat().st_mode):
+            raise ValueError("not_regular_local_file")
+    if Path(manifest_path).stat().st_size > MAX_MANIFEST_BYTES or Path(csv_path).stat().st_size > MAX_CSV_BYTES:
+        raise ValueError("input_too_large")
+    manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+    payload = Path(csv_path).read_bytes()
+    return audit_historical_price_dataset(manifest, payload)
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--manifest", required=True, help="Local manifest JSON path")
+    parser.add_argument("--csv", required=True, help="Local daily OHLCV CSV path")
+    args = parser.parse_args(argv)
+    try:
+        result = audit_local_files(args.manifest, args.csv)
+    except (ValueError, OSError, json.JSONDecodeError) as exc:
+        # Avoid printing file content or full paths in exception messages.
+        print(json.dumps({"accepted": False, "error_type": type(exc).__name__,
+                          "research_data_ready": False, "trade_ready": False},
+                         sort_keys=True))
+        return 1
+    # No source path, raw bars, provider URL, or license text is printed.
+    print(json.dumps(result, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

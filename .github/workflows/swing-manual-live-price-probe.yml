@@ -1,0 +1,29 @@
+name: DIPSAUS manual historical price probe
+on:
+  workflow_dispatch:
+    inputs:
+      symbol:
+        description: 'Allowlisted exploratory symbol'
+        required: true
+        type: choice
+        options:
+          - aapl.us
+          - msft.us
+          - spy.us
+permissions:
+  contents: read
+jobs:
+  one-shot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: One-shot probe (metadata only)
+        env:
+          RESEARCH_SYMBOL: ${{ inputs.symbol }}
+        run: python research_swing_live_price_probe.py --symbol "$RESEARCH_SYMBOL"

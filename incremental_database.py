@@ -38,11 +38,24 @@ def restore():
     if not TOKEN:
         raise RuntimeError("GITHUB_TOKEN missing: cannot safely restore cumulative database")
     api="https://api.github.com/repos/"+REPO+"/actions/artifacts?per_page=100"
-    artifacts=json.loads(get(api,True)).get("artifacts",[])
+    artifacts=[]
+    for page in range(1,101):
+        page_url=api+"&page="+str(page)
+        batch=json.loads(get(page_url,True)).get("artifacts",[])
+        if not isinstance(batch,list):
+            raise RuntimeError("Invalid artifact inventory response")
+        artifacts.extend(batch)
+        if len(batch)<100:
+            break
+    else:
+        raise RuntimeError("Artifact inventory pagination limit reached; restore aborted")
     candidates=[a for a in artifacts if not a.get("expired") and a.get("name") in
                 ("ohlcv-incremental","database-pilot-60")]
     if not candidates:
         return {}, "no prior artifact (first run)"
+    # GitHub API ordering is not a provenance guarantee: newest first explicitly.
+    # Keep stable tie-breaking for reproducible restoration.
+    candidates.sort(key=lambda a: (a.get("created_at") or "", a.get("id") or 0), reverse=True)
     errors=[]
     for artifact in candidates:
         run_id=(artifact.get("workflow_run") or {}).get("id")

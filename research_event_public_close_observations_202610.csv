@@ -1,0 +1,13 @@
+symbol,date,close_usd,source_url,provenance
+TSLA,2026-10-21,386.47,https://stockanalysis.com/stocks/tsla/history/,public_historical_page_manual_extract
+TSLA,2026-10-22,374.58,https://stockanalysis.com/stocks/tsla/history/,public_historical_page_manual_extract
+TSLA,2026-10-23,372.22,https://stockanalysis.com/stocks/tsla/history/,public_historical_page_manual_extract
+META,2026-10-21,697.52,https://stockanalysis.com/stocks/meta/history/,public_historical_page_manual_extract
+META,2026-10-22,648.85,https://stockanalysis.com/stocks/meta/history/,public_historical_page_manual_extract
+META,2026-10-23,642.62,https://stockanalysis.com/stocks/meta/history/,public_historical_page_manual_extract
+COHU,2026-10-21,55.29,https://stockanalysis.com/stocks/cohu/history/,public_historical_page_manual_extract
+COHU,2026-10-22,46.26,https://stockanalysis.com/stocks/cohu/history/,public_historical_page_manual_extract
+COHU,2026-10-23,47.96,https://stockanalysis.com/stocks/cohu/history/,public_historical_page_manual_extract
+AMZN,2026-10-21,262.37,https://stockanalysis.com/stocks/amzn/history/,public_historical_page_manual_extract
+AMZN,2026-10-22,250.38,https://stockanalysis.com/stocks/amzn/history/,public_historical_page_manual_extract
+AMZN,2026-10-23,248.00,https://stockanalysis.com/stocks/amzn/history/,public_historical_page_manual_extract

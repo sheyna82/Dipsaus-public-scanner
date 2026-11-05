@@ -1,0 +1,49 @@
+{
+  "protocol_id": "dipsaus-prospective-momentum-v1",
+  "status": "frozen_research_specification_not_live",
+  "created_date_utc": "2026-10-25",
+  "historical_data_inspected_through": "2026-10-23",
+  "first_eligible_signal_session": "2026-10-26",
+  "symbols": ["COHU", "AMD", "META"],
+  "benchmark": "SPY",
+  "signal": {
+    "name": "past_relative_momentum",
+    "lookback_trading_sessions": 3,
+    "definition": "positive iff prior 3-session stock close-to-close return exceeds SPY return",
+    "evaluation_horizon_trading_sessions": 3,
+    "signal_known_at": "completed_daily_close",
+    "entry_execution_assumption": "none; research outcome only"
+  },
+  "outcome": {
+    "name": "future_excess_close_to_close_percentage_points",
+    "definition": "stock next-3-session close return minus SPY next-3-session close return",
+    "severe_downside_threshold": "-5% worst future close-to-close stock return within 3 sessions",
+    "nonoverlapping_windows": true
+  },
+  "evaluation": {
+    "freeze_before_future_data": true,
+    "no_retroactive_parameter_changes": true,
+    "no_model_selection_on_prospective_outcomes": true,
+    "report_positive_negative_counts": true,
+    "report_mean_median_and_trimmed_outcomes": true,
+    "report_severe_downside_rates_and_uncertainty": true,
+    "do_not_claim_predictive_skill_without_independent_validation": true,
+    "minimum_group_count_heuristic_not_power_analysis": 30,
+    "account_for_serial_dependence_before_inference": true
+  },
+  "data_limits": [
+    "Yahoo Finance Chart data unverified by independent provider",
+    "Unadjusted daily closes may be affected by splits and dividends",
+    "Historical symbols chosen after exploratory inspection",
+    "Survivorship bias and corporate actions require further checks",
+    "Data freshness and completeness must be verified"
+  ],
+  "safety": {
+    "research_only": true,
+    "trade_ready": false,
+    "live_alerts_modified": false,
+    "orders_placed": false,
+    "no_stoploss_automation": true,
+    "no_paid_services": true
+  }
+}
