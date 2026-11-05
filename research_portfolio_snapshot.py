@@ -2,7 +2,7 @@
 import math
 
 
-def reconcile_broker_positions(config, broker_positions, *, as_of_utc, now_utc=None, max_age_hours=24):
+def reconcile_broker_positions(config, broker_positions, *, as_of_utc, now_utc=None, max_age_hours=24, complete_account_snapshot=False):
     """Strict research-only comparison. Broker evidence must be externally verified."""
     from datetime import datetime, timezone
     if not isinstance(as_of_utc, str):
@@ -25,6 +25,8 @@ def reconcile_broker_positions(config, broker_positions, *, as_of_utc, now_utc=N
         raise ValueError("FUTURE_BROKER_TIMESTAMP")
     evidence_age_hours = (now - timestamp).total_seconds() / 3600
     evidence_fresh = evidence_age_hours <= max_age_hours
+    if not isinstance(complete_account_snapshot, bool):
+        raise ValueError("INVALID_COMPLETENESS_CLAIM")
     if not isinstance(broker_positions, dict):
         raise ValueError("INVALID_BROKER_POSITIONS")
     configured = snapshot(config)
@@ -50,11 +52,14 @@ def reconcile_broker_positions(config, broker_positions, *, as_of_utc, now_utc=N
             "broker_evidence_age_hours": round(evidence_age_hours, 3),
             "broker_evidence_max_age_hours": max_age_hours,
             "broker_verified_claim": False,
+            "complete_account_snapshot_claim": complete_account_snapshot,
+            "completeness_independently_verified": False,
             "requires_evidence_authentication": True,
             "broker_open_position_count": len(verified),
             "broker_remaining_slots": max(0, configured["max_positions"] - len(verified)),
             "position_mismatches": mismatches,
-            "positions_agree": not mismatches,
+            "positions_agree": not mismatches if complete_account_snapshot else None,
+            "comparison_is_partial": not complete_account_snapshot,
             "portfolio_capacity_usable": False,
             "actual_cash_eur": None,
             "capital_adequacy_verified": False}
