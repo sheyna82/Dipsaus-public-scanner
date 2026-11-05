@@ -34,6 +34,21 @@ class LegacyOosAdapterTests(unittest.TestCase):
             adapt_legacy_oos_net_candidates([record("")], legacy_cost_bps=20,
                                             simulator_round_trip_cost_rate=.002)
 
+    def test_symbol_grouped_rows_are_sorted_by_entry_date(self):
+        later = record("AMD")
+        earlier = record("META")
+        later["entry_day"] = day("2026-10-10")
+        later["exit_day"] = day("2026-10-20")
+        result = adapt_legacy_oos_net_candidates([later, earlier],
+            legacy_cost_bps=50, simulator_round_trip_cost_rate=.005)
+        self.assertEqual([x["symbol"] for x in result["candidates"]], ["META", "AMD"])
+        self.assertTrue(result["chronological_order_normalized"])
+
+    def test_same_day_input_order_is_stable(self):
+        result = adapt_legacy_oos_net_candidates([record("META"), record("AMD")],
+            legacy_cost_bps=50, simulator_round_trip_cost_rate=.005)
+        self.assertEqual([x["symbol"] for x in result["candidates"]], ["META", "AMD"])
+
     def test_invalid_return_rejected(self):
         with self.assertRaisesRegex(ValueError, "INVALID_LEGACY_RETURN"):
             adapt_legacy_oos_net_candidates([record(ret=float("nan"))],
