@@ -159,6 +159,15 @@ class PortfolioSnapshotTests(unittest.TestCase):
                 now_utc=datetime(2026, 11, 5, 12, tzinfo=timezone.utc),
                 broker_instruments={"NOT_PRESENT": {"isin": "NL0012817175"}})
 
+    def test_invalid_broker_symbol_rejected_before_alias_processing(self):
+        for symbol in (None, 123, "", "   "):
+            with self.subTest(symbol=symbol):
+                with self.assertRaisesRegex(ValueError, "INVALID_BROKER_SYMBOL"):
+                    reconcile_broker_positions(
+                        self.config, {symbol: 25},
+                        as_of_utc="2026-11-05T11:30:00Z",
+                        now_utc=datetime(2026, 11, 5, 12, tzinfo=timezone.utc))
+
     def test_capacity_limit_is_not_a_cash_balance(self):
         report = snapshot(self.config, max_positions=2)
         self.assertEqual(report["configured_remaining_slots"], 0)
