@@ -8,7 +8,7 @@ def simulate_settled_cash(candidates, *, starting_settled_cash_eur,
                           tranche_eur=3500, settlement_calendar_days=2,
                           max_positions=6, initial_open_positions=0,
                           round_trip_cost_rate=0.005, settlement_business_days=None,
-                          settlement_holidays=()):
+                          settlement_holidays=(), require_symbol=False):
     """No same-day reuse: proceeds become usable on explicit settlement date.
 
     Calendar days are an illustrative parameter, NOT a market-specific settlement
@@ -35,6 +35,8 @@ def simulate_settled_cash(candidates, *, starting_settled_cash_eur,
         raise ValueError("INVALID_INITIAL_POSITIONS")
     if not finite(round_trip_cost_rate) or not 0 <= round_trip_cost_rate < 1:
         raise ValueError("INVALID_COST_RATE")
+    if not isinstance(require_symbol, bool):
+        raise ValueError("INVALID_REQUIRE_SYMBOL")
     if not isinstance(candidates, list):
         raise ValueError("INVALID_CANDIDATES")
     parsed = []
@@ -51,6 +53,8 @@ def simulate_settled_cash(candidates, *, starting_settled_cash_eur,
         if end <= start or not finite(ret) or ret < -100:
             raise ValueError("INVALID_CANDIDATE_OUTCOME")
         symbol = c.get("symbol")
+        if require_symbol and symbol is None:
+            raise ValueError("MISSING_CANDIDATE_SYMBOL")
         if symbol is not None and (not isinstance(symbol, str) or not symbol.strip()):
             raise ValueError("INVALID_CANDIDATE_SYMBOL")
         parsed.append((start, index, c["id"], end, ret / 100, symbol.strip().upper() if symbol is not None else None))
@@ -106,6 +110,8 @@ def simulate_settled_cash(candidates, *, starting_settled_cash_eur,
         "accepted_count": sum(e["decision"] == "SIMULATED_ACCEPT" for e in events),
         "rejected_count": sum(rejection_reasons.values()),
         "rejection_reasons": rejection_reasons,
+        "symbol_identity_required": require_symbol,
+        "symbol_identity_complete": all(symbol is not None for _, _, _, _, _, symbol in parsed),
         "rejection_reason_priority": ["SYMBOL_ALREADY_HELD", "POSITION_LIMIT",
                                       "INSUFFICIENT_SETTLED_CASH"],
         "cash_after_last_entry_eur": round(cash, 2),
