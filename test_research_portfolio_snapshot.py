@@ -1,6 +1,6 @@
 import unittest
 
-from research_portfolio_snapshot import snapshot
+from research_portfolio_snapshot import snapshot, reconcile_broker_positions
 
 
 class PortfolioSnapshotTests(unittest.TestCase):
@@ -31,6 +31,22 @@ class PortfolioSnapshotTests(unittest.TestCase):
             with self.subTest(shares=shares):
                 with self.assertRaises(ValueError):
                     snapshot({"positions": {"RENK": {"status": "PROFIT-WATCH-DYNAMIC", "shares": shares}}})
+
+    def test_reconciliation_detects_unrecorded_and_closed_positions(self):
+        report = reconcile_broker_positions(
+            self.config, {"RENK": 50, "ALFEN.AS": 25, "FER": 71, "EXE": 0},
+            as_of_utc="2026-11-04T18:00:00Z")
+        self.assertEqual(report["broker_open_position_count"], 3)
+        self.assertEqual(report["broker_remaining_slots"], 3)
+        self.assertEqual(set(report["position_mismatches"]), {"FER"})
+        self.assertFalse(report["broker_verified_claim"])
+        self.assertFalse(report["trade_ready"])
+
+    def test_reconciliation_requires_valid_timestamp_and_shares(self):
+        with self.assertRaises(ValueError):
+            reconcile_broker_positions(self.config, {}, as_of_utc="not-a-date")
+        with self.assertRaises(ValueError):
+            reconcile_broker_positions(self.config, {"EXE": True}, as_of_utc="2026-11-04T18:00:00Z")
 
     def test_capacity_limit_is_not_a_cash_balance(self):
         report = snapshot(self.config, max_positions=2)
