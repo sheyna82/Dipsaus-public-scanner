@@ -21,6 +21,8 @@ def compare_legacy_oos_capital(legacy_rows, source_bytes, *,
         retrieved_at_utc=retrieved_at_utc,
         legacy_cost_bps=legacy_cost_bps,
         simulator_round_trip_cost_rate=simulator_round_trip_cost_rate)
+    if not prepared["legacy_fee_model_equivalent_to_simulator"]:
+        raise ValueError("LEGACY_SIMULATOR_COST_MODEL_MISMATCH")
     result = compare_source_bound_tranches(
         prepared["ledger"], source_bytes,
         starting_settled_cash_eur=starting_settled_cash_eur,
