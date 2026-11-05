@@ -33,6 +33,14 @@ class LegacyOosCapitalBridgeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "DUPLICATE_LEGACY_CANDIDATE"):
             self.run_bridge(rows + [rows[0]])
 
+    def test_incompatible_fee_model_blocks_comparison(self):
+        with self.assertRaisesRegex(ValueError, "LEGACY_SIMULATOR_COST_MODEL_MISMATCH"):
+            compare_legacy_oos_capital(
+                self.candidates(), b"frozen source", source_name="fixture",
+                retrieved_at_utc="2026-11-05T12:00:00Z",
+                starting_settled_cash_eur=5000,
+                legacy_cost_bps=50, simulator_round_trip_cost_rate=0.01)
+
     def test_missing_source_bytes_fails(self):
         with self.assertRaisesRegex(ValueError, "INVALID_FROZEN_SOURCE_BYTES"):
             compare_legacy_oos_capital(
