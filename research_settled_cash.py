@@ -50,20 +50,23 @@ def simulate_settled_cash(candidates, *, starting_settled_cash_eur,
         ret = c.get("realized_return_pct")
         if end <= start or not finite(ret) or ret < -100:
             raise ValueError("INVALID_CANDIDATE_OUTCOME")
-        parsed.append((start, index, c["id"], end, ret / 100))
+        symbol = c.get("symbol")
+        if symbol is not None and (not isinstance(symbol, str) or not symbol.strip()):
+            raise ValueError("INVALID_CANDIDATE_SYMBOL")
+        parsed.append((start, index, c["id"], end, ret / 100, symbol.strip().upper() if symbol is not None else None))
     parsed.sort(key=lambda x: (x[0], x[1]))
     cash = float(starting_settled_cash_eur)
     active = []
     pending = []
     events = []
-    for entry, _, identifier, end, gross_return in parsed:
+    for entry, _, identifier, end, gross_return, symbol in parsed:
         retained = []
-        for closing in active:
+        for closing, held_symbol in active:
             if closing <= entry:
                 # The exit releases the position slot, not the unsettled proceeds.
                 pass
             else:
-                retained.append(closing)
+                retained.append((closing, held_symbol))
         active = retained
         still_pending = []
         for release, amount in pending:
@@ -72,14 +75,16 @@ def simulate_settled_cash(candidates, *, starting_settled_cash_eur,
             else:
                 still_pending.append((release, amount))
         pending = still_pending
-        if initial_open_positions + len(active) >= max_positions:
+        if symbol is not None and any(held_symbol == symbol for _, held_symbol in active):
+            decision = "SYMBOL_ALREADY_HELD"
+        elif initial_open_positions + len(active) >= max_positions:
             decision = "POSITION_LIMIT"
         elif cash + 1e-9 < tranche_eur:
             decision = "INSUFFICIENT_SETTLED_CASH"
         else:
             decision = "SIMULATED_ACCEPT"
             cash -= tranche_eur
-            active.append(end)
+            active.append((end, symbol))
             proceeds = tranche_eur * max(0, 1 + gross_return - round_trip_cost_rate)
             if settlement_business_days is None:
                 release_date = end + timedelta(days=settlement_calendar_days)
@@ -89,7 +94,8 @@ def simulate_settled_cash(candidates, *, starting_settled_cash_eur,
                     holidays=settlement_holidays)["settlement_date"])
             pending.append((release_date, proceeds))
         events.append({"id": identifier, "entry_date": entry.isoformat(),
-                       "exit_date": end.isoformat(), "decision": decision,
+                       "exit_date": end.isoformat(), "symbol": symbol,
+                       "decision": decision,
                        "future_return_used_for_entry": False})
     return {
         "status": "RESEARCH_ONLY_SETTLED_CASH_SIMULATION",
