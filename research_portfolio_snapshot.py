@@ -2,7 +2,7 @@
 import math
 
 
-def reconcile_broker_positions(config, broker_positions, *, as_of_utc):
+def reconcile_broker_positions(config, broker_positions, *, as_of_utc, now_utc=None, max_age_hours=24):
     """Strict research-only comparison. Broker evidence must be externally verified."""
     from datetime import datetime, timezone
     if not isinstance(as_of_utc, str):
@@ -13,6 +13,18 @@ def reconcile_broker_positions(config, broker_positions, *, as_of_utc):
         raise ValueError("INVALID_BROKER_TIMESTAMP") from None
     if timestamp.tzinfo is None or timestamp.utcoffset() is None or timestamp > datetime.now(timezone.utc):
         raise ValueError("INVALID_BROKER_TIMESTAMP")
+    if now_utc is None:
+        now = datetime.now(timezone.utc)
+    elif isinstance(now_utc, datetime) and now_utc.tzinfo is not None and now_utc.utcoffset() is not None:
+        now = now_utc.astimezone(timezone.utc)
+    else:
+        raise ValueError("INVALID_NOW")
+    if not isinstance(max_age_hours, (int, float)) or isinstance(max_age_hours, bool) or not math.isfinite(max_age_hours) or max_age_hours <= 0:
+        raise ValueError("INVALID_MAX_AGE")
+    if timestamp > now:
+        raise ValueError("FUTURE_BROKER_TIMESTAMP")
+    evidence_age_hours = (now - timestamp).total_seconds() / 3600
+    evidence_fresh = evidence_age_hours <= max_age_hours
     if not isinstance(broker_positions, dict):
         raise ValueError("INVALID_BROKER_POSITIONS")
     configured = snapshot(config)
@@ -34,12 +46,16 @@ def reconcile_broker_positions(config, broker_positions, *, as_of_utc):
     return {"status": "RESEARCH_ONLY_BROKER_RECONCILIATION",
             "trade_ready": False, "automatic_orders": False,
             "broker_as_of_utc": timestamp.isoformat(),
+            "broker_evidence_fresh": evidence_fresh,
+            "broker_evidence_age_hours": round(evidence_age_hours, 3),
+            "broker_evidence_max_age_hours": max_age_hours,
             "broker_verified_claim": False,
             "requires_evidence_authentication": True,
             "broker_open_position_count": len(verified),
             "broker_remaining_slots": max(0, configured["max_positions"] - len(verified)),
             "position_mismatches": mismatches,
             "positions_agree": not mismatches,
+            "portfolio_capacity_usable": False,
             "actual_cash_eur": None,
             "capital_adequacy_verified": False}
 
