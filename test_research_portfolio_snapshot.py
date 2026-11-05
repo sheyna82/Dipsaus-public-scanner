@@ -56,7 +56,7 @@ class PortfolioSnapshotTests(unittest.TestCase):
             now_utc=datetime(2026, 11, 5, 12, tzinfo=timezone.utc))
         self.assertFalse(report["broker_evidence_fresh"])
         self.assertEqual(report["broker_evidence_age_hours"], 48)
-        self.assertTrue(report["positions_agree"])
+        self.assertIsNone(report["positions_agree"])
         self.assertFalse(report["portfolio_capacity_usable"])
 
     def test_recent_broker_evidence_still_requires_authentication(self):
@@ -65,6 +65,26 @@ class PortfolioSnapshotTests(unittest.TestCase):
             as_of_utc="2026-11-05T11:30:00Z",
             now_utc=datetime(2026, 11, 5, 12, tzinfo=timezone.utc))
         self.assertTrue(report["broker_evidence_fresh"])
+        self.assertFalse(report["broker_verified_claim"])
+        self.assertFalse(report["portfolio_capacity_usable"])
+
+    def test_partial_broker_list_never_claims_complete_agreement(self):
+        report = reconcile_broker_positions(
+            self.config, {"RENK": 50}, as_of_utc="2026-11-05T11:30:00Z",
+            now_utc=datetime(2026, 11, 5, 12, tzinfo=timezone.utc))
+        self.assertTrue(report["comparison_is_partial"])
+        self.assertIsNone(report["positions_agree"])
+        self.assertFalse(report["completeness_independently_verified"])
+        self.assertFalse(report["portfolio_capacity_usable"])
+
+    def test_claimed_complete_snapshot_still_not_authenticated(self):
+        report = reconcile_broker_positions(
+            self.config, {"RENK": 50, "ALFEN.AS": 25},
+            as_of_utc="2026-11-05T11:30:00Z",
+            now_utc=datetime(2026, 11, 5, 12, tzinfo=timezone.utc),
+            complete_account_snapshot=True)
+        self.assertTrue(report["positions_agree"])
+        self.assertFalse(report["completeness_independently_verified"])
         self.assertFalse(report["broker_verified_claim"])
         self.assertFalse(report["portfolio_capacity_usable"])
 
