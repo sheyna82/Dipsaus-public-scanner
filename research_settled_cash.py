@@ -97,10 +97,17 @@ def simulate_settled_cash(candidates, *, starting_settled_cash_eur,
                        "exit_date": end.isoformat(), "symbol": symbol,
                        "decision": decision,
                        "future_return_used_for_entry": False})
+    rejection_reasons = {reason: sum(event["decision"] == reason for event in events)
+                         for reason in ("SYMBOL_ALREADY_HELD", "POSITION_LIMIT",
+                                        "INSUFFICIENT_SETTLED_CASH")}
     return {
         "status": "RESEARCH_ONLY_SETTLED_CASH_SIMULATION",
         "events": events,
         "accepted_count": sum(e["decision"] == "SIMULATED_ACCEPT" for e in events),
+        "rejected_count": sum(rejection_reasons.values()),
+        "rejection_reasons": rejection_reasons,
+        "rejection_reason_priority": ["SYMBOL_ALREADY_HELD", "POSITION_LIMIT",
+                                      "INSUFFICIENT_SETTLED_CASH"],
         "cash_after_last_entry_eur": round(cash, 2),
         "unsettled_proceeds_eur": round(sum(amount for _, amount in pending), 2),
         "settlement_calendar_days_assumption": settlement_calendar_days,
