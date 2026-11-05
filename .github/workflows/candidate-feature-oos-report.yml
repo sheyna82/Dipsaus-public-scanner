@@ -65,3 +65,4 @@ jobs:
             reports/candidate_feature_portfolio_quarters.json
             reports/candidate_feature_oos_input_snapshot.json
           if-no-files-found: warn
+# Research-only rerun: refresh expiring historical OOS snapshot artifact (2026-11-05).
