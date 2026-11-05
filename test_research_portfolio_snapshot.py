@@ -38,7 +38,8 @@ class PortfolioSnapshotTests(unittest.TestCase):
             self.config, {"RENK": 50, "ALFEN.AS": 25, "FER": 71, "EXE": 0},
             as_of_utc="2026-11-04T18:00:00Z")
         self.assertEqual(report["broker_open_position_count"], 3)
-        self.assertEqual(report["broker_remaining_slots"], 3)
+        self.assertIsNone(report["broker_remaining_slots"])
+        self.assertEqual(report["potential_slots_upper_bound"], 3)
         self.assertEqual(set(report["position_mismatches"]), {"FER"})
         self.assertFalse(report["broker_verified_claim"])
         self.assertFalse(report["trade_ready"])
@@ -73,6 +74,10 @@ class PortfolioSnapshotTests(unittest.TestCase):
             self.config, {"RENK": 50}, as_of_utc="2026-11-05T11:30:00Z",
             now_utc=datetime(2026, 11, 5, 12, tzinfo=timezone.utc))
         self.assertTrue(report["comparison_is_partial"])
+        self.assertIsNone(report["broker_remaining_slots"])
+        self.assertEqual(report["observed_position_count_lower_bound"], 1)
+        self.assertEqual(report["potential_slots_upper_bound"], 5)
+        self.assertFalse(report["actual_remaining_slots_verified"])
         self.assertIsNone(report["positions_agree"])
         self.assertFalse(report["completeness_independently_verified"])
         self.assertFalse(report["portfolio_capacity_usable"])
