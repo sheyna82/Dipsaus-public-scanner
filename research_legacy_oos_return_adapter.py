@@ -22,7 +22,6 @@ def adapt_legacy_oos_net_candidates(rows, *, legacy_cost_bps, simulator_round_tr
     original_fee_pct = legacy_cost_bps / 100.0
     result = []
     ids = set()
-    previous_entry = None
     for row in rows:
         if not isinstance(row, dict):
             raise ValueError("INVALID_LEGACY_CANDIDATE")
@@ -43,9 +42,6 @@ def adapt_legacy_oos_net_candidates(rows, *, legacy_cost_bps, simulator_round_tr
             end = date(1970, 1, 1) + timedelta(days=exit_)
         except (OverflowError, ValueError):
             raise ValueError("INVALID_LEGACY_DATES") from None
-        if previous_entry is not None and entry < previous_entry:
-            raise ValueError("LEGACY_CANDIDATE_ORDER_NOT_CHRONOLOGICAL")
-        previous_entry = entry
         identifier = f"{symbol.strip().upper()}:{entry}"
         if identifier in ids:
             raise ValueError("DUPLICATE_LEGACY_CANDIDATE")
@@ -53,6 +49,9 @@ def adapt_legacy_oos_net_candidates(rows, *, legacy_cost_bps, simulator_round_tr
         result.append({"id": identifier, "symbol": symbol.strip().upper(),
                        "entry_date": start.isoformat(), "exit_date": end.isoformat(),
                        "realized_return_pct": gross})
+    # The older OOS generator emits symbol-grouped candidates, not a global
+    # chronology. Stable date sorting retains original order on same-day ties.
+    result.sort(key=lambda row: row["entry_date"])
     return {"status": "RESEARCH_ONLY_LEGACY_NET_TO_GROSS_ADAPTER",
             "candidates": result,
             "legacy_cost_bps": legacy_cost_bps,
@@ -60,5 +59,6 @@ def adapt_legacy_oos_net_candidates(rows, *, legacy_cost_bps, simulator_round_tr
             "effective_net_return_pct_formula": "gross_pct - 100 * simulator_round_trip_cost_rate",
             "legacy_fee_model_equivalent_to_simulator": abs(original_fee_pct - 100 * simulator_round_trip_cost_rate) < 1e-10,
             "same_day_priority_preserved_from_input_order": True,
+            "chronological_order_normalized": True,
             "source_independently_verified": False,
             "trade_ready": False}
