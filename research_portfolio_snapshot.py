@@ -36,6 +36,9 @@ def reconcile_broker_positions(config, broker_positions, *, as_of_utc, now_utc=N
         return symbol.split(".", 1)[0].upper()
     configured_symbols = set(configured["configured_active_positions"])
     broker_symbols = set(broker_positions)
+    # Validate symbol keys before alias detection calls string methods.
+    if any(not isinstance(symbol, str) or not symbol.strip() for symbol in broker_symbols):
+        raise ValueError("INVALID_BROKER_SYMBOL")
     alias_review = sorted(
         [{"configured_symbol": c, "broker_symbol": b}
          for c in configured_symbols for b in broker_symbols
