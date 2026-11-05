@@ -46,6 +46,10 @@ def compare_tranche_capacity(candidates, *, starting_settled_cash_eur,
                                        if event["decision"] != "SIMULATED_ACCEPT"],
             "cash_after_last_entry_eur": result["cash_after_last_entry_eur"],
             "unsettled_proceeds_eur": result["unsettled_proceeds_eur"],
+            "unsettled_proceeds_includes_future_exits": result["unsettled_proceeds_includes_future_exits"],
+            "asof_last_entry_date": result["asof_last_entry_date"],
+            "future_not_yet_exited_proceeds_eur": result["future_not_yet_exited_proceeds_eur"],
+            "exited_but_unsettled_proceeds_eur": result["exited_but_unsettled_proceeds_eur"],
         })
     return {
         "status": "RESEARCH_ONLY_CAPITAL_CAPACITY_COMPARISON",
