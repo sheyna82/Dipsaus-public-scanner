@@ -22,6 +22,8 @@ on:
       - 'research/test_integrated_broker_candidate_screen.py'
       - 'research/integrated_recovery_decision_boundary.py'
       - 'research/test_integrated_recovery_decision_boundary.py'
+      - 'research/integrated_capital_day_comparison.py'
+      - 'research/test_integrated_capital_day_comparison.py'
       - '.github/workflows/research-integrated-evidence.yml'
   pull_request:
     branches:
@@ -53,3 +55,4 @@ jobs:
           python research/integrated_degiro_eligibility_gate.py
           python -m unittest discover -s research -p 'test_integrated_broker_candidate_screen.py' -v
           python -m unittest discover -s research -p 'test_integrated_recovery_decision_boundary.py' -v
+          python -m unittest discover -s research -p 'test_integrated_capital_day_comparison.py' -v
