@@ -27,6 +27,24 @@ class HashCheckedSelectionTests(unittest.TestCase):
         self.assertFalse(result["trade_ready"])
         self.assertFalse(result["historical_authenticity_independently_proven"])
 
+    def test_cash_policy_propagates_through_hash_checked_gate(self):
+        first = candidate("A")
+        first["allocation_eur"] = 50000
+        first["exit_date"] = "2026-11-09"
+        second = candidate("B")
+        second["allocation_eur"] = 50000
+        second["entry_date"] = "2026-11-09"
+        second["exit_date"] = "2026-11-13"
+        regs = [registration("A", 1, HASH_A), registration("B", 3, HASH_B)]
+        # B's registration must precede its entry; both source hashes are verified.
+        source = {HASH_A: RAW_A, HASH_B: RAW_B}
+        immediate = compare_hash_checked(regs, source, [first, second], same_day_cash_reuse=True)
+        conservative = compare_hash_checked(regs, source, [first, second], same_day_cash_reuse=False)
+        self.assertEqual(immediate["selection"]["baseline"]["accepted_ids"], ["A", "B"])
+        self.assertEqual(conservative["selection"]["baseline"]["accepted_ids"], ["A"])
+        self.assertEqual(conservative["selection"]["priority"]["accepted_ids"], ["A"])
+        self.assertFalse(conservative["selection"]["same_day_cash_reuse"])
+
     def test_tampered_source_blocks_selection(self):
         with self.assertRaisesRegex(ValueError, "SOURCE_HASH_MISMATCH"):
             compare_hash_checked([registration("A", 1, HASH_A)],
