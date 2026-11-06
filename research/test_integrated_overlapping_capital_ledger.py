@@ -14,6 +14,24 @@ class OverlapLedgerTests(unittest.TestCase):
         self.assertEqual(result["rejected"], [])
         self.assertFalse(result["trade_ready"])
 
+    def test_same_day_exit_cash_not_reused_when_conservative(self):
+        result = simulate([t("A", end="2026-11-05", allocation=50000),
+                           t("B", start="2026-11-05", allocation=50000)],
+                          same_day_cash_reuse=False)
+        self.assertEqual(result["accepted_ids"], ["A"])
+        self.assertEqual(result["rejected"][0]["id"], "B")
+        self.assertEqual(result["rejected"][0]["reason"], "INSUFFICIENT_CASH")
+
+    def test_next_day_cash_reusable_when_conservative(self):
+        result = simulate([t("A", end="2026-11-05", allocation=50000),
+                           t("B", start="2026-11-06", allocation=50000)],
+                          same_day_cash_reuse=False)
+        self.assertEqual(result["accepted_ids"], ["A", "B"])
+
+    def test_same_day_policy_must_be_boolean(self):
+        with self.assertRaisesRegex(ValueError, "INVALID_SAME_DAY_CASH_POLICY"):
+            simulate([], same_day_cash_reuse="False")
+
     def test_overlapping_cash_shortage(self):
         result = simulate([t("A", allocation=30000), t("B", allocation=30000)])
         self.assertEqual(len(result["accepted_ids"]), 1)
