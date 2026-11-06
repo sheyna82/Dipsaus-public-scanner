@@ -37,7 +37,7 @@ class SecAcceptanceEvidenceTests(unittest.TestCase):
                     inspect_sec_acceptance_header(raw, URL, ENTRY)
 
     def test_private_to_public_marker_with_whitespace_rejected(self):
-        raw = RAW + b"<PRIVATE-TO-PUBLIC \n"
+        raw = RAW.replace(b"</SEC-HEADER>", b"<PRIVATE-TO-PUBLIC \n</SEC-HEADER>")
         with self.assertRaisesRegex(ValueError, "SEC_PRIVATE_TO_PUBLIC_ACCEPTANCE_UNUSABLE"):
             inspect_sec_acceptance_header(raw, URL, ENTRY)
 
