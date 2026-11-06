@@ -64,6 +64,12 @@ def audit_publication_receipts(registrations, receipts):
             "audit_sha256": audit_sha256, "audit_fingerprint_schema": "publication_receipt_audit_v1",
             "receipt_count": len(checked), "receipts": sorted(checked, key=lambda x: x["id"]),
             "external_publication_time_independently_proven": False,
+            "evidence_level": "SUPPLIED_RECEIPT_BYTES_ONLY",
+            "independent_verification_requirements": [
+                "independently retrieve publisher or trusted archive record",
+                "verify publisher or archive identity and source content",
+                "verify externally attested publication or capture timestamp",
+                "bind independently verified timestamp to the pre-entry registration"],
             "eligible_for_performance_claim": False, "trade_ready": False,
             "limitations": ["receipt timestamps and URLs are supplied claims",
                             "independent archive or publisher verification remains required"]}
