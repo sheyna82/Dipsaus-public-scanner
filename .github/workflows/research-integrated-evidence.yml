@@ -26,6 +26,8 @@ on:
       - 'research/test_integrated_capital_day_comparison.py'
       - 'research/integrated_overlapping_capital_ledger.py'
       - 'research/test_integrated_overlapping_capital_ledger.py'
+      - 'research/integrated_rejected_opportunity_attribution.py'
+      - 'research/test_integrated_rejected_opportunity_attribution.py'
       - '.github/workflows/research-integrated-evidence.yml'
   pull_request:
     branches:
@@ -59,3 +61,4 @@ jobs:
           python -m unittest discover -s research -p 'test_integrated_recovery_decision_boundary.py' -v
           python -m unittest discover -s research -p 'test_integrated_capital_day_comparison.py' -v
           python -m unittest discover -s research -p 'test_integrated_overlapping_capital_ledger.py' -v
+          python -m unittest discover -s research -p 'test_integrated_rejected_opportunity_attribution.py' -v
