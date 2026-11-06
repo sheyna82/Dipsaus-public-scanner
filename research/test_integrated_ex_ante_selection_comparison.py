@@ -1,0 +1,90 @@
+"""Tests for deterministic ex-ante portfolio selection scenarios."""
+import unittest
+from integrated_ex_ante_selection_comparison import compare_orders
+
+def c(i, priority, allocation=30000):
+    return {"id": i, "entry_date": "2026-11-02", "exit_date": "2026-11-10",
+            "allocation_eur": allocation, "research_only": True, "trade_ready": False,
+            "registered_priority": priority, "priority_source_verified": True,
+            "priority_registered_before_entry": True}
+
+class SelectionComparisonTests(unittest.TestCase):
+    def test_registered_priority_changes_allocation(self):
+        result = compare_orders([c("A", 1), c("B", 3)])
+        self.assertEqual(result["baseline"]["accepted_ids"], ["A"])
+        self.assertEqual(result["priority"]["accepted_ids"], ["B"])
+        self.assertFalse(result["trade_ready"])
+        self.assertFalse(result["performance_superiority_proven"])
+
+    def test_cash_reuse_policy_changes_next_entry(self):
+        first = c("A", 1, allocation=50000)
+        first["exit_date"] = "2026-11-05"
+        second = c("B", 2, allocation=50000)
+        second["entry_date"] = "2026-11-05"
+        second["exit_date"] = "2026-11-12"
+        immediate = compare_orders([first, second], same_day_cash_reuse=True)
+        conservative = compare_orders([first, second], same_day_cash_reuse=False)
+        self.assertEqual(immediate["baseline"]["accepted_ids"], ["A", "B"])
+        self.assertEqual(conservative["baseline"]["accepted_ids"], ["A"])
+        self.assertEqual(conservative["priority"]["accepted_ids"], ["A"])
+        self.assertFalse(conservative["same_day_cash_reuse"])
+        self.assertEqual(conservative["cash_policy"], "entry_before_exit_same_day")
+        self.assertEqual(immediate["cash_policy"], "exit_before_entry_same_day")
+        self.assertEqual(conservative["capital_eur"], "50000")
+        self.assertEqual(conservative["max_positions"], 6)
+
+    def test_input_fingerprint_is_order_independent(self):
+        left = compare_orders([c("B", 3), c("A", 1)])
+        right = compare_orders([c("A", 1), c("B", 3)])
+        self.assertEqual(left["input_sha256"], right["input_sha256"])
+        self.assertEqual(len(left["input_sha256"]), 64)
+        self.assertEqual(left["fingerprint_schema"], "ex_ante_selection_input_v1")
+
+    def test_input_fingerprint_changes_with_cash_policy(self):
+        immediate = compare_orders([c("A", 1)], same_day_cash_reuse=True)
+        conservative = compare_orders([c("A", 1)], same_day_cash_reuse=False)
+        self.assertNotEqual(immediate["input_sha256"], conservative["input_sha256"])
+
+    def test_input_fingerprint_changes_with_allocation(self):
+        original = compare_orders([c("A", 1, allocation=3500)])
+        changed = compare_orders([c("A", 1, allocation=4000)])
+        self.assertNotEqual(original["input_sha256"], changed["input_sha256"])
+
+    def test_unregistered_priority_blocks(self):
+        item = c("A", 1)
+        item["priority_registered_before_entry"] = False
+        with self.assertRaisesRegex(ValueError, "LOOKAHEAD_PRIORITY_BLOCKED"):
+            compare_orders([item])
+
+    def test_unverified_source_blocks(self):
+        item = c("A", 1)
+        item["priority_source_verified"] = False
+        with self.assertRaisesRegex(ValueError, "MISSING_EX_ANTE_PRIORITY"):
+            compare_orders([item])
+
+    def test_future_pnl_blocks(self):
+        item = c("A", 1)
+        item["realized_pnl_eur"] = 100
+        with self.assertRaisesRegex(ValueError, "FUTURE_OUTCOME_IN_SELECTION"):
+            compare_orders([item])
+
+    def test_future_return_blocks(self):
+        item = c("A", 1)
+        item["future_return"] = 0.1
+        with self.assertRaisesRegex(ValueError, "FUTURE_OUTCOME_IN_SELECTION"):
+            compare_orders([item])
+
+    def test_duplicate_candidate_blocks(self):
+        with self.assertRaisesRegex(ValueError, "DUPLICATE_CANDIDATE"):
+            compare_orders([c("A", 1), c("A", 2)])
+
+    def test_deterministic_tie_break(self):
+        result = compare_orders([c("B", 1), c("A", 1)])
+        self.assertEqual(result["priority"]["accepted_ids"], ["A"])
+
+    def test_empty_candidate_list(self):
+        result = compare_orders([])
+        self.assertEqual(result["baseline"]["accepted_ids"], [])
+
+if __name__ == "__main__":
+    unittest.main()

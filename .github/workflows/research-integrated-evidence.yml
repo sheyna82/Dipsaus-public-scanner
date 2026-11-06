@@ -1,0 +1,88 @@
+name: Research evidence integrity gate
+on:
+  push:
+    branches:
+      - research/integrated-evidence-20261106
+    paths:
+      - 'research/integrated_filter_evidence_gate.py'
+      - 'research/test_integrated_filter_evidence_gate.py'
+      - 'research/integrated_evidence_manifest.json'
+      - 'research/test_integrated_evidence_manifest.py'
+      - 'research/integrated_evidence_readiness.py'
+      - 'research/test_integrated_evidence_readiness.py'
+      - 'research/check_integrated_evidence_gate.py'
+      - 'research/integrated_historical_reconciliation.py'
+      - 'research/integrated_artifact_fetch.py'
+      - 'research/test_integrated_artifact_configuration.py'
+      - 'research/test_integrated_historical_reconciliation.py'
+      - 'research/degiro_eligibility_research_20261106.json'
+      - 'research/integrated_degiro_eligibility_gate.py'
+      - 'research/test_integrated_degiro_eligibility_gate.py'
+      - 'research/integrated_broker_candidate_screen.py'
+      - 'research/test_integrated_broker_candidate_screen.py'
+      - 'research/integrated_recovery_decision_boundary.py'
+      - 'research/test_integrated_recovery_decision_boundary.py'
+      - 'research/integrated_capital_day_comparison.py'
+      - 'research/test_integrated_capital_day_comparison.py'
+      - 'research/integrated_overlapping_capital_ledger.py'
+      - 'research/test_integrated_overlapping_capital_ledger.py'
+      - 'research/integrated_rejected_opportunity_attribution.py'
+      - 'research/test_integrated_rejected_opportunity_attribution.py'
+      - 'research/integrated_ex_ante_selection_comparison.py'
+      - 'research/test_integrated_ex_ante_selection_comparison.py'
+      - 'research/integrated_historical_priority_provenance.py'
+      - 'research/test_integrated_historical_priority_provenance.py'
+      - 'research/integrated_verified_priority_selection.py'
+      - 'research/test_integrated_verified_priority_selection.py'
+      - 'research/integrated_historical_source_bytes_gate.py'
+      - 'research/test_integrated_historical_source_bytes_gate.py'
+      - 'research/integrated_hash_checked_priority_selection.py'
+      - 'research/test_integrated_hash_checked_priority_selection.py'
+      - 'research/isolated_50000_portfolio_ledger.py'
+      - 'research/test_isolated_50000_portfolio_ledger.py'
+      - 'research/dipsaus_isolated_quality_gates.py'
+      - 'research/test_dipsaus_isolated_quality_gates.py'
+      - 'research/isolated_source_capture_audit.py'
+      - 'research/test_isolated_source_capture_audit.py'
+      - '.github/workflows/research-integrated-evidence.yml'
+  pull_request:
+    branches:
+      - research/prospective-core-isolation-20261103
+    paths:
+      - 'research/**'
+      - '.github/workflows/research-integrated-evidence.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  integrity-unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run fail-closed integrity tests
+        run: |
+          python -m unittest discover -s research -p 'test_integrated_filter_evidence_gate.py' -v
+          python -m unittest discover -s research -p 'test_integrated_evidence_manifest.py' -v
+          python -m unittest discover -s research -p 'test_integrated_evidence_readiness.py' -v
+          python research/check_integrated_evidence_gate.py
+          python -m unittest discover -s research -p 'test_integrated_historical_reconciliation.py' -v
+          python -m unittest discover -s research -p 'test_integrated_artifact_configuration.py' -v
+          python -m unittest discover -s research -p 'test_integrated_degiro_eligibility_gate.py' -v
+          python research/integrated_degiro_eligibility_gate.py
+          python -m unittest discover -s research -p 'test_integrated_broker_candidate_screen.py' -v
+          python -m unittest discover -s research -p 'test_integrated_recovery_decision_boundary.py' -v
+          python -m unittest discover -s research -p 'test_integrated_capital_day_comparison.py' -v
+          python -m unittest discover -s research -p 'test_integrated_overlapping_capital_ledger.py' -v
+          python -m unittest discover -s research -p 'test_integrated_rejected_opportunity_attribution.py' -v
+          python -m unittest discover -s research -p 'test_integrated_ex_ante_selection_comparison.py' -v
+          python -m unittest discover -s research -p 'test_integrated_historical_priority_provenance.py' -v
+          python -m unittest discover -s research -p 'test_integrated_verified_priority_selection.py' -v
+          python -m unittest discover -s research -p 'test_integrated_historical_source_bytes_gate.py' -v
+          python -m unittest discover -s research -p 'test_integrated_hash_checked_priority_selection.py' -v
+          python -m unittest discover -s research -p 'test_isolated_50000_portfolio_ledger.py' -v
+          python -m unittest discover -s research -p 'test_dipsaus_isolated_quality_gates.py' -v
+          python -m unittest discover -s research -p 'test_isolated_source_capture_audit.py' -v

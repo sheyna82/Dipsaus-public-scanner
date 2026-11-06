@@ -1,0 +1,86 @@
+{
+  "schema": "dipsaus.research_broker_eligibility.v1",
+  "as_of": "2026-11-06",
+  "research_only": true,
+  "trade_ready": false,
+  "broker": "DEGIRO NL",
+  "broker_source": "https://www.degiro.nl/beurzen",
+  "rules": {
+    "supported_exchange_required": true,
+    "exact_instrument_in_account_required": true,
+    "isin_and_listing_required": true,
+    "liquidity_spread_costs_fx_required": true,
+    "unverified_is_not_eligible": true,
+    "selection_order": [
+      "exchange_supported",
+      "instrument_verified_in_account",
+      "liquidity_and_costs",
+      "recovery_quality",
+      "portfolio_risk_and_capital_efficiency"
+    ]
+  },
+  "candidates": [
+    {
+      "symbol": "ASML",
+      "market": "Euronext Amsterdam",
+      "status": "EXCHANGE_SUPPORTED_INSTRUMENT_UNVERIFIED"
+    },
+    {
+      "symbol": "IFX",
+      "market": "Xetra",
+      "status": "EXCHANGE_SUPPORTED_INSTRUMENT_UNVERIFIED"
+    },
+    {
+      "symbol": "AIXA",
+      "market": "Xetra",
+      "status": "EXCHANGE_SUPPORTED_INSTRUMENT_UNVERIFIED"
+    },
+    {
+      "symbol": "WAF",
+      "market": "Xetra",
+      "status": "EXCHANGE_SUPPORTED_INSTRUMENT_UNVERIFIED"
+    },
+    {
+      "symbol": "SOI",
+      "market": "Euronext Paris",
+      "status": "EXCHANGE_SUPPORTED_INSTRUMENT_UNVERIFIED"
+    },
+    {
+      "symbol": "AMD",
+      "market": "Nasdaq",
+      "status": "EXCHANGE_SUPPORTED_INSTRUMENT_UNVERIFIED"
+    },
+    {
+      "symbol": "NVDA",
+      "market": "Nasdaq",
+      "status": "EXCHANGE_SUPPORTED_INSTRUMENT_UNVERIFIED"
+    },
+    {
+      "symbol": "WDC",
+      "market": "Nasdaq",
+      "status": "EXCHANGE_SUPPORTED_INSTRUMENT_UNVERIFIED"
+    },
+    {
+      "symbol": "9984",
+      "market": "Tokyo Stock Exchange",
+      "status": "EXCHANGE_SUPPORTED_INSTRUMENT_UNVERIFIED"
+    },
+    {
+      "symbol": "000660",
+      "market": "Korea Exchange",
+      "status": "EXCHANGE_NOT_LISTED_BY_DEGIRO_UNVERIFIED"
+    }
+  ],
+  "sector_risk": "Geographical diversification does not remove correlated semiconductor/AI exposure.",
+  "portfolio_constraints": {
+    "capital_eur": 50000,
+    "max_positions": 6,
+    "typical_tranche_eur": 3500,
+    "holding_sessions_min": 5,
+    "holding_sessions_max": 15,
+    "orders": "MANUAL_ONLY",
+    "stoploss_or_stoplimit": false
+  },
+  "prospective_registration": "NO_CANDIDATE_SIGNAL_REGISTERED",
+  "live_scanner_changed": false
+}
