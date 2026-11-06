@@ -16,6 +16,19 @@ class SelectionComparisonTests(unittest.TestCase):
         self.assertFalse(result["trade_ready"])
         self.assertFalse(result["performance_superiority_proven"])
 
+    def test_cash_reuse_policy_changes_next_entry(self):
+        first = c("A", 1, allocation=50000)
+        first["exit_date"] = "2026-11-05"
+        second = c("B", 2, allocation=50000)
+        second["entry_date"] = "2026-11-05"
+        second["exit_date"] = "2026-11-12"
+        immediate = compare_orders([first, second], same_day_cash_reuse=True)
+        conservative = compare_orders([first, second], same_day_cash_reuse=False)
+        self.assertEqual(immediate["baseline"]["accepted_ids"], ["A", "B"])
+        self.assertEqual(conservative["baseline"]["accepted_ids"], ["A"])
+        self.assertEqual(conservative["priority"]["accepted_ids"], ["A"])
+        self.assertFalse(conservative["same_day_cash_reuse"])
+
     def test_unregistered_priority_blocks(self):
         item = c("A", 1)
         item["priority_registered_before_entry"] = False
