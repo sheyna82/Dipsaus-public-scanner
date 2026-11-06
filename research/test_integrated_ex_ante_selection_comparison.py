@@ -28,6 +28,10 @@ class SelectionComparisonTests(unittest.TestCase):
         self.assertEqual(conservative["baseline"]["accepted_ids"], ["A"])
         self.assertEqual(conservative["priority"]["accepted_ids"], ["A"])
         self.assertFalse(conservative["same_day_cash_reuse"])
+        self.assertEqual(conservative["cash_policy"], "entry_before_exit_same_day")
+        self.assertEqual(immediate["cash_policy"], "exit_before_entry_same_day")
+        self.assertEqual(conservative["capital_eur"], "50000")
+        self.assertEqual(conservative["max_positions"], 6)
 
     def test_unregistered_priority_blocks(self):
         item = c("A", 1)
