@@ -8,6 +8,7 @@ DIGEST = hashlib.sha256(RAW).hexdigest()
 
 def registration():
     return {"id": "A", "registered_at": "2026-11-05T10:00:00+01:00",
+            "source_available_at": "2026-11-05T08:30:00Z",
             "entry_at": "2026-11-06T09:00:00+01:00",
             "source_sha256": hashlib.sha256(b"synthetic source").hexdigest()}
 
