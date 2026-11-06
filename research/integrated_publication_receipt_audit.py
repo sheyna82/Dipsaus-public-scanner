@@ -25,6 +25,8 @@ def audit_publication_receipts(registrations, receipts):
         digest = hashlib.sha256(raw).hexdigest()
         if digest != receipt.get("receipt_sha256"):
             raise ValueError("RECEIPT_HASH_MISMATCH")
+        if receipt.get("source_sha256") != expected[ident].get("source_sha256"):
+            raise ValueError("RECEIPT_SOURCE_BINDING_MISMATCH")
         observed = _timestamp(receipt.get("observed_at"))
         registered = _timestamp(expected[ident]["registered_at"])
         entry = _timestamp(expected[ident]["entry_at"])
@@ -33,6 +35,7 @@ def audit_publication_receipts(registrations, receipts):
         if not isinstance(receipt.get("source_url"), str) or not receipt["source_url"].startswith("https://"):
             raise ValueError("INVALID_RECEIPT_URL")
         checked.append({"id": ident, "receipt_sha256": digest,
+                        "source_sha256": receipt["source_sha256"],
                         "observed_at_claimed": receipt["observed_at"],
                         "source_url_claimed": receipt["source_url"],
                         "receipt_bytes_hash_checked": True,
