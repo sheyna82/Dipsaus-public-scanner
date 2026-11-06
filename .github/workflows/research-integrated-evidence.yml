@@ -38,6 +38,10 @@ on:
       - 'research/test_integrated_historical_source_bytes_gate.py'
       - 'research/integrated_hash_checked_priority_selection.py'
       - 'research/test_integrated_hash_checked_priority_selection.py'
+      - 'research/isolated_50000_portfolio_ledger.py'
+      - 'research/test_isolated_50000_portfolio_ledger.py'
+      - 'research/dipsaus_isolated_quality_gates.py'
+      - 'research/test_dipsaus_isolated_quality_gates.py'
       - '.github/workflows/research-integrated-evidence.yml'
   pull_request:
     branches:
@@ -77,3 +81,5 @@ jobs:
           python -m unittest discover -s research -p 'test_integrated_verified_priority_selection.py' -v
           python -m unittest discover -s research -p 'test_integrated_historical_source_bytes_gate.py' -v
           python -m unittest discover -s research -p 'test_integrated_hash_checked_priority_selection.py' -v
+          python -m unittest discover -s research -p 'test_isolated_50000_portfolio_ledger.py' -v
+          python -m unittest discover -s research -p 'test_dipsaus_isolated_quality_gates.py' -v
