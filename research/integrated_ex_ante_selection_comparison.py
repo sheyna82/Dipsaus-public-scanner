@@ -23,6 +23,8 @@ def compare_orders(candidates, capital_eur=50000, max_positions=6, same_day_cash
     return {"status": "RESEARCH_ONLY_EX_ANTE_ORDER_COMPARISON",
             "trade_ready": False, "performance_superiority_proven": False,
             "same_day_cash_reuse": same_day_cash_reuse,
+            "capital_eur": str(capital_eur), "max_positions": max_positions,
+            "cash_policy": "exit_before_entry_same_day" if same_day_cash_reuse else "entry_before_exit_same_day",
             "baseline": {"accepted_ids": baseline["accepted_ids"], "rejected": baseline["rejected"]},
             "priority": {"accepted_ids": prioritized["accepted_ids"], "rejected": prioritized["rejected"]},
             "limitations": ["same-day entry ordering is a scenario assumption",
