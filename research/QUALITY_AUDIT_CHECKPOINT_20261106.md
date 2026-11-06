@@ -35,3 +35,19 @@ Scope: inspected PR #65 research modules and the read-only public main copies of
 
 ### Confirmed source-gate CI result
 GitHub CI **#209**, run ID **42265054773**, completed **SUCCESS** for commit `d2fec12c1b2e9652c6239a183a2798ec2a164f32`. Logs explicitly show 8 isolated ledger tests, 10 cost/freshness/pivot tests and 5 source capture tests passing. This does not establish independently authenticated external source timestamps or DEGIRO statement reconciliation. **Operational release remains blocked.**
+
+## Freeze checkpoint — 2026-11-06: ex-ante net return research
+
+**Decision:** user approved the historical cost reconciliation and requested a code freeze. No operational promotion, no merge to main, no live scanner edits, no broker connectivity, and no automatic orders. The private DEGIRO statements, account ledger, normalized transaction data, and locally generated source/test files must **never** be committed to this public repository.
+
+**Local-only research evidence (not uploaded):** `dipsaus_ex_ante_cost_engine.py`, `test_dipsaus_ex_ante_cost_engine.py`, and `DIPSAUS_ex_ante_kosten_onderzoeksresultaten_20261106.md`. These files were developed and tested locally; **they are not part of this branch's tracked code**, and the freeze does not imply they passed GitHub CI.
+
+**Verified local result:** 12/12 unittest cases passed on 2026-11-06, covering ask/bid execution, separate entry/exit FX scenarios, explicit broker fees per side, percentage FX fees, adverse slippage, EUR-only trades, invalid input, double counting prevention, and periodic venue connectivity fees. The bid/ask spread is already included in executable prices and is not subtracted twice. Connectivity fees are portfolio-period obligations, not charged once per trade; the model distinguishes already-paid fees, newly due fees, and analytical allocation.
+
+**Hypothetical 10-share example:** ask 100, target bid 110, EUR/quote 1, EUR 2 broker fee per side, 0.25% FX per side: base **+EUR 90.75**; exit FX 0.95: **+EUR 35.89**; exit FX 0.95, bid 108, adverse slippage 1 per share on both sides: **-EUR 2.57**. These inputs are illustrative, **not verified current DEGIRO tariffs or a forecast**. Newly due EUR 2.50 connectivity fee changes the base portfolio-period outcome to EUR 88.25, not the standalone trade PnL.
+
+**Historical account reconciliation:** the prior private audit reported 40/40 grouped orders matched, 62/62 execution rows reconciled within one cent, and an additional EUR 2.50 Bolsa de Madrid connectivity fee. These figures are recorded as prior local findings; personal transaction-level evidence is intentionally absent from GitHub and cannot be independently reproduced from this public dossier alone. Historical reconciliation is accepted by the user but does not validate prospective price/FX/cost forecasts.
+
+**Open release gates (frozen backlog):** (1) independently verify current DEGIRO transaction, venue connectivity and FX tariffs by instrument, exchange and fee plan, including effective dates; (2) calibrate timestamped FX/spread/slippage scenarios with independently sourced data; (3) preregister scenario forecasts and compare them prospectively with subsequent actual executions without post-hoc adjustment; (4) validate venue-level once-per-period charges and reconcile actual cash movements; (5) develop **synthetic/anonymized** test fixtures that cannot reconstruct personal transaction records and run them in GitHub CI; (6) separately review integration and data provenance before any operational release.
+
+**Freeze status:** research only; **not trade-ready**. Do not edit the cost engine, merge, or change operational configuration until the user reopens the backlog.
