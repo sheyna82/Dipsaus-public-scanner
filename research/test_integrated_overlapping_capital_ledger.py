@@ -53,6 +53,11 @@ class OverlapLedgerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "INVALID_MONEY"):
             simulate([], capital_eur="NaN")
 
+    def test_same_day_input_order_preserved(self):
+        result = simulate([t("B", allocation=30000), t("A", allocation=30000)])
+        self.assertEqual(result["accepted_ids"], ["B"])
+        self.assertEqual(result["rejected"][0]["id"], "A")
+
     def test_no_trades(self):
         result = simulate([])
         self.assertEqual(result["ending_free_cash_eur"], "50000")
