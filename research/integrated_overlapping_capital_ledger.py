@@ -11,7 +11,9 @@ def _money(value):
         raise ValueError("INVALID_MONEY")
     return v
 
-def simulate(trades, capital_eur=50000, max_positions=6):
+def simulate(trades, capital_eur=50000, max_positions=6, same_day_cash_reuse=True):
+    if type(same_day_cash_reuse) is not bool:
+        raise ValueError("INVALID_SAME_DAY_CASH_POLICY")
     capital = _money(capital_eur)
     if capital <= 0 or type(max_positions) is not int or max_positions < 1:
         raise ValueError("INVALID_LIMITS")
@@ -36,7 +38,7 @@ def simulate(trades, capital_eur=50000, max_positions=6):
             raise ValueError("INVALID_ALLOCATION")
         # Same-day exits release cash before entries; date-granular only.
         events.extend([(start, 1, order_index, ident, allocation), (end, 0, order_index, ident, allocation)])
-    events.sort(key=lambda x: (x[0], x[1], x[2]))
+    events.sort(key=lambda x: (x[0], x[1] if same_day_cash_reuse else 1 - x[1], x[2]))
     active = {}
     cash = capital
     accepted, rejected = [], []
@@ -55,5 +57,5 @@ def simulate(trades, capital_eur=50000, max_positions=6):
             "accepted_ids": accepted, "rejected": rejected,
             "ending_reserved_eur": str(sum(active.values(), Decimal(0))),
             "ending_free_cash_eur": str(cash),
-            "limitations": ["no intraday sequence", "no PnL reinvestment", "no currency conversion",
+            "limitations": ["same-day cash reuse policy: " + ("enabled" if same_day_cash_reuse else "disabled"), "no intraday sequence", "no PnL reinvestment", "no currency conversion",
                             "no order execution or settlement model", "not a trading recommendation"]}
