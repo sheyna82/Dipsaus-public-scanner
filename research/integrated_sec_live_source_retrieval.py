@@ -5,9 +5,10 @@ historical entry time. No trading, notifications or operational integration.
 Requires caller-provided descriptive SEC-compliant User-Agent.
 """
 import hashlib
+import re
 from datetime import datetime, timezone
 from urllib.parse import urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import Request
 
 MAX_SOURCE_BYTES = 12 * 1024 * 1024
 
@@ -18,8 +19,10 @@ def retrieve_sec_complete_submission(source_url, user_agent, max_bytes=MAX_SOURC
     parsed = urlsplit(source_url)
     if (parsed.scheme != "https" or parsed.netloc != "www.sec.gov"
             or parsed.query or parsed.fragment
-            or not parsed.path.startswith("/Archives/edgar/data/")
-            or not parsed.path.endswith(".txt")):
+            or re.fullmatch(
+                r"/Archives/edgar/data/[1-9]\\d*/\\d{18}/"
+                r"[0-9]{10}-[0-9]{2}-[0-9]{6}\\.txt",
+                parsed.path, re.I) is None):
         raise ValueError("INVALID_SEC_SOURCE_URL")
     if (not isinstance(user_agent, str) or len(user_agent.strip()) < 12
             or "\n" in user_agent or "\r" in user_agent):
