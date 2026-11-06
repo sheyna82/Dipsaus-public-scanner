@@ -23,7 +23,7 @@ class EvidenceGateTests(unittest.TestCase):
     def write(self, data):
         raw = json.dumps(data, sort_keys=True).encode("utf-8")
         self.protocol.write_bytes(raw)
-        self.digest.write_text(hashlib.sha256(raw).hexdigest() + "\n", encoding="utf-8")
+        self.digest.write_text(hashlib.sha256(json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")).hexdigest() + "\n", encoding="utf-8")
 
     def test_valid_protocol_remains_inactive(self):
         self.write(BASE)
@@ -34,11 +34,11 @@ class EvidenceGateTests(unittest.TestCase):
 
     def test_tampered_protocol_blocked(self):
         self.write(BASE)
-        self.protocol.write_bytes(self.protocol.read_bytes() + b" ")
+        self.protocol.write_text(json.dumps({**BASE, "unexpected": True}), encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "PROTOCOL_SHA256_MISMATCH"):
             verify(self.protocol, self.digest)
 
-    def test_wrong_schema_blocked(self):
+    def test_whitespace_only_change_is_canonical(self):\n        self.write(BASE)\n        self.protocol.write_text(json.dumps(BASE, indent=4), encoding="utf-8")\n        self.assertEqual(verify(self.protocol, self.digest)["status"], "RESEARCH_ONLY_INTEGRITY_VERIFIED")\n\n    def test_wrong_schema_blocked(self):
         self.write({**BASE, "schema": "unknown"})
         with self.assertRaisesRegex(ValueError, "PROTOCOL_SCHEMA_MISMATCH"):
             verify(self.protocol, self.digest)
