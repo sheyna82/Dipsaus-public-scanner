@@ -19,7 +19,7 @@ def compare_orders(candidates, capital_eur=50000, max_positions=6, same_day_cash
     by_time = sorted(candidates, key=lambda c: (c["entry_date"], str(c["id"])))
     by_priority = sorted(candidates, key=lambda c: (c["entry_date"], -c["registered_priority"], str(c["id"])))
     baseline = simulate(by_time, capital_eur=capital_eur, max_positions=max_positions, same_day_cash_reuse=same_day_cash_reuse)
-    prioritized = simulate(by_priority, capital_eur=capital_eur, max_positions=max_positions)
+    prioritized = simulate(by_priority, capital_eur=capital_eur, max_positions=max_positions, same_day_cash_reuse=same_day_cash_reuse)
     return {"status": "RESEARCH_ONLY_EX_ANTE_ORDER_COMPARISON",
             "trade_ready": False, "performance_superiority_proven": False,
             "same_day_cash_reuse": same_day_cash_reuse,
