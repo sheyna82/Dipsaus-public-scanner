@@ -52,6 +52,9 @@ def audit_publication_receipts(registrations, receipts):
         checked.append({"id": ident, "receipt_sha256": digest,
                         "source_sha256": receipt["source_sha256"],
                         "observed_at_claimed": receipt["observed_at"],
+                        "source_available_at_claimed": expected[ident]["source_available_at"],
+                        "registered_at_claimed": expected[ident]["registered_at"],
+                        "entry_at": expected[ident]["entry_at"],
                         "source_url_claimed": receipt["source_url"],
                         "receipt_bytes_hash_checked": True,
                         "independent_publication_time_proven": False})
@@ -61,7 +64,7 @@ def audit_publication_receipts(registrations, receipts):
                            separators=(",", ":"), ensure_ascii=True).encode("utf-8")
     audit_sha256 = hashlib.sha256(canonical).hexdigest()
     return {"status": "RESEARCH_ONLY_RECEIPT_AUDIT",
-            "audit_sha256": audit_sha256, "audit_fingerprint_schema": "publication_receipt_audit_v1",
+            "audit_sha256": audit_sha256, "audit_fingerprint_schema": "publication_receipt_audit_v2",
             "receipt_count": len(checked), "receipts": sorted(checked, key=lambda x: x["id"]),
             "external_publication_time_independently_proven": False,
             "evidence_level": "SUPPLIED_RECEIPT_BYTES_ONLY",
