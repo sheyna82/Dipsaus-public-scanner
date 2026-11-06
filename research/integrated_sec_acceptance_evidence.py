@@ -22,7 +22,11 @@ def inspect_sec_acceptance_header(raw_bytes, source_url, entry_at):
             or not parsed.path.startswith("/Archives/edgar/data/")
             or parsed.username or parsed.password or parsed.query or parsed.fragment):
         raise ValueError("INVALID_SEC_ARCHIVE_URL")
-    # A private submission can become public months after EDGAR acceptance.\n    # Acceptance must never be used as a public-availability proxy for it.\n    if re.search(rb"<PRIVATE-TO-PUBLIC(?:\\s|>)", raw_bytes, re.I):\n        raise ValueError("SEC_PRIVATE_TO_PUBLIC_ACCEPTANCE_UNUSABLE")\n    matches = _HEADER.findall(raw_bytes)
+    # A private submission can become public months after EDGAR acceptance.
+    # Acceptance must never be used as a public-availability proxy for it.
+    if re.search(rb"<PRIVATE-TO-PUBLIC(?:\\s|>)", raw_bytes, re.I):
+        raise ValueError("SEC_PRIVATE_TO_PUBLIC_ACCEPTANCE_UNUSABLE")
+    matches = _HEADER.findall(raw_bytes)
     if len(matches) != 1:
         raise ValueError("MISSING_OR_AMBIGUOUS_SEC_ACCEPTANCE_TIME")
     try:
