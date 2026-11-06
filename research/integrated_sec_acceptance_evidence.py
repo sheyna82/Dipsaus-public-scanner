@@ -25,7 +25,7 @@ def inspect_sec_acceptance_header(raw_bytes, source_url, entry_at):
         raise ValueError("INVALID_SEC_ARCHIVE_URL")
     # A private submission can become public months after EDGAR acceptance.
     # Acceptance must never be used as a public-availability proxy for it.
-    if re.search(rb"<PRIVATE-TO-PUBLIC(?:\\s|>)", raw_bytes, re.I):
+    if re.search(rb"<PRIVATE-TO-PUBLIC(?:\s|>)", raw_bytes, re.I):
         raise ValueError("SEC_PRIVATE_TO_PUBLIC_ACCEPTANCE_UNUSABLE")
     matches = _HEADER.findall(raw_bytes)
     if len(matches) != 1:
