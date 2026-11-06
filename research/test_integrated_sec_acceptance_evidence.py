@@ -17,6 +17,18 @@ class SecAcceptanceEvidenceTests(unittest.TestCase):
         self.assertFalse(result["trade_ready"])
         self.assertEqual(result["supplied_document_sha256"], hashlib.sha256(RAW).hexdigest())
 
+    def test_body_cannot_supply_missing_acceptance_header(self):
+        body_only = (b"<SEC-HEADER>\\nACCESSION NUMBER: 0000123456-26-000001\\n"
+                     b"</SEC-HEADER>\\n<DOCUMENT>\\n"
+                     b"<ACCEPTANCE-DATETIME>20261105163000\\n</DOCUMENT>\\n")
+        with self.assertRaisesRegex(ValueError, "MISSING_OR_AMBIGUOUS_SEC_ACCEPTANCE_TIME"):
+            inspect_sec_acceptance_header(body_only, URL, ENTRY)
+
+    def test_body_duplicate_does_not_override_header(self):
+        body_duplicate = RAW + b"<DOCUMENT>\\n<ACCEPTANCE-DATETIME>20261106163000\\n</DOCUMENT>"
+        result = inspect_sec_acceptance_header(body_duplicate, URL, ENTRY)
+        self.assertEqual(result["acceptance_at_et"], "2026-11-05T16:30:00-05:00")
+
     def test_private_to_public_submission_is_rejected(self):
         # Observed in a real SEC filing: accepted in September 2025,
         # document subsequently marked private-to-public in February 2026.
