@@ -51,7 +51,8 @@ class HashCheckedSelectionTests(unittest.TestCase):
         second["entry_date"] = "2026-11-09"
         second["exit_date"] = "2026-11-13"
         regs = [registration("A", 1, HASH_A), registration("B", 3, HASH_B)]
-        # B's registration must precede its entry; both source hashes are verified.
+        regs[1]["entry_at"] = "2026-11-09T09:00:00+01:00"
+        # B's registration and its candidate date must match; both source hashes are verified.
         source = {HASH_A: RAW_A, HASH_B: RAW_B}
         immediate = compare_hash_checked(regs, source, [first, second], same_day_cash_reuse=True)
         conservative = compare_hash_checked(regs, source, [first, second], same_day_cash_reuse=False)
