@@ -33,6 +33,23 @@ class SelectionComparisonTests(unittest.TestCase):
         self.assertEqual(conservative["capital_eur"], "50000")
         self.assertEqual(conservative["max_positions"], 6)
 
+    def test_input_fingerprint_is_order_independent(self):
+        left = compare_orders([c("B", 3), c("A", 1)])
+        right = compare_orders([c("A", 1), c("B", 3)])
+        self.assertEqual(left["input_sha256"], right["input_sha256"])
+        self.assertEqual(len(left["input_sha256"]), 64)
+        self.assertEqual(left["fingerprint_schema"], "ex_ante_selection_input_v1")
+
+    def test_input_fingerprint_changes_with_cash_policy(self):
+        immediate = compare_orders([c("A", 1)], same_day_cash_reuse=True)
+        conservative = compare_orders([c("A", 1)], same_day_cash_reuse=False)
+        self.assertNotEqual(immediate["input_sha256"], conservative["input_sha256"])
+
+    def test_input_fingerprint_changes_with_allocation(self):
+        original = compare_orders([c("A", 1, allocation=3500)])
+        changed = compare_orders([c("A", 1, allocation=4000)])
+        self.assertNotEqual(original["input_sha256"], changed["input_sha256"])
+
     def test_unregistered_priority_blocks(self):
         item = c("A", 1)
         item["priority_registered_before_entry"] = False
