@@ -34,6 +34,8 @@ on:
       - 'research/test_integrated_historical_priority_provenance.py'
       - 'research/integrated_verified_priority_selection.py'
       - 'research/test_integrated_verified_priority_selection.py'
+      - 'research/integrated_historical_source_bytes_gate.py'
+      - 'research/test_integrated_historical_source_bytes_gate.py'
       - '.github/workflows/research-integrated-evidence.yml'
   pull_request:
     branches:
@@ -71,3 +73,4 @@ jobs:
           python -m unittest discover -s research -p 'test_integrated_ex_ante_selection_comparison.py' -v
           python -m unittest discover -s research -p 'test_integrated_historical_priority_provenance.py' -v
           python -m unittest discover -s research -p 'test_integrated_verified_priority_selection.py' -v
+          python -m unittest discover -s research -p 'test_integrated_historical_source_bytes_gate.py' -v
