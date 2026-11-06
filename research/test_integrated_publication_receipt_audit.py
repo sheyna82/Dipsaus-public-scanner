@@ -22,8 +22,19 @@ class PublicationReceiptAuditTests(unittest.TestCase):
     def test_valid_receipt_remains_unproven(self):
         result = audit_publication_receipts([registration()], [receipt()])
         self.assertEqual(result["receipt_count"], 1)
+        self.assertEqual(len(result["audit_sha256"]), 64)
+        self.assertEqual(result["audit_fingerprint_schema"], "publication_receipt_audit_v1")
         self.assertFalse(result["external_publication_time_independently_proven"])
         self.assertFalse(result["eligible_for_performance_claim"])
+
+    def test_receipt_audit_fingerprint_changes_with_evidence(self):
+        baseline = audit_publication_receipts([registration()], [receipt()])
+        modified = receipt()
+        modified["source_url"] = "https://example.org/other-archive"
+        changed = audit_publication_receipts([registration()], [modified])
+        self.assertNotEqual(baseline["audit_sha256"], changed["audit_sha256"])
+        self.assertEqual(baseline["audit_sha256"],
+                         audit_publication_receipts([registration()], [receipt()])["audit_sha256"])
 
     def test_receipt_source_binding_mismatch_rejected(self):
         r = receipt()
