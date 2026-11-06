@@ -6,6 +6,8 @@ on:
     paths:
       - 'research/integrated_filter_evidence_gate.py'
       - 'research/test_integrated_filter_evidence_gate.py'
+      - 'research/integrated_evidence_manifest.json'
+      - 'research/test_integrated_evidence_manifest.py'
       - '.github/workflows/research-integrated-evidence.yml'
   workflow_dispatch:
 permissions:
@@ -20,4 +22,4 @@ jobs:
         with:
           python-version: '3.11'
       - name: Run fail-closed integrity tests
-        run: python -m unittest discover -s research -p 'test_integrated_filter_evidence_gate.py' -v
+        run: |\n          python -m unittest discover -s research -p 'test_integrated_filter_evidence_gate.py' -v\n          python -m unittest discover -s research -p 'test_integrated_evidence_manifest.py' -v
