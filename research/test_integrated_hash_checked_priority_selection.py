@@ -23,6 +23,12 @@ class HashCheckedSelectionTests(unittest.TestCase):
                                       {HASH_A: RAW_A, HASH_B: RAW_B},
                                       [candidate("A"), candidate("B")])
         self.assertEqual(result["hash_checked_count"], 2)
+        manifest = result["research_manifest"]
+        self.assertEqual(manifest["source_sha256"], sorted([HASH_A, HASH_B]))
+        self.assertEqual(manifest["input_sha256"], result["selection"]["input_sha256"])
+        self.assertEqual(manifest["cash_policy"], "exit_before_entry_same_day")
+        self.assertFalse(manifest["historical_authenticity_independently_proven"])
+        self.assertFalse(manifest["trade_ready"])
         self.assertEqual(result["selection"]["priority"]["accepted_ids"], ["B"])
         self.assertFalse(result["trade_ready"])
         self.assertFalse(result["historical_authenticity_independently_proven"])
@@ -44,6 +50,8 @@ class HashCheckedSelectionTests(unittest.TestCase):
         self.assertEqual(conservative["selection"]["baseline"]["accepted_ids"], ["A"])
         self.assertEqual(conservative["selection"]["priority"]["accepted_ids"], ["A"])
         self.assertFalse(conservative["selection"]["same_day_cash_reuse"])
+        self.assertEqual(conservative["research_manifest"]["cash_policy"], "entry_before_exit_same_day")
+        self.assertNotEqual(immediate["research_manifest"]["input_sha256"], conservative["research_manifest"]["input_sha256"])
 
     def test_tampered_source_blocks_selection(self):
         with self.assertRaisesRegex(ValueError, "SOURCE_HASH_MISMATCH"):
