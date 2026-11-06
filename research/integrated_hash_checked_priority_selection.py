@@ -49,3 +49,21 @@ def compare_hash_checked(registrations, source_bytes_by_hash, candidates,
                            ensure_ascii=True, allow_nan=False).encode("utf-8")
     manifest["manifest_sha256"] = hashlib.sha256(canonical).hexdigest()
     return result
+
+def verify_manifest_fingerprint(manifest):
+    """Recompute the research manifest fingerprint; never attest source authenticity."""
+    if not isinstance(manifest, dict) or manifest.get("schema") != "hash_checked_selection_manifest_v2":
+        raise ValueError("INVALID_MANIFEST_SCHEMA")
+    digest = manifest.get("manifest_sha256")
+    if not isinstance(digest, str) or len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
+        raise ValueError("INVALID_MANIFEST_FINGERPRINT")
+    payload = {key: value for key, value in manifest.items() if key != "manifest_sha256"}
+    try:
+        canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"),
+                               ensure_ascii=True, allow_nan=False).encode("utf-8")
+    except (TypeError, ValueError) as exc:
+        raise ValueError("INVALID_MANIFEST_CONTENT") from exc
+    if hashlib.sha256(canonical).hexdigest() != digest:
+        raise ValueError("MANIFEST_FINGERPRINT_MISMATCH")
+    return {"fingerprint_verified": True, "trade_ready": False,
+            "historical_authenticity_independently_proven": False}
