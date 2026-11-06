@@ -42,6 +42,18 @@ class VerifiedSelectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "POINT_IN_TIME_VIOLATION"):
             compare_verified([r], [candidate("A")])
 
+    def test_registration_for_different_trade_date_blocks(self):
+        item = candidate("A")
+        item["entry_date"] = "2026-11-04"  # Before purported registration.
+        with self.assertRaisesRegex(ValueError, "CANDIDATE_REGISTRATION_ENTRY_MISMATCH"):
+            compare_verified([registration("A", 1)], [item])
+
+    def test_later_trade_date_cannot_reuse_registration(self):
+        item = candidate("A")
+        item["entry_date"] = "2026-11-09"
+        with self.assertRaisesRegex(ValueError, "CANDIDATE_REGISTRATION_ENTRY_MISMATCH"):
+            compare_verified([registration("A", 1)], [item])
+
     def test_candidate_id_mismatch_blocks(self):
         with self.assertRaisesRegex(ValueError, "UNREGISTERED_CANDIDATE"):
             compare_verified([registration("A", 1)], [candidate("B")])
