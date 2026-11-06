@@ -63,6 +63,7 @@ class HashCheckedSelectionTests(unittest.TestCase):
         raw_receipt = b"synthetic capture receipt"
         receipt = {"id": "A", "raw_bytes": raw_receipt,
                    "receipt_sha256": hashlib.sha256(raw_receipt).hexdigest(),
+                   "source_sha256": HASH_A,
                    "observed_at": "2026-11-05T08:30:00Z",
                    "source_url": "https://example.org/archive"}
         result = compare_hash_checked([registration("A", 1, HASH_A)],
@@ -74,7 +75,7 @@ class HashCheckedSelectionTests(unittest.TestCase):
         self.assertFalse(manifest["eligible_for_performance_claim"])
 
     def test_invalid_receipt_blocks_selection(self):
-        bad = {"id": "A", "raw_bytes": b"bad", "receipt_sha256": "0" * 64,
+        bad = {"id": "A", "raw_bytes": b"bad", "receipt_sha256": "0" * 64, "source_sha256": HASH_A,
                "observed_at": "2026-11-05T08:30:00Z",
                "source_url": "https://example.org/archive"}
         with self.assertRaisesRegex(ValueError, "RECEIPT_HASH_MISMATCH"):
