@@ -15,6 +15,9 @@ on:
       - 'research/integrated_artifact_fetch.py'
       - 'research/test_integrated_artifact_configuration.py'
       - 'research/test_integrated_historical_reconciliation.py'
+      - 'research/degiro_eligibility_research_20261106.json'
+      - 'research/integrated_degiro_eligibility_gate.py'
+      - 'research/test_integrated_degiro_eligibility_gate.py'
       - '.github/workflows/research-integrated-evidence.yml'
   pull_request:
     branches:
@@ -42,3 +45,5 @@ jobs:
           python research/check_integrated_evidence_gate.py
           python -m unittest discover -s research -p 'test_integrated_historical_reconciliation.py' -v
           python -m unittest discover -s research -p 'test_integrated_artifact_configuration.py' -v
+          python -m unittest discover -s research -p 'test_integrated_degiro_eligibility_gate.py' -v
+          python research/integrated_degiro_eligibility_gate.py
