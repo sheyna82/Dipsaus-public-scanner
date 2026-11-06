@@ -25,7 +25,19 @@ def inspect_sec_acceptance_header(raw_bytes, source_url, entry_at):
         raise ValueError("INVALID_SEC_ARCHIVE_URL")
     # A private submission can become public months after EDGAR acceptance.
     # Acceptance must never be used as a public-availability proxy for it.
-    if re.search(rb"<PRIVATE-TO-PUBLIC(?:\s|>)", raw_bytes, re.I):
+    # Restrict the marker check to the SGML SEC header. A mention in a
+    # document body is not itself evidence of private-to-public treatment.
+    header_start = re.search(rb"<SEC-HEADER(?:\s|>)", raw_bytes, re.I)
+    if header_start is not None:
+        header_end = re.search(rb"</SEC-HEADER\s*>", raw_bytes[header_start.end():], re.I)
+        if header_end is None:
+            raise ValueError("UNCLOSED_SEC_HEADER")
+        header = raw_bytes[header_start.start():header_start.end() + header_end.end()]
+    else:
+        # Some synthetic and legacy supplied fixtures omit SEC-HEADER.
+        # Conservatively inspect all supplied bytes rather than skip the gate.
+        header = raw_bytes
+    if re.search(rb"<PRIVATE-TO-PUBLIC(?:\s|>)", header, re.I):
         raise ValueError("SEC_PRIVATE_TO_PUBLIC_ACCEPTANCE_UNUSABLE")
     matches = _HEADER.findall(raw_bytes)
     if len(matches) != 1:
