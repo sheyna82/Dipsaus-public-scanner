@@ -45,6 +45,25 @@ def verify_sec_archive(package, raw_bytes):
     from integrated_sec_historical_evidence_dossier import verify_sec_historical_evidence_dossier
     if not verify_sec_historical_evidence_dossier(dossier):
         raise ValueError("SEC_ARCHIVE_DOSSIER_INVALID")
+    from integrated_sec_complete_submission_audit import inspect_sec_complete_submission
+    dossier_body = dossier["dossier"]
+    audit = inspect_sec_complete_submission(
+        raw_bytes, manifest.get("source_url"), dossier_body.get("entry_at_claimed"))
+    if audit != dossier_body.get("sec_audit"):
+        raise ValueError("SEC_ARCHIVE_RECOMPUTED_AUDIT_MISMATCH")
+    from integrated_historical_source_chronology import assess_historical_source_chronology
+    expected_chronology = assess_historical_source_chronology(
+        dossier_body.get("entry_at_claimed"), receipt.get("retrieved_at_utc"))
+    if expected_chronology != dossier_body.get("source_chronology"):
+        raise ValueError("SEC_ARCHIVE_RECOMPUTED_CHRONOLOGY_MISMATCH")
+    if (receipt.get("schema") != "sec_live_retrieval_receipt_v1"
+            or receipt.get("historical_publication_independently_proven") is not False
+            or receipt.get("eligible_for_performance_claim") is not False
+            or receipt.get("trade_ready") is not False
+            or captured.get("historical_publication_independently_proven") is not False
+            or captured.get("eligible_for_backtest_performance_claim") is not False
+            or captured.get("trade_ready") is not False):
+        raise ValueError("SEC_ARCHIVE_UNSUPPORTED_PROOF_PROMOTION")
     if (manifest.get("schema") != "sec_candidate_archive_manifest_v1"
             or manifest.get("raw_bytes_sha256") != hashlib.sha256(raw_bytes).hexdigest()
             or manifest.get("raw_bytes_length") != len(raw_bytes)
