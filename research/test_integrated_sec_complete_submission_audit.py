@@ -31,7 +31,7 @@ class SecCompleteSubmissionAuditTests(unittest.TestCase):
 
     def test_private_to_public_fails(self):
         with self.assertRaisesRegex(ValueError, "SEC_PRIVATE_TO_PUBLIC_ACCEPTANCE_UNUSABLE"):
-            inspect_sec_complete_submission(RAW + b"<PRIVATE-TO-PUBLIC>\n", URL, ENTRY)
+            inspect_sec_complete_submission(RAW.replace(b"</SEC-HEADER>", b"<PRIVATE-TO-PUBLIC>\n</SEC-HEADER>"), URL, ENTRY)
 
 
 if __name__ == "__main__":
