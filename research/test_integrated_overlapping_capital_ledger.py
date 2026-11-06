@@ -27,7 +27,9 @@ class OverlapLedgerTests(unittest.TestCase):
     def test_cash_released_on_exit(self):
         result = simulate([t("A", end="2026-11-05", allocation=3500),
                            t("B", start="2026-11-05", end="2026-11-12", allocation=3500)])
-        self.assertEqual(result["ending_free_cash_eur"], "46500")
+        self.assertEqual(result["ending_free_cash_eur"], "50000")
+        self.assertEqual(result["accepted_ids"], ["A", "B"])
+        self.assertEqual(result["rejected"], [])
 
     def test_duplicate_id_blocks(self):
         with self.assertRaisesRegex(ValueError, "DUPLICATE_ID"):
