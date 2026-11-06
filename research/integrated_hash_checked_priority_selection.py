@@ -65,5 +65,30 @@ def verify_manifest_fingerprint(manifest):
         raise ValueError("INVALID_MANIFEST_CONTENT") from exc
     if hashlib.sha256(canonical).hexdigest() != digest:
         raise ValueError("MANIFEST_FINGERPRINT_MISMATCH")
+    for key in ("trade_ready", "historical_authenticity_independently_proven",
+                "external_publication_time_independently_proven", "eligible_for_performance_claim"):
+        if manifest.get(key) is not False:
+            raise ValueError("UNSUPPORTED_EVIDENCE_PROMOTION")
+    audit = manifest.get("publication_receipt_audit")
+    if audit is None:
+        if manifest.get("publication_receipts_supplied") is not False:
+            raise ValueError("RECEIPT_AUDIT_COVERAGE_MISMATCH")
+    else:
+        if manifest.get("publication_receipts_supplied") is not True or not isinstance(audit, dict):
+            raise ValueError("RECEIPT_AUDIT_COVERAGE_MISMATCH")
+        if audit.get("audit_fingerprint_schema") != "publication_receipt_audit_v2":
+            raise ValueError("INVALID_RECEIPT_AUDIT_SCHEMA")
+        receipts = audit.get("receipts")
+        if not isinstance(receipts, list) or audit.get("receipt_count") != len(receipts):
+            raise ValueError("RECEIPT_AUDIT_COVERAGE_MISMATCH")
+        canonical_receipts = json.dumps(sorted(receipts, key=lambda row: str(row["id"])),
+                                        sort_keys=True, separators=(",", ":"),
+                                        ensure_ascii=True, allow_nan=False).encode("utf-8")
+        if hashlib.sha256(canonical_receipts).hexdigest() != audit.get("audit_sha256"):
+            raise ValueError("RECEIPT_AUDIT_FINGERPRINT_MISMATCH")
+        if audit.get("external_publication_time_independently_proven") is not False or (
+                audit.get("eligible_for_performance_claim") is not False) or (
+                audit.get("trade_ready") is not False):
+            raise ValueError("UNSUPPORTED_EVIDENCE_PROMOTION")
     return {"fingerprint_verified": True, "trade_ready": False,
             "historical_authenticity_independently_proven": False}
