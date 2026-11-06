@@ -2,7 +2,7 @@
 from integrated_historical_priority_provenance import validate
 from integrated_ex_ante_selection_comparison import compare_orders
 
-def compare_verified(records, candidates, capital_eur=50000, max_positions=6):
+def compare_verified(records, candidates, capital_eur=50000, max_positions=6, same_day_cash_reuse=True):
     evidence = validate(records)
     registrations = {r["id"]: r for r in evidence["verified_registrations"]}
     if len(registrations) != len(candidates):
@@ -21,7 +21,7 @@ def compare_verified(records, candidates, capital_eur=50000, max_positions=6):
                                          "realized_pnl_eur")):
             raise ValueError("CANDIDATE_EVIDENCE_OVERRIDE_BLOCKED")
         enriched.append({**candidate, **registrations[ident]})
-    result = compare_orders(enriched, capital_eur=capital_eur, max_positions=max_positions)
+    result = compare_orders(enriched, capital_eur=capital_eur, max_positions=max_positions, same_day_cash_reuse=same_day_cash_reuse)
     return {"status": "RESEARCH_ONLY_VERIFIED_PRIORITY_SELECTION",
             "trade_ready": False, "historical_authenticity_independently_proven": False,
             "selection": result,
