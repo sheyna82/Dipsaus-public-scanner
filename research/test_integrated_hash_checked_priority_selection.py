@@ -1,7 +1,7 @@
 """End-to-end source-hash-backed selection regression tests."""
 import hashlib
 import unittest
-from integrated_hash_checked_priority_selection import compare_hash_checked
+from integrated_hash_checked_priority_selection import compare_hash_checked, verify_manifest_fingerprint
 
 RAW_A, RAW_B = b"synthetic source A", b"synthetic source B"
 HASH_A, HASH_B = hashlib.sha256(RAW_A).hexdigest(), hashlib.sha256(RAW_B).hexdigest()
@@ -94,6 +94,21 @@ class HashCheckedSelectionTests(unittest.TestCase):
                             changed["research_manifest"]["manifest_sha256"])
         self.assertNotEqual(baseline["research_manifest"]["manifest_sha256"],
                             compare_hash_checked(*args)["research_manifest"]["manifest_sha256"])
+
+    def test_archived_manifest_verification_detects_tampering(self):
+        result = compare_hash_checked([registration("A", 1, HASH_A)],
+                                      {HASH_A: RAW_A}, [candidate("A")])
+        manifest = result["research_manifest"]
+        verified = verify_manifest_fingerprint(manifest)
+        self.assertTrue(verified["fingerprint_verified"])
+        self.assertFalse(verified["historical_authenticity_independently_proven"])
+        modified = dict(manifest, capital_eur=100000)
+        with self.assertRaisesRegex(ValueError, "MANIFEST_FINGERPRINT_MISMATCH"):
+            verify_manifest_fingerprint(modified)
+        with self.assertRaisesRegex(ValueError, "INVALID_MANIFEST_FINGERPRINT"):
+            verify_manifest_fingerprint(dict(manifest, manifest_sha256="bad"))
+        with self.assertRaisesRegex(ValueError, "INVALID_MANIFEST_SCHEMA"):
+            verify_manifest_fingerprint(dict(manifest, schema="unknown"))
 
     def test_invalid_receipt_blocks_selection(self):
         bad = {"id": "A", "raw_bytes": b"bad", "receipt_sha256": "0" * 64, "source_sha256": HASH_A,
