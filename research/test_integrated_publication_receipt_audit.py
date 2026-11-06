@@ -30,6 +30,23 @@ class PublicationReceiptAuditTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "RECEIPT_SOURCE_BINDING_MISMATCH"):
             audit_publication_receipts([registration()], [r])
 
+    def test_receipt_before_claimed_source_availability_rejected(self):
+        r = receipt()
+        r["observed_at"] = "2026-11-05T08:29:59Z"
+        reg = registration()
+        reg["source_available_at"] = "2026-11-05T08:30:00Z"
+        with self.assertRaisesRegex(ValueError, "RECEIPT_BEFORE_CLAIMED_SOURCE_AVAILABILITY"):
+            audit_publication_receipts([reg], [r])
+
+    def test_malformed_https_urls_rejected(self):
+        for url in ("https://", "https:///archive", "https://user:pass@example.org/archive",
+                    "https://example.org/path with spaces", "http://example.org/archive"):
+            with self.subTest(url=url):
+                r = receipt()
+                r["source_url"] = url
+                with self.assertRaisesRegex(ValueError, "INVALID_RECEIPT_URL"):
+                    audit_publication_receipts([registration()], [r])
+
     def test_tampered_receipt_rejected(self):
         r = receipt()
         r["raw_bytes"] += b"tampered"
