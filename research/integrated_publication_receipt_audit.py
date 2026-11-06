@@ -1,5 +1,6 @@
 """Fail-closed audit of externally supplied publication receipts; no authenticity promotion."""
 import hashlib
+import json
 from urllib.parse import urlsplit
 from integrated_historical_priority_provenance import _timestamp
 
@@ -56,7 +57,11 @@ def audit_publication_receipts(registrations, receipts):
                         "independent_publication_time_proven": False})
     if seen != set(expected):
         raise ValueError("RECEIPT_COVERAGE_MISMATCH")
+    canonical = json.dumps(sorted(checked, key=lambda x: x["id"]), sort_keys=True,
+                           separators=(",", ":"), ensure_ascii=True).encode("utf-8")
+    audit_sha256 = hashlib.sha256(canonical).hexdigest()
     return {"status": "RESEARCH_ONLY_RECEIPT_AUDIT",
+            "audit_sha256": audit_sha256, "audit_fingerprint_schema": "publication_receipt_audit_v1",
             "receipt_count": len(checked), "receipts": sorted(checked, key=lambda x: x["id"]),
             "external_publication_time_independently_proven": False,
             "eligible_for_performance_claim": False, "trade_ready": False,
