@@ -1,5 +1,6 @@
 """Fail-closed audit of externally supplied publication receipts; no authenticity promotion."""
 import hashlib
+from urllib.parse import urlsplit
 from integrated_historical_priority_provenance import _timestamp
 
 def audit_publication_receipts(registrations, receipts):
@@ -30,9 +31,22 @@ def audit_publication_receipts(registrations, receipts):
         observed = _timestamp(receipt.get("observed_at"))
         registered = _timestamp(expected[ident]["registered_at"])
         entry = _timestamp(expected[ident]["entry_at"])
+        available = _timestamp(expected[ident]["source_available_at"])
+        if observed < available:
+            raise ValueError("RECEIPT_BEFORE_CLAIMED_SOURCE_AVAILABILITY")
         if observed > registered or observed >= entry:
             raise ValueError("RECEIPT_TOO_LATE")
-        if not isinstance(receipt.get("source_url"), str) or not receipt["source_url"].startswith("https://"):
+        url = receipt.get("source_url")
+        if not isinstance(url, str):
+            raise ValueError("INVALID_RECEIPT_URL")
+        try:
+            parsed = urlsplit(url)
+            valid_url = (parsed.scheme == "https" and bool(parsed.hostname)
+                         and not parsed.username and not parsed.password
+                         and not any(ch.isspace() for ch in url))
+        except ValueError:
+            valid_url = False
+        if not valid_url:
             raise ValueError("INVALID_RECEIPT_URL")
         checked.append({"id": ident, "receipt_sha256": digest,
                         "source_sha256": receipt["source_sha256"],
