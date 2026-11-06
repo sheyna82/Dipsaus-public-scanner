@@ -23,7 +23,7 @@ class PublicationReceiptAuditTests(unittest.TestCase):
         result = audit_publication_receipts([registration()], [receipt()])
         self.assertEqual(result["receipt_count"], 1)
         self.assertEqual(len(result["audit_sha256"]), 64)
-        self.assertEqual(result["audit_fingerprint_schema"], "publication_receipt_audit_v1")
+        self.assertEqual(result["audit_fingerprint_schema"], "publication_receipt_audit_v2")
         self.assertFalse(result["external_publication_time_independently_proven"])
         self.assertFalse(result["eligible_for_performance_claim"])
         self.assertEqual(result["evidence_level"], "SUPPLIED_RECEIPT_BYTES_ONLY")
@@ -37,6 +37,17 @@ class PublicationReceiptAuditTests(unittest.TestCase):
         self.assertNotEqual(baseline["audit_sha256"], changed["audit_sha256"])
         self.assertEqual(baseline["audit_sha256"],
                          audit_publication_receipts([registration()], [receipt()])["audit_sha256"])
+
+    def test_fingerprint_binds_registration_and_entry_times(self):
+        baseline = audit_publication_receipts([registration()], [receipt()])
+        for field, value in (("registered_at", "2026-11-05T10:01:00+01:00"),
+                             ("entry_at", "2026-11-06T09:01:00+01:00"),
+                             ("source_available_at", "2026-11-05T08:29:00Z")):
+            with self.subTest(field=field):
+                changed = registration()
+                changed[field] = value
+                result = audit_publication_receipts([changed], [receipt()])
+                self.assertNotEqual(baseline["audit_sha256"], result["audit_sha256"])
 
     def test_receipt_source_binding_mismatch_rejected(self):
         r = receipt()
