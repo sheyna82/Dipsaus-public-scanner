@@ -29,6 +29,8 @@ class HashCheckedSelectionTests(unittest.TestCase):
         self.assertEqual(manifest["cash_policy"], "exit_before_entry_same_day")
         self.assertFalse(manifest["historical_authenticity_independently_proven"])
         self.assertFalse(manifest["external_publication_time_independently_proven"])
+        self.assertFalse(manifest["eligible_for_performance_claim"])
+        self.assertEqual(manifest["source_provenance_status"], "CLAIMED_TIMESTAMPS_NOT_INDEPENDENTLY_VERIFIED")
         self.assertEqual([r["id"] for r in manifest["registration_evidence"]], ["A", "B"])
         self.assertEqual(manifest["registration_evidence"][0]["source_sha256"], HASH_A)
         self.assertEqual(manifest["registration_evidence"][0]["source_available_at_claimed"], "2026-11-05T08:30:00Z")
