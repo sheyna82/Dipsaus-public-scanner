@@ -14,6 +14,12 @@ on:
       - 'research/integrated_historical_reconciliation.py'
       - 'research/test_integrated_historical_reconciliation.py'
       - '.github/workflows/research-integrated-evidence.yml'
+  pull_request:
+    branches:
+      - research/prospective-core-isolation-20261103
+    paths:
+      - 'research/**'
+      - '.github/workflows/research-integrated-evidence.yml'
   workflow_dispatch:
 permissions:
   contents: read
