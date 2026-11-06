@@ -14,7 +14,7 @@ def verify(protocol_path, digest_path):
     protocol_path = pathlib.Path(protocol_path)
     digest_path = pathlib.Path(digest_path)
     raw = protocol_path.read_bytes()
-    digest = hashlib.sha256(raw).hexdigest()
+    data = json.loads(raw)\n    canonical = json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")\n    digest = hashlib.sha256(canonical).hexdigest()
     recorded = digest_path.read_text(encoding="utf-8").strip().split()[0].lower()
     if digest != recorded:
         raise ValueError("PROTOCOL_SHA256_MISMATCH")
