@@ -1,5 +1,6 @@
 """End-to-end source-hash-backed selection regression tests."""
 import hashlib
+import json
 import unittest
 from integrated_hash_checked_priority_selection import compare_hash_checked, verify_manifest_fingerprint
 
@@ -109,6 +110,36 @@ class HashCheckedSelectionTests(unittest.TestCase):
             verify_manifest_fingerprint(dict(manifest, manifest_sha256="bad"))
         with self.assertRaisesRegex(ValueError, "INVALID_MANIFEST_SCHEMA"):
             verify_manifest_fingerprint(dict(manifest, schema="unknown"))
+
+    def test_manifest_verifier_rejects_rehashed_evidence_promotion(self):
+        manifest = compare_hash_checked([registration("A", 1, HASH_A)],
+                                        {HASH_A: RAW_A}, [candidate("A")])["research_manifest"]
+        forged = dict(manifest, eligible_for_performance_claim=True)
+        payload = {k: v for k, v in forged.items() if k != "manifest_sha256"}
+        forged["manifest_sha256"] = hashlib.sha256(
+            json.dumps(payload, sort_keys=True, separators=(",", ":"),
+                       ensure_ascii=True, allow_nan=False).encode("utf-8")).hexdigest()
+        with self.assertRaisesRegex(ValueError, "UNSUPPORTED_EVIDENCE_PROMOTION"):
+            verify_manifest_fingerprint(forged)
+
+    def test_manifest_verifier_checks_nested_receipt_audit(self):
+        raw = b"synthetic capture receipt"
+        receipt = {"id": "A", "raw_bytes": raw,
+                   "receipt_sha256": hashlib.sha256(raw).hexdigest(),
+                   "source_sha256": HASH_A, "observed_at": "2026-11-05T08:30:00Z",
+                   "source_url": "https://example.org/archive"}
+        manifest = compare_hash_checked([registration("A", 1, HASH_A)],
+                                        {HASH_A: RAW_A}, [candidate("A")],
+                                        publication_receipts=[receipt])["research_manifest"]
+        self.assertTrue(verify_manifest_fingerprint(manifest)["fingerprint_verified"])
+        audit = dict(manifest["publication_receipt_audit"], audit_sha256="0" * 64)
+        forged = dict(manifest, publication_receipt_audit=audit)
+        payload = {k: v for k, v in forged.items() if k != "manifest_sha256"}
+        forged["manifest_sha256"] = hashlib.sha256(
+            json.dumps(payload, sort_keys=True, separators=(",", ":"),
+                       ensure_ascii=True, allow_nan=False).encode("utf-8")).hexdigest()
+        with self.assertRaisesRegex(ValueError, "RECEIPT_AUDIT_FINGERPRINT_MISMATCH"):
+            verify_manifest_fingerprint(forged)
 
     def test_invalid_receipt_blocks_selection(self):
         bad = {"id": "A", "raw_bytes": b"bad", "receipt_sha256": "0" * 64, "source_sha256": HASH_A,
