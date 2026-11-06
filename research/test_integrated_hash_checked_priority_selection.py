@@ -141,6 +141,30 @@ class HashCheckedSelectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "RECEIPT_AUDIT_FINGERPRINT_MISMATCH"):
             verify_manifest_fingerprint(forged)
 
+    def test_rehashed_receipt_and_manifest_cannot_change_registration_binding(self):
+        raw = b"synthetic capture receipt"
+        receipt = {"id": "A", "raw_bytes": raw,
+                   "receipt_sha256": hashlib.sha256(raw).hexdigest(),
+                   "source_sha256": HASH_A, "observed_at": "2026-11-05T08:30:00Z",
+                   "source_url": "https://example.org/archive"}
+        manifest = compare_hash_checked([registration("A", 1, HASH_A)],
+                                        {HASH_A: RAW_A}, [candidate("A")],
+                                        publication_receipts=[receipt])["research_manifest"]
+        forged = dict(manifest)
+        audit = dict(forged["publication_receipt_audit"])
+        changed_receipt = dict(audit["receipts"][0], registered_at_claimed="2026-11-05T10:01:00+01:00")
+        audit["receipts"] = [changed_receipt]
+        audit["audit_sha256"] = hashlib.sha256(
+            json.dumps(audit["receipts"], sort_keys=True, separators=(",", ":"),
+                       ensure_ascii=True, allow_nan=False).encode("utf-8")).hexdigest()
+        forged["publication_receipt_audit"] = audit
+        payload = {k: v for k, v in forged.items() if k != "manifest_sha256"}
+        forged["manifest_sha256"] = hashlib.sha256(
+            json.dumps(payload, sort_keys=True, separators=(",", ":"),
+                       ensure_ascii=True, allow_nan=False).encode("utf-8")).hexdigest()
+        with self.assertRaisesRegex(ValueError, "RECEIPT_REGISTRATION_BINDING_MISMATCH"):
+            verify_manifest_fingerprint(forged)
+
     def test_invalid_receipt_blocks_selection(self):
         bad = {"id": "A", "raw_bytes": b"bad", "receipt_sha256": "0" * 64, "source_sha256": HASH_A,
                "observed_at": "2026-11-05T08:30:00Z",
