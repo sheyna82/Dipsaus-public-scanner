@@ -15,6 +15,21 @@ class SecAccessionBindingTests(unittest.TestCase):
         self.assertFalse(result["source_bytes_authenticity_independently_proven"])
         self.assertFalse(result["public_dissemination_time_independently_proven"])
 
+    def test_real_sec_header_format_accession_number(self):
+        # Official SEC example: Anixa Biosciences private-to-public submission.
+        # Only the header syntax is reproduced here, not the full official bytes.
+        real_style = (
+            b"<SEC-DOCUMENT>0000000000-25-010013.txt : 20260204\n"
+            b"<SEC-HEADER>0000000000-25-010013.hdr.sgml : 20260204\n"
+            b"<ACCEPTANCE-DATETIME>20250916113615\n"
+            b"<PRIVATE-TO-PUBLIC>\n"
+            b"ACCESSION NUMBER:\t\t0000000000-25-010013\n"
+        )
+        url = ("https://www.sec.gov/Archives/edgar/data/715446/"
+               "000000000025010013/0000000000-25-010013.txt")
+        result = verify_sec_accession_binding(real_style, url)
+        self.assertEqual(result["accession"], "0000000000-25-010013")
+
     def test_wrong_url_accession_fails_closed(self):
         with self.assertRaisesRegex(ValueError, "SEC_ACCESSION_URL_MISMATCH"):
             verify_sec_accession_binding(
