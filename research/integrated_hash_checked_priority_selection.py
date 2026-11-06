@@ -1,10 +1,14 @@
 """Research-only selection from independently hash-checked registration source bytes."""
 from integrated_historical_source_bytes_gate import verify_sources
 from integrated_verified_priority_selection import compare_verified
+from integrated_publication_receipt_audit import audit_publication_receipts
 
 def compare_hash_checked(registrations, source_bytes_by_hash, candidates,
-                         capital_eur=50000, max_positions=6, same_day_cash_reuse=True):
+                         capital_eur=50000, max_positions=6, same_day_cash_reuse=True,
+                         publication_receipts=None):
     evidence = verify_sources(registrations, source_bytes_by_hash)
+    receipt_audit = (audit_publication_receipts(registrations, publication_receipts)
+                     if publication_receipts is not None else None)
     selection = compare_verified(registrations, candidates, capital_eur=capital_eur,
                                  max_positions=max_positions, same_day_cash_reuse=same_day_cash_reuse)
     if len(evidence["source_bytes_verified"]) != len(candidates):
@@ -30,6 +34,8 @@ def compare_hash_checked(registrations, source_bytes_by_hash, candidates,
                 "source_provenance_status": "CLAIMED_TIMESTAMPS_NOT_INDEPENDENTLY_VERIFIED",
                 "eligible_for_performance_claim": False,
                 "source_bytes_hash_checked": True,
+                "publication_receipt_audit": receipt_audit,
+                "publication_receipts_supplied": publication_receipts is not None,
                 "historical_authenticity_independently_proven": False,
                 "trade_ready": False},
             "selection": selection["selection"],
