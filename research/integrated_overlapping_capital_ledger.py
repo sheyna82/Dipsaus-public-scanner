@@ -17,7 +17,7 @@ def simulate(trades, capital_eur=50000, max_positions=6):
         raise ValueError("INVALID_LIMITS")
     events = []
     ids = set()
-    for t in trades:
+    for order_index, t in enumerate(trades):
         ident = str(t["id"])
         if ident in ids:
             raise ValueError("DUPLICATE_ID")
@@ -35,12 +35,12 @@ def simulate(trades, capital_eur=50000, max_positions=6):
         if allocation <= 0:
             raise ValueError("INVALID_ALLOCATION")
         # Same-day exits release cash before entries; date-granular only.
-        events.extend([(start, 1, ident, allocation), (end, 0, ident, allocation)])
+        events.extend([(start, 1, order_index, ident, allocation), (end, 0, order_index, ident, allocation)])
     events.sort(key=lambda x: (x[0], x[1], x[2]))
     active = {}
     cash = capital
     accepted, rejected = [], []
-    for day, kind, ident, allocation in events:
+    for day, kind, order_index, ident, allocation in events:
         if kind == 0:
             if ident in active:
                 cash += active.pop(ident)
