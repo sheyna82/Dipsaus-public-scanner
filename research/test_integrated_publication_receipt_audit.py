@@ -26,6 +26,8 @@ class PublicationReceiptAuditTests(unittest.TestCase):
         self.assertEqual(result["audit_fingerprint_schema"], "publication_receipt_audit_v1")
         self.assertFalse(result["external_publication_time_independently_proven"])
         self.assertFalse(result["eligible_for_performance_claim"])
+        self.assertEqual(result["evidence_level"], "SUPPLIED_RECEIPT_BYTES_ONLY")
+        self.assertEqual(len(result["independent_verification_requirements"]), 4)
 
     def test_receipt_audit_fingerprint_changes_with_evidence(self):
         baseline = audit_publication_receipts([registration()], [receipt()])
