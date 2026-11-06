@@ -1,4 +1,5 @@
 """Synthetic SEC EDGAR header fixtures; no live SEC authenticity claims."""
+import hashlib
 import unittest
 from integrated_sec_acceptance_evidence import inspect_sec_acceptance_header
 
@@ -14,6 +15,7 @@ class SecAcceptanceEvidenceTests(unittest.TestCase):
         self.assertFalse(result["public_dissemination_time_independently_proven"])
         self.assertFalse(result["source_bytes_authenticity_independently_proven"])
         self.assertFalse(result["trade_ready"])
+        self.assertEqual(result["supplied_document_sha256"], hashlib.sha256(RAW).hexdigest())
 
     def test_private_to_public_submission_is_rejected(self):
         # Observed in a real SEC filing: accepted in September 2025,
@@ -25,6 +27,19 @@ class SecAcceptanceEvidenceTests(unittest.TestCase):
                "000000000025010013/0000000000-25-010013.txt")
         with self.assertRaisesRegex(ValueError, "SEC_PRIVATE_TO_PUBLIC_ACCEPTANCE_UNUSABLE"):
             inspect_sec_acceptance_header(private, url, "2025-09-17T09:00:00-04:00")
+
+    def test_dst_ambiguous_and_nonexistent_acceptance_times_rejected(self):
+        for stamp in (b"20261101013000", b"20260308023000"):
+            with self.subTest(stamp=stamp):
+                raw = b"<ACCEPTANCE-DATETIME>" + stamp + b"\n"
+                with self.assertRaisesRegex(
+                        ValueError, "AMBIGUOUS_OR_NONEXISTENT_SEC_ACCEPTANCE_TIME"):
+                    inspect_sec_acceptance_header(raw, URL, ENTRY)
+
+    def test_private_to_public_marker_with_whitespace_rejected(self):
+        raw = RAW + b"<PRIVATE-TO-PUBLIC \n"
+        with self.assertRaisesRegex(ValueError, "SEC_PRIVATE_TO_PUBLIC_ACCEPTANCE_UNUSABLE"):
+            inspect_sec_acceptance_header(raw, URL, ENTRY)
 
     def test_after_entry_rejected(self):
         with self.assertRaisesRegex(ValueError, "SEC_ACCEPTANCE_NOT_BEFORE_ENTRY"):
