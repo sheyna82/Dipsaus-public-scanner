@@ -20,8 +20,8 @@ def retrieve_sec_complete_submission(source_url, user_agent, max_bytes=MAX_SOURC
     if (parsed.scheme != "https" or parsed.netloc != "www.sec.gov"
             or parsed.query or parsed.fragment
             or re.fullmatch(
-                r"/Archives/edgar/data/[1-9]\\d*/\\d{18}/"
-                r"[0-9]{10}-[0-9]{2}-[0-9]{6}\\.txt",
+                r"/Archives/edgar/data/[1-9]\d*/\d{18}/"
+                r"[0-9]{10}-[0-9]{2}-[0-9]{6}\.txt",
                 parsed.path, re.I) is None):
         raise ValueError("INVALID_SEC_SOURCE_URL")
     if (not isinstance(user_agent, str) or len(user_agent.strip()) < 12
