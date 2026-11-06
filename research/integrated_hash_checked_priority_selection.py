@@ -86,6 +86,21 @@ def verify_manifest_fingerprint(manifest):
                                         ensure_ascii=True, allow_nan=False).encode("utf-8")
         if hashlib.sha256(canonical_receipts).hexdigest() != audit.get("audit_sha256"):
             raise ValueError("RECEIPT_AUDIT_FINGERPRINT_MISMATCH")
+        registrations = manifest.get("registration_evidence")
+        if not isinstance(registrations, list) or len(registrations) != len(receipts):
+            raise ValueError("RECEIPT_REGISTRATION_BINDING_MISMATCH")
+        expected = {str(row["id"]): row for row in registrations}
+        if len(expected) != len(registrations):
+            raise ValueError("RECEIPT_REGISTRATION_BINDING_MISMATCH")
+        for receipt in receipts:
+            ident = str(receipt["id"])
+            row = expected.get(ident)
+            if row is None or any((
+                    receipt.get("source_sha256") != row.get("source_sha256"),
+                    receipt.get("source_available_at_claimed") != row.get("source_available_at_claimed"),
+                    receipt.get("registered_at_claimed") != row.get("registered_at_claimed"),
+                    receipt.get("entry_at") != row.get("entry_at"))):
+                raise ValueError("RECEIPT_REGISTRATION_BINDING_MISMATCH")
         if audit.get("external_publication_time_independently_proven") is not False or (
                 audit.get("eligible_for_performance_claim") is not False) or (
                 audit.get("trade_ready") is not False):
