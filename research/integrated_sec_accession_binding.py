@@ -6,7 +6,10 @@ independently authenticated and no historical public availability is proven.
 import re
 from urllib.parse import urlsplit
 
-_ACCESSION = re.compile(rb"(?m)^<ACCESSION-NUMBER>\s*(\d{10}-\d{2}-\d{6})\s*$", re.I)
+_ACCESSION = re.compile(
+    rb"(?m)^(?:<ACCESSION-NUMBER>\s*|ACCESSION NUMBER:\s*)(\d{10}-\d{2}-\d{6})\s*$",
+    re.I,
+)
 
 
 def verify_sec_accession_binding(raw_bytes, source_url):
