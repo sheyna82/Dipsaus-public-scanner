@@ -32,3 +32,6 @@ Scope: inspected PR #65 research modules and the read-only public main copies of
 - **Hash match is not publication authenticity:** independent publisher timestamp and source origin remain unverified; the module never marks evidence trade-ready.
 - The newer workflow run #209 includes the source-capture tests; its result must be checked separately.
 - **DEGIRO reconciliation remains blocked pending actual transaction statements** with fees, exchange-rate conversion, trade dates and quantities. No tariff has been guessed. No operational scanner modifications.
+
+### Confirmed source-gate CI result
+GitHub CI **#209**, run ID **42265054773**, completed **SUCCESS** for commit `d2fec12c1b2e9652c6239a183a2798ec2a164f32`. Logs explicitly show 8 isolated ledger tests, 10 cost/freshness/pivot tests and 5 source capture tests passing. This does not establish independently authenticated external source timestamps or DEGIRO statement reconciliation. **Operational release remains blocked.**
