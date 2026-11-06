@@ -25,6 +25,8 @@ class HashCheckedSelectionTests(unittest.TestCase):
         self.assertEqual(result["hash_checked_count"], 2)
         manifest = result["research_manifest"]
         self.assertEqual(manifest["source_sha256"], sorted([HASH_A, HASH_B]))
+        self.assertEqual(manifest["schema"], "hash_checked_selection_manifest_v2")
+        self.assertEqual(len(manifest["manifest_sha256"]), 64)
         self.assertEqual(manifest["input_sha256"], result["selection"]["input_sha256"])
         self.assertEqual(manifest["cash_policy"], "exit_before_entry_same_day")
         self.assertFalse(manifest["historical_authenticity_independently_proven"])
@@ -73,6 +75,25 @@ class HashCheckedSelectionTests(unittest.TestCase):
         self.assertTrue(manifest["publication_receipts_supplied"])
         self.assertEqual(manifest["publication_receipt_audit"]["receipt_count"], 1)
         self.assertFalse(manifest["eligible_for_performance_claim"])
+
+    def test_manifest_hash_changes_with_receipt_and_is_repeatable(self):
+        raw = b"synthetic capture receipt"
+        receipt = {"id": "A", "raw_bytes": raw,
+                   "receipt_sha256": hashlib.sha256(raw).hexdigest(),
+                   "source_sha256": HASH_A,
+                   "observed_at": "2026-11-05T08:30:00Z",
+                   "source_url": "https://example.org/archive"}
+        args = ([registration("A", 1, HASH_A)], {HASH_A: RAW_A}, [candidate("A")])
+        baseline = compare_hash_checked(*args, publication_receipts=[receipt])
+        repeated = compare_hash_checked(*args, publication_receipts=[receipt])
+        changed_receipt = dict(receipt, source_url="https://example.org/other-archive")
+        changed = compare_hash_checked(*args, publication_receipts=[changed_receipt])
+        self.assertEqual(baseline["research_manifest"]["manifest_sha256"],
+                         repeated["research_manifest"]["manifest_sha256"])
+        self.assertNotEqual(baseline["research_manifest"]["manifest_sha256"],
+                            changed["research_manifest"]["manifest_sha256"])
+        self.assertNotEqual(baseline["research_manifest"]["manifest_sha256"],
+                            compare_hash_checked(*args)["research_manifest"]["manifest_sha256"])
 
     def test_invalid_receipt_blocks_selection(self):
         bad = {"id": "A", "raw_bytes": b"bad", "receipt_sha256": "0" * 64, "source_sha256": HASH_A,
