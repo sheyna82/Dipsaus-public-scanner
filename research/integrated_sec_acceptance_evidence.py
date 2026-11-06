@@ -4,6 +4,7 @@ SEC states that EDGAR acceptance and website dissemination can differ. This
 module parses externally supplied bytes; it does NOT retrieve or authenticate
 SEC documents or prove a historical point-in-time publication.
 """
+import hashlib
 import re
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -31,7 +32,15 @@ def inspect_sec_acceptance_header(raw_bytes, source_url, entry_at):
         raise ValueError("MISSING_OR_AMBIGUOUS_SEC_ACCEPTANCE_TIME")
     try:
         accepted = datetime.strptime(matches[0].decode("ascii"), "%Y%m%d%H%M%S")
-        accepted = accepted.replace(tzinfo=ZoneInfo("America/New_York"))
+        eastern = ZoneInfo("America/New_York")
+        accepted = accepted.replace(tzinfo=eastern)
+        # Reject impossible local times and the repeated DST hour. Otherwise
+        # naive replace(tzinfo=...) silently assigns a potentially wrong instant.
+        wall = accepted.replace(tzinfo=None)
+        if (accepted.astimezone(ZoneInfo("UTC")).astimezone(eastern).replace(tzinfo=None) != wall
+                or wall.replace(tzinfo=eastern, fold=0).utcoffset()
+                != wall.replace(tzinfo=eastern, fold=1).utcoffset()):
+            raise ValueError("AMBIGUOUS_OR_NONEXISTENT_SEC_ACCEPTANCE_TIME")
         from integrated_historical_priority_provenance import _timestamp
         entry = _timestamp(entry_at)
     except (ValueError, UnicodeError) as exc:
@@ -41,6 +50,7 @@ def inspect_sec_acceptance_header(raw_bytes, source_url, entry_at):
     return {
         "status": "RESEARCH_ONLY_SEC_HEADER_PARSED",
         "acceptance_at_et": accepted.isoformat(),
+        "supplied_document_sha256": hashlib.sha256(raw_bytes).hexdigest(),
         "acceptance_precedes_entry": True,
         "source_url_claimed": source_url,
         "source_bytes_authenticity_independently_proven": False,
