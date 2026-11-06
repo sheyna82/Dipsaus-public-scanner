@@ -15,6 +15,17 @@ class SecAcceptanceEvidenceTests(unittest.TestCase):
         self.assertFalse(result["source_bytes_authenticity_independently_proven"])
         self.assertFalse(result["trade_ready"])
 
+    def test_private_to_public_submission_is_rejected(self):
+        # Observed in a real SEC filing: accepted in September 2025,
+        # document subsequently marked private-to-public in February 2026.
+        private = (b"<SEC-DOCUMENT>0000000000-25-010013.txt : 20260204\n"
+                   b"<SEC-HEADER>\n<ACCEPTANCE-DATETIME>20250916113615\n"
+                   b"<PRIVATE-TO-PUBLIC>\n</SEC-HEADER>\n")
+        url = ("https://www.sec.gov/Archives/edgar/data/715446/"
+               "000000000025010013/0000000000-25-010013.txt")
+        with self.assertRaisesRegex(ValueError, "SEC_PRIVATE_TO_PUBLIC_ACCEPTANCE_UNUSABLE"):
+            inspect_sec_acceptance_header(private, url, "2025-09-17T09:00:00-04:00")
+
     def test_after_entry_rejected(self):
         with self.assertRaisesRegex(ValueError, "SEC_ACCEPTANCE_NOT_BEFORE_ENTRY"):
             inspect_sec_acceptance_header(RAW, URL, "2026-11-05T16:00:00-05:00")
