@@ -54,6 +54,15 @@ class SecSourceRetrievalTests(unittest.TestCase):
     def test_untrusted_url_and_missing_identity_rejected(self):
         with self.assertRaisesRegex(ValueError, "INVALID_SEC_SOURCE_URL"):
             retrieve_sec_complete_submission(URL.replace("www.sec.gov", "evil.example"), AGENT)
+        for malformed in (
+            URL.replace("/0000123456-26-000001.txt", "/other.txt"),
+            URL.replace("/000012345626000001/", "/../../"),
+            URL.replace("/Archives/edgar/data/", "/Archives/edgar/data/123456/"),
+            URL + "#fragment",
+        ):
+            with self.subTest(url=malformed):
+                with self.assertRaisesRegex(ValueError, "INVALID_SEC_SOURCE_URL"):
+                    retrieve_sec_complete_submission(malformed, AGENT)
         with self.assertRaisesRegex(ValueError, "SEC_IDENTIFYING_USER_AGENT_REQUIRED"):
             retrieve_sec_complete_submission(URL, "bot")
 
