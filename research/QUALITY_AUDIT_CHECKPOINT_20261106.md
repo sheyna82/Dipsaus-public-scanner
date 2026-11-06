@@ -23,3 +23,12 @@ Scope: inspected PR #65 research modules and the read-only public main copies of
 - Reconstruct fee/FX/slippage calculations from broker statements and independent quotations; test currency conversion direction and double counting.
 - Trace actual live alert inputs from quote timestamp through feature construction, stage classification, notification gate and state persistence. Add negative tests for stale timestamps, missing fields, NaN, and duplicate independent setups.
 - Keep research separate from main and the private live scanner; require separate user authorization for operational integration.
+
+## CI and source audit extension — 6 November 2026
+
+- CI workflow `research-integrated-evidence.yml` now includes the isolated €50k ledger, net-cost / signal-freshness / pivot tests and independent source-capture tests.
+- GitHub CI run **#205** for commit `dd8a5976baeaab40aafdbc2ec63a9d1752f97e16` completed successfully; this covers the isolated ledger and cost/signal/pivot test suites.
+- Independent source-capture module `isolated_source_capture_audit.py` verifies source SHA256 against actual bytes and checks claimed source availability, capture time and decision time. Tests reject tampering, late capture, late publication and timezone-naive timestamps.
+- **Hash match is not publication authenticity:** independent publisher timestamp and source origin remain unverified; the module never marks evidence trade-ready.
+- The newer workflow run #209 includes the source-capture tests; its result must be checked separately.
+- **DEGIRO reconciliation remains blocked pending actual transaction statements** with fees, exchange-rate conversion, trade dates and quantities. No tariff has been guessed. No operational scanner modifications.
