@@ -41,7 +41,7 @@ def inspect_sec_acceptance_header(raw_bytes, source_url, entry_at):
         header = raw_bytes
     if re.search(rb"<PRIVATE-TO-PUBLIC(?:\s|>)", header, re.I):
         raise ValueError("SEC_PRIVATE_TO_PUBLIC_ACCEPTANCE_UNUSABLE")
-    matches = _HEADER.findall(raw_bytes)
+    matches = _HEADER.findall(header)
     if len(matches) != 1:
         raise ValueError("MISSING_OR_AMBIGUOUS_SEC_ACCEPTANCE_TIME")
     try:
