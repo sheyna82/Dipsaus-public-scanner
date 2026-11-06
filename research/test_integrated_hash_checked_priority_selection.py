@@ -59,6 +59,35 @@ class HashCheckedSelectionTests(unittest.TestCase):
         self.assertEqual(conservative["research_manifest"]["cash_policy"], "entry_before_exit_same_day")
         self.assertNotEqual(immediate["research_manifest"]["input_sha256"], conservative["research_manifest"]["input_sha256"])
 
+    def test_receipt_audit_attached_without_authenticity_promotion(self):
+        raw_receipt = b"synthetic capture receipt"
+        receipt = {"id": "A", "raw_bytes": raw_receipt,
+                   "receipt_sha256": hashlib.sha256(raw_receipt).hexdigest(),
+                   "observed_at": "2026-11-05T08:30:00Z",
+                   "source_url": "https://example.org/archive"}
+        result = compare_hash_checked([registration("A", 1, HASH_A)],
+                                      {HASH_A: RAW_A}, [candidate("A")],
+                                      publication_receipts=[receipt])
+        manifest = result["research_manifest"]
+        self.assertTrue(manifest["publication_receipts_supplied"])
+        self.assertEqual(manifest["publication_receipt_audit"]["receipt_count"], 1)
+        self.assertFalse(manifest["eligible_for_performance_claim"])
+
+    def test_invalid_receipt_blocks_selection(self):
+        bad = {"id": "A", "raw_bytes": b"bad", "receipt_sha256": "0" * 64,
+               "observed_at": "2026-11-05T08:30:00Z",
+               "source_url": "https://example.org/archive"}
+        with self.assertRaisesRegex(ValueError, "RECEIPT_HASH_MISMATCH"):
+            compare_hash_checked([registration("A", 1, HASH_A)],
+                                 {HASH_A: RAW_A}, [candidate("A")],
+                                 publication_receipts=[bad])
+
+    def test_missing_receipt_coverage_blocks_selection(self):
+        with self.assertRaisesRegex(ValueError, "RECEIPT_COVERAGE_MISMATCH"):
+            compare_hash_checked([registration("A", 1, HASH_A)],
+                                 {HASH_A: RAW_A}, [candidate("A")],
+                                 publication_receipts=[])
+
     def test_tampered_source_blocks_selection(self):
         with self.assertRaisesRegex(ValueError, "SOURCE_HASH_MISMATCH"):
             compare_hash_checked([registration("A", 1, HASH_A)],
