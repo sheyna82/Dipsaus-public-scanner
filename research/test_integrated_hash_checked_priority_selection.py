@@ -89,6 +89,18 @@ class HashCheckedSelectionTests(unittest.TestCase):
                                  {HASH_A: RAW_A}, [candidate("A")],
                                  publication_receipts=[])
 
+    def test_receipt_bound_to_different_verified_source_blocks_selection(self):
+        raw_receipt = b"synthetic capture receipt"
+        receipt = {"id": "A", "raw_bytes": raw_receipt,
+                   "receipt_sha256": hashlib.sha256(raw_receipt).hexdigest(),
+                   "source_sha256": HASH_B,
+                   "observed_at": "2026-11-05T08:30:00Z",
+                   "source_url": "https://example.org/archive"}
+        with self.assertRaisesRegex(ValueError, "RECEIPT_SOURCE_BINDING_MISMATCH"):
+            compare_hash_checked([registration("A", 1, HASH_A)],
+                                 {HASH_A: RAW_A, HASH_B: RAW_B},
+                                 [candidate("A")], publication_receipts=[receipt])
+
     def test_tampered_source_blocks_selection(self):
         with self.assertRaisesRegex(ValueError, "SOURCE_HASH_MISMATCH"):
             compare_hash_checked([registration("A", 1, HASH_A)],
