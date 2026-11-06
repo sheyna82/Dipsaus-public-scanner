@@ -31,6 +31,8 @@ def inspect_sec_acceptance_header(raw_bytes, source_url, entry_at):
     if header_start is not None:
         header_end = re.search(rb"</SEC-HEADER\s*>", raw_bytes[header_start.end():], re.I)
         if header_end is None:
+            if re.search(rb"<PRIVATE-TO-PUBLIC(?:\s|>)", raw_bytes[header_start.start():], re.I):
+                raise ValueError("SEC_PRIVATE_TO_PUBLIC_ACCEPTANCE_UNUSABLE")
             raise ValueError("UNCLOSED_SEC_HEADER")
         header = raw_bytes[header_start.start():header_start.end() + header_end.end()]
     else:
