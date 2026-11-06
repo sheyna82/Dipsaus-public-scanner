@@ -37,6 +37,28 @@ class HistoricalSecDossierTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "SEC_DOSSIER_UNSUPPORTED_EVIDENCE_PROMOTION"):
             verify_sec_historical_evidence_dossier(a)
 
+    def test_post_entry_retrieval_recorded_but_never_promoted(self):
+        bundle = build_sec_historical_evidence_dossier(
+            "candidate-001", RAW, URL, ENTRY,
+            retrieved_at="2026-11-07T12:00:00Z",
+            claimed_public_at="2026-11-05T20:00:00Z")
+        self.assertTrue(verify_sec_historical_evidence_dossier(bundle))
+        chronology = bundle["dossier"]["source_chronology"]
+        self.assertFalse(chronology["retrieval_precedes_entry"])
+        self.assertFalse(chronology["historical_publication_independently_proven"])
+
+    def test_rehashed_chronology_promotion_rejected(self):
+        import hashlib
+        import json
+        bundle = build_sec_historical_evidence_dossier(
+            "candidate-001", RAW, URL, ENTRY,
+            retrieved_at="2026-11-05T20:00:00Z")
+        bundle["dossier"]["source_chronology"]["historical_publication_independently_proven"] = True
+        canonical = json.dumps(bundle["dossier"], sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+        bundle["dossier_sha256"] = hashlib.sha256(canonical.encode("ascii")).hexdigest()
+        with self.assertRaisesRegex(ValueError, "SEC_DOSSIER_UNSUPPORTED_CHRONOLOGY_PROMOTION"):
+            verify_sec_historical_evidence_dossier(bundle)
+
     def test_missing_accession_and_bad_candidate_rejected(self):
         with self.assertRaises(ValueError):
             build_sec_historical_evidence_dossier("", RAW, URL, ENTRY)
