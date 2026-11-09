@@ -199,6 +199,8 @@ def diagnose(source):
             for expression in (list(stmt.decorator_list) + list(stmt.bases)
                                + [kw.value for kw in stmt.keywords]):
                 for nested in ast.walk(expression):
+                    if isinstance(nested, ast.NamedExpr):
+                        state[nested.target.id] = None
                     if isinstance(nested, ast.Call):
                         findings.append({"line": nested.lineno, "target": None,
                                          "classification": "uncertain_class_body_call"})
