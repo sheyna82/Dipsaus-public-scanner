@@ -413,5 +413,27 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          ["not_proven_legacy", "not_proven_legacy"])
 
 
+    def test_walrus_in_conditional_expression_invalidates_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "(compare := fallback) if flag else other\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_walrus_in_fstring_expression_invalidates_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "f'{(compare := fallback)}'\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_non_call_expression_inventories_nested_call(self):
+        source = ("helper() if flag else fallback()\n")
+        result = diagnose(source)
+        self.assertEqual(len(result), 2)
+        self.assertTrue(all(x["classification"] == "uncertain_expression_call"
+                            and x["target"] is None for x in result))
+
+
 if __name__ == "__main__":
     unittest.main()
