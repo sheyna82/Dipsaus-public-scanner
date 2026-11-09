@@ -1,0 +1,30 @@
+name: European benchmark research capture
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  benchmark-capture:
+    if: github.repository == 'sheyna82/Dipsaus-public-scanner'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Offline syntax check
+        run: python -m py_compile research_capture_europe_benchmarks.py
+      - name: Capture indexes; fail if any provider alias is invalid
+        run: |
+          mkdir -p research-observation
+          python research_capture_europe_benchmarks.py research-observation/europe-benchmarks.json
+      - name: Upload research-only benchmark artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: dipsaus-europe-benchmarks-research
+          path: research-observation/europe-benchmarks.json
+          if-no-files-found: error
+          retention-days: 14
