@@ -45,7 +45,12 @@ def compare(europe,benchmarks,identity_evidence,as_of_complete_day):
         recomputed=[audit_omxh25_daily_bar(b) for b in omx["bars"]]
     except (ValueError,OverflowError,TypeError,KeyError) as exc:
         raise ValueError("OMXH25_DAILY_LABEL_RECOMPUTE_FAILED") from exc
-    if (any(not a["session_open_label_consistent"] for a in recomputed) or
+    expected_inconsistent=[a["session_date"] for a in recomputed if not a["session_open_label_consistent"]]
+    expected_consistent=len(recomputed)-len(expected_inconsistent)
+    if (label_audit["consistent"]!=expected_consistent or
+        label_audit["inconsistent_dates"]!=expected_inconsistent):
+        raise ValueError("OMXH25_DAILY_LABEL_AUDIT_CONTENT_MISMATCH")
+    if (expected_inconsistent or
         len({a["session_date"] for a in recomputed})!=len(recomputed)):
         raise ValueError("OMXH25_DAILY_LABEL_RECOMPUTE_BLOCKED")
     result={}
