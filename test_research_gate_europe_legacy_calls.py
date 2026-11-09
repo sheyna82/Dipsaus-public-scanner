@@ -24,5 +24,12 @@ class CallReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "UNREVIEWED_LEGACY_EU_CALLS"):
             enforce_no_unreviewed([hit])
 
+    def test_dynamic_import_not_allowlisted_even_inside_wrapper(self):
+        hit = {"path": "research_europe_relative_strength_admitted.py", "line": 4,
+               "target": "research_europe_relative_strength.compare",
+               "kind": "dynamic_import"}
+        with self.assertRaisesRegex(ValueError, "UNREVIEWED_LEGACY_EU_CALLS"):
+            enforce_no_unreviewed([hit])
+
 if __name__ == "__main__":
     unittest.main()
