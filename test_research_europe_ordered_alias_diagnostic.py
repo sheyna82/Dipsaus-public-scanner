@@ -786,6 +786,27 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
         self.assertEqual(diagnose(source)[-1]["classification"],
                          "ordered_legacy_call")
 
+    def test_exec_inside_fstring_expression_invalidates_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "f\"{exec('compare = fallback')}\"\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_exec_inside_tuple_expression_invalidates_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "(exec('compare = fallback'), 1)\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_unrelated_fstring_expression_preserves_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "f\"{value}\"\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "ordered_legacy_call")
+
 
 if __name__ == "__main__":
     unittest.main()
