@@ -343,3 +343,13 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - All nine exact-commit GitHub Actions runs completed successfully: `42695464804`, `42695465222`, `42695464846`, `42695464814`, `42695465036`, `42695465078`, `42695464772`, `42695465294`, `42695454135`.
 - Runner logged Node.js 20 deprecation/forced Node.js 24 warning for pinned GitHub Actions; follow up as maintenance, not a test failure.
 - No benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
+
+
+## Definition-time walrus alias invalidation: CI verification (2026-11-09)
+
+- Supplemental ordered-alias diagnostic code commit `c59b1f544e82f0d0a5476d9e04f2d416a6d8153d`; regression-test commit `412194a9a2618147a6fe1826025be252ec1fe31e`.
+- Function-definition decorators and defaults may execute walrus bindings at definition time; the diagnostic now conservatively invalidates the affected prior alias proof. An unrelated function definition retains independent alias evidence.
+- Exact-commit source-admission run `42695611873`, job `129426529273`: `Ran 116 tests in 0.018s`, `OK`; the three new regression tests passed individually.
+- All nine exact-commit workflows completed successfully: `42695625602`, `42695626137`, `42695625622`, `42695626089`, `42695625661`, `42695625677`, `42695625591`, `42695625866`, `42695611873`.
+- Enforced legacy audit inventory in job log: 31 `historical_test`, 2 `controlled_delegation`, zero unknown classifications.
+- Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
