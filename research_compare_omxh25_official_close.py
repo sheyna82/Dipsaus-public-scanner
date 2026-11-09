@@ -8,6 +8,15 @@ from zoneinfo import ZoneInfo
 import math
 
 OFFICIAL_OBSERVATIONS = {
+    "2026-11-05": {
+        "close": 6254.30,
+        "source": "https://fred.stlouisfed.org/series/NASDAQOMXH25",
+        "corroboration": "https://markets.ft.markitdigital.com/data/indices/tearsheet/historical?s=OMX25%3AHEX",
+        "official_variant": "OMXH25",
+        "return_type": "PRICE_RETURN",
+        "currency": "EUR",
+        "raw_official_eod_bytes_preserved": False,
+    },
     "2026-11-06": {
         "close": 6221.79,
         "source": "https://beta.indexes.nasdaqomx.com/Index/History/OMXH25",
