@@ -32,6 +32,30 @@ def inventory(paths):
                 for item in node.names:
                     if item.name == LEGACY[node.module]:
                         functions[item.asname or item.name] = node.module
+        # Function-local imports of legacy modules/functions are scope-sensitive.
+        # The file-wide name map cannot establish which binding a call resolves
+        # to, so explicitly flag them for review rather than silently admitting.
+        for scope in ast.walk(tree):
+            if not isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+                continue
+            pending = list(ast.iter_child_nodes(scope))
+            while pending:
+                child = pending.pop()
+                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
+                    continue
+                if isinstance(child, ast.Import):
+                    for item in child.names:
+                        if item.name in LEGACY:
+                            hits.append({"path": str(path), "line": child.lineno,
+                                         "target": "ambiguous_local_legacy_import:" + item.name,
+                                         "kind": "ambiguous_scope"})
+                elif isinstance(child, ast.ImportFrom) and child.module in LEGACY:
+                    if any(item.name == LEGACY[child.module] or item.name == "*"
+                           for item in child.names):
+                        hits.append({"path": str(path), "line": child.lineno,
+                                     "target": "ambiguous_local_legacy_import:" + child.module,
+                                     "kind": "ambiguous_scope"})
+                pending.extend(ast.iter_child_nodes(child))
         # Local bindings can shadow module-level legacy imports. Flag this
         # uncertainty rather than treating the name as a proven legacy call.
         for scope in ast.walk(tree):
