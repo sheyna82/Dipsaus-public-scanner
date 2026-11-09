@@ -21,7 +21,9 @@ def classify(hits):
         path = Path(hit["path"]).as_posix()
         name = Path(path).name
         key = (path, hit["target"])
-        if key in CONTROLLED:
+        if hit.get("kind") == "dynamic_import":
+            category = "unreviewed_direct_call"
+        elif key in CONTROLLED:
             category = "controlled_delegation"
         elif path == name and name in HISTORICAL_TESTS:
             category = "historical_test"
