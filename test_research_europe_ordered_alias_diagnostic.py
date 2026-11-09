@@ -376,5 +376,27 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "ordered_legacy_call")
 
 
+    def test_tuple_unpacking_invalidates_prior_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "compare, other = (fallback, 1)\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[0]["classification"],
+                         "not_proven_legacy")
+
+    def test_nested_list_unpacking_invalidates_prior_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "[other, [compare]] = [1, [fallback]]\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[0]["classification"],
+                         "not_proven_legacy")
+
+    def test_chained_assignment_unpacking_invalidates_prior_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "compare, other = replacement = (fallback, 1)\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[0]["classification"],
+                         "not_proven_legacy")
+
+
 if __name__ == "__main__":
     unittest.main()
