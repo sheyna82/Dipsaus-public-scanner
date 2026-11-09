@@ -807,6 +807,40 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
         self.assertEqual(diagnose(source)[-1]["classification"],
                          "ordered_legacy_call")
 
+    def test_exec_in_function_default_invalidates_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "def later(value=exec('compare = fallback')):\n"
+                  "    pass\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_exec_in_function_decorator_invalidates_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "@decorator(exec('compare = fallback'))\n"
+                  "def later():\n"
+                  "    pass\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_exec_in_class_base_invalidates_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "class Later(exec('compare = fallback') or Base):\n"
+                  "    pass\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_exec_in_class_decorator_invalidates_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "@decorator(exec('compare = fallback'))\n"
+                  "class Later:\n"
+                  "    pass\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
 
 if __name__ == "__main__":
     unittest.main()
