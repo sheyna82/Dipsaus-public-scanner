@@ -119,5 +119,25 @@ class ComparisonTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "EMPTY_ISSUER_HISTORY"):
                     compare_archive(path)
 
+    def test_yahoo_raw_hash_mismatch_rejected(self):
+        import base64
+        yahoo = {
+            "research_only": True, "trade_ready": False, "benchmark_identity_verified": False,
+            "series": {"OMXH25": {
+                "provider_symbol": "^OMXH25",
+                "provider_metadata": {"currency": "EUR", "instrumentType": "INDEX"},
+                "source_raw_base64": base64.b64encode(b"original-bytes").decode("ascii"),
+                "source_sha256": "0" * 64,
+                "bars": []
+            }}
+        }
+        directory, path = archive_with({}, yahoo)
+        with directory:
+            with patch("research_compare_omxh25_actual_issuer_yahoo.validate",
+                       return_value={"records": [{"date": "2026-11-05", "value": 6254.3}],
+                                     "source_sha256": "test"}):
+                with self.assertRaisesRegex(ValueError, "YAHOO_RAW_HASH_MISMATCH"):
+                    compare_archive(path)
+
 if __name__ == "__main__":
     unittest.main()
