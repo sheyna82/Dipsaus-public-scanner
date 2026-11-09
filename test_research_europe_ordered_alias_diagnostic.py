@@ -990,5 +990,25 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "ordered_legacy_call")
 
 
+    @unittest.expectedFailure
+    def test_known_gap_immediately_invoked_class_lambda_exec_invalidates_alias(self):
+        # A lambda body is deferred at definition, but executes if called.
+        source = ("from research_europe_relative_strength import compare\n"
+                  "class Later:\n"
+                  "    (lambda: exec('global compare; compare = fallback'))()\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_uninvoked_class_lambda_exec_preserves_alias(self):
+        # Creating a lambda does not execute its body.
+        source = ("from research_europe_relative_strength import compare\n"
+                  "class Later:\n"
+                  "    callback = lambda: exec('global compare; compare = fallback')\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "ordered_legacy_call")
+
+
 if __name__ == "__main__":
     unittest.main()
