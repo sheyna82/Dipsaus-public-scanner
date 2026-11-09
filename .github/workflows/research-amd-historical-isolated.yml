@@ -1,11 +1,16 @@
 name: DIPSAUS AMD isolated historical research capture
 on:
+  pull_request:
+    paths:
+      - 'research_capture_amd_history.py'
+      - 'test_research_capture_amd_history.py'
+      - '.github/workflows/research-amd-historical-isolated.yml'
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   amd-history-only:
-    if: github.event_name == 'workflow_dispatch' && github.repository == 'sheyna82/Dipsaus-public-scanner'
+    if: github.repository == 'sheyna82/Dipsaus-public-scanner' && github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'workflow_dispatch' && github.repository == 'sheyna82/Dipsaus-public-scanner'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
