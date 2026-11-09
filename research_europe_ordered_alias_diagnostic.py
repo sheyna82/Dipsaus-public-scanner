@@ -32,6 +32,14 @@ def diagnose(source):
             for target in targets:
                 if isinstance(target, ast.Name):
                     state[target.id] = resolved
+        elif isinstance(stmt, (ast.If, ast.For, ast.AsyncFor, ast.While, ast.Try,
+                               ast.With, ast.AsyncWith, ast.Match)):
+            # Do not infer which branch ran or how often a loop executed.
+            # Invalidate earlier bindings: the compound statement may rebind
+            # aliases through nested statements, imports or side effects.
+            state.clear()
+            findings.append({"line": stmt.lineno, "target": None,
+                             "classification": "uncertain_control_flow"})
         elif isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
             func = stmt.value.func
             resolved = state.get(func.id) if isinstance(func, ast.Name) else None
