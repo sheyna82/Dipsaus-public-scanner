@@ -333,3 +333,13 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - All seven workflows completed successfully: `42694228862`, `42694228848`, `42694228988`, `42694229078`, `42694229390`, `42694229282`, `42694228841`.
 - Enforced legacy gate succeeded; log inventory: 31 `historical_test`, 2 `controlled_delegation`, zero unknown direct legacy calls.
 - Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
+
+
+## Isolated AMD historical workflow YAML repair: CI verification (2026-11-09)
+
+- Research-branch-only workflow configuration fix commit `36352abed5f9702c52128f704f1872f5f3404b63` repaired a malformed literal `\\n` joining the offline AMD contract-test step `name` and `run` fields in `.github/workflows/research-amd-historical-isolated.yml`.
+- Previously failing push workflow `42694216299` had no jobs; this is evidence of a pre-job workflow issue, not a proven failed AMD test. The YAML repair was limited to the affected step structure.
+- Exact-commit isolated AMD historical workflow `42695465222`, job `129426016101`: `Ran 5 tests in 0.005s`, `OK`; job and workflow concluded `success`.
+- All nine exact-commit GitHub Actions runs completed successfully: `42695464804`, `42695465222`, `42695464846`, `42695464814`, `42695465036`, `42695465078`, `42695464772`, `42695465294`, `42695454135`.
+- Runner logged Node.js 20 deprecation/forced Node.js 24 warning for pinned GitHub Actions; follow up as maintenance, not a test failure.
+- No benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
