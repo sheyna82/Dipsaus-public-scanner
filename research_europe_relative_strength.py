@@ -24,6 +24,10 @@ def compare(europe,benchmarks,identity_evidence,as_of_complete_day):
         raise ValueError("RESEARCH_ONLY_REQUIRED")
     if not identity_evidence or set(identity_evidence)!={"AEX","DAX_PRICE","OMXH25","STOXX600_PRICE"} or not all(identity_evidence.values()):
         raise ValueError("BENCHMARK_IDENTITY_UNVERIFIED")
+    # A caller's asserted identity evidence is never permission to promote
+    # the underlying unverified provider capture into an approved source.
+    if benchmarks.get("benchmark_identity_verified") is True:
+        raise ValueError("UNSUPPORTED_BENCHMARK_IDENTITY_PROMOTION")
     # A captured Helsinki label audit can veto comparison, regardless of caller identity flags.
     omx=benchmarks.get("series",{}).get("OMXH25",{})
     label_audit=omx.get("daily_label_audit")
