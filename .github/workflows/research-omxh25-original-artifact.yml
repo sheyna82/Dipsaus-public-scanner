@@ -55,8 +55,6 @@ jobs:
             research-omxh25/captured.zip \
             research-omxh25/offline-recovered.zip \
             research-omxh25/offline-recovery-receipt.json
-            research-omxh25/portable-positive-verification.json
-            research-omxh25/portable-positive-recovery-receipt.json
           python - <<'PY'
           import json
           from pathlib import Path
