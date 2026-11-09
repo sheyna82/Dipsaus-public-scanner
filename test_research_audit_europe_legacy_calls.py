@@ -73,5 +73,26 @@ class LegacyCallAuditTests(unittest.TestCase):
             file.write_text("exec('import research_europe_relative_strength')\n", encoding="utf-8")
             self.assertEqual(inventory([file])[0]["kind"], "dynamic_code")
 
+    def test_assignment_alias_of_imported_function_is_detected(self):
+        with tempfile.TemporaryDirectory() as root:
+            file = pathlib.Path(root) / "alias.py"
+            file.write_text("from research_europe_relative_strength import compare\n"
+                            "first = compare\n"
+                            "second = first\n"
+                            "second({}, {}, {}, '2026-11-06')\n", encoding="utf-8")
+            found = inventory([file])
+            self.assertEqual(len(found), 1)
+            self.assertEqual(found[0]["target"], "research_europe_relative_strength.compare")
+
+    def test_assignment_alias_of_module_attribute_is_detected(self):
+        with tempfile.TemporaryDirectory() as root:
+            file = pathlib.Path(root) / "alias.py"
+            file.write_text("import research_europe_recovery_confirmation as module\n"
+                            "fn = module.evaluate\n"
+                            "fn([], '2026-11-06')\n", encoding="utf-8")
+            found = inventory([file])
+            self.assertEqual(len(found), 1)
+            self.assertEqual(found[0]["target"], "research_europe_recovery_confirmation.evaluate")
+
 if __name__ == "__main__":
     unittest.main()
