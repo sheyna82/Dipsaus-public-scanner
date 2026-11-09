@@ -24,8 +24,8 @@ def _scan_class_creation_expressions(expressions, state, findings):
                     state.clear()
                 findings.append({"line": node.lineno, "target": None,
                                  "classification": "uncertain_class_body_call"})
-            if isinstance(node, ast.NamedExpr):
-                state[node.target.id] = None
+            # NamedExpr in a class-creation expression binds in class scope,
+            # not in the enclosing module's alias state.
             pending.extend(ast.iter_child_nodes(node))
 
 
