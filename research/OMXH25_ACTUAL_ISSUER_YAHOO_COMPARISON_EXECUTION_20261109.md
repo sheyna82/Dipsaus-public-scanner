@@ -263,3 +263,13 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - All seven workflows completed successfully: `42692416736`, `42692416720`, `42692417205`, `42692417146`, `42692417192`, `42692416810`, `42692417130`.
 - Enforced legacy gate succeeded; log inventory: 31 `historical_test`, 2 `controlled_delegation`, zero unknown direct legacy calls.
 - This is supplemental, conservative AST evidence only. No trusted source receipt, benchmark admission promotion, live scanner/trading changes, or merge to `main`.
+
+
+## Tuple/list unpacking alias invalidation: CI verification (2026-11-09)
+
+- Code commit `2694fe2d683bb18464d3977e3723014cc2138f42`; regression-test commit `31c9672090ffe5d9a408306938953d1afd3e2b01`.
+- Supplemental ordered-alias diagnosis now invalidates proven names bound by tuple/list unpacking (including nested and chained assignment targets), without inferring the identity of unpacked values.
+- Exact-commit GitHub Actions source-admission run `42693076674`, job `129417641896`: `Ran 93 tests in 0.019s`, `OK`; all three unpacking regression tests passed individually.
+- All seven workflows completed successfully: `42693076908`, `42693076897`, `42693076674`, `42693077321`, `42693076550`, `42693077041`, `42693076634`.
+- Enforced legacy gate succeeded; audit log inventory: 31 `historical_test`, 2 `controlled_delegation`, zero unknown direct legacy calls.
+- Supplemental AST evidence only; no source admission promotion, trusted receipt, live scanner/trading logic modification or merge to `main`.
