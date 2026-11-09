@@ -51,8 +51,10 @@ def compare_archive(path):
         files = ("omxh25-history-post-raw-unverified.json", "europe-benchmarks.json")
         if any(names.count(name) != 1 or archive.getinfo(name).file_size > 2_000_000 for name in files):
             raise ValueError("MISSING_DUPLICATE_OR_OVERSIZED_SOURCE")
-        issuer_receipt = json.loads(archive.read(files[0]))
-        yahoo = json.loads(archive.read(files[1]))
+        issuer_receipt = json.loads(archive.read(files[0]), object_pairs_hook=_unique_object,
+                                    parse_constant=lambda _: (_ for _ in ()).throw(ValueError("nonfinite")))
+        yahoo = json.loads(archive.read(files[1]), object_pairs_hook=_unique_object,
+                           parse_constant=lambda _: (_ for _ in ()).throw(ValueError("nonfinite")))
     issuer = validate(issuer_receipt)
     if any(yahoo.get(k) is not v for k, v in (("research_only", True), ("trade_ready", False), ("benchmark_identity_verified", False))):
         raise ValueError("UNSAFE_YAHOO_GATES")
