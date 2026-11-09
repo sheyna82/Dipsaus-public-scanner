@@ -50,7 +50,23 @@ def review_official_eod_evidence(record):
         raise ValueError("INVALID_RAW_BASE64") from exc
     if not raw or len(raw) > 2_000_000 or hashlib.sha256(raw).hexdigest() != record["source_sha256"]:
         raise ValueError("PRIMARY_BYTES_HASH_MISMATCH")
-    # Never trust a claimed extracted close without binding it to raw bytes.\n    # This contract intentionally supports only explicit JSON-pointer extraction;\n    # HTML/PDF pages require a separate reviewed parser and remain blocked.\n    if record["close_field"] != "/session/close":\n        raise ValueError("UNSUPPORTED_CLOSE_FIELD_EXTRACTION")\n    try:\n        document = json.loads(raw)\n        extracted = document["session"]["close"]\n        extracted_day = document["session"]["date"]\n        extracted_index = document["session"]["index"]\n    except (ValueError, TypeError, KeyError, IndexError) as exc:\n        raise ValueError("RAW_CLOSE_EXTRACTION_FAILED") from exc\n    if (extracted_day != record["session_date"] or extracted_index != "OMXH25"\n            or isinstance(extracted, bool) or not isinstance(extracted, (int, float))\n            or extracted != close):\n        raise ValueError("RAW_CLOSE_FIELD_MISMATCH")\n    # A self-consistent JSON fixture still does not prove issuer authenticity.
+    # Never trust a claimed extracted close without binding it to raw bytes.
+    # This contract intentionally supports only explicit JSON-pointer extraction;
+    # HTML/PDF pages require a separate reviewed parser and remain blocked.
+    if record["close_field"] != "/session/close":
+        raise ValueError("UNSUPPORTED_CLOSE_FIELD_EXTRACTION")
+    try:
+        document = json.loads(raw)
+        extracted = document["session"]["close"]
+        extracted_day = document["session"]["date"]
+        extracted_index = document["session"]["index"]
+    except (ValueError, TypeError, KeyError, IndexError) as exc:
+        raise ValueError("RAW_CLOSE_EXTRACTION_FAILED") from exc
+    if (extracted_day != record["session_date"] or extracted_index != "OMXH25"
+            or isinstance(extracted, bool) or not isinstance(extracted, (int, float))
+            or extracted != close):
+        raise ValueError("RAW_CLOSE_FIELD_MISMATCH")
+    # A self-consistent JSON fixture still does not prove issuer authenticity.
     return {"status": "official_bytes_self_consistent_requires_independent_source_review",
             "session_date": record["session_date"], "source_sha256": record["source_sha256"],
             "source_authenticity_independently_verified": False,
