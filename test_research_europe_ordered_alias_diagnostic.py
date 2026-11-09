@@ -929,6 +929,37 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
         self.assertEqual(diagnose(source)[-1]["classification"],
                          "not_proven_legacy")
 
+    def test_class_match_guard_exec_invalidates_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "class Later:\n"
+                  "    match 1:\n"
+                  "        case 1 if exec('global compare; compare = fallback') is None:\n"
+                  "            pass\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_class_exception_handler_type_exec_invalidates_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "class Later:\n"
+                  "    try:\n"
+                  "        raise ValueError()\n"
+                  "    except (exec('global compare; compare = fallback') or ValueError):\n"
+                  "        pass\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_class_match_guard_without_exec_preserves_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "class Later:\n"
+                  "    match 1:\n"
+                  "        case 1 if True:\n"
+                  "            pass\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "ordered_legacy_call")
+
 
 if __name__ == "__main__":
     unittest.main()
