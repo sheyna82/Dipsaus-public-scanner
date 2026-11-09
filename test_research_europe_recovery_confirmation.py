@@ -10,6 +10,8 @@ class Tests(unittest.TestCase):
     def test_two_positive_sessions_observation_only(self):
         result=evaluate(H,"2026-11-06",True)
         self.assertTrue(result["two_positive_relative_sessions"])
+        self.assertEqual(len(result["observations"]),2)
+        self.assertEqual(result["observations"][-1]["day"],"2026-11-06")
         self.assertFalse(result["trade_ready"])
         self.assertFalse(result["approved_signal"])
     def test_partial_session_excluded(self):
