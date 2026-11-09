@@ -169,5 +169,17 @@ class ComparisonTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "YAHOO_RAW_DERIVATION_MISMATCH"):
                     compare_archive(path)
 
+    def test_duplicate_outer_archive_json_key_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "duplicate-outer.zip"
+            with zipfile.ZipFile(path, "w") as archive:
+                archive.writestr("omxh25-history-post-raw-unverified.json", "{}")
+                archive.writestr("europe-benchmarks.json",
+                                 '{"research_only":true,"research_only":true}')
+            with patch("research_compare_omxh25_actual_issuer_yahoo.validate",
+                       return_value={"records": [], "source_sha256": "test"}):
+                with self.assertRaisesRegex(ValueError, "DUPLICATE_JSON_KEY"):
+                    compare_archive(path)
+
 if __name__ == "__main__":
     unittest.main()
