@@ -65,6 +65,7 @@ def collect(destination,fetch=None):
             audits=[audit_omxh25_daily_bar(bar) for bar in bars]
             series["daily_label_audit"]={
                 "schema":"omxh25_helsinki_label_audit_v1",
+                "bars_sha256":hashlib.sha256(json.dumps(bars,sort_keys=True,separators=(",",":"),allow_nan=False).encode()).hexdigest(),
                 "checked":len(audits),
                 "consistent":sum(a["session_open_label_consistent"] for a in audits),
                 "inconsistent_dates":[a["session_date"] for a in audits if not a["session_open_label_consistent"]],
