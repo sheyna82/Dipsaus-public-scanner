@@ -1,5 +1,5 @@
 """Offline benchmark capture contract tests: no external calls or trading."""
-import io,json,tempfile,unittest
+import hashlib,io,json,tempfile,unittest
 from pathlib import Path
 from datetime import datetime,timedelta,timezone
 from research_capture_europe_benchmarks import collect,BENCHMARKS
@@ -40,6 +40,22 @@ class Tests(unittest.TestCase):
             self.assertEqual(entry["provider_metadata"]["currency"],"EUR")
             self.assertEqual(entry["provider_metadata"]["instrumentType"],"INDEX")
             self.assertEqual(len(entry["source_sha256"]),64)
+    def test_source_hash_matches_exact_provider_response(self):
+        _,doc=self.capture()
+        for name,entry in doc["series"].items():
+            expected=hashlib.sha256(payload(BENCHMARKS[name])).hexdigest()
+            self.assertEqual(entry["source_sha256"],expected)
+            self.assertFalse(doc["benchmark_identity_verified"])
+            self.assertTrue(doc["research_only"])
+
+    def test_refuse_overwrite_of_existing_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/"capture.json"
+            path.write_text("immutable original",encoding="utf-8")
+            with self.assertRaisesRegex(FileExistsError,"immutable_capture_exists"):
+                collect(path,lambda req,timeout: self.fail("network must not be called"))
+            self.assertEqual(path.read_text(encoding="utf-8"),"immutable original")
+
     def test_reject_wrong_currency(self):
         with self.assertRaisesRegex(ValueError,"currency_not_eur"):self.capture(currency="USD")
     def test_reject_wrong_instrument(self):
