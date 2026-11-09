@@ -293,5 +293,35 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                           (3, "not_proven_legacy")])
 
 
+    def test_unrelated_import_shadows_proven_function_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "import math as compare\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[0]["classification"],
+                         "not_proven_legacy")
+
+    def test_unrelated_from_import_shadows_proven_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "from math import sqrt as compare\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[0]["classification"],
+                         "not_proven_legacy")
+
+    def test_wildcard_import_invalidates_prior_proof(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "from math import *\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[0]["classification"],
+                         "not_proven_legacy")
+
+    def test_unrelated_import_then_legacy_reimport_restores_proof(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "import math as compare\n"
+                  "from research_europe_relative_strength import compare\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[0]["classification"],
+                         "ordered_legacy_call")
+
+
 if __name__ == "__main__":
     unittest.main()
