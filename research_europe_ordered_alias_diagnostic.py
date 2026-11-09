@@ -83,6 +83,9 @@ def diagnose(source):
                                      "classification": "uncertain_nested_call"})
                 pending.extend(ast.iter_child_nodes(child))
         elif isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            # Defining a function binds its name and shadows any prior import.
+            # Even a decorated function cannot retain an earlier alias proof.
+            state[stmt.name] = None
             # Decorators, default values and annotations are evaluated at
             # definition time (subject to postponed annotation semantics).
             # Never classify these as deferred body execution.
