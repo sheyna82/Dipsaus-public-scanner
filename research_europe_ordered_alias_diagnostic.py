@@ -29,6 +29,13 @@ def diagnose(source):
                 base = state.get(value.value.id)
                 if base and base[0] == "module" and value.attr == LEGACY[base[1]]:
                     resolved = ("function", base[1])
+            # Calls inside assignment expressions may execute before binding,
+            # but their target is not proven by this supplemental analysis.
+            if value is not None:
+                for child in ast.walk(value):
+                    if isinstance(child, ast.Call):
+                        findings.append({"line": child.lineno, "target": None,
+                                         "classification": "uncertain_expression_call"})
             for target in targets:
                 if isinstance(target, ast.Name):
                     state[target.id] = resolved
@@ -53,6 +60,12 @@ def diagnose(source):
                                      "classification": "uncertain_nested_call"})
                 pending.extend(ast.iter_child_nodes(child))
         elif isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
+            # The outer call is classified below; its nested arguments and
+            # callable expression are inventoried separately as uncertain.
+            for child in ast.walk(stmt.value):
+                if isinstance(child, ast.Call) and child is not stmt.value:
+                    findings.append({"line": child.lineno, "target": None,
+                                     "classification": "uncertain_expression_call"})
             func = stmt.value.func
             resolved = state.get(func.id) if isinstance(func, ast.Name) else None
             if isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name):
