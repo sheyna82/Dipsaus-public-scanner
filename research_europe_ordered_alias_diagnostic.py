@@ -81,7 +81,14 @@ def diagnose(source):
                                          "classification": "uncertain_definition_time_call"})
             # Return expressions are deferred until invocation; record their
             # syntactic calls without claiming execution or alias identity.
-            for child in ast.walk(stmt):
+            pending_expressions = list(stmt.body)
+            while pending_expressions:
+                child = pending_expressions.pop()
+                # A nested definition has its own deferred execution context.
+                # Do not attribute its returns or conditions to this function.
+                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef,
+                                      ast.Lambda, ast.ClassDef)):
+                    continue
                 if isinstance(child, (ast.Return, ast.If, ast.While, ast.Assert)):
                     expressions = ([child.value] if isinstance(child, ast.Return)
                                    else [child.test])
@@ -92,6 +99,7 @@ def diagnose(source):
                             if isinstance(nested, ast.Call):
                                 findings.append({"line": nested.lineno, "target": None,
                                                  "classification": "uncertain_deferred_expression_call"})
+                pending_expressions.extend(ast.iter_child_nodes(child))
             # Also inspect direct expression statements in the function body;
             # these execute only if the function is invoked.
             pending = list(stmt.body)
