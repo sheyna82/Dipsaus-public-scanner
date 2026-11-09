@@ -190,3 +190,15 @@ Commit `2328184214a06bc22df25b278606d8d8596d20a6` adds supplemental `uncertain_d
 ## Method definition and nested class expressions — CI verified 2026-11-09
 
 Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creation-time inventory for direct method decorators/defaults and nested class decorators/bases/keywords. Three regression tests passed: method decorator, method default, nested class base/decorator. GitHub Actions run `42690336454`, job `129408093728`: **70 tests OK**, all seven workflows successful. Legacy gate inventory remains 31 historical test calls, 2 controlled delegations, 0 unreviewed. Limits: no complete traversal of nested class bodies, annotations and all arbitrary statement forms; syntactic inventory does not establish runtime execution or source admission. Enforcing gate unchanged; no main/live scanner changes.
+
+
+## Ordered alias diagnostic: nested class-body CI verification (2026-11-09)
+
+- Verified exact code commit: `b2d7799882675d74569df7d2dbd43e358e0e2c09` on `research/integrated-evidence-20261106`.
+- All seven associated pull-request workflow runs completed with conclusion `success` (GitHub commit-associated workflow query).
+- Benchmark source admission offline tests: run `42690608599`, job `129409032522`; actual job log reports `Ran 73 tests in 0.012s` and `OK`.
+- EU relative strength offline gate tests: run `42690608572`, offline-gates job `129409032125`, log reports `Ran 145 tests in 0.193s` and `OK` (a separate test suite, not an alternative count for the 73 admission tests).
+- Legacy gate job output independently enumerates 31 `historical_test`, 2 `controlled_delegation`, and 0 unknown direct calls; unchanged from prior verified inventory.
+- New nested class-body traversal and three associated regression tests are included in the verified 73-test suite. CI success verifies tested behavior only, not complete Python scope semantics.
+- The ordered alias diagnostic remains supplemental, non-admitting research evidence; the fail-closed legacy gate and empty trusted source receipt registry must not be weakened. No benchmark-source identity approval or trade-ready status follows from this CI result.
+- Next priority: inspect real scope/definition-time gaps and possible duplicate call findings before changing the diagnostic again; add code only for a demonstrated defect and preserve isolation from main/live/trading.
