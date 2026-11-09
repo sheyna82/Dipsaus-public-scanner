@@ -27,8 +27,8 @@ class HistoryPostTests(unittest.TestCase):
                 self.assertIn(b"id=OMXH25", request.data)
                 self.assertIn(b"timeOfDay=EOD", request.data)
                 return FakeResponse()
-            result = capture_history_post(path, "2026-11-05T00:00:00",
-                                          "2026-11-09T00:00:00", "EOD", fetch=fetch)
+            result = capture_history_post(path, "2026-11-05T00:00:00.000",
+                                          "2026-11-09T00:00:00.000", "EOD", fetch=fetch)
             receipt = json.loads(path.read_text())
             self.assertEqual(base64.b64decode(receipt["source_raw_base64"]), b'{"illustrative":true}')
             self.assertEqual(receipt["source_sha256"], hashlib.sha256(b'{"illustrative":true}').hexdigest())
@@ -36,8 +36,8 @@ class HistoryPostTests(unittest.TestCase):
             self.assertFalse(receipt["trade_ready"])
             self.assertEqual(result["status"], "history_post_raw_captured_unverified")
             with self.assertRaises(FileExistsError):
-                capture_history_post(path, "2026-11-05T00:00:00",
-                                     "2026-11-09T00:00:00", "EOD", fetch=fetch)
+                capture_history_post(path, "2026-11-05T00:00:00.000",
+                                     "2026-11-09T00:00:00.000", "EOD", fetch=fetch)
 
     def test_reject_invalid_date(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -47,8 +47,8 @@ class HistoryPostTests(unittest.TestCase):
     def test_reject_invalid_time_of_day(self):
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaisesRegex(ValueError, "UNREVIEWED_TIME_OF_DAY"):
-                capture_history_post(Path(directory)/"x.json", "2026-11-05T00:00:00",
-                                     "2026-11-09T00:00:00", "a&b")
+                capture_history_post(Path(directory)/"x.json", "2026-11-05T00:00:00.000",
+                                     "2026-11-09T00:00:00.000", "a&b")
 
 if __name__ == "__main__":
     unittest.main()
