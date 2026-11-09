@@ -3,11 +3,13 @@
 An evidence receipt documents review, not proof of external truth by itself.
 """
 import hashlib
+import base64
+import binascii
 import json
 from datetime import date
 
 REQUIRED=("symbol","provider_symbol","official_index_name","official_publisher",
-          "official_source_url","official_document_sha256","reviewer",
+          "official_source_url","official_document_sha256","official_document_base64","reviewer",
           "review_day","methodology","identity_match","currency_match",
           "price_vs_total_return_match","value_discrepancy_resolved")
 
@@ -23,6 +25,12 @@ def validate_receipt(receipt):
     h=receipt["official_document_sha256"]
     if not isinstance(h,str) or len(h)!=64 or any(x not in "0123456789abcdef" for x in h):
         raise ValueError("INVALID_EVIDENCE_HASH")
+    try:
+        raw=base64.b64decode(receipt["official_document_base64"],validate=True)
+    except (TypeError,ValueError,binascii.Error) as exc:
+        raise ValueError("INVALID_OFFICIAL_DOCUMENT_BYTES") from exc
+    if not raw or len(raw)>2000000 or hashlib.sha256(raw).hexdigest()!=h:
+        raise ValueError("OFFICIAL_DOCUMENT_HASH_MISMATCH")
     if date.fromisoformat(receipt["review_day"]).isoformat()!=receipt["review_day"]:
         raise ValueError("INVALID_REVIEW_DAY")
     for k in ("identity_match","currency_match","price_vs_total_return_match",
