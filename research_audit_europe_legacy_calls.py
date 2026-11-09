@@ -32,6 +32,26 @@ def inventory(paths):
                 for item in node.names:
                     if item.name == LEGACY[node.module]:
                         functions[item.asname or item.name] = node.module
+        # Local bindings can shadow module-level legacy imports. Flag this
+        # uncertainty rather than treating the name as a proven legacy call.
+        for scope in ast.walk(tree):
+            if not isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+                continue
+            parameters = scope.args.posonlyargs + scope.args.args + scope.args.kwonlyargs
+            if scope.args.vararg:
+                parameters.append(scope.args.vararg)
+            if scope.args.kwarg:
+                parameters.append(scope.args.kwarg)
+            shadowed = {arg.arg for arg in parameters}
+            for child in ast.walk(scope):
+                if child is scope or isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+                    continue
+                if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Del)):
+                    shadowed.add(child.id)
+            for name in sorted(shadowed.intersection(set(aliases) | set(functions))):
+                hits.append({"path": str(path), "line": scope.lineno,
+                             "target": "ambiguous_legacy_scope_shadow:" + name,
+                             "kind": "ambiguous_scope"})
         # Track simple function aliases, including chained assignments, without
         # pretending to solve arbitrary Python runtime data flow.
         for node in ast.walk(tree):
