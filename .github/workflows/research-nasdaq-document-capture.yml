@@ -4,6 +4,7 @@ on:
     branches: [research/integrated-evidence-20261106]
     paths:
       - .github/workflows/research-nasdaq-document-capture.yml
+      - research_capture_official_index_document.py
   workflow_dispatch:
 permissions:
   contents: read
