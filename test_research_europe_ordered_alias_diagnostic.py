@@ -275,5 +275,23 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
         self.assertEqual(sorted(x["line"] for x in result), [1, 2])
 
 
+    def test_augmented_assignment_invalidates_proven_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "compare += other\n"
+                  "compare()\n")
+        result = diagnose(source)
+        self.assertEqual([x["classification"] for x in result],
+                         ["not_proven_legacy"])
+
+    def test_augmented_assignment_rhs_call_inventoried(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "compare += helper()\n"
+                  "compare()\n")
+        result = diagnose(source)
+        self.assertEqual([(x["line"], x["classification"]) for x in result],
+                         [(2, "uncertain_expression_call"),
+                          (3, "not_proven_legacy")])
+
+
 if __name__ == "__main__":
     unittest.main()
