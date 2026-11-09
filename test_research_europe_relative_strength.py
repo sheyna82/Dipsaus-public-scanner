@@ -1,6 +1,6 @@
 """Offline European relative strength contract tests; no external market access."""
 import unittest
-import hashlib,json
+import hashlib,json,base64
 from datetime import datetime,timedelta,timezone
 from zoneinfo import ZoneInfo
 from research_europe_relative_strength import compare
@@ -18,13 +18,25 @@ def fixtures():
         bar["t"]=int(datetime(day.year,day.month,day.day,10,tzinfo=ZoneInfo("Europe/Helsinki")).timestamp())
     digest=hashlib.sha256(json.dumps(indices["OMXH25"]["bars"],sort_keys=True,separators=(",",":"),allow_nan=False).encode()).hexdigest()
     indices["OMXH25"]["provider_metadata"]={"symbol":"^OMXH25","currency":"EUR","instrumentType":"INDEX","longName":"OMX Helsinki 25"}
-    indices["OMXH25"]["source_sha256"]="a"*64
+    raw=b'{"synthetic":"omxh25-test-source"}'
+    indices["OMXH25"]["source_raw_base64"]=base64.b64encode(raw).decode("ascii")
+    indices["OMXH25"]["source_sha256"]=hashlib.sha256(raw).hexdigest()
     indices["OMXH25"]["daily_label_audit"]={
         "bars_sha256":digest,
         "validation_status":"consistent_unverified","checked":21,"consistent":21,
         "inconsistent_dates":[],"identity_approved":False}
     return {"trade_ready":False,"series":stocks},{"trade_ready":False,"series":indices}
 class Tests(unittest.TestCase):
+    def test_missing_raw_source_blocks(self):
+        stocks,indices=fixtures()
+        del indices["series"]["OMXH25"]["source_raw_base64"]
+        with self.assertRaisesRegex(ValueError,"OMXH25_RAW_SOURCE_MISSING"):
+            compare(stocks,indices,IDENTITY,"2026-11-06")
+    def test_tampered_raw_source_blocks(self):
+        stocks,indices=fixtures()
+        indices["series"]["OMXH25"]["source_raw_base64"]=base64.b64encode(b"tampered").decode("ascii")
+        with self.assertRaisesRegex(ValueError,"OMXH25_RAW_SOURCE_HASH_MISMATCH"):
+            compare(stocks,indices,IDENTITY,"2026-11-06")
     def test_missing_source_digest_blocks(self):
         stocks,indices=fixtures()
         del indices["series"]["OMXH25"]["source_sha256"]
