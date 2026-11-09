@@ -239,8 +239,10 @@ def diagnose(source):
                         pending_classes.append(member)
                     if isinstance(member, ast.Expr):
                         expressions = [member.value]
-                    elif isinstance(member, (ast.Assign, ast.AnnAssign)):
+                    elif isinstance(member, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
                         expressions = [member.value] if member.value is not None else []
+                    elif isinstance(member, ast.Assert):
+                        expressions = [member.test] + ([member.msg] if member.msg is not None else [])
                     elif isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef)):
                         # Method body is deferred; decorators and defaults
                         # execute while its enclosing class is created.
