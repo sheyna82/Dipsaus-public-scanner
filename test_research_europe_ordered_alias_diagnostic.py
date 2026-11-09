@@ -105,5 +105,29 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
         self.assertEqual([x["classification"] for x in result],
                          ["uncertain_expression_call", "ordered_legacy_call"])
 
+    def test_return_expression_call_is_deferred(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "def later():\n"
+                  "    return compare()\n")
+        result = diagnose(source)
+        self.assertEqual(result[0]["classification"],
+                         "uncertain_deferred_expression_call")
+        self.assertEqual(result[0]["line"], 3)
+
+    def test_function_condition_call_is_deferred(self):
+        source = ("def later():\n"
+                  "    if check():\n"
+                  "        pass\n")
+        result = diagnose(source)
+        self.assertEqual(result[0]["classification"],
+                         "uncertain_deferred_expression_call")
+        self.assertEqual(result[0]["line"], 2)
+
+    def test_assert_condition_call_is_uncertain(self):
+        result = diagnose("assert check()\n")
+        self.assertEqual(result[0]["classification"],
+                         "uncertain_expression_call")
+        self.assertEqual(result[0]["line"], 1)
+
 if __name__ == "__main__":
     unittest.main()
