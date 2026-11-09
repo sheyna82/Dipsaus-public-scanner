@@ -98,6 +98,7 @@ class Tests(unittest.TestCase):
     def test_mutated_bar_digest_mismatch_blocks(self):
         stocks,indices=fixtures()
         indices["series"]["OMXH25"]["bars"][0]["close"]+=1
+        sync_raw_omx(indices["series"]["OMXH25"])
         with self.assertRaisesRegex(ValueError,"OMXH25_DAILY_LABEL_AUDIT_HASH_MISMATCH"):
             compare(stocks,indices,IDENTITY,"2026-11-06")
     def test_forged_consistent_audit_cannot_override_bad_bar(self):
@@ -111,6 +112,7 @@ class Tests(unittest.TestCase):
         stocks,indices=fixtures()
         indices["series"]["OMXH25"]["bars"][1]["t"]=indices["series"]["OMXH25"]["bars"][0]["t"]
         indices["series"]["OMXH25"]["daily_label_audit"]["bars_sha256"]=hashlib.sha256(json.dumps(indices["series"]["OMXH25"]["bars"],sort_keys=True,separators=(",",":"),allow_nan=False).encode()).hexdigest()
+        sync_raw_omx(indices["series"]["OMXH25"])
         with self.assertRaisesRegex(ValueError,"OMXH25_DAILY_LABEL_RECOMPUTE_BLOCKED"):
             compare(stocks,indices,IDENTITY,"2026-11-06")
     def test_missing_omxh25_audit_vetoes_comparison(self):
