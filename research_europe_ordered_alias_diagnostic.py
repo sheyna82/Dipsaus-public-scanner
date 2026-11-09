@@ -91,6 +91,11 @@ def diagnose(source):
                 # Attribute/subscript writes can have side effects; avoid
                 # preserving unrelated proofs without modeling those effects.
                 state.clear()
+            # The RHS is evaluated too: a walrus may rebind another alias,
+            # not just the augmented-assignment target.
+            for child in ast.walk(stmt.value):
+                if isinstance(child, ast.NamedExpr):
+                    state[child.target.id] = None
         elif isinstance(stmt, (ast.If, ast.For, ast.AsyncFor, ast.While, ast.Try,
                                ast.With, ast.AsyncWith, ast.Match)):
             # Do not infer which branch ran or how often a loop executed.
