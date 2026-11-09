@@ -26,7 +26,7 @@ def diagnose(source):
                     continue
                 bound = item.asname or item.name
                 state[bound] = (("function", stmt.module)
-                                if stmt.module in LEGACY
+                                if stmt.level == 0 and stmt.module in LEGACY
                                 and item.name == LEGACY[stmt.module]
                                 else None)
         elif isinstance(stmt, (ast.Assign, ast.AnnAssign)):
