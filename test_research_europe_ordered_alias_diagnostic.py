@@ -153,5 +153,24 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          ["uncertain_definition_time_call",
                           "uncertain_deferred_expression_call"])
 
+    def test_function_body_expression_is_deferred(self):
+        result = diagnose("def later():\n    compare()\n")
+        self.assertEqual([(x["line"], x["classification"]) for x in result],
+                         [(2, "uncertain_deferred_body_call")])
+
+    def test_class_body_expression_is_creation_time(self):
+        result = diagnose("class Research:\n    compare()\n")
+        self.assertEqual([(x["line"], x["classification"]) for x in result],
+                         [(2, "uncertain_class_body_call")])
+
+    def test_class_assignment_call_is_creation_time_not_method_body(self):
+        source = ("class Research:\n"
+                  "    result = compare()\n"
+                  "    def later(self):\n"
+                  "        compare()\n")
+        result = diagnose(source)
+        self.assertEqual([(x["line"], x["classification"]) for x in result],
+                         [(2, "uncertain_class_body_call")])
+
 if __name__ == "__main__":
     unittest.main()
