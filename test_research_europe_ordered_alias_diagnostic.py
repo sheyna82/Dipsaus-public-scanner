@@ -627,6 +627,24 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
         self.assertEqual(diagnose(source)[-1]["classification"],
                          "ordered_legacy_call")
 
+    def test_relative_legacy_named_import_is_not_proven(self):
+        source = ("from .research_europe_relative_strength import compare\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_parent_relative_legacy_named_import_is_not_proven(self):
+        source = ("from ..research_europe_relative_strength import compare\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_absolute_legacy_named_import_remains_proven(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "ordered_legacy_call")
+
 
 if __name__ == "__main__":
     unittest.main()
