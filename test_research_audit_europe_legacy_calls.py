@@ -104,5 +104,24 @@ class LegacyCallAuditTests(unittest.TestCase):
             found = inventory([file])
             self.assertTrue(any(x.get("kind") == "ambiguous_alias" for x in found))
 
+    def test_local_parameter_shadowing_is_ambiguous(self):
+        with tempfile.TemporaryDirectory() as root:
+            file = pathlib.Path(root) / "scope.py"
+            file.write_text("from research_europe_relative_strength import compare\n"
+                            "def run(compare):\n"
+                            "    return compare()\n", encoding="utf-8")
+            self.assertTrue(any(x.get("kind") == "ambiguous_scope"
+                                for x in inventory([file])))
+
+    def test_local_assignment_shadowing_is_ambiguous(self):
+        with tempfile.TemporaryDirectory() as root:
+            file = pathlib.Path(root) / "scope.py"
+            file.write_text("import research_europe_recovery_confirmation as legacy\n"
+                            "def run():\n"
+                            "    legacy = object()\n"
+                            "    return legacy.evaluate()\n", encoding="utf-8")
+            self.assertTrue(any(x.get("kind") == "ambiguous_scope"
+                                for x in inventory([file])))
+
 if __name__ == "__main__":
     unittest.main()
