@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch
-from research_europe_relative_strength_admitted import compare_admitted
+from research_europe_relative_strength_admitted import compare_admitted, receipt_digest
 
 REQUIRED = ("AEX", "DAX_PRICE", "OMXH25", "STOXX600_PRICE")
 
@@ -50,8 +50,24 @@ class AdmissionIntegrationTests(unittest.TestCase):
                 self.invoke(records)
             calculate.assert_not_called()
 
+    def test_all_true_self_attestation_still_blocked(self):
+        with patch("research_europe_relative_strength_admitted.compare") as calculate:
+            with self.assertRaisesRegex(ValueError, "BENCHMARK_SOURCE_RECEIPT_NOT_TRUSTED"):
+                self.invoke(self.receipts)
+            calculate.assert_not_called()
+
+    def test_modified_receipt_rejected_against_pinned_hash(self):
+        pinned = {name: receipt_digest(value) for name, value in self.receipts.items()}
+        modified = {name: dict(value) for name, value in self.receipts.items()}
+        modified["OMXH25"]["review_note"] = "unreviewed alteration"
+        with patch("research_europe_relative_strength_admitted.TRUSTED_SOURCE_RECEIPT_SHA256", pinned), patch("research_europe_relative_strength_admitted.compare") as calculate:
+            with self.assertRaisesRegex(ValueError, "BENCHMARK_SOURCE_RECEIPT_NOT_TRUSTED:OMXH25"):
+                self.invoke(modified)
+            calculate.assert_not_called()
+
     def test_admitted_sources_delegate_to_existing_calculator(self):
-        with patch("research_europe_relative_strength_admitted.compare",
+        pinned = {name: receipt_digest(value) for name, value in self.receipts.items()}
+        with patch("research_europe_relative_strength_admitted.TRUSTED_SOURCE_RECEIPT_SHA256", pinned), patch("research_europe_relative_strength_admitted.compare",
                    return_value={"research_only": True, "trade_ready": False}) as calculate:
             result = self.invoke(self.receipts)
             calculate.assert_called_once_with({}, {}, {}, "2026-11-06")
