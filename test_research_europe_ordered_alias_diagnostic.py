@@ -960,6 +960,37 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
         self.assertEqual(diagnose(source)[-1]["classification"],
                          "ordered_legacy_call")
 
+    @unittest.expectedFailure
+    def test_known_gap_class_trystar_exec_invalidates_alias(self):
+        # Python 3.11+: except* suites execute during class creation.
+        source = ("from research_europe_relative_strength import compare\n"
+                  "class Later:\n"
+                  "    try:\n"
+                  "        raise ExceptionGroup('group', [ValueError()])\n"
+                  "    except* ValueError:\n"
+                  "        exec('global compare; compare = fallback')\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    @unittest.expectedFailure
+    def test_known_gap_class_annotation_exec_invalidates_alias(self):
+        # Without postponed annotations, this expression executes in class scope.
+        source = ("from research_europe_relative_strength import compare\n"
+                  "class Later:\n"
+                  "    field: (exec('global compare; compare = fallback') or int)\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_class_plain_annotation_preserves_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "class Later:\n"
+                  "    field: int\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "ordered_legacy_call")
+
 
 if __name__ == "__main__":
     unittest.main()
