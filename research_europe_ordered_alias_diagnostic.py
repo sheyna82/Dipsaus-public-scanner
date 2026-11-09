@@ -300,7 +300,11 @@ def diagnose(source):
             # Non-call expressions may still bind names via walrus operators,
             # e.g. a conditional expression or an f-string. Invalidate these
             # bindings without attributing the calls inside the expression.
+            # An embedded direct exec call can also replace module bindings.
             for child in ast.walk(stmt.value):
+                if (isinstance(child, ast.Call) and isinstance(child.func, ast.Name)
+                        and child.func.id == "exec"):
+                    state.clear()
                 if isinstance(child, ast.NamedExpr):
                     state[child.target.id] = None
                 if isinstance(child, ast.Call):
