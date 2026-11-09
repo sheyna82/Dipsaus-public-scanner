@@ -283,3 +283,13 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - All seven workflows completed successfully: `42693254208`, `42693254174`, `42693254180`, `42693254135`, `42693254338`, `42693254149`, `42693254246`.
 - Enforced legacy gate succeeded; log inventory: 31 `historical_test`, 2 `controlled_delegation`, zero unknown direct legacy calls.
 - Supplemental AST evidence only; no source admission promotion, trusted receipt, live scanner/trading logic modification, or merge to `main`.
+
+
+## Walrus bindings in non-call top-level expressions: CI verification (2026-11-09)
+
+- Code commit `019a775c54922a46c56caeb6993f2bda2c007d8c`; regression-test commit `bc783da7597072ada1334e86900e8384cb76d70f`.
+- Supplemental ordered-alias diagnostic now invalidates names bound by `ast.NamedExpr` in non-call top-level expression statements, including conditional expressions and f-strings. Calls nested in such expressions are inventoried as uncertain, without claiming execution or runtime identity.
+- Exact-commit source-admission GitHub Actions run `42693395853`, job `129418777221`: `Ran 98 tests in 0.022s`, `OK`; all three new regressions passed individually.
+- All seven workflows completed successfully: `42693395903`, `42693395850`, `42693396311`, `42693396081`, `42693396260`, `42693395853`, `42693396184`.
+- Enforced legacy gate succeeded; log inventory: 31 `historical_test`, 2 `controlled_delegation`, zero unknown direct legacy calls.
+- Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
