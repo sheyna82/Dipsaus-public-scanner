@@ -30,6 +30,13 @@ def fixtures():
         "validation_status":"consistent_unverified","checked":21,"consistent":21,
         "inconsistent_dates":[],"identity_approved":False}
     return {"trade_ready":False,"series":stocks},{"trade_ready":False,"series":indices}
+def sync_raw_omx(omx):
+    payload=json.loads(base64.b64decode(omx["source_raw_base64"]))
+    payload["chart"]["result"][0]["timestamp"]=[b["t"] for b in omx["bars"]]
+    payload["chart"]["result"][0]["indicators"]["quote"][0]["close"]=[b["close"] for b in omx["bars"]]
+    raw=json.dumps(payload,sort_keys=True,separators=(",",":")).encode()
+    omx["source_raw_base64"]=base64.b64encode(raw).decode("ascii")
+    omx["source_sha256"]=hashlib.sha256(raw).hexdigest()
 class Tests(unittest.TestCase):
     def test_raw_source_bars_mismatch_blocks_even_with_updated_bar_hash(self):
         stocks,indices=fixtures()
@@ -67,6 +74,7 @@ class Tests(unittest.TestCase):
                       "checked":len(omx["bars"]),"consistent":len(omx["bars"]),
                       "inconsistent_dates":[],"identity_approved":False})
         audit["bars_sha256"]=hashlib.sha256(json.dumps(omx["bars"],sort_keys=True,separators=(",",":"),allow_nan=False).encode()).hexdigest()
+        sync_raw_omx(omx)
         with self.assertRaisesRegex(ValueError,"OMXH25_DAILY_LABEL_AUDIT_CONTENT_MISMATCH"):
             compare(stocks,indices,IDENTITY,"2026-11-06")
     def test_forged_status_counts_and_hash_cannot_hide_duplicate_day(self):
@@ -78,6 +86,7 @@ class Tests(unittest.TestCase):
                       "checked":len(omx["bars"]),"consistent":len(omx["bars"]),
                       "inconsistent_dates":[],"identity_approved":False})
         audit["bars_sha256"]=hashlib.sha256(json.dumps(omx["bars"],sort_keys=True,separators=(",",":"),allow_nan=False).encode()).hexdigest()
+        sync_raw_omx(omx)
         with self.assertRaisesRegex(ValueError,"OMXH25_DAILY_LABEL_RECOMPUTE_BLOCKED"):
             compare(stocks,indices,IDENTITY,"2026-11-06")
     def test_forged_audit_count_is_rejected(self):
@@ -95,6 +104,7 @@ class Tests(unittest.TestCase):
         stocks,indices=fixtures()
         indices["series"]["OMXH25"]["bars"][0]["t"]+=3600
         indices["series"]["OMXH25"]["daily_label_audit"]["bars_sha256"]=hashlib.sha256(json.dumps(indices["series"]["OMXH25"]["bars"],sort_keys=True,separators=(",",":"),allow_nan=False).encode()).hexdigest()
+        sync_raw_omx(indices["series"]["OMXH25"])
         with self.assertRaisesRegex(ValueError,"OMXH25_DAILY_LABEL_AUDIT_CONTENT_MISMATCH"):
             compare(stocks,indices,IDENTITY,"2026-11-06")
     def test_duplicate_omxh25_local_session_is_blocked(self):
@@ -164,6 +174,7 @@ class Tests(unittest.TestCase):
         audit["checked"]=22
         audit["consistent"]=22
         audit["bars_sha256"]=hashlib.sha256(json.dumps(indices["series"]["OMXH25"]["bars"],sort_keys=True,separators=(",",":"),allow_nan=False).encode()).hexdigest()
+        sync_raw_omx(indices["series"]["OMXH25"])
         result=compare(stocks,indices,IDENTITY,"2026-11-06")
         self.assertAlmostEqual(result["comparisons"]["ASML.AS"]["AEX"]["relative_strength_20d_pct"],5.0)
 if __name__=="__main__":unittest.main()
