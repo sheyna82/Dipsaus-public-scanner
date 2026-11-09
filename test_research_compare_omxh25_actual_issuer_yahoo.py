@@ -41,5 +41,39 @@ class ComparisonTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "INVALID_YAHOO_SYMBOL"):
                     compare_archive(path)
 
+    def test_missing_issuer_session_rejected(self):
+        import base64
+        import hashlib
+        raw = b"sample-yahoo-response"
+        yahoo = {
+            "research_only": True, "trade_ready": False, "benchmark_identity_verified": False,
+            "series": {"OMXH25": {
+                "provider_symbol": "^OMXH25",
+                "provider_metadata": {"currency": "EUR", "instrumentType": "INDEX"},
+                "source_raw_base64": base64.b64encode(raw).decode("ascii"),
+                "source_sha256": hashlib.sha256(raw).hexdigest(),
+                "bars": []
+            }}
+        }
+        directory, path = archive_with({}, yahoo)
+        with directory:
+            with patch("research_compare_omxh25_actual_issuer_yahoo.validate",
+                       return_value={"records": [{"date": "2026-11-05", "value": 6254.3}], "source_sha256": "test"}):
+                with self.assertRaisesRegex(ValueError, "MISSING_YAHOO_SESSION"):
+                    compare_archive(path)
+
+    def test_invalid_currency_rejected(self):
+        yahoo = {
+            "research_only": True, "trade_ready": False, "benchmark_identity_verified": False,
+            "series": {"OMXH25": {"provider_symbol": "^OMXH25",
+                                  "provider_metadata": {"currency": "USD", "instrumentType": "INDEX"}}}
+        }
+        directory, path = archive_with({}, yahoo)
+        with directory:
+            with patch("research_compare_omxh25_actual_issuer_yahoo.validate",
+                       return_value={"records": [], "source_sha256": "test"}):
+                with self.assertRaisesRegex(ValueError, "INVALID_YAHOO_METADATA"):
+                    compare_archive(path)
+
 if __name__ == "__main__":
     unittest.main()
