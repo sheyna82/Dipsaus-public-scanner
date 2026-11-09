@@ -39,6 +39,19 @@ def diagnose(source):
             for target in targets:
                 if isinstance(target, ast.Name):
                     state[target.id] = resolved
+        elif isinstance(stmt, ast.AugAssign):
+            # Augmented assignment may mutate or replace an alias. Never
+            # retain a previously proven binding after this statement.
+            for child in ast.walk(stmt.value):
+                if isinstance(child, ast.Call):
+                    findings.append({"line": child.lineno, "target": None,
+                                     "classification": "uncertain_expression_call"})
+            if isinstance(stmt.target, ast.Name):
+                state[stmt.target.id] = None
+            else:
+                # Attribute/subscript writes can have side effects; avoid
+                # preserving unrelated proofs without modeling those effects.
+                state.clear()
         elif isinstance(stmt, (ast.If, ast.For, ast.AsyncFor, ast.While, ast.Try,
                                ast.With, ast.AsyncWith, ast.Match)):
             # Do not infer which branch ran or how often a loop executed.
