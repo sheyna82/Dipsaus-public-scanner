@@ -523,5 +523,25 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "ordered_legacy_call")
 
 
+    def test_walrus_in_annotation_invalidates_prior_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "other: (compare := fallback)\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_annotation_only_does_not_rebind_prior_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "compare: int\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "ordered_legacy_call")
+
+    def test_annotation_call_is_inventoried_as_uncertain(self):
+        source = ("other: annotation_factory()\n")
+        self.assertEqual(diagnose(source)[0]["classification"],
+                         "uncertain_expression_call")
+
+
 if __name__ == "__main__":
     unittest.main()
