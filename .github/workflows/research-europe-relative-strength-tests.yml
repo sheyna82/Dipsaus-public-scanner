@@ -5,6 +5,7 @@ on:
       - 'research_europe_relative_strength.py'
       - 'test_research_europe_relative_strength.py'
       - 'research/OMXH25_PRIMARY_SOURCE_CAPTURE_20261109.md'
+      - 'research_inspect_omxh25_history_js.py'
       - 'research_capture_omxh25_issuer_raw.py'
       - 'test_research_capture_omxh25_issuer_raw.py'
       - 'research_review_omxh25_official_eod.py'
@@ -73,6 +74,11 @@ jobs:
         continue-on-error: true
         run: |
           python research_capture_omxh25_issuer_raw.py https://beta.indexes.nasdaqomx.com/Index/History/OMXH25 research-observation/omxh25-issuer-history-candidate.json
+      - name: Capture Nasdaq History.js candidate and inspect script literals (unverified)
+        continue-on-error: true
+        run: |
+          python research_capture_omxh25_issuer_raw.py 'https://beta.indexes.nasdaqomx.com/Scripts/History.js?v=2.0.0.0' research-observation/omxh25-history-script-candidate.json
+          python research_inspect_omxh25_history_js.py research-observation/omxh25-history-script-candidate.json research-observation/omxh25-history-script-inspection.json
       - name: Upload observations
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -83,5 +89,7 @@ jobs:
             research-observation/raw-integrity-receipt.json
             research-observation/omxh25-official-close-crosscheck.json
             research-observation/omxh25-issuer-history-candidate.json
+            research-observation/omxh25-history-script-candidate.json
+            research-observation/omxh25-history-script-inspection.json
           if-no-files-found: error
           retention-days: 14
