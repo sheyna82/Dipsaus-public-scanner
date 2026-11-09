@@ -398,5 +398,20 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "not_proven_legacy")
 
 
+    def test_walrus_in_call_argument_invalidates_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "print((compare := fallback))\n"
+                  "compare()\n")
+        self.assertEqual([x["classification"] for x in diagnose(source)],
+                         ["not_proven_legacy", "not_proven_legacy"])
+
+    def test_nested_walrus_in_call_argument_invalidates_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "print((other := (compare := fallback)))\n"
+                  "compare()\n")
+        self.assertEqual([x["classification"] for x in diagnose(source)],
+                         ["not_proven_legacy", "not_proven_legacy"])
+
+
 if __name__ == "__main__":
     unittest.main()
