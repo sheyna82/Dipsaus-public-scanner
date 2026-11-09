@@ -14,16 +14,16 @@ def fixtures():
 class Tests(unittest.TestCase):
     def test_missing_evidence_blocks(self):
         with self.assertRaisesRegex(ValueError,"BENCHMARK_IDENTITY_UNVERIFIED"):
-            compare({"trade_ready":False},{"trade_ready":False},{})
+            compare({"trade_ready":False},{"trade_ready":False},{},"2026-11-06")
     def test_partial_evidence_blocks(self):
         with self.assertRaisesRegex(ValueError,"BENCHMARK_IDENTITY_UNVERIFIED"):
-            compare({"trade_ready":False},{"trade_ready":False},{"AEX":True})
+            compare({"trade_ready":False},{"trade_ready":False},{"AEX":True},"2026-11-06")
     def test_trade_ready_source_blocks(self):
         with self.assertRaisesRegex(ValueError,"RESEARCH_ONLY_REQUIRED"):
-            compare({"trade_ready":True},{"trade_ready":False},{})
+            compare({"trade_ready":True},{"trade_ready":False},{},"2026-11-06")
     def test_aligned_twenty_session_relative_return(self):
         stocks,indices=fixtures()
-        result=compare(stocks,indices,IDENTITY)
+        result=compare(stocks,indices,IDENTITY,"2026-11-06")
         self.assertFalse(result["trade_ready"])
         self.assertFalse(result["selection_thresholds_approved"])
         self.assertEqual(len(result["comparisons"]),4)
@@ -36,11 +36,15 @@ class Tests(unittest.TestCase):
         stocks,indices=fixtures()
         indices["series"]["AEX"]["bars"]=indices["series"]["AEX"]["bars"][1:]
         with self.assertRaisesRegex(ValueError,"INSUFFICIENT_MATCHED_DAYS"):
-            compare(stocks,indices,IDENTITY)
+            compare(stocks,indices,IDENTITY,"2026-11-06")
+    def test_invalid_cutoff_blocks(self):
+        stocks,indices=fixtures()
+        with self.assertRaisesRegex(ValueError,"INVALID_COMPLETE_SESSION_CUTOFF"):
+            compare(stocks,indices,IDENTITY,"2026-99-99")
     def test_incomplete_current_session_excluded(self):
         stocks,indices=fixtures()
         for v in stocks["series"].values():v["bars"].append({"t":int(datetime(2026,11,9,12,tzinfo=timezone.utc).timestamp()),"close":9999})
         for v in indices["series"].values():v["bars"].append({"t":int(datetime(2026,11,9,12,tzinfo=timezone.utc).timestamp()),"close":1})
-        result=compare(stocks,indices,IDENTITY)
+        result=compare(stocks,indices,IDENTITY,"2026-11-06")
         self.assertAlmostEqual(result["comparisons"]["ASML.AS"]["AEX"]["relative_strength_20d_pct"],5.0)
 if __name__=="__main__":unittest.main()
