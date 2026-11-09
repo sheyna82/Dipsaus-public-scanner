@@ -32,6 +32,24 @@ def inventory(paths):
                 for item in node.names:
                     if item.name == LEGACY[node.module]:
                         functions[item.asname or item.name] = node.module
+        # Track simple function aliases, including chained assignments, without
+        # pretending to solve arbitrary Python runtime data flow.
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.Assign, ast.AnnAssign)):
+                value = node.value
+                targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                module = None
+                if isinstance(value, ast.Name):
+                    module = functions.get(value.id)
+                elif (isinstance(value, ast.Attribute) and
+                      isinstance(value.value, ast.Name) and value.value.id in aliases):
+                    candidate = aliases[value.value.id]
+                    if value.attr == LEGACY[candidate]:
+                        module = candidate
+                if module:
+                    for target in targets:
+                        if isinstance(target, ast.Name):
+                            functions[target.id] = module
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
                 continue
