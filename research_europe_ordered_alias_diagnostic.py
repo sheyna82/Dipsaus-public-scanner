@@ -92,6 +92,36 @@ def diagnose(source):
                             if isinstance(nested, ast.Call):
                                 findings.append({"line": nested.lineno, "target": None,
                                                  "classification": "uncertain_deferred_expression_call"})
+            # Also inspect direct expression statements in the function body;
+            # these execute only if the function is invoked.
+            pending = list(stmt.body)
+            while pending:
+                child = pending.pop()
+                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef,
+                                      ast.Lambda, ast.ClassDef)):
+                    continue
+                if isinstance(child, ast.Expr):
+                    for nested in ast.walk(child.value):
+                        if isinstance(nested, ast.Call):
+                            findings.append({"line": nested.lineno, "target": None,
+                                             "classification": "uncertain_deferred_body_call"})
+                else:
+                    pending.extend(ast.iter_child_nodes(child))
+        elif isinstance(stmt, ast.ClassDef):
+            # Class body statements execute during class creation, unlike
+            # ordinary method bodies. Inspect only direct class-body calls.
+            for member in stmt.body:
+                if isinstance(member, ast.Expr):
+                    expressions = [member.value]
+                elif isinstance(member, (ast.Assign, ast.AnnAssign)):
+                    expressions = [member.value] if member.value is not None else []
+                else:
+                    expressions = []
+                for expression in expressions:
+                    for nested in ast.walk(expression):
+                        if isinstance(nested, ast.Call):
+                            findings.append({"line": nested.lineno, "target": None,
+                                             "classification": "uncertain_class_body_call"})
         elif isinstance(stmt, (ast.Assert,)):
             for child in ast.walk(stmt.test):
                 if isinstance(child, ast.Call):
