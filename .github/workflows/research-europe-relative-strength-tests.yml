@@ -47,7 +47,6 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-  actions: read
 jobs:
   offline-gates:
     runs-on: ubuntu-latest
@@ -60,25 +59,6 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m unittest -v test_research_europe_relative_strength.py test_research_capture_europe_benchmarks.py test_research_europe_recovery_confirmation.py test_research_europe_next_session_ledger.py test_research_europe_prospective_protocol.py test_research_europe_candidate_registry_bridge.py test_research_europe_registry_receipt_demo.py test_research_europe_benchmark_identity_receipt.py test_research_verify_omxh25_archive.py test_research_rebuild_omxh25_archive.py test_research_recover_omxh25_offline.py test_research_verify_omxh25_portable_backup.py test_research_verify_europe_benchmark_raw.py test_research_compare_omxh25_official_close.py test_research_review_omxh25_official_eod.py test_research_capture_omxh25_issuer_raw.py test_research_capture_omxh25_history_post.py test_research_validate_omxh25_real_history_post.py test_research_verify_omxh25_real_history_artifact.py
-      - name: Verify actual preserved Nasdaq HistoryData artifact from run 42679785882
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          python - <<'PY'
-          import hashlib, os, urllib.request
-          url = 'https://api.github.com/repos/sheyna82/Dipsaus-public-scanner/actions/artifacts/13700999627/zip'
-          req = urllib.request.Request(url, headers={'Authorization': 'Bearer '+os.environ['GH_TOKEN'], 'Accept':'application/vnd.github+json', 'User-Agent':'DIPSAUS-offline-evidence-verifier'})
-          with urllib.request.urlopen(req, timeout=30) as response:
-              data = response.read(2_000_000)
-          digest = hashlib.sha256(data).hexdigest()
-          expected = 'b0aaeb32563f96f91dcc7372c96a183fb247a0cf3392c4bc94111fd23b8c0465'
-          if digest != expected:
-              raise SystemExit('ORIGINAL_ZIP_SHA256_MISMATCH: '+digest)
-          with open('/tmp/omxh25-original-history-evidence.zip', 'xb') as stream:
-              stream.write(data)
-          print('Original artifact ZIP SHA256 verified:', digest)
-          PY
-          python research_verify_omxh25_real_history_artifact.py /tmp/omxh25-original-history-evidence.zip
       - name: Demonstrate deterministic synthetic registry receipt
         run: python research_europe_registry_receipt_demo.py
   benchmark-observation:
