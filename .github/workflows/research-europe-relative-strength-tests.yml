@@ -4,6 +4,7 @@ on:
     paths:
       - 'research_europe_relative_strength.py'
       - 'test_research_europe_relative_strength.py'
+      - 'research/OMXH25_PRIMARY_SOURCE_CAPTURE_20261109.md'
       - 'research_capture_omxh25_issuer_raw.py'
       - 'test_research_capture_omxh25_issuer_raw.py'
       - 'research_review_omxh25_official_eod.py'
@@ -68,6 +69,10 @@ jobs:
           python research_capture_europe_benchmarks.py research-observation/europe-benchmarks.json
           python research_verify_europe_benchmark_raw.py research-observation/europe-benchmarks.json | tee research-observation/raw-integrity-receipt.json
           python -c 'import json,sys; from research_compare_omxh25_official_close import compare_omxh25_capture; doc=json.load(open(sys.argv[1])); print(json.dumps(compare_omxh25_capture(doc),sort_keys=True))' research-observation/europe-benchmarks.json | tee research-observation/omxh25-official-close-crosscheck.json
+      - name: Capture public Nasdaq OMXH25 history candidate (unverified source bytes)
+        continue-on-error: true
+        run: |
+          python research_capture_omxh25_issuer_raw.py https://beta.indexes.nasdaqomx.com/Index/History/OMXH25 research-observation/omxh25-issuer-history-candidate.json
       - name: Upload observations
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -77,5 +82,6 @@ jobs:
             research-observation/europe-benchmarks.json
             research-observation/raw-integrity-receipt.json
             research-observation/omxh25-official-close-crosscheck.json
+            research-observation/omxh25-issuer-history-candidate.json
           if-no-files-found: error
           retention-days: 14
