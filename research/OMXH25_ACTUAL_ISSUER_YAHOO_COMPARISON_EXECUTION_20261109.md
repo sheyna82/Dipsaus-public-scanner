@@ -138,3 +138,7 @@ Commit `adae6979f31ba9ee185ff53c4a7802f6380bf82c` adds AST detection for straigh
 ## Ambiguous legacy alias rebinding — CI verified 2026-11-09
 
 Commit `11bd9bb1097090fd90848d6fcd38969cb004942d` adds a fail-closed `ambiguous_alias` finding for assignment rebinding of a tracked historical function alias to a different or unknown value, plus two regression tests. GitHub Actions run `42686322838`, job `129394007781`: **35 tests OK**; all seven workflows succeeded. Inventory: 31 historical test calls, 2 controlled delegations, 0 unreviewed. Important limitation: this is conservative AST-wide name matching, not scope-aware, order-aware or control-flow-sensitive; additional false positives or missed complex paths remain possible. Historical research calculations and trusted-source registry unchanged.
+
+## Local scope shadowing ambiguity — CI verified 2026-11-09
+
+Commit `c819ff2933473e8eb666615d9f0021e9a7d28c8b` adds a conservative `ambiguous_scope` AST finding for local parameters and assignment targets that shadow imported legacy names, and three regression tests. GitHub Actions run `42686564065`, job `129394838848`: **38 tests OK**. All seven workflows for the code commit completed `success`. Inventory remains 31 historical test calls, 2 controlled delegations, 0 unreviewed. Limitations: this is not a complete scope-aware dataflow or runtime call graph; conservative ambiguity detection can overreport and nested scopes/control-flow need independent analysis. No benchmark admission, historical calculation changes, main/live updates or trading orders.
