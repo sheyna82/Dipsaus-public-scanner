@@ -6,6 +6,7 @@ import hashlib
 import base64
 import binascii
 import json
+from urllib.parse import urlsplit
 from datetime import date
 
 REQUIRED=("symbol","provider_symbol","official_index_name","official_publisher",
@@ -20,8 +21,18 @@ def validate_receipt(receipt):
               "official_source_url","reviewer","methodology"):
         if not isinstance(receipt[k],str) or not receipt[k].strip():
             raise ValueError("INVALID_EVIDENCE")
-    if not receipt["official_source_url"].startswith("https://"):
+    try:
+        url=urlsplit(receipt["official_source_url"])
+        valid_url=(url.scheme=="https" and bool(url.hostname) and
+                   url.username is None and url.password is None and
+                   url.port in (None,443) and not url.fragment and
+                   url.hostname==url.hostname.lower())
+    except ValueError:
+        valid_url=False
+    if not valid_url:
         raise ValueError("INVALID_OFFICIAL_SOURCE")
+    if receipt["official_publisher"].strip().lower()=="nasdaq" and url.hostname not in ("indexes.nasdaqomx.com","www.nasdaq.com"):
+        raise ValueError("OFFICIAL_PUBLISHER_HOST_MISMATCH")
     h=receipt["official_document_sha256"]
     if not isinstance(h,str) or len(h)!=64 or any(x not in "0123456789abcdef" for x in h):
         raise ValueError("INVALID_EVIDENCE_HASH")
