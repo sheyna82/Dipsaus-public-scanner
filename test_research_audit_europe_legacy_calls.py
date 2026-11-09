@@ -33,5 +33,23 @@ class LegacyCallAuditTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "UNPARSABLE_PYTHON_SOURCE"):
                 inventory([file])
 
+    def test_dynamic_legacy_import_is_flagged(self):
+        with tempfile.TemporaryDirectory() as root:
+            file = pathlib.Path(root) / "dynamic.py"
+            file.write_text("import importlib\n"
+                            "module = importlib.import_module('research_europe_relative_strength')\n",
+                            encoding="utf-8")
+            found = inventory([file])
+            self.assertEqual(len(found), 1)
+            self.assertEqual(found[0]["kind"], "dynamic_import")
+
+    def test_computed_import_fails_closed(self):
+        with tempfile.TemporaryDirectory() as root:
+            file = pathlib.Path(root) / "computed.py"
+            file.write_text("name = 'research_europe_recovery_confirmation'\n"
+                            "module = __import__(name)\n", encoding="utf-8")
+            found = inventory([file])
+            self.assertEqual(found[0]["target"], "unknown_dynamic_import")
+
 if __name__ == "__main__":
     unittest.main()
