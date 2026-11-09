@@ -6,6 +6,29 @@ import ast
 from research_audit_europe_legacy_calls import LEGACY
 
 
+def _scan_class_creation_expressions(expressions, state, findings):
+    """Conservatively scan expressions evaluated while a class is created.
+
+    Deferred function and lambda bodies are not class-creation effects.
+    """
+    for expression in expressions:
+        if expression is None:
+            continue
+        pending = [expression]
+        while pending:
+            node = pending.pop()
+            if isinstance(node, (ast.Lambda, ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            if isinstance(node, ast.Call):
+                if isinstance(node.func, ast.Name) and node.func.id == "exec":
+                    state.clear()
+                findings.append({"line": node.lineno, "target": None,
+                                 "classification": "uncertain_class_body_call"})
+            if isinstance(node, ast.NamedExpr):
+                state[node.target.id] = None
+            pending.extend(ast.iter_child_nodes(node))
+
+
 def diagnose(source):
     tree = ast.parse(source)
     state = {}
@@ -205,17 +228,9 @@ def diagnose(source):
             state[stmt.name] = None
             # Top-level class decorators, bases and keyword values are also
             # evaluated during class creation, before its body is executed.
-            for expression in (list(stmt.decorator_list) + list(stmt.bases)
-                               + [kw.value for kw in stmt.keywords]):
-                for nested in ast.walk(expression):
-                    if (isinstance(nested, ast.Call) and isinstance(nested.func, ast.Name)
-                            and nested.func.id == "exec"):
-                        state.clear()
-                    if isinstance(nested, ast.NamedExpr):
-                        state[nested.target.id] = None
-                    if isinstance(nested, ast.Call):
-                        findings.append({"line": nested.lineno, "target": None,
-                                         "classification": "uncertain_class_body_call"})
+            _scan_class_creation_expressions(
+                list(stmt.decorator_list) + list(stmt.bases)
+                + [kw.value for kw in stmt.keywords], state, findings)
             # Class body statements execute during class creation, unlike
             # ordinary method bodies. Inspect only direct class-body calls.
             pending_classes = [stmt]
@@ -228,7 +243,7 @@ def diagnose(source):
                     # inspect their statements but never descend into deferred
                     # method bodies or lambda scopes.
                     if isinstance(member, (ast.If, ast.For, ast.AsyncFor, ast.While,
-                                           ast.Try, ast.With, ast.AsyncWith, ast.Match)):
+                                           ast.Try, ast.TryStar, ast.With, ast.AsyncWith, ast.Match))
                         suites = []
                         for field, value in ast.iter_fields(member):
                             if field in ('body', 'orelse', 'finalbody') and isinstance(value, list):
@@ -252,18 +267,10 @@ def diagnose(source):
                             header_expressions = [member.subject]
                             header_expressions.extend(case.guard for case in member.cases
                                                       if case.guard is not None)
-                        elif isinstance(member, ast.Try):
+                        elif isinstance(member, (ast.Try, ast.TryStar)):
                             header_expressions = [handler.type for handler in member.handlers
                                                   if handler.type is not None]
-                        for expression in header_expressions:
-                            for nested in ast.walk(expression):
-                                if (isinstance(nested, ast.Call)
-                                        and isinstance(nested.func, ast.Name)
-                                        and nested.func.id == 'exec'):
-                                    state.clear()
-                                if isinstance(nested, ast.Call):
-                                    findings.append({'line': nested.lineno, 'target': None,
-                                                     'classification': 'uncertain_class_body_call'})
+                        _scan_class_creation_expressions(header_expressions, state, findings)
                     # A global declaration can occur inside class-body control
                     # flow. Skip nested function/class scopes, which have their
                     # own declarations; nested classes are processed separately.
@@ -283,6 +290,8 @@ def diagnose(source):
                         expressions = [member.value]
                     elif isinstance(member, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
                         expressions = [member.value] if member.value is not None else []
+                        if isinstance(member, ast.AnnAssign):
+                            expressions.append(member.annotation)
                     elif isinstance(member, ast.Assert):
                         expressions = [member.test] + ([member.msg] if member.msg is not None else [])
                     elif isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -296,17 +305,7 @@ def diagnose(source):
                                        + [kw.value for kw in member.keywords])
                     else:
                         expressions = []
-                    for expression in expressions:
-                        for nested in ast.walk(expression):
-                            if (isinstance(nested, ast.Call)
-                                    and isinstance(nested.func, ast.Name)
-                                    and nested.func.id == "exec"):
-                                # Dynamic code in an executing class body can
-                                # explicitly write to module globals.
-                                state.clear()
-                            if isinstance(nested, ast.Call):
-                                findings.append({"line": nested.lineno, "target": None,
-                                                 "classification": "uncertain_class_body_call"})
+                    _scan_class_creation_expressions(expressions, state, findings)
         elif isinstance(stmt, ast.Assert):
             # Both the condition and optional message may evaluate bindings;
             # the message is conditional, so alias proof must stay conservative.
