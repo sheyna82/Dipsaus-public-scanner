@@ -35,6 +35,20 @@ def compare(europe,benchmarks,identity_evidence,as_of_complete_day):
             label_audit.get("inconsistent_dates")!=[] or
             label_audit.get("identity_approved") is not False):
             raise ValueError("OMXH25_DAILY_LABEL_AUDIT_BLOCKED")
+    # Provider metadata is a necessary provenance contract, not independent proof.
+    metadata=omx.get("provider_metadata")
+    if (not isinstance(metadata,dict) or
+        metadata.get("symbol")!="^OMXH25" or
+        metadata.get("currency")!="EUR" or
+        metadata.get("instrumentType")!="INDEX" or
+        not isinstance(metadata.get("longName"),str) or
+        "Helsinki 25" not in metadata["longName"]):
+        raise ValueError("OMXH25_PROVIDER_METADATA_UNVERIFIED")
+    raw_digest=omx.get("source_sha256")
+    if (not isinstance(raw_digest,str) or len(raw_digest)!=64 or
+        any(ch not in "0123456789abcdef" for ch in raw_digest)):
+        raise ValueError("OMXH25_SOURCE_DIGEST_MISSING")
+    # A source digest cannot be independently rechecked without retained raw bytes.
     # Audit digest must bind to the exact canonical daily bars used below.
     bars_digest=hashlib.sha256(json.dumps(omx["bars"],sort_keys=True,separators=(",",":"),allow_nan=False).encode()).hexdigest()
     if label_audit.get("bars_sha256")!=bars_digest:
