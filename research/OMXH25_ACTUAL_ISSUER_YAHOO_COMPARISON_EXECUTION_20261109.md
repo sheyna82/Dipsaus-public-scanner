@@ -253,3 +253,13 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - All seven workflows completed with `success`: `42692026430`, `42692026332`, `42692026119`, `42692026344`, `42692026415`, `42692026395`, `42692026092`.
 - Enforced legacy gate succeeded; job-log audit contains 31 `historical_test`, 2 `controlled_delegation`, and zero unknown direct legacy calls.
 - This remains supplemental AST evidence only. No source admission promotion, trusted receipt, live scanner or trading logic modification, and no merge to `main`.
+
+
+## Class-definition alias shadowing: CI verification (2026-11-09)
+
+- Code commit `a3872d9eca67eee67022468d619da2db5f93b434`; regression-test commit `dc04c2fa59b924ee97adf2a2ea52649164d24212`.
+- Supplemental ordered-alias diagnostic now invalidates a previously proven top-level legacy alias when a class definition binds the same name, including decorated classes. A later explicit recognized legacy import can restore proof.
+- Exact-commit GitHub Actions source-admission run `42692416810`, job `129415305436`: `Ran 90 tests in 0.024s`, `OK`; all three new class-shadowing regressions passed individually.
+- All seven workflows completed successfully: `42692416736`, `42692416720`, `42692417205`, `42692417146`, `42692417192`, `42692416810`, `42692417130`.
+- Enforced legacy gate succeeded; log inventory: 31 `historical_test`, 2 `controlled_delegation`, zero unknown direct legacy calls.
+- This is supplemental, conservative AST evidence only. No trusted source receipt, benchmark admission promotion, live scanner/trading changes, or merge to `main`.
