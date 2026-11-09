@@ -1,10 +1,12 @@
 import unittest
+import hashlib,base64
 from research_europe_benchmark_identity_receipt import validate_receipt
 def fixture():
     return {"symbol":"SYNTHETIC.EU","provider_symbol":"^TEST",
             "official_index_name":"Synthetic Index","official_publisher":"Synthetic",
             "official_source_url":"https://example.org/synthetic",
-            "official_document_sha256":"a"*64,"reviewer":"synthetic-test",
+            "official_document_sha256":hashlib.sha256(b"synthetic official document").hexdigest(),
+            "official_document_base64":base64.b64encode(b"synthetic official document").decode(),"reviewer":"synthetic-test",
             "review_day":"2026-11-09","methodology":"synthetic fixture only",
             "identity_match":True,"currency_match":True,
             "price_vs_total_return_match":True,"value_discrepancy_resolved":True}
@@ -14,6 +16,12 @@ class Tests(unittest.TestCase):
         self.assertEqual(a,b)
         self.assertFalse(a["trade_ready"])
         self.assertFalse(a["independently_audited"])
+    def test_modified_document_bytes_block(self):
+        r=fixture();r["official_document_base64"]=base64.b64encode(b"altered").decode()
+        with self.assertRaisesRegex(ValueError,"OFFICIAL_DOCUMENT_HASH_MISMATCH"):validate_receipt(r)
+    def test_missing_document_bytes_block(self):
+        r=fixture();del r["official_document_base64"]
+        with self.assertRaisesRegex(ValueError,"MISSING_EVIDENCE"):validate_receipt(r)
     def test_missing_evidence(self):
         r=fixture();del r["official_publisher"]
         with self.assertRaisesRegex(ValueError,"MISSING_EVIDENCE"):validate_receipt(r)
