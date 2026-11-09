@@ -11,14 +11,16 @@ def capture(close=6221.7900390625):
                 "provider_symbol": "^OMXH25",
                 "provider_metadata": {"currency": "EUR", "instrumentType": "INDEX",
                                       "exchangeName": "STO", "timezone": "CET"},
-                "bars": [{"t": int(datetime(2026, 11, 6, 8, tzinfo=timezone.utc).timestamp()),
+                "bars": [{"t": int(datetime(2026, 11, 5, 8, tzinfo=timezone.utc).timestamp()),
+                          "close": 6254.30},
+                         {"t": int(datetime(2026, 11, 6, 8, tzinfo=timezone.utc).timestamp()),
                           "close": close}]}}}
 
 class OfficialCloseComparisonTests(unittest.TestCase):
     def test_dated_close_matches_without_identity_approval(self):
         result = compare_omxh25_capture(capture())
         self.assertEqual(result["status"], "historical_value_match_unverified_identity")
-        self.assertEqual(result["compared_days"], 1)
+        self.assertEqual(result["compared_days"], 2)
         self.assertFalse(result["benchmark_identity_verified"])
         self.assertFalse(result["venue_mapping_explained"])
         self.assertFalse(result["official_eod_raw_bytes_verified"])
@@ -30,7 +32,7 @@ class OfficialCloseComparisonTests(unittest.TestCase):
 
     def test_reject_missing_date(self):
         doc = capture()
-        doc["series"]["OMXH25"]["bars"] = []
+        doc["series"]["OMXH25"]["bars"] = doc["series"]["OMXH25"]["bars"][:1]
         with self.assertRaisesRegex(ValueError, "PINNED_DATE_MISSING"):
             compare_omxh25_capture(doc)
 
