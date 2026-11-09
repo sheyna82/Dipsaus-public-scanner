@@ -233,3 +233,13 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - Seven of seven workflows completed successfully: `42691683763`, `42691683718`, `42691683828`, `42691683448`, `42691683490`, `42691683785`, `42691683352`.
 - Enforced legacy gate succeeded; job-log audit recorded 31 `historical_test`, 2 `controlled_delegation`, and zero unknown direct legacy calls.
 - This is conservative supplemental AST evidence, not an admission-gate promotion, independent market-source verification, or a live trading change. `main` and the live scanner remain untouched.
+
+
+## Import rebinding and wildcard alias invalidation: CI verification (2026-11-09)
+
+- Code commit `23bf1c38be35014597bb0b85eca50cf18b74af47`; regression-test commit `5ae21cbc7db415ca34200f2fc7cbaf3c72162a2c`.
+- Supplemental ordered-alias diagnosis now updates bound names for all ordinary imports and from-imports, not only recognized legacy imports. Unknown wildcard imports invalidate the known alias state; an explicit later recognized legacy import can re-establish a proof. This prevents stale alias identities after import shadowing.
+- Exact-commit source-admission GitHub Actions run `42691879606`, job `129413418183`: `Ran 84 tests in 0.018s`, `OK`; all four new import-rebinding regressions passed.
+- Seven of seven workflows completed successfully: `42691879736`, `42691880148`, `42691879714`, `42691880304`, `42691879606`, `42691880064`, `42691879809`.
+- Legacy audit log: 31 `historical_test`, 2 `controlled_delegation`, zero unknown direct legacy calls; the enforced gate succeeded.
+- This diagnostic remains supplemental and conservative. No admission promotion, trusted source receipt, live scanner or trading logic changes; no merge to `main`.
