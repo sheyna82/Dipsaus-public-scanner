@@ -243,7 +243,7 @@ def diagnose(source):
                     # inspect their statements but never descend into deferred
                     # method bodies or lambda scopes.
                     if isinstance(member, (ast.If, ast.For, ast.AsyncFor, ast.While,
-                                           ast.Try, ast.TryStar, ast.With, ast.AsyncWith, ast.Match))
+                                           ast.Try, ast.TryStar, ast.With, ast.AsyncWith, ast.Match)):
                         suites = []
                         for field, value in ast.iter_fields(member):
                             if field in ('body', 'orelse', 'finalbody') and isinstance(value, list):
