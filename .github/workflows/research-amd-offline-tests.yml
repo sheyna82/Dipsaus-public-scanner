@@ -5,6 +5,7 @@ on:
       - 'research_capture_amd_history.py'
       - 'test_research_capture_amd_history.py'
       - '.github/workflows/research-amd-offline-tests.yml'
+      - '.github/workflows/research-amd-historical-isolated.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -21,3 +22,26 @@ jobs:
           python-version: '3.12'
       - name: Offline contract tests (no market requests)
         run: python -m unittest -v test_research_capture_amd_history.py
+  amd-history-capture:
+    needs: amd-offline
+    if: github.repository == 'sheyna82/Dipsaus-public-scanner' && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Capture AMD daily and intraday history (research only)
+        run: |
+          mkdir -p research-observation
+          python research_capture_amd_history.py research-observation/amd-history.json
+      - name: Upload immutable research observation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: dipsaus-amd-historical-research
+          path: research-observation/amd-history.json
+          if-no-files-found: error
+          retention-days: 7
