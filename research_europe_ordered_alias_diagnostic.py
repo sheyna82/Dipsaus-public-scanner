@@ -59,6 +59,25 @@ def diagnose(source):
                     findings.append({"line": child.lineno, "target": None,
                                      "classification": "uncertain_nested_call"})
                 pending.extend(ast.iter_child_nodes(child))
+        elif isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            # Return expressions are deferred until invocation; record their
+            # syntactic calls without claiming execution or alias identity.
+            for child in ast.walk(stmt):
+                if isinstance(child, (ast.Return, ast.If, ast.While, ast.Assert)):
+                    expressions = ([child.value] if isinstance(child, ast.Return)
+                                   else [child.test])
+                    for expression in expressions:
+                        if expression is None:
+                            continue
+                        for nested in ast.walk(expression):
+                            if isinstance(nested, ast.Call):
+                                findings.append({"line": nested.lineno, "target": None,
+                                                 "classification": "uncertain_deferred_expression_call"})
+        elif isinstance(stmt, (ast.Assert,)):
+            for child in ast.walk(stmt.test):
+                if isinstance(child, ast.Call):
+                    findings.append({"line": child.lineno, "target": None,
+                                     "classification": "uncertain_expression_call"})
         elif isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
             # The outer call is classified below; its nested arguments and
             # callable expression are inventoried separately as uncertain.
