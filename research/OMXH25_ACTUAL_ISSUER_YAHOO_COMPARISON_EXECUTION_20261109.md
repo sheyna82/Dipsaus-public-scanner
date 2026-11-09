@@ -154,3 +154,7 @@ Commit `283863a475dfcd3ec442a14a5198d84586f334ec` adds conservative AST reportin
 ## Function-local legacy imports audit — CI verified 2026-11-09
 
 Commit `c48e56a4bda576f0d72efe794dcffc73e6686615` flags legacy module/function imports occurring within function lexical scopes (including nested scopes) as `ambiguous_scope`, preventing file-wide import-name inference from silently allowing uncertain cases. Two new regression tests passed. GitHub Actions run `42687155455`, job `129396906989`: **44 tests OK**; all seven workflows completed successfully. Inventory: 31 historical test calls, 2 controlled delegations, 0 unreviewed. Limits: conservative detection, not complete scope binding, alias/control-flow tracking or proof of runtime target; no real benchmark admission or historical calculation changes.
+
+## Module-level legacy alias execution-order ambiguity — CI verified 2026-11-09
+
+Commit `3d57ec98c70d00b59274dc686acc7f07474cf2dd` introduces `ambiguous_order` findings when a legacy-associated top-level name is both called and reassigned to an unrelated expression. The gate rejects this uncertainty; two regression tests added. GitHub Actions run `42687521396`, job `129398213717`: **46 tests OK**; all seven workflows completed successfully. Inventory remains 31 historical test calls, 2 controlled delegations, 0 unreviewed. Limits: this flags ambiguous timelines; it does not infer precise runtime state or full control flow. No benchmark source admitted and no historical calculation or live changes.
