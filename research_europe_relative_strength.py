@@ -2,6 +2,8 @@
 from datetime import datetime,timezone
 from zoneinfo import ZoneInfo
 import math
+import hashlib
+import json
 
 PAIRS={"ASML.AS":"AEX","IFX.DE":"DAX_PRICE","NOKIA.HE":"OMXH25","RHM.DE":"DAX_PRICE"}
 def session_day(bar,zone):
@@ -33,6 +35,10 @@ def compare(europe,benchmarks,identity_evidence,as_of_complete_day):
             label_audit.get("inconsistent_dates")!=[] or
             label_audit.get("identity_approved") is not False):
             raise ValueError("OMXH25_DAILY_LABEL_AUDIT_BLOCKED")
+    # Audit digest must bind to the exact canonical daily bars used below.
+    bars_digest=hashlib.sha256(json.dumps(omx["bars"],sort_keys=True,separators=(",",":"),allow_nan=False).encode()).hexdigest()
+    if label_audit.get("bars_sha256")!=bars_digest:
+        raise ValueError("OMXH25_DAILY_LABEL_AUDIT_HASH_MISMATCH")
     # Recompute from actual daily bars: stored audit flags alone are not evidence.
     from research_capture_europe_benchmarks import audit_omxh25_daily_bar
     try:
