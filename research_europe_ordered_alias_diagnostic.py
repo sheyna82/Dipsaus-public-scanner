@@ -115,6 +115,17 @@ def diagnose(source):
                     expressions = [member.value]
                 elif isinstance(member, (ast.Assign, ast.AnnAssign)):
                     expressions = [member.value] if member.value is not None else []
+                elif isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    # Method decorators and defaults run during class creation,
+                    # not when the method body is invoked.
+                    expressions = (list(member.decorator_list)
+                                   + list(member.args.defaults)
+                                   + [v for v in member.args.kw_defaults if v is not None])
+                elif isinstance(member, ast.ClassDef):
+                    # Nested class decorators and bases are evaluated during
+                    # nested class creation; its body is handled separately.
+                    expressions = list(member.decorator_list) + list(member.bases)
+                    expressions += [kw.value for kw in member.keywords]
                 else:
                     expressions = []
                 for expression in expressions:
