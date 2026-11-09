@@ -8,7 +8,14 @@ def session_day(bar,zone):
     return datetime.fromtimestamp(bar["t"],timezone.utc).astimezone(ZoneInfo(zone)).date().isoformat()
 ZONES={"ASML.AS":"Europe/Amsterdam","IFX.DE":"Europe/Berlin","NOKIA.HE":"Europe/Helsinki","RHM.DE":"Europe/Berlin"}
 BENCH_ZONES={"AEX":"Europe/Amsterdam","DAX_PRICE":"Europe/Berlin","OMXH25":"Europe/Helsinki","STOXX600_PRICE":"Europe/Paris"}
-def compare(europe,benchmarks,identity_evidence):
+def compare(europe,benchmarks,identity_evidence,as_of_complete_day):
+    # Explicitly supplied and frozen by caller; never silently assume a date.
+    from datetime import date
+    try:
+        cutoff=date.fromisoformat(as_of_complete_day)
+        if cutoff.isoformat()!=as_of_complete_day:raise ValueError()
+    except (TypeError,ValueError):
+        raise ValueError('INVALID_COMPLETE_SESSION_CUTOFF')
     if europe.get("trade_ready") is not False or benchmarks.get("trade_ready") is not False:
         raise ValueError("RESEARCH_ONLY_REQUIRED")
     if not identity_evidence or set(identity_evidence)!={"AEX","DAX_PRICE","OMXH25","STOXX600_PRICE"} or not all(identity_evidence.values()):
@@ -26,7 +33,7 @@ def compare(europe,benchmarks,identity_evidence):
             common=sorted(set(stock_by_date)&set(idx))
             # Never use current, potentially incomplete session. Explicitly choose
             # a fixed last complete day in the caller's research protocol.
-            common=[d for d in common if d<="2026-11-06"]
+            common=[d for d in common if d<=as_of_complete_day]
             if len(common)<21:raise ValueError("INSUFFICIENT_MATCHED_DAYS")
             last,prior=common[-1],common[-21]
             a=stock_by_date[last]["close"]/stock_by_date[prior]["close"]-1
