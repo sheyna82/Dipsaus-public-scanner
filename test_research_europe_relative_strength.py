@@ -18,7 +18,11 @@ def fixtures():
         bar["t"]=int(datetime(day.year,day.month,day.day,10,tzinfo=ZoneInfo("Europe/Helsinki")).timestamp())
     digest=hashlib.sha256(json.dumps(indices["OMXH25"]["bars"],sort_keys=True,separators=(",",":"),allow_nan=False).encode()).hexdigest()
     indices["OMXH25"]["provider_metadata"]={"symbol":"^OMXH25","currency":"EUR","instrumentType":"INDEX","longName":"OMX Helsinki 25"}
-    raw=b'{"synthetic":"omxh25-test-source"}'
+    omx_bars=indices["OMXH25"]["bars"]
+    source={"chart":{"result":[{"meta":{"symbol":"^OMXH25","currency":"EUR","instrumentType":"INDEX"},
+             "timestamp":[b["t"] for b in omx_bars],
+             "indicators":{"quote":[{"close":[b["close"] for b in omx_bars]}]}}]}}
+    raw=json.dumps(source,sort_keys=True,separators=(",",":")).encode()
     indices["OMXH25"]["source_raw_base64"]=base64.b64encode(raw).decode("ascii")
     indices["OMXH25"]["source_sha256"]=hashlib.sha256(raw).hexdigest()
     indices["OMXH25"]["daily_label_audit"]={
@@ -27,6 +31,13 @@ def fixtures():
         "inconsistent_dates":[],"identity_approved":False}
     return {"trade_ready":False,"series":stocks},{"trade_ready":False,"series":indices}
 class Tests(unittest.TestCase):
+    def test_raw_source_bars_mismatch_blocks_even_with_updated_bar_hash(self):
+        stocks,indices=fixtures()
+        omx=indices["series"]["OMXH25"]
+        omx["bars"][0]["close"]+=1
+        omx["daily_label_audit"]["bars_sha256"]=hashlib.sha256(json.dumps(omx["bars"],sort_keys=True,separators=(",",":"),allow_nan=False).encode()).hexdigest()
+        with self.assertRaisesRegex(ValueError,"OMXH25_RAW_SOURCE_BARS_MISMATCH"):
+            compare(stocks,indices,IDENTITY,"2026-11-06")
     def test_missing_raw_source_blocks(self):
         stocks,indices=fixtures()
         del indices["series"]["OMXH25"]["source_raw_base64"]
