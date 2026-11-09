@@ -27,5 +27,35 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "not_proven_legacy")
 
 
+    def test_if_else_invalidates_prior_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "if condition:\n"
+                  "    compare = lambda: None\n"
+                  "else:\n"
+                  "    pass\n"
+                  "compare()\n")
+        result = diagnose(source)
+        self.assertEqual([x["classification"] for x in result],
+                         ["uncertain_control_flow", "not_proven_legacy"])
+
+    def test_loop_invalidates_prior_alias(self):
+        source = ("import research_europe_recovery_confirmation as recovery\n"
+                  "for item in items:\n"
+                  "    recovery = item\n"
+                  "recovery.evaluate()\n")
+        result = diagnose(source)
+        self.assertEqual([x["classification"] for x in result],
+                         ["uncertain_control_flow", "not_proven_legacy"])
+
+    def test_reimport_after_branch_restores_proven_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "while condition:\n"
+                  "    compare = None\n"
+                  "from research_europe_relative_strength import compare\n"
+                  "compare()\n")
+        result = diagnose(source)
+        self.assertEqual([x["classification"] for x in result],
+                         ["uncertain_control_flow", "ordered_legacy_call"])
+
 if __name__ == "__main__":
     unittest.main()
