@@ -110,29 +110,32 @@ def diagnose(source):
         elif isinstance(stmt, ast.ClassDef):
             # Class body statements execute during class creation, unlike
             # ordinary method bodies. Inspect only direct class-body calls.
-            for member in stmt.body:
-                if isinstance(member, ast.Expr):
-                    expressions = [member.value]
-                elif isinstance(member, (ast.Assign, ast.AnnAssign)):
-                    expressions = [member.value] if member.value is not None else []
-                elif isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    # Method decorators and defaults run during class creation,
-                    # not when the method body is invoked.
-                    expressions = (list(member.decorator_list)
-                                   + list(member.args.defaults)
-                                   + [v for v in member.args.kw_defaults if v is not None])
-                elif isinstance(member, ast.ClassDef):
-                    # Nested class decorators and bases are evaluated during
-                    # nested class creation; its body is handled separately.
-                    expressions = list(member.decorator_list) + list(member.bases)
-                    expressions += [kw.value for kw in member.keywords]
-                else:
-                    expressions = []
-                for expression in expressions:
-                    for nested in ast.walk(expression):
-                        if isinstance(nested, ast.Call):
-                            findings.append({"line": nested.lineno, "target": None,
-                                             "classification": "uncertain_class_body_call"})
+            pending_classes = [stmt]
+            while pending_classes:
+                current_class = pending_classes.pop()
+                for member in current_class.body:
+                    if isinstance(member, ast.ClassDef):
+                        pending_classes.append(member)
+                    if isinstance(member, ast.Expr):
+                        expressions = [member.value]
+                    elif isinstance(member, (ast.Assign, ast.AnnAssign)):
+                        expressions = [member.value] if member.value is not None else []
+                    elif isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                        # Method body is deferred; decorators and defaults
+                        # execute while its enclosing class is created.
+                        expressions = (list(member.decorator_list)
+                                       + list(member.args.defaults)
+                                       + [v for v in member.args.kw_defaults if v is not None])
+                    elif isinstance(member, ast.ClassDef):
+                        expressions = (list(member.decorator_list) + list(member.bases)
+                                       + [kw.value for kw in member.keywords])
+                    else:
+                        expressions = []
+                    for expression in expressions:
+                        for nested in ast.walk(expression):
+                            if isinstance(nested, ast.Call):
+                                findings.append({"line": nested.lineno, "target": None,
+                                                 "classification": "uncertain_class_body_call"})
         elif isinstance(stmt, (ast.Assert,)):
             for child in ast.walk(stmt.test):
                 if isinstance(child, ast.Call):
