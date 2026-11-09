@@ -195,5 +195,24 @@ class LegacyCallAuditTests(unittest.TestCase):
                     and "ambiguous_local_legacy_import" in x["target"]]
             self.assertEqual([x["line"] for x in hits], [3])
 
+    def test_top_level_rebinding_with_call_flags_execution_order(self):
+        with tempfile.TemporaryDirectory() as root:
+            file = pathlib.Path(root) / "order.py"
+            file.write_text("from research_europe_relative_strength import compare\n"
+                            "compare()\n"
+                            "compare = lambda: None\n"
+                            "compare()\n", encoding="utf-8")
+            self.assertTrue(any(x.get("kind") == "ambiguous_order"
+                                for x in inventory([file])))
+
+    def test_unrelated_top_level_rebinding_does_not_flag_order(self):
+        with tempfile.TemporaryDirectory() as root:
+            file = pathlib.Path(root) / "order.py"
+            file.write_text("from research_europe_relative_strength import compare\n"
+                            "unrelated = lambda: None\n"
+                            "compare()\n", encoding="utf-8")
+            self.assertFalse(any(x.get("kind") == "ambiguous_order"
+                                 for x in inventory([file])))
+
 if __name__ == "__main__":
     unittest.main()
