@@ -601,6 +601,32 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
         self.assertEqual(diagnose(source)[-1]["classification"],
                          "ordered_legacy_call")
 
+    def test_assert_condition_walrus_invalidates_prior_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "assert (compare := fallback)\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_assert_message_walrus_invalidates_prior_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "assert False, (compare := fallback)\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_assert_message_call_inventoried_as_uncertain(self):
+        source = ("assert True, helper()\n")
+        self.assertEqual(diagnose(source)[0]["classification"],
+                         "uncertain_expression_call")
+
+    def test_unrelated_assert_preserves_alias_proof(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "assert ready\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "ordered_legacy_call")
+
 
 if __name__ == "__main__":
     unittest.main()
