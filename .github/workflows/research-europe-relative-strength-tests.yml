@@ -86,13 +86,6 @@ jobs:
         continue-on-error: true
         run: |
           python research_capture_omxh25_issuer_raw.py 'https://beta.indexes.nasdaqomx.com/Scripts/Site.js?v=1.0.0' research-observation/omxh25-site-script-candidate.json
-      - name: One-time bounded Nasdaq HistoryData POST observation (unverified)
-        continue-on-error: true
-        run: |
-          python research_capture_omxh25_history_post.py research-observation/omxh25-history-post-raw-unverified.json '2026-11-05T00:00:00.000' '2026-11-09T00:00:00.000' EOD > research-observation/omxh25-history-post-attempt-log.txt 2>&1
-          result=$?
-          echo "HistoryData POST capture exit code: $result" >> research-observation/omxh25-history-post-attempt-log.txt
-          exit "$result"
       - name: Upload observations
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -106,7 +99,5 @@ jobs:
             research-observation/omxh25-history-script-candidate.json
             research-observation/omxh25-history-script-inspection.json
             research-observation/omxh25-site-script-candidate.json
-            research-observation/omxh25-history-post-raw-unverified.json
-            research-observation/omxh25-history-post-attempt-log.txt
           if-no-files-found: error
           retention-days: 14
