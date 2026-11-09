@@ -2,7 +2,7 @@
 import hashlib,io,json,tempfile,unittest
 from pathlib import Path
 from datetime import datetime,timedelta,timezone
-from research_capture_europe_benchmarks import collect,BENCHMARKS
+from research_capture_europe_benchmarks import collect,BENCHMARKS,audit_omxh25_daily_bar
 class Response:
     status=200
     def __init__(self,body):self.body=body
@@ -55,6 +55,26 @@ class Tests(unittest.TestCase):
             with self.assertRaisesRegex(FileExistsError,"immutable_capture_exists"):
                 collect(path,lambda req,timeout: self.fail("network must not be called"))
             self.assertEqual(path.read_text(encoding="utf-8"),"immutable original")
+
+    def test_omxh25_winter_session_label(self):
+        t=int(datetime(2026,11,6,8,tzinfo=timezone.utc).timestamp())
+        audit=audit_omxh25_daily_bar({"t":t,"close":6221.7900390625})
+        self.assertEqual(audit["session_date"],"2026-11-06")
+        self.assertTrue(audit["session_open_label_consistent"])
+        self.assertFalse(audit["identity_approved"])
+
+    def test_omxh25_summer_dst_session_label(self):
+        t=int(datetime(2026,7,6,7,tzinfo=timezone.utc).timestamp())
+        audit=audit_omxh25_daily_bar({"t":t,"close":6200.0})
+        self.assertEqual(audit["session_date"],"2026-07-06")
+        self.assertTrue(audit["session_open_label_consistent"])
+        self.assertFalse(audit["identity_approved"])
+
+    def test_omxh25_wrong_label_does_not_approve(self):
+        t=int(datetime(2026,11,6,16,tzinfo=timezone.utc).timestamp())
+        audit=audit_omxh25_daily_bar({"t":t,"close":6221.79})
+        self.assertFalse(audit["session_open_label_consistent"])
+        self.assertFalse(audit["identity_approved"])
 
     def test_reject_wrong_currency(self):
         with self.assertRaisesRegex(ValueError,"currency_not_eur"):self.capture(currency="USD")
