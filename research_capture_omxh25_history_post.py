@@ -15,7 +15,7 @@ from pathlib import Path
 from research_capture_omxh25_issuer_raw import NoRedirects, MAX_BYTES
 
 ENDPOINT = "https://beta.indexes.nasdaqomx.com/Index/HistoryData"
-ISO_LOCAL = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$")
+ISO_LOCAL = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}$")
 
 def capture_history_post(destination, start_date, end_date, time_of_day, fetch=None):
     if not (ISO_LOCAL.fullmatch(start_date) and ISO_LOCAL.fullmatch(end_date)):
