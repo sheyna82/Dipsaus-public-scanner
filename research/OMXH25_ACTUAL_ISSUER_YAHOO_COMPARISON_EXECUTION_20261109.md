@@ -313,3 +313,13 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - All seven workflows completed successfully: `42693817669`, `42693817647`, `42693817843`, `42693817399`, `42693817697`, `42693817360`, `42693817415`.
 - Enforced legacy gate succeeded; log inventory: 31 `historical_test`, 2 `controlled_delegation`, zero unknown direct legacy calls.
 - Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
+
+
+## Side-effecting assignment targets: CI verification (2026-11-09)
+
+- Code commit `3194e059f3cc0e1fa117926b4724cc5db80227c0`; regression-test commit `938d2e7100af1eddb3fe0810b8a589f417c30b83`.
+- Supplemental ordered-alias diagnostic conservatively clears alias proof for attribute/subscript assignment targets, including such targets nested in unpacking, because property or item assignment may execute arbitrary code.
+- Exact-commit source-admission GitHub Actions run `42694056923`, job `129421069575`: `Ran 107 tests in 0.030s`, `OK`; all three new regressions passed individually.
+- All seven workflows completed successfully: `42694056498`, `42694056434`, `42694056427`, `42694056429`, `42694056391`, `42694056923`, `42694056857`.
+- Enforced legacy gate succeeded; log inventory: 31 `historical_test`, 2 `controlled_delegation`, zero unknown direct legacy calls.
+- Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
