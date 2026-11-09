@@ -54,6 +54,29 @@ def inventory(paths):
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
                 continue
+            if isinstance(node.func, ast.Name) and node.func.id == "getattr" and len(node.args) >= 2:
+                obj, attribute = node.args[:2]
+                if isinstance(obj, ast.Name) and obj.id in aliases:
+                    module = aliases[obj.id]
+                    if isinstance(attribute, ast.Constant) and attribute.value == LEGACY[module]:
+                        hits.append({"path": str(path), "line": node.lineno,
+                                     "target": module + "." + LEGACY[module],
+                                     "kind": "reflective_access"})
+                    elif not isinstance(attribute, ast.Constant):
+                        hits.append({"path": str(path), "line": node.lineno,
+                                     "target": "unknown_reflective_access",
+                                     "kind": "reflective_access"})
+            if isinstance(node.func, ast.Name) and node.func.id in ("exec", "eval") and node.args:
+                arg = node.args[0]
+                if not isinstance(arg, ast.Constant) or not isinstance(arg.value, str):
+                    hits.append({"path": str(path), "line": node.lineno,
+                                 "target": "unknown_dynamic_code", "kind": "dynamic_code"})
+                elif any(module in arg.value for module in LEGACY):
+                    hits.append({"path": str(path), "line": node.lineno,
+                                 "target": "legacy_dynamic_code", "kind": "dynamic_code"})
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
             target = None
             if isinstance(node.func, ast.Name) and node.func.id in functions:
                 target = functions[node.func.id] + "." + LEGACY[functions[node.func.id]]
