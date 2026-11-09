@@ -213,3 +213,13 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - The legacy gate remains green: 31 `historical_test`, 2 `controlled_delegation`, zero unreviewed direct legacy calls, as independently counted from the source-admission job log.
 - Scope analysis is deliberately incomplete: this patch prevents incorrect outer-function attribution; it does not inventory nested-function bodies as separate independently modeled scopes. No promotion to an admission gate, source verification, or trade-ready status is justified.
 - GitHub Actions logged a Node.js 20 deprecation warning for pinned checkout/setup-python actions; workflows succeeded. Review this maintenance warning separately without changing security-sensitive action pins casually.
+
+
+## Top-level class header expression inventory: CI verification (2026-11-09)
+
+- Code commit `3983ce2f19df36d24316566b6eafed145aff1afa`; regression-test commit `03c82d0a8196e29b44baeebd9dc4f3357ce96939`.
+- Supplemental AST diagnostic now inventories calls in top-level class decorators, base expressions and class keyword values, matching the existing conservative treatment of nested class headers. It does not claim execution or legacy target identity.
+- GitHub Actions source-admission workflow run `42691502041`, job `129412100022`: `Ran 78 tests in 0.020s`, `OK`; both new top-level class-header tests explicitly passed.
+- All seven commit-associated workflows completed with `success`: `42691501659`, `42691501742`, `42691502058`, `42691502024`, `42691501822`, `42691502041`, `42691501753`.
+- Legacy audit log still contains 31 `historical_test`, 2 `controlled_delegation`, and no unknown direct legacy calls. The enforced gate succeeded.
+- The diagnostic remains supplemental, not an admission gate; no trusted source receipts, live scanner, main branch or trading logic were changed. Further AST expansion requires a concrete evidence gap and should not be treated as strategy validation.
