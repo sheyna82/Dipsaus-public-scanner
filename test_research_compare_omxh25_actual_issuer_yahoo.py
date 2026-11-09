@@ -149,5 +149,25 @@ class ComparisonTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "YAHOO_RAW_DERIVATION_MISMATCH"):
                     compare_archive(path)
 
+    def test_duplicate_keys_in_hashed_yahoo_raw_rejected(self):
+        import base64
+        import hashlib
+        from datetime import datetime, timezone
+        timestamp = int(datetime(2026, 11, 5, 16, tzinfo=timezone.utc).timestamp())
+        entry = yahoo_raw([{"t": timestamp, "close": 6254.3}])
+        raw = base64.b64decode(entry["source_raw_base64"])
+        raw = raw.replace(b'"currency": "EUR"', b'"currency": "USD", "currency": "EUR"')
+        entry["source_raw_base64"] = base64.b64encode(raw).decode("ascii")
+        entry["source_sha256"] = hashlib.sha256(raw).hexdigest()
+        yahoo = {"research_only": True, "trade_ready": False,
+                 "benchmark_identity_verified": False, "series": {"OMXH25": entry}}
+        directory, path = archive_with({}, yahoo)
+        with directory:
+            with patch("research_compare_omxh25_actual_issuer_yahoo.validate",
+                       return_value={"records": [{"date": "2026-11-05", "value": 6254.3}],
+                                     "source_sha256": "test"}):
+                with self.assertRaisesRegex(ValueError, "YAHOO_RAW_DERIVATION_MISMATCH"):
+                    compare_archive(path)
+
 if __name__ == "__main__":
     unittest.main()
