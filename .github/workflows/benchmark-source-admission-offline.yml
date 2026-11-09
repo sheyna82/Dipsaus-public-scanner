@@ -1,0 +1,24 @@
+name: Benchmark source admission offline tests
+on:
+  push:
+    branches:
+      - research/integrated-evidence-20261106
+  pull_request:
+    paths:
+      - 'research_benchmark_source_admission.py'
+      - 'test_research_benchmark_source_admission.py'
+      - '.github/workflows/benchmark-source-admission-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-admission:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Run isolated fail-closed source admission tests
+        run: python -m unittest -v test_research_benchmark_source_admission.py
