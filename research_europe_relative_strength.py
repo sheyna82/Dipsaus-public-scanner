@@ -59,6 +59,27 @@ def compare(europe,benchmarks,identity_evidence,as_of_complete_day):
         raise ValueError("OMXH25_RAW_SOURCE_INVALID") from exc
     if not raw or len(raw)>2000000 or hashlib.sha256(raw).hexdigest()!=raw_digest:
         raise ValueError("OMXH25_RAW_SOURCE_HASH_MISMATCH")
+    # Independently reconstruct accepted bars from the retained Yahoo chart payload.
+    try:
+        source_doc=json.loads(raw,parse_constant=lambda _: (_ for _ in ()).throw(ValueError("nonfinite")))
+        source_data=source_doc["chart"]["result"][0]
+        source_meta=source_data["meta"]
+        source_times=source_data["timestamp"]
+        source_closes=source_data["indicators"]["quote"][0]["close"]
+        if (source_meta.get("symbol")!="^OMXH25" or
+            source_meta.get("currency")!="EUR" or
+            source_meta.get("instrumentType")!="INDEX" or
+            len(source_times)!=len(source_closes)):
+            raise ValueError("SOURCE_CONTRACT")
+        reconstructed=[]
+        for t,close in zip(source_times,source_closes):
+            if close is None or isinstance(close,bool) or not isinstance(close,(int,float)) or not math.isfinite(close) or close<=0:
+                continue
+            reconstructed.append({"t":int(t),"close":close})
+    except (ValueError,TypeError,KeyError,IndexError,AttributeError) as exc:
+        raise ValueError("OMXH25_RAW_SOURCE_PARSE_FAILED") from exc
+    if reconstructed!=omx["bars"]:
+        raise ValueError("OMXH25_RAW_SOURCE_BARS_MISMATCH")
     # Audit digest must bind to the exact canonical daily bars used below.
     bars_digest=hashlib.sha256(json.dumps(omx["bars"],sort_keys=True,separators=(",",":"),allow_nan=False).encode()).hexdigest()
     if label_audit.get("bars_sha256")!=bars_digest:
