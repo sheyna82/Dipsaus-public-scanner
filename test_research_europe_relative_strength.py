@@ -17,7 +17,7 @@ def fixtures():
         day=datetime.fromtimestamp(bar["t"],timezone.utc).date()
         bar["t"]=int(datetime(day.year,day.month,day.day,10,tzinfo=ZoneInfo("Europe/Helsinki")).timestamp())
     digest=hashlib.sha256(json.dumps(indices["OMXH25"]["bars"],sort_keys=True,separators=(",",":"),allow_nan=False).encode()).hexdigest()
-    indices["OMXH25"]["provider_metadata"]={"symbol":"^OMXH25","shortName":None,"longName":"OMX Helsinki 25","currency":"EUR","instrumentType":"INDEX","exchangeName":None,"timezone":None,"gmtoffset":None}
+    indices["OMXH25"]["provider_metadata"]={"symbol":"^OMXH25","shortName":None,"longName":"OMX Helsinki 25","currency":"EUR","instrumentType":"INDEX","exchangeName":"STO","timezone":"CET","gmtoffset":3600}
     omx_bars=indices["OMXH25"]["bars"]
     source={"chart":{"result":[{"meta":dict(indices["OMXH25"]["provider_metadata"]),
              "timestamp":[b["t"] for b in omx_bars],
@@ -38,6 +38,20 @@ def sync_raw_omx(omx):
     omx["source_raw_base64"]=base64.b64encode(raw).decode("ascii")
     omx["source_sha256"]=hashlib.sha256(raw).hexdigest()
 class Tests(unittest.TestCase):
+    def test_unreviewed_exchange_timezone_metadata_blocks(self):
+        for field, changed in (("exchangeName","HEL"),("timezone","EET"),("gmtoffset",7200)):
+            with self.subTest(field=field):
+                stocks,indices=fixtures()
+                omx=indices["series"]["OMXH25"]
+                omx["provider_metadata"][field]=changed
+                payload=json.loads(base64.b64decode(omx["source_raw_base64"]))
+                payload["chart"]["result"][0]["meta"][field]=changed
+                raw=json.dumps(payload,sort_keys=True,separators=(",",":")).encode()
+                omx["source_raw_base64"]=base64.b64encode(raw).decode("ascii")
+                omx["source_sha256"]=hashlib.sha256(raw).hexdigest()
+                with self.assertRaisesRegex(ValueError,"OMXH25_PROVIDER_EXCHANGE_TIMEZONE_UNREVIEWED"):
+                    compare(stocks,indices,IDENTITY,"2026-11-06")
+
     def test_modified_provider_metadata_blocks_even_when_plausible(self):
         stocks,indices=fixtures()
         indices["series"]["OMXH25"]["provider_metadata"]["longName"]="OMX Helsinki 25 alternative"
