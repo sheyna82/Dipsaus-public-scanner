@@ -1,6 +1,8 @@
 """Offline archive verifier tests: synthetic bytes never pass official digest."""
 import io
 import json
+import tempfile
+from pathlib import Path
 import unittest
 import zipfile
 from unittest.mock import patch
@@ -18,13 +20,19 @@ def synthetic_archive(mutate=False):
     stream.seek(0)
     return stream
 
+def verify_temp_zip(stream):
+    with tempfile.TemporaryDirectory() as directory:
+        path=Path(directory)/"evidence.zip"
+        path.write_bytes(stream.getvalue())
+        return verify(path)
+
 class Tests(unittest.TestCase):
     def test_synthetic_pdf_never_passes_official_hash(self):
         with self.assertRaisesRegex(ValueError,"ARCHIVE_PDF_INTEGRITY_INVALID"):
-            verify(synthetic_archive())
+            verify_temp_zip(synthetic_archive())
     def test_trading_promotion_is_rejected(self):
         with self.assertRaisesRegex(ValueError,"ARCHIVE_RESEARCH_CONTRACT_INVALID"):
-            verify(synthetic_archive(mutate=True))
+            verify_temp_zip(synthetic_archive(mutate=True))
     def test_unexpected_member_is_rejected(self):
         stream=synthetic_archive()
         other=io.BytesIO()
@@ -33,5 +41,5 @@ class Tests(unittest.TestCase):
             dest.writestr("untrusted.txt","extra")
         other.seek(0)
         with self.assertRaisesRegex(ValueError,"ARCHIVE_MEMBERS_INVALID"):
-            verify(other)
+            verify_temp_zip(other)
 if __name__=="__main__":unittest.main()
