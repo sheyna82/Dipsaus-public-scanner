@@ -6,12 +6,13 @@ import math
 import zipfile
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
-from research_validate_omxh25_real_history_post import validate
+from research_validate_omxh25_real_history_post import validate, _unique_object
 
 def verify_yahoo_raw_bars(raw, entry):
     """Reconstruct captured Yahoo bars from immutable raw Chart JSON."""
     try:
-        doc = json.loads(raw, parse_constant=lambda _: (_ for _ in ()).throw(ValueError("nonfinite")))
+        doc = json.loads(raw, object_pairs_hook=_unique_object,
+                         parse_constant=lambda _: (_ for _ in ()).throw(ValueError("nonfinite")))
         result = doc["chart"]["result"]
         if not isinstance(result, list) or len(result) != 1:
             raise ValueError("invalid result count")
