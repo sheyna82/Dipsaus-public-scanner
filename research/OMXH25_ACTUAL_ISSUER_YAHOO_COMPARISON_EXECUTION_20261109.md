@@ -373,3 +373,13 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - All nine exact-commit workflows completed successfully: `42695961607`, `42695962311`, `42695961722`, `42695961544`, `42695961578`, `42695961472`, `42695961965`, `42695961981`, `42695949025`.
 - Enforced legacy audit inventory in job log: 31 `historical_test`, 2 `controlled_delegation`, zero unknown classifications.
 - Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
+
+
+## Relative versus absolute legacy import alias proof: CI verification (2026-11-09)
+
+- Supplemental ordered-alias diagnostic code commit `d69cc554ec762b9b22de58f39ad0439dafb5bef6`; regression-test commit `c0d9d5cdd8357fc11036a9eaa3c651257a22640e`.
+- Relative `from .module import name` and `from ..module import name` cannot prove identity with the absolute legacy module. The diagnostic now requires `ImportFrom.level == 0` for proven legacy function aliases; an absolute import retains its prior classification.
+- Exact-commit source-admission run `42696133378`, job `129428339779`: `Ran 127 tests in 0.015s`, `OK`; all three new regression tests passed individually.
+- All nine exact-commit workflows completed successfully: `42696140446`, `42696140863`, `42696140177`, `42696140113`, `42696140282`, `42696140197`, `42696140627`, `42696140145`, `42696133378`.
+- Enforced legacy audit inventory in job log: 31 `historical_test`, 2 `controlled_delegation`, zero unknown classifications.
+- Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
