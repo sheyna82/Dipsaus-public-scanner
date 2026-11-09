@@ -6,6 +6,7 @@ be validated against provider metadata; unsupported aliases block capture.
 """
 import hashlib,json,math,urllib.parse,urllib.request
 from datetime import datetime,timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
 # Explicit research aliases. Never silently substitute a total-return index.
@@ -13,6 +14,21 @@ BENCHMARKS={"AEX":"^AEX","DAX_PRICE":"^GDAXIP","OMXH25":"^OMXH25","STOXX600_PRIC
 MAX_BYTES=2000000
 class NoRedirects(urllib.request.HTTPRedirectHandler):
     def redirect_request(self,req,fp,code,msg,headers,newurl):raise ValueError("redirect_forbidden")
+def audit_omxh25_daily_bar(bar):
+    """Interpret Yahoo's UTC bar label in Helsinki time; never approve identity."""
+    t=bar.get("t")
+    close=bar.get("close")
+    if isinstance(t,bool) or not isinstance(t,int) or isinstance(close,bool) or not isinstance(close,(int,float)) or not math.isfinite(close) or close<=0:
+        raise ValueError("invalid_omxh25_daily_bar")
+    local=datetime.fromtimestamp(t,timezone.utc).astimezone(ZoneInfo("Europe/Helsinki"))
+    # The observed Yahoo daily label corresponds to 10:00 Helsinki local time.
+    # This is a *consistency check*, not proof of a close-time or index identity.
+    return {"session_date":local.date().isoformat(),
+            "label_utc":datetime.fromtimestamp(t,timezone.utc).isoformat(),
+            "label_helsinki":local.isoformat(),
+            "session_open_label_consistent":local.hour==10 and local.minute==0,
+            "research_only":True,"identity_approved":False}
+
 def collect(destination,fetch=None):
     p=Path(destination)
     if p.exists():raise FileExistsError("immutable_capture_exists")
