@@ -728,6 +728,27 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
         self.assertEqual(diagnose(source)[-1]["classification"],
                          "ordered_legacy_call")
 
+    def test_direct_exec_invalidates_prior_alias_proof(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "exec('compare = fallback')\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_direct_exec_with_explicit_namespace_is_conservative(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "exec(code, namespace)\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_unrelated_direct_call_preserves_prior_alias_proof(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "helper()\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "ordered_legacy_call")
+
 
 if __name__ == "__main__":
     unittest.main()
