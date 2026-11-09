@@ -116,5 +116,7 @@ jobs:
           path: |
             research-omxh25/verification.json
             research-omxh25/offline-recovery-receipt.json
+            research-omxh25/portable-positive-verification.json
+            research-omxh25/portable-positive-recovery-receipt.json
           if-no-files-found: error
           retention-days: 14
