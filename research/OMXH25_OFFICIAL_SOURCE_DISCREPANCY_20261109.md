@@ -18,3 +18,13 @@ Four sources, including Nasdaq-derived FRED, support the 6,221.79 **historical c
 **Decision: unresolved official source conflict.** Do not issue an identity-verified receipt; keep Nokia / OMXH25 gated until Nasdaq source timestamp and close-definition are independently reconciled and the actual provider `^OMXH25` mapping is checked. No live trade authorization.
 
 Next evidence: Nasdaq historical end-of-day close or dated exchange bulletin, source timestamp/refresh behavior, and provider symbol mapping with captured SHA256 documents. The contract alone is not independent proof.
+
+
+## Follow-up audit — 2026-11-09 (independent retrieval limitations)
+
+- GitHub Actions for source-document commit `bc0d8c1465c0e568fa03f2e5f2462849d9d9620e`: all five returned PR workflow runs completed successfully (42607754256, 42607753891, 42607754034, 42607753812, 42607753950). The EU offline-gates job ran eight named unittest modules, including benchmark identity receipt tests. This establishes CI execution, **not** independent truth of index values.
+- Fresh public-page retrieval returned a **dated 2026-11-04 snapshot** from the official Nasdaq OMXH25 overview (6,289.73), and a **dated 2026-11-05 latest observation** from the FRED page (6,254.30). These retrieved views do not provide a newly independently verified 2026-11-06 close. They must not be used to adjudicate the 6,188.75 versus 6,221.79 conflict.
+- Nasdaq's retrieved index description explicitly identifies OMXH25 as a capitalization-weighted stock **price** index with currency EUR. This supports official index identity, but does **not** independently establish the Yahoo `^OMXH25` mapping or historical EOD field semantics.
+- Source pages: https://indexes.nasdaqomx.com/index/overview/omxh25 ; https://fred.stlouisfed.org/series/NASDAQOMXH25 . Retrieval date 2026-11-09; the page-visible as-of dates above are distinct from retrieval date. No raw page bytes or source SHA256 captured in this audit, therefore this appendix is **not** a valid benchmark identity evidence receipt.
+
+**Gate remains closed:** `identity_evidence_complete` must not be interpreted as independent audit; `independently_audited=False`, `research_only=True`, `trade_ready=False`. Next evidence required: date-specific Nasdaq end-of-day source plus independently captured Yahoo provider observation, with raw-byte hashes and timestamp/field definitions. No trading use.
