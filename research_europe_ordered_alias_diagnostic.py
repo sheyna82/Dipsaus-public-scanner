@@ -1,0 +1,49 @@
+"""Conservative, offline, order-sensitive diagnostic for top-level legacy aliases.
+
+This is supplemental evidence, not a replacement for the fail-closed gate.
+"""
+import ast
+from research_audit_europe_legacy_calls import LEGACY
+
+
+def diagnose(source):
+    tree = ast.parse(source)
+    state = {}
+    findings = []
+    for stmt in tree.body:
+        if isinstance(stmt, ast.Import):
+            for item in stmt.names:
+                if item.name in LEGACY:
+                    state[item.asname or item.name] = ("module", item.name)
+        elif isinstance(stmt, ast.ImportFrom) and stmt.module in LEGACY:
+            for item in stmt.names:
+                if item.name == LEGACY[stmt.module]:
+                    state[item.asname or item.name] = ("function", stmt.module)
+        elif isinstance(stmt, (ast.Assign, ast.AnnAssign)):
+            targets = stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target]
+            value = stmt.value
+            resolved = None
+            if isinstance(value, ast.Name):
+                resolved = state.get(value.id)
+            elif isinstance(value, ast.Attribute) and isinstance(value.value, ast.Name):
+                base = state.get(value.value.id)
+                if base and base[0] == "module" and value.attr == LEGACY[base[1]]:
+                    resolved = ("function", base[1])
+            for target in targets:
+                if isinstance(target, ast.Name):
+                    state[target.id] = resolved
+        elif isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
+            func = stmt.value.func
+            resolved = state.get(func.id) if isinstance(func, ast.Name) else None
+            if isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name):
+                base = state.get(func.value.id)
+                if base and base[0] == "module" and func.attr == LEGACY[base[1]]:
+                    resolved = ("function", base[1])
+            if resolved and resolved[0] == "function":
+                findings.append({"line": stmt.lineno,
+                                 "target": resolved[1] + "." + LEGACY[resolved[1]],
+                                 "classification": "ordered_legacy_call"})
+            else:
+                findings.append({"line": stmt.lineno, "target": None,
+                                 "classification": "not_proven_legacy"})
+    return findings
