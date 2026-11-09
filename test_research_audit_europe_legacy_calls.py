@@ -51,5 +51,27 @@ class LegacyCallAuditTests(unittest.TestCase):
             found = inventory([file])
             self.assertEqual(found[0]["target"], "unknown_dynamic_import")
 
+    def test_getattr_legacy_function_is_flagged(self):
+        with tempfile.TemporaryDirectory() as root:
+            file = pathlib.Path(root) / "reflect.py"
+            file.write_text("import research_europe_relative_strength as legacy\n"
+                            "fn = getattr(legacy, 'compare')\n", encoding="utf-8")
+            found = inventory([file])
+            self.assertEqual(len(found), 1)
+            self.assertEqual(found[0]["kind"], "reflective_access")
+
+    def test_computed_getattr_is_flagged(self):
+        with tempfile.TemporaryDirectory() as root:
+            file = pathlib.Path(root) / "reflect.py"
+            file.write_text("import research_europe_recovery_confirmation as legacy\n"
+                            "fn = getattr(legacy, method)\n", encoding="utf-8")
+            self.assertEqual(inventory([file])[0]["target"], "unknown_reflective_access")
+
+    def test_exec_with_legacy_module_is_flagged(self):
+        with tempfile.TemporaryDirectory() as root:
+            file = pathlib.Path(root) / "dynamic.py"
+            file.write_text("exec('import research_europe_relative_strength')\n", encoding="utf-8")
+            self.assertEqual(inventory([file])[0]["kind"], "dynamic_code")
+
 if __name__ == "__main__":
     unittest.main()
