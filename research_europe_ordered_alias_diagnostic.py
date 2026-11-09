@@ -155,6 +155,9 @@ def diagnose(source):
             )
             for expression in definition_expressions:
                 for nested in ast.walk(expression):
+                    if (isinstance(nested, ast.Call) and isinstance(nested.func, ast.Name)
+                            and nested.func.id == "exec"):
+                        state.clear()
                     if isinstance(nested, ast.NamedExpr):
                         state[nested.target.id] = None
                     if isinstance(nested, ast.Call):
@@ -205,6 +208,9 @@ def diagnose(source):
             for expression in (list(stmt.decorator_list) + list(stmt.bases)
                                + [kw.value for kw in stmt.keywords]):
                 for nested in ast.walk(expression):
+                    if (isinstance(nested, ast.Call) and isinstance(nested.func, ast.Name)
+                            and nested.func.id == "exec"):
+                        state.clear()
                     if isinstance(nested, ast.NamedExpr):
                         state[nested.target.id] = None
                     if isinstance(nested, ast.Call):
