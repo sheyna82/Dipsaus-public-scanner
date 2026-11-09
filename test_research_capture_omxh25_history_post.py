@@ -37,7 +37,7 @@ class HistoryPostTests(unittest.TestCase):
             self.assertEqual(result["status"], "history_post_raw_captured_unverified")
             with self.assertRaises(FileExistsError):
                 capture_history_post(path, "2026-11-05T00:00:00",
-                                     "2026-11-09T00:00:00", "0", fetch=fetch)
+                                     "2026-11-09T00:00:00", "EOD", fetch=fetch)
 
     def test_reject_invalid_date(self):
         with tempfile.TemporaryDirectory() as directory:
