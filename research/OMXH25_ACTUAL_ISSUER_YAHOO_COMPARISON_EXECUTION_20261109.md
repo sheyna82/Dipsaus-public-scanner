@@ -223,3 +223,13 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - All seven commit-associated workflows completed with `success`: `42691501659`, `42691501742`, `42691502058`, `42691502024`, `42691501822`, `42691502041`, `42691501753`.
 - Legacy audit log still contains 31 `historical_test`, 2 `controlled_delegation`, and no unknown direct legacy calls. The enforced gate succeeded.
 - The diagnostic remains supplemental, not an admission gate; no trusted source receipts, live scanner, main branch or trading logic were changed. Further AST expansion requires a concrete evidence gap and should not be treated as strategy validation.
+
+
+## Augmented assignment alias invalidation: CI verification (2026-11-09)
+
+- Code commit `7608181f79c4d3e148499f03a3aa6732b5f75e3e`; regression-test commit `474e9a5470d1f8c7701b42fa0fbb405a1e0d4b60`.
+- Supplemental ordered-alias diagnosis now invalidates a proven top-level alias after name-target augmented assignment, inventories RHS calls as uncertain, and conservatively clears the alias map for non-name augmented targets. This avoids falsely carrying a proof through `+=` without claiming a resolved runtime identity.
+- Exact-commit source-admission GitHub Actions run `42691683490`, job `129412738009`: `Ran 80 tests in 0.017s`, `OK`; both augmented-assignment regression tests passed.
+- Seven of seven workflows completed successfully: `42691683763`, `42691683718`, `42691683828`, `42691683448`, `42691683490`, `42691683785`, `42691683352`.
+- Enforced legacy gate succeeded; job-log audit recorded 31 `historical_test`, 2 `controlled_delegation`, and zero unknown direct legacy calls.
+- This is conservative supplemental AST evidence, not an admission-gate promotion, independent market-source verification, or a live trading change. `main` and the live scanner remain untouched.
