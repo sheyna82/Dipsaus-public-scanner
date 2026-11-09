@@ -221,7 +221,44 @@ def diagnose(source):
             pending_classes = [stmt]
             while pending_classes:
                 current_class = pending_classes.pop()
-                for member in current_class.body:
+                pending_members = list(current_class.body)
+                while pending_members:
+                    member = pending_members.pop(0)
+                    # Nested control-flow suites execute during class creation;
+                    # inspect their statements but never descend into deferred
+                    # method bodies or lambda scopes.
+                    if isinstance(member, (ast.If, ast.For, ast.AsyncFor, ast.While,
+                                           ast.Try, ast.With, ast.AsyncWith, ast.Match)):
+                        suites = []
+                        for field, value in ast.iter_fields(member):
+                            if field in ('body', 'orelse', 'finalbody') and isinstance(value, list):
+                                suites.extend(value)
+                            elif field == 'handlers' and isinstance(value, list):
+                                for handler in value:
+                                    suites.extend(handler.body)
+                            elif field == 'cases' and isinstance(value, list):
+                                for case in value:
+                                    suites.extend(case.body)
+                        pending_members[0:0] = suites
+                        # Expressions in the control-flow header can execute too.
+                        header_expressions = []
+                        if isinstance(member, (ast.If, ast.While)):
+                            header_expressions = [member.test]
+                        elif isinstance(member, (ast.For, ast.AsyncFor)):
+                            header_expressions = [member.iter]
+                        elif isinstance(member, (ast.With, ast.AsyncWith)):
+                            header_expressions = [item.context_expr for item in member.items]
+                        elif isinstance(member, ast.Match):
+                            header_expressions = [member.subject]
+                        for expression in header_expressions:
+                            for nested in ast.walk(expression):
+                                if (isinstance(nested, ast.Call)
+                                        and isinstance(nested.func, ast.Name)
+                                        and nested.func.id == 'exec'):
+                                    state.clear()
+                                if isinstance(nested, ast.Call):
+                                    findings.append({'line': nested.lineno, 'target': None,
+                                                     'classification': 'uncertain_class_body_call'})
                     # A global declaration can occur inside class-body control
                     # flow. Skip nested function/class scopes, which have their
                     # own declarations; nested classes are processed separately.
