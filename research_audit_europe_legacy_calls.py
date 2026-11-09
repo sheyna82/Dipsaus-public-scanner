@@ -43,11 +43,19 @@ def inventory(paths):
             if scope.args.kwarg:
                 parameters.append(scope.args.kwarg)
             shadowed = {arg.arg for arg in parameters}
-            for child in ast.walk(scope):
-                if child is scope or isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+            # Walk only the current lexical scope; ast.walk(scope) would
+            # incorrectly attribute assignments in nested functions to parent.
+            pending = list(ast.iter_child_nodes(scope))
+            while pending:
+                child = pending.pop()
+                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                    shadowed.add(child.name)
+                    continue
+                if isinstance(child, ast.Lambda):
                     continue
                 if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Del)):
                     shadowed.add(child.id)
+                pending.extend(ast.iter_child_nodes(child))
             for name in sorted(shadowed.intersection(set(aliases) | set(functions))):
                 hits.append({"path": str(path), "line": scope.lineno,
                              "target": "ambiguous_legacy_scope_shadow:" + name,
