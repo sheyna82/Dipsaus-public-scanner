@@ -85,3 +85,13 @@ Page 1 of Nasdaq's *Index Versions — OMXH25* (copyright 2021) identifies:
 **What this independently establishes:** issuer-authored index naming, official ticker, price-vs-gross-total-return identity and EUR denomination; provenance of a specific retrievable PDF byte sequence. **What it does not establish:** Yahoo's provider alias `^OMXH25` mapping contract, Yahoo's `STO` venue-label meaning, daily-close field semantics across all dates, current-day official closing prices, or profitability of any trading strategy. The issuer document is ©2021, so treat its index-versions table as a captured historical issuer specification rather than a guarantee of unchanged 2026 index rules.
 
 **Fail-closed decision:** `benchmark_identity_verified=false`, `independently_audited=false`, `research_only=true`, `trade_ready=false`. Independent reviewer approval and provider-mapping evidence remain outstanding; no promotion on the basis of a value match alone. No main, live scanner, or orders changed.
+
+
+## Official Nasdaq PDF byte-level audit — 2026-11-09
+
+- Successfully executed independent research job `nasdaq-document-observation` in existing European workflow run **42615494295** at commit `fea5926da70d0f77ecf1fadd2b4d569823d3c302`; artifact **13673030451**.
+- Official URL: https://indexes.nasdaqomx.com/docs/Index_Versions_OMXH25.pdf ; retrieval UTC `2026-11-09T12:15:35.625397+00:00`.
+- Retained original PDF is **109623 bytes**; SHA256 `52f35d3e0d4500e01d116c135628c3e145de0b3929e3532c37f3a59d79f550ef`. Recalculation from the artifact's decoded base64 bytes matches; byte-for-byte comparison to the downloaded PDF also matches.
+- PDF title `OMXH25 Versions`; metadata creation/modification date **2021-04-16**; © 2021 Nasdaq. Page 1 table: **OMX Helsinki 25 / OMXH25 / PRICE RETURN / EUR / base 500 / 1988-03-07**. Distinct variant **OMX Helsinki 25 GI / OMXH25GI / GROSS TOTAL RETURN / EUR / base 2835.17 / 2013-12-30**. Also OMXH25EXP (price return), OMXH25ER (excess return), OMXH25DVP (dividend point).
+- This official version-definition PDF **does not contain** a 2026-11-06 EOD close, a timestamped historical-price bulletin, or an independently verified Yahoo `^OMXH25` alias mapping. It **cannot resolve** the historical 6188.75 versus 6221.79 discrepancy or independently authorize benchmark identity. The 2021 document date is not the 2026 retrieval date.
+- **Gate stays closed:** `independently_audited=False`, `research_only=True`, `trade_ready=False`. Require independently retained official dated EOD source and provider mapping/field semantics before any promotion. No live scanner or main changes.
