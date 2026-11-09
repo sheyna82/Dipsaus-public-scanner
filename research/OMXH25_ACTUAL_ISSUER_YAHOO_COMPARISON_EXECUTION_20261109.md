@@ -243,3 +243,13 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - Seven of seven workflows completed successfully: `42691879736`, `42691880148`, `42691879714`, `42691880304`, `42691879606`, `42691880064`, `42691879809`.
 - Legacy audit log: 31 `historical_test`, 2 `controlled_delegation`, zero unknown direct legacy calls; the enforced gate succeeded.
 - This diagnostic remains supplemental and conservative. No admission promotion, trusted source receipt, live scanner or trading logic changes; no merge to `main`.
+
+
+## Function-definition alias shadowing: CI verification (2026-11-09)
+
+- Code commit `0c8250cfd2d80b1556bc04649a87dcf0ea6fb919`; regression-test commit `ae08fc801b1700b622bdd875e981c16a635166c3`.
+- Supplemental ordered-alias diagnostic now invalidates an earlier proven top-level legacy alias when a synchronous or asynchronous function definition binds the same name. A later explicit recognized legacy import can restore proof. Decorator/default/annotation expression inventory remains conservative.
+- Exact-commit GitHub Actions source-admission run `42692026415`, job `129413935426`: `Ran 87 tests in 0.013s`, `OK`; all three new function-definition regressions individually passed.
+- All seven workflows completed with `success`: `42692026430`, `42692026332`, `42692026119`, `42692026344`, `42692026415`, `42692026395`, `42692026092`.
+- Enforced legacy gate succeeded; job-log audit contains 31 `historical_test`, 2 `controlled_delegation`, and zero unknown direct legacy calls.
+- This remains supplemental AST evidence only. No source admission promotion, trusted receipt, live scanner or trading logic modification, and no merge to `main`.
