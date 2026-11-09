@@ -349,5 +349,32 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "ordered_legacy_call")
 
 
+    def test_class_definition_shadows_proven_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "class compare:\n"
+                  "    pass\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[0]["classification"],
+                         "not_proven_legacy")
+
+    def test_decorated_class_shadows_proven_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "@decorator\n"
+                  "class compare:\n"
+                  "    pass\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[0]["classification"],
+                         "not_proven_legacy")
+
+    def test_reimport_after_class_definition_restores_proof(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "class compare:\n"
+                  "    pass\n"
+                  "from research_europe_relative_strength import compare\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[0]["classification"],
+                         "ordered_legacy_call")
+
+
 if __name__ == "__main__":
     unittest.main()
