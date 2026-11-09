@@ -50,5 +50,12 @@ class CallReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "UNREVIEWED_LEGACY_EU_CALLS"):
             enforce_no_unreviewed([hit])
 
+    def test_local_scope_shadowing_is_not_allowlisted(self):
+        hit = {"path": "test_research_europe_relative_strength.py", "line": 3,
+               "target": "ambiguous_legacy_scope_shadow:compare",
+               "kind": "ambiguous_scope"}
+        with self.assertRaisesRegex(ValueError, "UNREVIEWED_LEGACY_EU_CALLS"):
+            enforce_no_unreviewed([hit])
+
 if __name__ == "__main__":
     unittest.main()
