@@ -91,6 +91,42 @@ def inventory(paths):
                 hits.append({"path": str(path), "line": scope.lineno,
                              "target": "ambiguous_legacy_scope_shadow:" + name,
                              "kind": "ambiguous_scope"})
+        # A file-wide alias table cannot distinguish calls before/after a
+        # module-level rebinding. Flag those timelines for manual review.
+        for stmt in tree.body:
+            if not isinstance(stmt, (ast.Assign, ast.AnnAssign)):
+                continue
+            targets = stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target]
+            for target in targets:
+                if not isinstance(target, ast.Name):
+                    continue
+                name = target.id
+                if name not in functions and name not in aliases:
+                    continue
+                value = stmt.value
+                same_legacy = (
+                    name in functions and (
+                        isinstance(value, ast.Name) and functions.get(value.id) == functions[name]
+                        or isinstance(value, ast.Attribute)
+                        and isinstance(value.value, ast.Name)
+                        and value.value.id in aliases
+                        and aliases[value.value.id] == functions[name]
+                        and value.attr == LEGACY[functions[name]]
+                    )
+                )
+                if same_legacy:
+                    continue
+                direct_calls = [
+                    node for node in tree.body
+                    if isinstance(node, ast.Expr)
+                    and isinstance(node.value, ast.Call)
+                    and isinstance(node.value.func, ast.Name)
+                    and node.value.func.id == name
+                ]
+                if direct_calls:
+                    hits.append({"path": str(path), "line": stmt.lineno,
+                                 "target": "ambiguous_legacy_execution_order:" + name,
+                                 "kind": "ambiguous_order"})
         # Track simple function aliases, including chained assignments, without
         # pretending to solve arbitrary Python runtime data flow.
         for node in ast.walk(tree):
