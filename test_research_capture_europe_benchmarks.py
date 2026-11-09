@@ -63,6 +63,20 @@ class Tests(unittest.TestCase):
         self.assertEqual(audit["consistent"],0)
         self.assertEqual(len(audit["inconsistent_dates"]),130)
         self.assertFalse(audit["identity_approved"])
+        self.assertEqual(audit["validation_status"],"blocked")
+        self.assertTrue(audit["blocks_identity_review"])
+        self.assertFalse(doc["benchmark_identity_verified"])
+
+    def test_valid_labels_still_require_independent_identity_evidence(self):
+        from unittest.mock import patch
+        t=int(datetime(2026,11,6,8,tzinfo=timezone.utc).timestamp())
+        with patch("research_capture_europe_benchmarks.audit_omxh25_daily_bar",return_value={
+            "session_date":"2026-11-06","session_open_label_consistent":True,
+            "research_only":True,"identity_approved":False}):
+            _,doc=self.capture()
+        audit=doc["series"]["OMXH25"]["daily_label_audit"]
+        self.assertEqual(audit["validation_status"],"consistent_unverified")
+        self.assertTrue(audit["blocks_identity_review"])
         self.assertFalse(doc["benchmark_identity_verified"])
 
     def test_omxh25_winter_session_label(self):
