@@ -13,12 +13,22 @@ def diagnose(source):
     for stmt in tree.body:
         if isinstance(stmt, ast.Import):
             for item in stmt.names:
-                if item.name in LEGACY:
-                    state[item.asname or item.name] = ("module", item.name)
-        elif isinstance(stmt, ast.ImportFrom) and stmt.module in LEGACY:
+                # Any import binds its local name, including non-legacy imports.
+                # A dotted import without an alias binds its first component.
+                bound = item.asname or item.name.split(".")[0]
+                state[bound] = (("module", item.name)
+                                if item.name in LEGACY else None)
+        elif isinstance(stmt, ast.ImportFrom):
             for item in stmt.names:
-                if item.name == LEGACY[stmt.module]:
-                    state[item.asname or item.name] = ("function", stmt.module)
+                if item.name == "*":
+                    # Unknown wildcard bindings may shadow any known alias.
+                    state.clear()
+                    continue
+                bound = item.asname or item.name
+                state[bound] = (("function", stmt.module)
+                                if stmt.module in LEGACY
+                                and item.name == LEGACY[stmt.module]
+                                else None)
         elif isinstance(stmt, (ast.Assign, ast.AnnAssign)):
             targets = stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target]
             value = stmt.value
