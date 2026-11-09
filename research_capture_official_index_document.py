@@ -10,6 +10,7 @@ from urllib.request import build_opener, HTTPHandler, HTTPSHandler, Request
 from urllib.error import HTTPError, URLError
 
 ALLOWED_HOSTS=frozenset(("indexes.nasdaqomx.com","www.nasdaq.com"))
+ALLOWED_DOCUMENT_PATHS=frozenset(("/docs/Index_Versions_OMXH25.pdf","/docs/methodology_OMXH25.pdf"))
 MAX_BYTES=2_000_000
 
 class NoRedirect(HTTPHandler):
@@ -24,7 +25,9 @@ def capture_official_document(url, opener=None, now=None):
     parts=urlsplit(url)
     if (parts.scheme!="https" or parts.hostname not in ALLOWED_HOSTS or
         parts.username is not None or parts.password is not None or
-        parts.port not in (None,443) or parts.fragment):
+        parts.port not in (None,443) or parts.fragment or
+        parts.hostname!="indexes.nasdaqomx.com" or parts.path not in ALLOWED_DOCUMENT_PATHS or
+        parts.query):
         raise ValueError("OFFICIAL_SOURCE_URL_BLOCKED")
     opener=opener or build_opener(HTTPSHandler(),RejectRedirect())
     req=Request(url,headers={"User-Agent":"DIPSAUS-research-evidence/1.0","Accept":"application/pdf,application/octet-stream"})
