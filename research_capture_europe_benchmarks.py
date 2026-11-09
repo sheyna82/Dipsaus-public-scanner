@@ -4,7 +4,7 @@ Benchmark choices: AEX price index, DAX price index, OMX Helsinki 25,
 STOXX Europe 600 price index. Provider aliases are *candidates* and must
 be validated against provider metadata; unsupported aliases block capture.
 """
-import hashlib,json,math,urllib.parse,urllib.request
+import base64,hashlib,json,math,urllib.parse,urllib.request
 from datetime import datetime,timezone
 from zoneinfo import ZoneInfo
 from pathlib import Path
@@ -60,7 +60,8 @@ def collect(destination,fetch=None):
         if len(bars)<100 or any(a["t"]>=b["t"] for a,b in zip(bars,bars[1:])):
             raise ValueError("invalid_bars:"+name)
         series={"provider_symbol":symbol,"source":url,"source_sha256":hashlib.sha256(raw).hexdigest(),
-                "count":len(bars),"provider_metadata":provider_meta,"bars":bars}
+                "count":len(bars),"provider_metadata":provider_meta,"bars":bars,
+                "source_raw_base64":base64.b64encode(raw).decode("ascii")}
         if name=="OMXH25":
             audits=[audit_omxh25_daily_bar(bar) for bar in bars]
             series["daily_label_audit"]={
