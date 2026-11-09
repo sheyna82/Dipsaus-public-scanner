@@ -20,6 +20,17 @@ def compare(europe,benchmarks,identity_evidence,as_of_complete_day):
         raise ValueError("RESEARCH_ONLY_REQUIRED")
     if not identity_evidence or set(identity_evidence)!={"AEX","DAX_PRICE","OMXH25","STOXX600_PRICE"} or not all(identity_evidence.values()):
         raise ValueError("BENCHMARK_IDENTITY_UNVERIFIED")
+    # A captured Helsinki label audit can veto comparison, regardless of caller identity flags.
+    omx=benchmarks.get("series",{}).get("OMXH25",{})
+    label_audit=omx.get("daily_label_audit")
+    if label_audit is not None:
+        if (not isinstance(label_audit,dict) or
+            label_audit.get("validation_status")!="consistent_unverified" or
+            label_audit.get("checked")!=len(omx.get("bars",[])) or
+            label_audit.get("consistent")!=label_audit.get("checked") or
+            label_audit.get("inconsistent_dates")!=[] or
+            label_audit.get("identity_approved") is not False):
+            raise ValueError("OMXH25_DAILY_LABEL_AUDIT_BLOCKED")
     result={}
     for stock,primary in PAIRS.items():
         stock_bars=europe["series"][stock]["bars"]
