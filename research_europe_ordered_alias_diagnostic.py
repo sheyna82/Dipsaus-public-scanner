@@ -250,6 +250,11 @@ def diagnose(source):
                             header_expressions = [item.context_expr for item in member.items]
                         elif isinstance(member, ast.Match):
                             header_expressions = [member.subject]
+                            header_expressions.extend(case.guard for case in member.cases
+                                                      if case.guard is not None)
+                        elif isinstance(member, ast.Try):
+                            header_expressions = [handler.type for handler in member.handlers
+                                                  if handler.type is not None]
                         for expression in header_expressions:
                             for nested in ast.walk(expression):
                                 if (isinstance(nested, ast.Call)
