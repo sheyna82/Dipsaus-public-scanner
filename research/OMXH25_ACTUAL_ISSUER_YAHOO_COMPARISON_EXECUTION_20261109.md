@@ -453,3 +453,13 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - All nine exact-commit workflows completed successfully: `42705948806`, `42705949155`, `42705948880`, `42705949019`, `42705949502`, `42705949058`, `42705948830`, `42705948904`, `42705937882`.
 - Enforced legacy audit inventory in job log: 31 `historical_test`, 2 `controlled_delegation`, zero unknown classifications.
 - Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
+
+
+## Exec in function/class definition-time expressions: CI verification (2026-11-09)
+
+- Supplemental ordered-alias diagnostic code commit `cc1d1c19a6985b4b7851767d340f35993d1566c1`; regression-test commit `116ce25abe988f8209f4bd41e80c40758e8ff6af`.
+- Direct `exec` calls nested in function default/decorator expressions and class base/decorator expressions conservatively invalidate earlier module alias proofs. Four regression tests cover these execution-time cases. This does not establish complete coverage of dynamic rebinding or all class-body expressions.
+- Exact-commit source-admission run `42706158551`, job `129463373529`: `Ran 150 tests in 0.030s`, `OK`; all four new regression tests passed individually.
+- All nine exact-commit workflows completed successfully: `42706169335`, `42706168727`, `42706168675`, `42706169588`, `42706168908`, `42706168644`, `42706169628`, `42706168854`, `42706158551`.
+- Enforced legacy audit inventory in job log: 31 `historical_test`, 2 `controlled_delegation`, zero unknown classifications.
+- Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
