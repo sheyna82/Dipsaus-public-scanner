@@ -483,3 +483,13 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - All nine exact-commit workflows completed successfully: `42706531820`, `42706531592`, `42706531604`, `42706531655`, `42706531578`, `42706531821`, `42706531502`, `42706531599`, `42706519754`.
 - Enforced legacy audit inventory in job log: 31 `historical_test`, 2 `controlled_delegation`, zero unknown classifications.
 - Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
+
+
+## Exec in nested class control flow: CI verification (2026-11-09)
+
+- Supplemental ordered-alias diagnostic code commit `00ee5b0dfaac2d8d41d1de25c4e6b09e89faec32`; regression-test commit `b9ea36c8f8f1d51538580697b625f7799d860ea5`.
+- Class-body scanner now visits statements in nested if/for/while/try/with/match suites and checks selected control-flow header expressions for direct nested `exec`, conservatively invalidating prior module alias proofs. Four regression tests cover class if body, for body, try body, and if header. Remaining gaps include exception handler headers, match guards, and other dynamically evaluated expressions; no completeness claim.
+- Exact-commit source-admission run `42709509602`, job `129474997751`: `Ran 160 tests in 0.018s`, `OK`; all four new regression tests passed individually.
+- All nine exact-commit workflows completed successfully: `42709521300`, `42709521364`, `42709521360`, `42709521697`, `42709521714`, `42709521784`, `42709521637`, `42709521290`, `42709509602`.
+- Enforced legacy audit inventory in job log: 31 `historical_test`, 2 `controlled_delegation`, zero unknown classifications.
+- Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
