@@ -10,7 +10,7 @@ from urllib.parse import urlsplit
 from datetime import date
 
 REQUIRED=("symbol","provider_symbol","official_index_name","official_publisher",
-          "official_source_url","official_document_sha256","official_document_base64","reviewer",
+          "official_source_url","official_document_sha256","official_document_base64","retrieval_method","retrieved_utc","reviewer",
           "review_day","methodology","identity_match","currency_match",
           "price_vs_total_return_match","value_discrepancy_resolved")
 
@@ -42,6 +42,15 @@ def validate_receipt(receipt):
         raise ValueError("INVALID_OFFICIAL_DOCUMENT_BYTES") from exc
     if not raw or len(raw)>2000000 or hashlib.sha256(raw).hexdigest()!=h:
         raise ValueError("OFFICIAL_DOCUMENT_HASH_MISMATCH")
+    if receipt["retrieval_method"] not in ("direct_https_no_redirect",):
+        raise ValueError("UNVERIFIED_RETRIEVAL_METHOD")
+    from datetime import datetime,timezone
+    try:
+        retrieval_time=datetime.fromisoformat(receipt["retrieved_utc"])
+        if retrieval_time.tzinfo is None or retrieval_time.utcoffset()!=timezone.utc.utcoffset(retrieval_time):
+            raise ValueError("not_utc")
+    except (TypeError,ValueError,AttributeError) as exc:
+        raise ValueError("INVALID_RETRIEVAL_TIMESTAMP") from exc
     if date.fromisoformat(receipt["review_day"]).isoformat()!=receipt["review_day"]:
         raise ValueError("INVALID_REVIEW_DAY")
     for k in ("identity_match","currency_match","price_vs_total_return_match",
