@@ -116,6 +116,14 @@ def diagnose(source):
                 else:
                     pending.extend(ast.iter_child_nodes(child))
         elif isinstance(stmt, ast.ClassDef):
+            # Top-level class decorators, bases and keyword values are also
+            # evaluated during class creation, before its body is executed.
+            for expression in (list(stmt.decorator_list) + list(stmt.bases)
+                               + [kw.value for kw in stmt.keywords]):
+                for nested in ast.walk(expression):
+                    if isinstance(nested, ast.Call):
+                        findings.append({"line": nested.lineno, "target": None,
+                                         "classification": "uncertain_class_body_call"})
             # Class body statements execute during class creation, unlike
             # ordinary method bodies. Inspect only direct class-body calls.
             pending_classes = [stmt]
