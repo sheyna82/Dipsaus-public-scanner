@@ -83,5 +83,27 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
         self.assertFalse(any(x["classification"] == "uncertain_nested_call"
                              for x in result))
 
+    def test_assignment_rhs_call_is_inventoried(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "value = compare()\n")
+        result = diagnose(source)
+        self.assertEqual(result[0]["classification"], "uncertain_expression_call")
+        self.assertEqual(result[0]["line"], 2)
+        self.assertIsNone(result[0]["target"])
+
+    def test_nested_argument_call_is_inventoried(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "print(compare())\n")
+        result = diagnose(source)
+        self.assertEqual([x["classification"] for x in result],
+                         ["uncertain_expression_call", "not_proven_legacy"])
+
+    def test_outer_legacy_call_with_nested_argument(self):
+        source = ("from research_europe_recovery_confirmation import evaluate\n"
+                  "evaluate(helper())\n")
+        result = diagnose(source)
+        self.assertEqual([x["classification"] for x in result],
+                         ["uncertain_expression_call", "ordered_legacy_call"])
+
 if __name__ == "__main__":
     unittest.main()
