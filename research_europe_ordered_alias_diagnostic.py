@@ -64,6 +64,16 @@ def diagnose(source):
                     # Attribute/subscript assignment can execute user code.
                     # Never preserve unrelated alias proofs across it.
                     state.clear()
+            if isinstance(stmt, ast.AnnAssign):
+                # Annotation expressions may be evaluated at module scope.
+                # Even without a value, a walrus may shadow a prior alias.
+                # Postponed annotations make execution uncertain, not proven.
+                for child in ast.walk(stmt.annotation):
+                    if isinstance(child, ast.NamedExpr):
+                        state[child.target.id] = None
+                    if isinstance(child, ast.Call):
+                        findings.append({"line": child.lineno, "target": None,
+                                         "classification": "uncertain_expression_call"})
             # Assignment RHS may itself bind names through :=. Such bindings
             # can shadow earlier imports, regardless of the outer targets.
             if value is not None:
