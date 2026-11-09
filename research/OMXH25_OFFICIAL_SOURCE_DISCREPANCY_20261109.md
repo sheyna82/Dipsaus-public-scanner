@@ -69,3 +69,19 @@ The separate `.github/workflows/research-europe-benchmarks-isolated.yml` is **wo
 Official Nasdaq methodology https://indexes.nasdaqomx.com/docs/methodology_OMXH25.pdf says OMXH25 is calculated on Nasdaq Helsinki trading days and disseminated from **10:00:10 to 18:35:00 Helsinki local time (EET/EEST)**. On Friday 2026-11-06, Finland used EET (UTC+2), so **10:00 EET = 08:00 UTC**. The Yahoo daily bar timestamp for that date, **08:00 UTC**, therefore aligns with the **session start** to the minute; it is **not an end-of-day execution timestamp**. The captured Yahoo `timezone=CET`, `gmtoffset=3600`, and `exchangeName=STO` refer to provider display/venue metadata, and do not independently prove the index calculation venue or a provider-specific mapping guarantee. Yahoo's own public quote labels `^OMXH25` 'Stockholm - Delayed Quote' while its help page lists Nasdaq OMX Helsinki as a distinct Finnish exchange. The reason for Yahoo's STO code remains unconfirmed; do not silently normalize it to HEL.
 
 The 2026-11-06 Yahoo `close=6221.7900390625` is a **daily-bar closing value**, even though its **bar label** is 08:00 UTC. A two-decimal match with Nasdaq's official 6221.79 close is strong historical cross-validation, not proof that all future bars or index variants map identically. Continue requiring independent provider mapping and field semantics before changing `benchmark_identity_verified=false`. No orders, no main/live changes.
+
+
+## Captured official Nasdaq index-version PDF — 2026-11-09
+
+Official issuer URL: https://indexes.nasdaqomx.com/docs/Index_Versions_OMXH25.pdf
+
+GitHub Actions run **42615494295**, job **nasdaq-document-observation**, research branch commit **fea5926da70d0f77ecf1fadd2b4d569823d3c302**; artifact **13673030451**, ZIP SHA256 **5d4475449813e7444ef491fe1348f83ec3a3b0146cef404ceb6e1191fca51f7a**, captured at **2026-11-09T12:15:35Z**. Official PDF raw byte length **109623**, SHA256 **52f35d3e0d4500e01d116c135628c3e145de0b3929e3532c37f3a59d79f550ef**. Independently recomputed SHA256 from downloaded PDF matches the capture receipt; PDF header is %PDF-1.7. Original bytes are preserved base64-encoded inside the downloadable research artifact (artifact retention through 2026-11-23).
+
+Page 1 of Nasdaq's *Index Versions — OMXH25* (copyright 2021) identifies:
+- **OMX Helsinki 25**, symbol **OMXH25**, **PRICE RETURN**, **EUR**, base value **500**, base date **3/7/1988**.
+- **OMX Helsinki 25 GI**, symbol **OMXH25GI**, **GROSS TOTAL RETURN**, **EUR**, base value **2835.17**, base date **12/30/2013**.
+- **OMX Helsinki 25 Expiration**, symbol **OMXH25EXP**, **PRICE RETURN**, **EUR**; this is a distinct variant and must not be silently equated to OMXH25.
+
+**What this independently establishes:** issuer-authored index naming, official ticker, price-vs-gross-total-return identity and EUR denomination; provenance of a specific retrievable PDF byte sequence. **What it does not establish:** Yahoo's provider alias `^OMXH25` mapping contract, Yahoo's `STO` venue-label meaning, daily-close field semantics across all dates, current-day official closing prices, or profitability of any trading strategy. The issuer document is ©2021, so treat its index-versions table as a captured historical issuer specification rather than a guarantee of unchanged 2026 index rules.
+
+**Fail-closed decision:** `benchmark_identity_verified=false`, `independently_audited=false`, `research_only=true`, `trade_ready=false`. Independent reviewer approval and provider-mapping evidence remain outstanding; no promotion on the basis of a value match alone. No main, live scanner, or orders changed.
