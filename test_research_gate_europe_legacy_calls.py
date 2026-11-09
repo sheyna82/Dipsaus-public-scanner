@@ -31,5 +31,18 @@ class CallReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "UNREVIEWED_LEGACY_EU_CALLS"):
             enforce_no_unreviewed([hit])
 
+    def test_reflective_access_cannot_use_wrapper_allowlist(self):
+        hit = {"path": "research_europe_relative_strength_admitted.py", "line": 7,
+               "target": "research_europe_relative_strength.compare",
+               "kind": "reflective_access"}
+        with self.assertRaisesRegex(ValueError, "UNREVIEWED_LEGACY_EU_CALLS"):
+            enforce_no_unreviewed([hit])
+
+    def test_dynamic_code_is_not_allowlisted(self):
+        hit = {"path": "test_research_europe_relative_strength.py", "line": 7,
+               "target": "legacy_dynamic_code", "kind": "dynamic_code"}
+        with self.assertRaisesRegex(ValueError, "UNREVIEWED_LEGACY_EU_CALLS"):
+            enforce_no_unreviewed([hit])
+
 if __name__ == "__main__":
     unittest.main()
