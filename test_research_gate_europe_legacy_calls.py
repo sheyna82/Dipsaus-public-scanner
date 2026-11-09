@@ -44,5 +44,11 @@ class CallReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "UNREVIEWED_LEGACY_EU_CALLS"):
             enforce_no_unreviewed([hit])
 
+    def test_ambiguous_alias_is_not_allowlisted(self):
+        hit = {"path": "test_research_europe_relative_strength.py", "line": 5,
+               "target": "ambiguous_legacy_alias_rebinding", "kind": "ambiguous_alias"}
+        with self.assertRaisesRegex(ValueError, "UNREVIEWED_LEGACY_EU_CALLS"):
+            enforce_no_unreviewed([hit])
+
 if __name__ == "__main__":
     unittest.main()
