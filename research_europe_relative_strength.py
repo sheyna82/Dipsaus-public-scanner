@@ -23,6 +23,8 @@ def compare(europe,benchmarks,identity_evidence,as_of_complete_day):
     # A captured Helsinki label audit can veto comparison, regardless of caller identity flags.
     omx=benchmarks.get("series",{}).get("OMXH25",{})
     label_audit=omx.get("daily_label_audit")
+    if label_audit is None:
+        raise ValueError("OMXH25_DAILY_LABEL_AUDIT_MISSING")
     if label_audit is not None:
         if (not isinstance(label_audit,dict) or
             label_audit.get("validation_status")!="consistent_unverified" or
