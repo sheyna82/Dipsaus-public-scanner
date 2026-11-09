@@ -503,3 +503,16 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - All nine exact-commit workflows completed successfully: `42709707592`, `42709708090`, `42709707695`, `42709707555`, `42709707848`, `42709708121`, `42709707668`, `42709707523`, `42709695543`.
 - Enforced legacy audit inventory in job log: 31 `historical_test`, 2 `controlled_delegation`, zero unknown classifications.
 - Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
+
+
+## Architecture review: ordered alias diagnostic execution-context risks (2026-11-09)
+
+Scope: static review of `research_europe_ordered_alias_diagnostic.py` after 163-test verified milestone. **This is a risk inventory, not a code change, CI verification, or claim of runtime exploitability.**
+
+1. **Duplicated execution scanning (high maintenance risk):** direct `exec` detection appears in multiple statement branches; each new syntax form requires a separate manual update. Proposal: introduce a single execution-context-aware expression walker with explicit policies for module statements, class-creation expressions, and deferred function/lambda bodies. Retain conservative invalidation and preserve existing classifications unless independently justified.
+2. **Class-body coverage is incomplete (potential false proof):** the current nested-suite traversal covers selected `if/for/while/try/with/match` headers and bodies, but does not explicitly model every expression or all Python syntax forms. In particular `ast.TryStar` (`except*`) is absent, and class-body `ast.AnnAssign` annotation expressions are not in the explicit class expression list. Confirm actual evaluation semantics before treating a candidate as executable.
+3. **Execution-time vs deferred scopes (false-positive risk):** generic `ast.walk` over a definition-time expression can descend into nested lambda/comprehension or other deferred bodies. The new walker should distinguish code executed during class/function definition from code merely constructed then, with positive and negative regression controls.
+4. **Dynamic namespace mutation beyond direct `exec` (potential false proof):** alias state can be changed via indirect calls, namespace dictionaries, imported helpers or `eval` of dynamically constructed code. Do not assert that matching direct `exec` is exhaustive; determine a bounded, auditable policy for unknown calls rather than treating them as proven safe.
+5. **Proof model and test strategy:** retain the fail-closed enforced legacy gate as authority. Use small executable Python semantics fixtures, mutation/property-oriented test matrices and exact-commit CI evidence to validate a future refactor. No change to the live scanner, order execution, source admission, or benchmark trust receipts.
+
+Recommended next small step: add a focused, regression-only failing-case inventory for `except*` and class annotation execution semantics, then design the centralized walker **before** adding more one-off branches. No merge of draft PR #65.
