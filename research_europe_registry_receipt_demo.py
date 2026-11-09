@@ -13,7 +13,7 @@ def demonstrate():
               "source_sha256":"a"*64,"research_only":True,"trade_ready":False}
     # True is *only* a synthetic fixture to exercise the positive path.
     entry=register_snapshot(snapshot,decision_cutoff="2026-11-09",
-                            benchmark_identity_verified=True)
+                            benchmark_identity_verified=True,synthetic_fixture=True)
     readiness=evaluate_readiness([entry],start_day="2026-11-09",end_day="2026-11-09")
     tampered=dict(entry,selected=True)
     detected=False
