@@ -22,7 +22,7 @@ def capture_history_post(destination, start_date, end_date, time_of_day, fetch=N
         raise ValueError("UNREVIEWED_DATE_FORMAT")
     if not (start_date < end_date):
         raise ValueError("INVALID_DATE_RANGE")
-    if not isinstance(time_of_day, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,32}", time_of_day):
+    if time_of_day != "EOD":
         raise ValueError("UNREVIEWED_TIME_OF_DAY")
     path = Path(destination)
     if path.exists():
