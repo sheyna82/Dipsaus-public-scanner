@@ -193,6 +193,11 @@ def diagnose(source):
                     findings.append({"line": child.lineno, "target": None,
                                      "classification": "uncertain_expression_call"})
         elif isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
+            # A walrus binding in the call expression may shadow a previously
+            # proven alias. Do not infer evaluation order or runtime identity.
+            for child in ast.walk(stmt.value):
+                if isinstance(child, ast.NamedExpr):
+                    state[child.target.id] = None
             # The outer call is classified below; its nested arguments and
             # callable expression are inventoried separately as uncertain.
             for child in ast.walk(stmt.value):
