@@ -457,5 +457,27 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "not_proven_legacy")
 
 
+    def test_del_name_invalidates_legacy_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "del compare\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_del_unrelated_name_preserves_legacy_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "del unrelated\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "ordered_legacy_call")
+
+    def test_del_attribute_invalidates_unrelated_alias_proofs(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "del object.attr\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+
 if __name__ == "__main__":
     unittest.main()
