@@ -8,6 +8,42 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from research_validate_omxh25_real_history_post import validate
 
+def verify_yahoo_raw_bars(raw, entry):
+    """Reconstruct captured Yahoo bars from immutable raw Chart JSON."""
+    try:
+        doc = json.loads(raw, parse_constant=lambda _: (_ for _ in ()).throw(ValueError("nonfinite")))
+        result = doc["chart"]["result"]
+        if not isinstance(result, list) or len(result) != 1:
+            raise ValueError("invalid result count")
+        data = result[0]
+        metadata = data["meta"]
+        stored_meta = entry["provider_metadata"]
+        if any(metadata.get(key) != stored_meta.get(key) for key in
+               ("symbol", "currency", "instrumentType", "exchangeName", "timezone", "gmtoffset", "shortName", "longName")):
+            raise ValueError("metadata mismatch")
+        if metadata.get("symbol") != "^OMXH25":
+            raise ValueError("raw symbol mismatch")
+        timestamps = data["timestamp"]
+        quotes = data["indicators"]["quote"]
+        if not isinstance(quotes, list) or len(quotes) != 1:
+            raise ValueError("invalid quote count")
+        closes = quotes[0]["close"]
+        if not isinstance(timestamps, list) or not isinstance(closes, list) or len(timestamps) != len(closes):
+            raise ValueError("length mismatch")
+        reconstructed = []
+        for timestamp, close in zip(timestamps, closes):
+            if type(timestamp) is not int:
+                raise ValueError("invalid timestamp")
+            if close is None or isinstance(close, bool) or not isinstance(close, (int, float)) or not math.isfinite(close) or close <= 0:
+                continue  # Capture module explicitly skips unusable closes.
+            reconstructed.append({"t": timestamp, "close": close})
+        if reconstructed != entry["bars"]:
+            raise ValueError("derived bars mismatch")
+        if entry.get("count") != len(reconstructed):
+            raise ValueError("derived count mismatch")
+    except (KeyError, TypeError, IndexError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+        raise ValueError("YAHOO_RAW_DERIVATION_MISMATCH") from exc
+
 def compare_archive(path):
     with zipfile.ZipFile(path) as archive:
         names = archive.namelist()
@@ -31,6 +67,7 @@ def compare_archive(path):
     raw = base64.b64decode(encoded, validate=True)
     if not raw or hashlib.sha256(raw).hexdigest() != entry.get("source_sha256"):
         raise ValueError("YAHOO_RAW_HASH_MISMATCH")
+    verify_yahoo_raw_bars(raw, entry)
     bars = {}
     for bar in entry.get("bars", []):
         timestamp, close = bar.get("t"), bar.get("close")
