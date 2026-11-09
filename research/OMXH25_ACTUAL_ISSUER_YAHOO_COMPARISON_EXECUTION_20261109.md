@@ -393,3 +393,13 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - All nine exact-commit workflows completed successfully: `42696348891`, `42696349134`, `42696349099`, `42696348842`, `42696349170`, `42696348745`, `42696349290`, `42696349129`, `42696333006`.
 - Enforced legacy audit inventory in job log: 31 `historical_test`, 2 `controlled_delegation`, zero unknown classifications.
 - Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
+
+
+## Class-body nested global declaration alias invalidation: CI verification (2026-11-09)
+
+- Supplemental ordered-alias diagnostic code commit `c18d1195c03bebc5d5495485840e10ceef958d25`; regression-test commit `c82dfa999f461d64b324eea8e26325cfce3c7bb8`.
+- Class-body `global` declarations nested inside control-flow suites can affect module alias bindings. The diagnostic conservatively invalidates these names while avoiding deferred method/function scopes; nested classes are inspected separately.
+- Exact-commit source-admission run `42696513154`, job `129429679693`: `Ran 133 tests in 0.025s`, `OK`; all three new regression tests passed individually.
+- All nine exact-commit workflows completed successfully: `42696522846`, `42696522813`, `42696522881`, `42696522474`, `42696522492`, `42696522071`, `42696522496`, `42696522273`, `42696513154`.
+- Enforced legacy audit inventory in job log: 31 `historical_test`, 2 `controlled_delegation`, zero unknown classifications.
+- Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
