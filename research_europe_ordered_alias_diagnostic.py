@@ -60,6 +60,25 @@ def diagnose(source):
                                      "classification": "uncertain_nested_call"})
                 pending.extend(ast.iter_child_nodes(child))
         elif isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            # Decorators, default values and annotations are evaluated at
+            # definition time (subject to postponed annotation semantics).
+            # Never classify these as deferred body execution.
+            definition_expressions = (
+                list(stmt.decorator_list)
+                + list(stmt.args.defaults)
+                + [value for value in stmt.args.kw_defaults if value is not None]
+                + [arg.annotation for arg in (
+                    stmt.args.posonlyargs + stmt.args.args + stmt.args.kwonlyargs
+                    + ([stmt.args.vararg] if stmt.args.vararg else [])
+                    + ([stmt.args.kwarg] if stmt.args.kwarg else []))
+                   if arg.annotation is not None]
+                + ([stmt.returns] if stmt.returns is not None else [])
+            )
+            for expression in definition_expressions:
+                for nested in ast.walk(expression):
+                    if isinstance(nested, ast.Call):
+                        findings.append({"line": nested.lineno, "target": None,
+                                         "classification": "uncertain_definition_time_call"})
             # Return expressions are deferred until invocation; record their
             # syntactic calls without claiming execution or alias identity.
             for child in ast.walk(stmt):
