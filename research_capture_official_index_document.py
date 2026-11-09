@@ -35,6 +35,8 @@ def capture_official_document(url, opener=None, now=None):
         raw=response.read(MAX_BYTES+1)
     if not raw or len(raw)>MAX_BYTES:
         raise ValueError("OFFICIAL_SOURCE_SIZE_BLOCKED")
+    if parts.path.lower().endswith(".pdf") and not raw.startswith(b"%PDF-"):
+        raise ValueError("OFFICIAL_SOURCE_NOT_PDF")
     stamp=(now or datetime.now(timezone.utc)).astimezone(timezone.utc).isoformat()
     return {"official_source_url":url,"official_document_sha256":hashlib.sha256(raw).hexdigest(),
             "official_document_base64":base64.b64encode(raw).decode("ascii"),
