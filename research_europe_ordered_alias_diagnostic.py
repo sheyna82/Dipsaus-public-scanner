@@ -55,6 +55,12 @@ def diagnose(source):
                     for child in ast.walk(target):
                         if isinstance(child, ast.Name):
                             state[child.id] = None
+            # Assignment RHS may itself bind names through :=. Such bindings
+            # can shadow earlier imports, regardless of the outer targets.
+            if value is not None:
+                for child in ast.walk(value):
+                    if isinstance(child, ast.NamedExpr):
+                        state[child.target.id] = None
         elif isinstance(stmt, ast.AugAssign):
             # Augmented assignment may mutate or replace an alias. Never
             # retain a previously proven binding after this statement.
