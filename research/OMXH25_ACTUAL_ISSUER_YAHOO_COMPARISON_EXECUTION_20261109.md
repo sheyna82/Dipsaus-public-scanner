@@ -202,3 +202,14 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - New nested class-body traversal and three associated regression tests are included in the verified 73-test suite. CI success verifies tested behavior only, not complete Python scope semantics.
 - The ordered alias diagnostic remains supplemental, non-admitting research evidence; the fail-closed legacy gate and empty trusted source receipt registry must not be weakened. No benchmark-source identity approval or trade-ready status follows from this CI result.
 - Next priority: inspect real scope/definition-time gaps and possible duplicate call findings before changing the diagnostic again; add code only for a demonstrated defect and preserve isolation from main/live/trading.
+
+
+## Nested function scope boundary CI verification (2026-11-09)
+
+- Code commit `6dee1a067437122de8fcb23d88e399a3eee0b97e`; regression test commit `a9cccc226e8baadb3e4150d729be1fef01d6e3af`.
+- The supplemental ordered-alias diagnostic no longer traverses nested function, lambda, or class definitions when inventorying return/condition/assert calls belonging to an enclosing function. Three targeted tests cover nested synchronous functions, asynchronous functions, and nested class methods.
+- Verified exact test-commit GitHub Actions workflow run `42691328068`, job `129411501179`: `Ran 76 tests in 0.015s`, `OK`; the three new scope tests individually show `ok` in the job log.
+- All seven commit-associated workflows completed with `success`: `42691328738`, `42691328415`, `42691328728`, `42691328440`, `42691328068`, `42691328787`, `42691328689`.
+- The legacy gate remains green: 31 `historical_test`, 2 `controlled_delegation`, zero unreviewed direct legacy calls, as independently counted from the source-admission job log.
+- Scope analysis is deliberately incomplete: this patch prevents incorrect outer-function attribution; it does not inventory nested-function bodies as separate independently modeled scopes. No promotion to an admission gate, source verification, or trade-ready status is justified.
+- GitHub Actions logged a Node.js 20 deprecation warning for pinned checkout/setup-python actions; workflows succeeded. Review this maintenance warning separately without changing security-sensitive action pins casually.
