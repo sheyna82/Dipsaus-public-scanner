@@ -2,18 +2,19 @@
 import base64
 import copy
 import hashlib
+import json
 import unittest
 from research_review_omxh25_official_eod import review_official_eod_evidence
 
 def evidence():
-    raw = b'illustrative fixture only, not an issuer document'
+    raw = json.dumps({'session': {'date': '2026-11-06', 'index': 'OMXH25', 'close': 6221.79}}).encode()
     return {"source_url": "https://indexes.nasdaqomx.com/index/history/omxh25",
             "retrieved_utc": "2026-11-09T15:00:00+00:00",
             "source_sha256": hashlib.sha256(raw).hexdigest(),
             "source_raw_base64": base64.b64encode(raw).decode(),
             "session_date": "2026-11-06", "official_index": "OMXH25",
             "currency": "EUR", "return_type": "PRICE_RETURN",
-            "close_field": "close", "close_value": 6221.79,
+            "close_field": "/session/close", "close_value": 6221.79,
             "extraction_method": "reviewed_issuer_dated_eod_field"}
 
 class ProvenanceGateTests(unittest.TestCase):
@@ -45,6 +46,18 @@ class ProvenanceGateTests(unittest.TestCase):
         doc = evidence()
         doc["extraction_method"] = "guess"
         with self.assertRaisesRegex(ValueError, "UNREVIEWED_EXTRACTION"):
+            review_official_eod_evidence(doc)
+
+    def test_reject_claimed_close_not_in_raw_bytes(self):
+        doc = evidence()
+        doc["close_value"] = 6221.80
+        with self.assertRaisesRegex(ValueError, "RAW_CLOSE_FIELD_MISMATCH"):
+            review_official_eod_evidence(doc)
+
+    def test_reject_unsupported_html_extraction(self):
+        doc = evidence()
+        doc["close_field"] = "html:span.close"
+        with self.assertRaisesRegex(ValueError, "UNSUPPORTED_CLOSE_FIELD"):
             review_official_eod_evidence(doc)
 
     def test_reject_naive_retrieval_time(self):
