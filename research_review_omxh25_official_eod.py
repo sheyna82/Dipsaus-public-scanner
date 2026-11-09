@@ -55,8 +55,16 @@ def review_official_eod_evidence(record):
     # HTML/PDF pages require a separate reviewed parser and remain blocked.
     if record["close_field"] != "/session/close":
         raise ValueError("UNSUPPORTED_CLOSE_FIELD_EXTRACTION")
+    def unique_keys(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("DUPLICATE_JSON_KEY")
+            result[key] = value
+        return result
     try:
-        document = json.loads(raw)
+        document = json.loads(raw, object_pairs_hook=unique_keys,
+                              parse_constant=lambda _: (_ for _ in ()).throw(ValueError("NONFINITE_JSON")))
         extracted = document["session"]["close"]
         extracted_day = document["session"]["date"]
         extracted_index = document["session"]["index"]
