@@ -59,8 +59,17 @@ def collect(destination,fetch=None):
             bars.append({"t":int(t),"close":c})
         if len(bars)<100 or any(a["t"]>=b["t"] for a,b in zip(bars,bars[1:])):
             raise ValueError("invalid_bars:"+name)
-        out["series"][name]={"provider_symbol":symbol,"source":url,"source_sha256":hashlib.sha256(raw).hexdigest(),
-                             "count":len(bars),"provider_metadata":provider_meta,"bars":bars}
+        series={"provider_symbol":symbol,"source":url,"source_sha256":hashlib.sha256(raw).hexdigest(),
+                "count":len(bars),"provider_metadata":provider_meta,"bars":bars}
+        if name=="OMXH25":
+            audits=[audit_omxh25_daily_bar(bar) for bar in bars]
+            series["daily_label_audit"]={
+                "schema":"omxh25_helsinki_label_audit_v1",
+                "checked":len(audits),
+                "consistent":sum(a["session_open_label_consistent"] for a in audits),
+                "inconsistent_dates":[a["session_date"] for a in audits if not a["session_open_label_consistent"]],
+                "research_only":True,"identity_approved":False}
+        out["series"][name]=series
     out["benchmark_identity_verified"]=False  # Provider alias alone cannot verify official index variant or ISIN
     with p.open("x",encoding="utf-8") as f:json.dump(out,f,sort_keys=True,separators=(",",":"));f.write("\n")
     return {"status":"research_capture_complete","counts":{k:v["count"] for k,v in out["series"].items()},"trade_ready":False}
