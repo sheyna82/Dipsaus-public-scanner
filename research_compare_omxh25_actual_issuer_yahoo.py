@@ -40,6 +40,8 @@ def compare_archive(path):
         if day in bars:
             raise ValueError("DUPLICATE_YAHOO_SESSION")
         bars[day] = close
+    if not issuer["records"]:
+        raise ValueError("EMPTY_ISSUER_HISTORY")
     matches = []
     for row in issuer["records"]:
         day, official = row["date"], row["value"]
