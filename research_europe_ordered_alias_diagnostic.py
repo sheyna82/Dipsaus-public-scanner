@@ -217,4 +217,14 @@ def diagnose(source):
             else:
                 findings.append({"line": stmt.lineno, "target": None,
                                  "classification": "not_proven_legacy"})
+        elif isinstance(stmt, ast.Expr):
+            # Non-call expressions may still bind names via walrus operators,
+            # e.g. a conditional expression or an f-string. Invalidate these
+            # bindings without attributing the calls inside the expression.
+            for child in ast.walk(stmt.value):
+                if isinstance(child, ast.NamedExpr):
+                    state[child.target.id] = None
+                if isinstance(child, ast.Call):
+                    findings.append({"line": child.lineno, "target": None,
+                                     "classification": "uncertain_expression_call"})
     return findings
