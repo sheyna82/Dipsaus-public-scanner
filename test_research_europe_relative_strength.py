@@ -68,6 +68,10 @@ class Tests(unittest.TestCase):
         stocks,indices=fixtures()
         for v in stocks["series"].values():v["bars"].append({"t":int(datetime(2026,11,9,12,tzinfo=timezone.utc).timestamp()),"close":9999})
         for v in indices["series"].values():v["bars"].append({"t":int(datetime(2026,11,9,12,tzinfo=timezone.utc).timestamp()),"close":1})
+        # Synthetic audit fixture must cover the appended (incomplete) observation.
+        audit=indices["series"]["OMXH25"]["daily_label_audit"]
+        audit["checked"]=22
+        audit["consistent"]=22
         result=compare(stocks,indices,IDENTITY,"2026-11-06")
         self.assertAlmostEqual(result["comparisons"]["ASML.AS"]["AEX"]["relative_strength_20d_pct"],5.0)
 if __name__=="__main__":unittest.main()
