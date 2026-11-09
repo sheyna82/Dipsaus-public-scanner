@@ -172,5 +172,28 @@ class LegacyCallAuditTests(unittest.TestCase):
                                 and "scope_redirect" in x["target"]
                                 for x in inventory([file])))
 
+    def test_function_local_legacy_import_is_flagged(self):
+        with tempfile.TemporaryDirectory() as root:
+            file = pathlib.Path(root) / "local_import.py"
+            file.write_text("def run():\n"
+                            "    from research_europe_relative_strength import compare\n"
+                            "    return compare()\n", encoding="utf-8")
+            self.assertTrue(any(x.get("kind") == "ambiguous_scope"
+                                and "ambiguous_local_legacy_import" in x["target"]
+                                for x in inventory([file])))
+
+    def test_nested_local_legacy_import_belongs_to_inner_scope(self):
+        with tempfile.TemporaryDirectory() as root:
+            file = pathlib.Path(root) / "nested_import.py"
+            file.write_text("def outer():\n"
+                            "    def inner():\n"
+                            "        import research_europe_recovery_confirmation as recovery\n"
+                            "        return recovery.evaluate([], '2026-11-09')\n"
+                            "    return inner()\n", encoding="utf-8")
+            hits = [x for x in inventory([file])
+                    if x.get("kind") == "ambiguous_scope"
+                    and "ambiguous_local_legacy_import" in x["target"]]
+            self.assertEqual([x["line"] for x in hits], [3])
+
 if __name__ == "__main__":
     unittest.main()
