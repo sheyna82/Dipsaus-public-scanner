@@ -22,6 +22,10 @@ def _scan_class_creation_expressions(expressions, state, findings, module_scope=
             if isinstance(node, ast.Call):
                 if isinstance(node.func, ast.Name) and node.func.id == "exec":
                     state.clear()
+                # An immediately invoked lambda executes its body during
+                # class creation. Merely constructing a lambda does not.
+                if isinstance(node.func, ast.Lambda):
+                    pending.append(node.func.body)
                 findings.append({"line": node.lineno, "target": None,
                                  "classification": "uncertain_class_body_call"})
             # Class headers at module scope bind in the module; expressions
