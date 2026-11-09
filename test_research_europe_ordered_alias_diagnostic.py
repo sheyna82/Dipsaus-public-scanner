@@ -172,5 +172,32 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
         self.assertEqual([(x["line"], x["classification"]) for x in result],
                          [(2, "uncertain_class_body_call")])
 
+    def test_method_decorator_is_class_creation_time(self):
+        source = ("class Research:\n"
+                  "    @decorator()\n"
+                  "    def later(self):\n"
+                  "        pass\n")
+        result = diagnose(source)
+        self.assertEqual([(x["line"], x["classification"]) for x in result],
+                         [(2, "uncertain_class_body_call")])
+
+    def test_method_default_is_class_creation_time(self):
+        source = ("class Research:\n"
+                  "    def later(self, value=setup()):\n"
+                  "        pass\n")
+        result = diagnose(source)
+        self.assertEqual([(x["line"], x["classification"]) for x in result],
+                         [(2, "uncertain_class_body_call")])
+
+    def test_nested_class_base_and_decorator_are_visible(self):
+        source = ("class Outer:\n"
+                  "    @decorate()\n"
+                  "    class Inner(base_factory()):\n"
+                  "        pass\n")
+        result = diagnose(source)
+        self.assertEqual(sorted(x["line"] for x in result), [2, 3])
+        self.assertTrue(all(x["classification"] == "uncertain_class_body_call"
+                            for x in result))
+
 if __name__ == "__main__":
     unittest.main()
