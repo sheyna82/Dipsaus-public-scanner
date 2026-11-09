@@ -2,6 +2,7 @@ name: OMXH25 original Nasdaq artifact offline verification
 on:
   pull_request:
     paths:
+      - 'research_recover_omxh25_offline.py'
       - 'research_rebuild_omxh25_archive.py'
       - 'research_verify_omxh25_archive.py'
       - '.github/workflows/research-omxh25-original-artifact.yml'
@@ -46,11 +47,32 @@ jobs:
           assert result["verification"] == {"status":"verified_original_bytes","research_only":True,"trade_ready":False,"files":2}
           print("Verified original bytes; no index-identity or trading approval.")
           PY
+      - name: Exercise exact offline recovery entrypoint using retained local source bytes
+        run: |
+          python research_recover_omxh25_offline.py \
+            research-omxh25/captured.zip \
+            research-omxh25/offline-recovered.zip \
+            research-omxh25/offline-recovery-receipt.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_verify_omxh25_archive import verify
+          receipt = json.loads(Path("research-omxh25/offline-recovery-receipt.json").read_text())
+          assert receipt["schema"] == "dipsaus-omxh25-offline-recovery-v1"
+          assert receipt["source_sha256"] == "6849ebe332ce2be42e51cd9c8537b12e755e739bc4fc4a25ec5bccfcb70fc277"
+          assert receipt["verification"] == verify("research-omxh25/offline-recovered.zip")
+          assert receipt["benchmark_identity_verified"] is False
+          assert receipt["independently_audited"] is False
+          assert receipt["research_only"] is True and receipt["trade_ready"] is False
+          print("Offline recovery from retained local ZIP: verified_original_bytes; research only.")
+          PY
       - name: Publish verification receipt (not the source PDFs)
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: omxh25-official-bytes-research-receipt
-          path: research-omxh25/verification.json
+          path: |
+            research-omxh25/verification.json
+            research-omxh25/offline-recovery-receipt.json
           if-no-files-found: error
           retention-days: 14
