@@ -433,3 +433,13 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - All nine exact-commit workflows completed successfully: `42697138431`, `42697138833`, `42697138604`, `42697139117`, `42697138702`, `42697138591`, `42697138348`, `42697139195`, `42697126866`.
 - Enforced legacy audit inventory in job log: 31 `historical_test`, 2 `controlled_delegation`, zero unknown classifications.
 - Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
+
+
+## Exec in augmented assignment RHS: CI verification (2026-11-09)
+
+- Supplemental ordered-alias diagnostic code commit `11f40eb6f9edb5c00ca3de27e1c35566892ab956`; regression-test commit `5fa90c94686f01b68ecc6b2b5882b9cd2b8209bb`.
+- A direct `exec` call nested in the RHS of an augmented assignment conservatively invalidates earlier module alias proofs. An unrelated ordinary augmented assignment retains a separate proven alias in the tested case.
+- Exact-commit source-admission run `42697322530`, job `129432522090`: `Ran 143 tests in 0.032s`, `OK`; both new regression tests passed individually. The previously forecast 144-test count was incorrect; 143 is the observed log count.
+- All nine exact-commit workflows completed successfully: `42697336062`, `42697336063`, `42697336250`, `42697336185`, `42697336041`, `42697335973`, `42697336297`, `42697336386`, `42697322530`.
+- Enforced legacy audit inventory in job log: 31 `historical_test`, 2 `controlled_delegation`, zero unknown classifications.
+- Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
