@@ -56,6 +56,15 @@ class Tests(unittest.TestCase):
                 collect(path,lambda req,timeout: self.fail("network must not be called"))
             self.assertEqual(path.read_text(encoding="utf-8"),"immutable original")
 
+    def test_capture_records_unapproved_label_audit(self):
+        _,doc=self.capture()
+        audit=doc["series"]["OMXH25"]["daily_label_audit"]
+        self.assertEqual(audit["checked"],130)
+        self.assertEqual(audit["consistent"],0)
+        self.assertEqual(len(audit["inconsistent_dates"]),130)
+        self.assertFalse(audit["identity_approved"])
+        self.assertFalse(doc["benchmark_identity_verified"])
+
     def test_omxh25_winter_session_label(self):
         t=int(datetime(2026,11,6,8,tzinfo=timezone.utc).timestamp())
         audit=audit_omxh25_daily_bar({"t":t,"close":6221.7900390625})
