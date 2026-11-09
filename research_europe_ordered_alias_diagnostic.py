@@ -49,6 +49,12 @@ def diagnose(source):
             for target in targets:
                 if isinstance(target, ast.Name):
                     state[target.id] = resolved
+                elif isinstance(target, (ast.Tuple, ast.List)):
+                    # Unpacking binds each contained name. Without evaluating
+                    # the RHS shape, no element retains a proven alias.
+                    for child in ast.walk(target):
+                        if isinstance(child, ast.Name):
+                            state[child.id] = None
         elif isinstance(stmt, ast.AugAssign):
             # Augmented assignment may mutate or replace an alias. Never
             # retain a previously proven binding after this statement.
