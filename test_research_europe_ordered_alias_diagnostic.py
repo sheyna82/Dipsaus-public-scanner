@@ -199,5 +199,34 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
         self.assertTrue(all(x["classification"] == "uncertain_class_body_call"
                             for x in result))
 
+    def test_nested_class_body_call_is_inventoried(self):
+        source = ("class Outer:\n"
+                  "    class Inner:\n"
+                  "        result = compare()\n")
+        result = diagnose(source)
+        self.assertEqual([(x["line"], x["classification"]) for x in result],
+                         [(3, "uncertain_class_body_call")])
+
+    def test_deep_nested_class_body_without_method_body(self):
+        source = ("class Outer:\n"
+                  "    class Middle:\n"
+                  "        class Inner:\n"
+                  "            compare()\n"
+                  "            def later(self):\n"
+                  "                ignored()\n")
+        result = diagnose(source)
+        self.assertEqual([(x["line"], x["classification"]) for x in result],
+                         [(4, "uncertain_class_body_call")])
+
+    def test_nested_class_decorator_and_body_are_separate(self):
+        source = ("class Outer:\n"
+                  "    @decorate()\n"
+                  "    class Inner:\n"
+                  "        result = setup()\n")
+        result = diagnose(source)
+        self.assertEqual(sorted(x["line"] for x in result), [2, 4])
+        self.assertTrue(all(x["classification"] == "uncertain_class_body_call"
+                            for x in result))
+
 if __name__ == "__main__":
     unittest.main()
