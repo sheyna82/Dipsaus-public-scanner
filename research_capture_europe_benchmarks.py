@@ -30,7 +30,11 @@ def collect(destination,fetch=None):
         if not raw or len(raw)>MAX_BYTES:raise ValueError("response_size_invalid:"+name)
         doc=json.loads(raw,parse_constant=lambda _: (_ for _ in ()).throw(ValueError("nonfinite")))
         data=doc["chart"]["result"][0]
-        if data["meta"].get("symbol")!=symbol:raise ValueError("symbol_mismatch:"+name)
+        meta=data["meta"]
+        if meta.get("symbol")!=symbol:raise ValueError("symbol_mismatch:"+name)
+        if meta.get("currency")!="EUR":raise ValueError("currency_not_eur:"+name)
+        if meta.get("instrumentType")!="INDEX":raise ValueError("not_an_index:"+name)
+        provider_meta={k:meta.get(k) for k in ("symbol","shortName","longName","currency","instrumentType","exchangeName","timezone","gmtoffset")}
         timestamps=data["timestamp"];quotes=data["indicators"]["quote"][0]
         if len(quotes["close"])!=len(timestamps):raise ValueError("length_mismatch:"+name)
         bars=[]
@@ -40,7 +44,7 @@ def collect(destination,fetch=None):
         if len(bars)<100 or any(a["t"]>=b["t"] for a,b in zip(bars,bars[1:])):
             raise ValueError("invalid_bars:"+name)
         out["series"][name]={"provider_symbol":symbol,"source":url,"source_sha256":hashlib.sha256(raw).hexdigest(),
-                             "count":len(bars),"bars":bars}
+                             "count":len(bars),"provider_metadata":provider_meta,"bars":bars}
     out["benchmark_identity_verified"]=False  # Provider alias alone cannot verify official index variant or ISIN
     with p.open("x",encoding="utf-8") as f:json.dump(out,f,sort_keys=True,separators=(",",":"));f.write("\n")
     return {"status":"research_capture_complete","counts":{k:v["count"] for k,v in out["series"].items()},"trade_ready":False}
