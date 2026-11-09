@@ -110,6 +110,9 @@ def diagnose(source):
             # The RHS is evaluated too: a walrus may rebind another alias,
             # not just the augmented-assignment target.
             for child in ast.walk(stmt.value):
+                if (isinstance(child, ast.Call) and isinstance(child.func, ast.Name)
+                        and child.func.id == "exec"):
+                    state.clear()
                 if isinstance(child, ast.NamedExpr):
                     state[child.target.id] = None
         elif isinstance(stmt, (ast.If, ast.For, ast.AsyncFor, ast.While, ast.Try,
