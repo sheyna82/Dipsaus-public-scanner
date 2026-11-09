@@ -17,6 +17,8 @@ jobs:
           python-version: '3.12'
       - name: Offline syntax check
         run: python -m py_compile research_capture_europe_benchmarks.py
+      - name: Offline capture contract tests
+        run: python -m unittest -v test_research_capture_europe_benchmarks.py
       - name: Capture indexes; fail if any provider alias is invalid
         run: |
           mkdir -p research-observation
