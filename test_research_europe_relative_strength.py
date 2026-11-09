@@ -151,6 +151,11 @@ class Tests(unittest.TestCase):
         result=compare(stocks,indices,IDENTITY,"2026-11-06")
         self.assertFalse(result["trade_ready"])
         self.assertFalse(result["selection_thresholds_approved"])
+    def test_unsupported_identity_promotion_blocks(self):
+        stocks,indices=fixtures()
+        indices["benchmark_identity_verified"]=True
+        with self.assertRaisesRegex(ValueError,"UNSUPPORTED_BENCHMARK_IDENTITY_PROMOTION"):
+            compare(stocks,indices,IDENTITY,"2026-11-06")
     def test_missing_evidence_blocks(self):
         with self.assertRaisesRegex(ValueError,"BENCHMARK_IDENTITY_UNVERIFIED"):
             compare({"trade_ready":False},{"trade_ready":False},{},"2026-11-06")
