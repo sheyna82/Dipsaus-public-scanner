@@ -4,13 +4,21 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from test_research_capture_europe_benchmarks import Tests as CaptureTests
+from test_research_capture_europe_benchmarks import payload, Response
+from research_capture_europe_benchmarks import BENCHMARKS, collect
+import urllib.parse
 from research_verify_europe_benchmark_raw import verify_capture
 
 class RawVerificationTests(unittest.TestCase):
     def setUp(self):
         # Reuse deterministic in-memory fixture; no Yahoo network calls.
-        self.doc = CaptureTests().capture()[1]
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "capture.json"
+            def fetch(req, timeout):
+                symbol = urllib.parse.unquote(req.full_url.split("/chart/")[1].split("?")[0])
+                return Response(payload(symbol))
+            collect(path, fetch)
+            self.doc = json.loads(path.read_text())
 
     def test_positive_reconcile_does_not_approve_identity(self):
         result = verify_capture(self.doc)
