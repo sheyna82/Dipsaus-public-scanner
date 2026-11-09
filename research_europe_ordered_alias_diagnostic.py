@@ -210,12 +210,19 @@ def diagnose(source):
             while pending_classes:
                 current_class = pending_classes.pop()
                 for member in current_class.body:
-                    if isinstance(member, ast.Global):
-                        # Class bodies normally bind their own namespace, but
-                        # an explicit global declaration can rebind module aliases.
-                        # Conservatively invalidate all declared names.
-                        for name in member.names:
-                            state[name] = None
+                    # A global declaration can occur inside class-body control
+                    # flow. Skip nested function/class scopes, which have their
+                    # own declarations; nested classes are processed separately.
+                    pending_globals = [member]
+                    while pending_globals:
+                        node = pending_globals.pop()
+                        if isinstance(node, ast.Global):
+                            for name in node.names:
+                                state[name] = None
+                        elif not isinstance(node, (ast.FunctionDef,
+                                                   ast.AsyncFunctionDef,
+                                                   ast.Lambda, ast.ClassDef)):
+                            pending_globals.extend(ast.iter_child_nodes(node))
                     if isinstance(member, ast.ClassDef):
                         pending_classes.append(member)
                     if isinstance(member, ast.Expr):
