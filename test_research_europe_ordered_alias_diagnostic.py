@@ -259,5 +259,21 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          [(5, "uncertain_deferred_expression_call")])
 
 
+    def test_top_level_class_decorator_base_and_keyword_calls(self):
+        source = ("@decorate()\n"
+                  "class Outer(base_factory(), metaclass=meta_factory()):\n"
+                  "    pass\n")
+        result = diagnose(source)
+        self.assertEqual(sorted(x["line"] for x in result), [1, 2, 2])
+        self.assertTrue(all(x["classification"] == "uncertain_class_body_call"
+                            and x["target"] is None for x in result))
+
+    def test_top_level_class_header_and_body_both_inventoried(self):
+        source = ("class Outer(base_factory()):\n"
+                  "    value = body_call()\n")
+        result = diagnose(source)
+        self.assertEqual(sorted(x["line"] for x in result), [1, 2])
+
+
 if __name__ == "__main__":
     unittest.main()
