@@ -258,6 +258,11 @@ def diagnose(source):
                         findings.append({"line": child.lineno, "target": None,
                                          "classification": "uncertain_expression_call"})
         elif isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
+            # Direct exec can replace module globals dynamically. Without
+            # proving its runtime namespace, no earlier alias stays proven.
+            if (isinstance(stmt.value.func, ast.Name)
+                    and stmt.value.func.id == "exec"):
+                state.clear()
             # A walrus binding in the call expression may shadow a previously
             # proven alias. Do not infer evaluation order or runtime identity.
             for child in ast.walk(stmt.value):
