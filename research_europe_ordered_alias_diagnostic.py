@@ -81,6 +81,9 @@ def diagnose(source):
             # can shadow earlier imports, regardless of the outer targets.
             if value is not None:
                 for child in ast.walk(value):
+                    if (isinstance(child, ast.Call) and isinstance(child.func, ast.Name)
+                            and child.func.id == "exec"):
+                        state.clear()
                     if isinstance(child, ast.NamedExpr):
                         state[child.target.id] = None
         elif isinstance(stmt, ast.Delete):
@@ -252,6 +255,9 @@ def diagnose(source):
                 if expression is None:
                     continue
                 for child in ast.walk(expression):
+                    if (isinstance(child, ast.Call) and isinstance(child.func, ast.Name)
+                            and child.func.id == "exec"):
+                        state.clear()
                     if isinstance(child, ast.NamedExpr):
                         state[child.target.id] = None
                     if isinstance(child, ast.Call):
