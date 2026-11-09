@@ -50,6 +50,12 @@ def compare(europe,benchmarks,identity_evidence,as_of_complete_day):
         not isinstance(metadata.get("longName"),str) or
         "Helsinki 25" not in metadata["longName"]):
         raise ValueError("OMXH25_PROVIDER_METADATA_UNVERIFIED")
+    # STO/CET are unverified Yahoo provider metadata, not Helsinki exchange proof.
+    # Require exact observed values until an independent provider contract resolves them.
+    if (metadata.get("exchangeName")!="STO" or
+        metadata.get("timezone")!="CET" or
+        metadata.get("gmtoffset")!=3600):
+        raise ValueError("OMXH25_PROVIDER_EXCHANGE_TIMEZONE_UNREVIEWED")
     raw_digest=omx.get("source_sha256")
     if (not isinstance(raw_digest,str) or len(raw_digest)!=64 or
         any(ch not in "0123456789abcdef" for ch in raw_digest)):
