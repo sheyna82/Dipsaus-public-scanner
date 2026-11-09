@@ -4,6 +4,8 @@ on:
     paths:
       - 'research_europe_relative_strength.py'
       - 'test_research_europe_relative_strength.py'
+      - 'research_verify_europe_benchmark_raw.py'
+      - 'test_research_verify_europe_benchmark_raw.py'
       - 'research_capture_europe_benchmarks.py'
       - 'test_research_capture_europe_benchmarks.py'
       - 'research_europe_recovery_confirmation.py'
@@ -41,7 +43,7 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.12'
-      - run: python -m unittest -v test_research_europe_relative_strength.py test_research_capture_europe_benchmarks.py test_research_europe_recovery_confirmation.py test_research_europe_next_session_ledger.py test_research_europe_prospective_protocol.py test_research_europe_candidate_registry_bridge.py test_research_europe_registry_receipt_demo.py test_research_europe_benchmark_identity_receipt.py test_research_verify_omxh25_archive.py test_research_rebuild_omxh25_archive.py test_research_recover_omxh25_offline.py test_research_verify_omxh25_portable_backup.py
+      - run: python -m unittest -v test_research_europe_relative_strength.py test_research_capture_europe_benchmarks.py test_research_europe_recovery_confirmation.py test_research_europe_next_session_ledger.py test_research_europe_prospective_protocol.py test_research_europe_candidate_registry_bridge.py test_research_europe_registry_receipt_demo.py test_research_europe_benchmark_identity_receipt.py test_research_verify_omxh25_archive.py test_research_rebuild_omxh25_archive.py test_research_recover_omxh25_offline.py test_research_verify_omxh25_portable_backup.py test_research_verify_europe_benchmark_raw.py
       - name: Demonstrate deterministic synthetic registry receipt
         run: python research_europe_registry_receipt_demo.py
   benchmark-observation:
@@ -58,11 +60,14 @@ jobs:
         run: |
           mkdir -p research-observation
           python research_capture_europe_benchmarks.py research-observation/europe-benchmarks.json
+          python research_verify_europe_benchmark_raw.py research-observation/europe-benchmarks.json | tee research-observation/raw-integrity-receipt.json
       - name: Upload observations
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: eu-benchmark-unverified-observations
-          path: research-observation/europe-benchmarks.json
+          path: |
+            research-observation/europe-benchmarks.json
+            research-observation/raw-integrity-receipt.json
           if-no-files-found: error
           retention-days: 14
