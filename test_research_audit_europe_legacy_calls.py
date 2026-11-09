@@ -94,5 +94,15 @@ class LegacyCallAuditTests(unittest.TestCase):
             self.assertEqual(len(found), 1)
             self.assertEqual(found[0]["target"], "research_europe_recovery_confirmation.evaluate")
 
+    def test_legacy_alias_rebinding_is_marked_ambiguous(self):
+        with tempfile.TemporaryDirectory() as root:
+            file = pathlib.Path(root) / "rebind.py"
+            file.write_text("from research_europe_relative_strength import compare\n"
+                            "fn = compare\n"
+                            "fn = lambda *args: None\n"
+                            "fn()\n", encoding="utf-8")
+            found = inventory([file])
+            self.assertTrue(any(x.get("kind") == "ambiguous_alias" for x in found))
+
 if __name__ == "__main__":
     unittest.main()
