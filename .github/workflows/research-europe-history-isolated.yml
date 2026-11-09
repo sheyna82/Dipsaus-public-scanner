@@ -54,17 +54,16 @@ jobs:
           import json
           from pathlib import Path
           from research_capture_official_index_document import capture_official_document
-          url="https://indexes.nasdaqomx.com/docs/Index_Versions_OMXH25.pdf"
-          receipt=capture_official_document(url)
-          Path("research-observation/nasdaq-official-document.json").write_text(json.dumps(receipt,sort_keys=True,indent=2))
-          print("Official document sha256:",receipt["official_document_sha256"])
-          print("Identity approved:",receipt["independently_audited"])
+          for name,url in (("index-versions","https://indexes.nasdaqomx.com/docs/Index_Versions_OMXH25.pdf"),("methodology","https://indexes.nasdaqomx.com/docs/methodology_OMXH25.pdf")):
+              receipt=capture_official_document(url)
+              Path("research-observation/nasdaq-"+name+".json").write_text(json.dumps(receipt,sort_keys=True,indent=2))
+              print(name,"official sha256:",receipt["official_document_sha256"],"identity approved:",receipt["independently_audited"])
           PY
       - name: Upload unverified Nasdaq observation if capture succeeded
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: nasdaq-official-document-unverified-observation
-          path: research-observation/nasdaq-official-document.json
+          path: research-observation/nasdaq-*.json
           if-no-files-found: error
           retention-days: 14
