@@ -68,7 +68,9 @@ def collect(destination,fetch=None):
                 "checked":len(audits),
                 "consistent":sum(a["session_open_label_consistent"] for a in audits),
                 "inconsistent_dates":[a["session_date"] for a in audits if not a["session_open_label_consistent"]],
-                "research_only":True,"identity_approved":False}
+                "research_only":True,"identity_approved":False,
+                "validation_status":"blocked" if any(not a["session_open_label_consistent"] for a in audits) else "consistent_unverified",
+                "blocks_identity_review":True}
         out["series"][name]=series
     out["benchmark_identity_verified"]=False  # Provider alias alone cannot verify official index variant or ISIN
     with p.open("x",encoding="utf-8") as f:json.dump(out,f,sort_keys=True,separators=(",",":"));f.write("\n")
