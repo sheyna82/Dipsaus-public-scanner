@@ -353,3 +353,13 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - All nine exact-commit workflows completed successfully: `42695625602`, `42695626137`, `42695625622`, `42695626089`, `42695625661`, `42695625677`, `42695625591`, `42695625866`, `42695611873`.
 - Enforced legacy audit inventory in job log: 31 `historical_test`, 2 `controlled_delegation`, zero unknown classifications.
 - Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
+
+
+## Class-header walrus alias invalidation: CI verification (2026-11-09)
+
+- Supplemental ordered-alias diagnostic code commit `358657dec8e205c96395672aaac3d109a58a9358`; regression-test commit `376f646635c77bb9566b3be714c90ed1ae32404e`.
+- Top-level class decorators, bases and keyword expressions may execute walrus bindings during class creation; the diagnostic now conservatively invalidates the affected earlier alias proofs. An unrelated class definition preserves independent alias evidence.
+- Exact-commit source-admission run `42695761113`, job `129427062314`: `Ran 120 tests in 0.015s`, `OK`; all four new regression tests passed individually.
+- All nine exact-commit workflows completed successfully: `42695774907`, `42695773509`, `42695773422`, `42695773378`, `42695773225`, `42695773232`, `42695773197`, `42695773321`, `42695761113`.
+- Enforced legacy audit inventory in job log: 31 `historical_test`, 2 `controlled_delegation`, zero unknown classifications.
+- Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
