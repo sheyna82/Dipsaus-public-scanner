@@ -48,7 +48,10 @@ def diagnose(source):
                                          "classification": "uncertain_expression_call"})
             for target in targets:
                 if isinstance(target, ast.Name):
-                    state[target.id] = resolved
+                    # A bare annotation (name: Type) does not assign a value
+                    # or replace a previously imported runtime binding.
+                    if not (isinstance(stmt, ast.AnnAssign) and value is None):
+                        state[target.id] = resolved
                 elif isinstance(target, (ast.Tuple, ast.List)):
                     # Unpacking binds each contained name. Without evaluating
                     # the RHS shape, no element retains a proven alias.
