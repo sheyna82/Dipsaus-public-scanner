@@ -14,6 +14,19 @@ def archive_with(issuer, yahoo):
         archive.writestr("europe-benchmarks.json", json.dumps(yahoo))
     return directory, path
 
+def yahoo_raw(bars):
+    import base64
+    import hashlib
+    meta = {"symbol": "^OMXH25", "currency": "EUR", "instrumentType": "INDEX"}
+    raw = json.dumps({"chart": {"result": [{
+        "meta": meta, "timestamp": [bar["t"] for bar in bars],
+        "indicators": {"quote": [{"close": [bar["close"] for bar in bars]}]}
+    }]}}).encode()
+    return {"provider_symbol": "^OMXH25", "provider_metadata": meta,
+            "source_raw_base64": base64.b64encode(raw).decode(),
+            "source_sha256": hashlib.sha256(raw).hexdigest(),
+            "bars": bars, "count": len(bars)}
+
 class ComparisonTests(unittest.TestCase):
     def test_missing_source_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -47,13 +60,7 @@ class ComparisonTests(unittest.TestCase):
         raw = b"sample-yahoo-response"
         yahoo = {
             "research_only": True, "trade_ready": False, "benchmark_identity_verified": False,
-            "series": {"OMXH25": {
-                "provider_symbol": "^OMXH25",
-                "provider_metadata": {"currency": "EUR", "instrumentType": "INDEX"},
-                "source_raw_base64": base64.b64encode(raw).decode("ascii"),
-                "source_sha256": hashlib.sha256(raw).hexdigest(),
-                "bars": []
-            }}
+            "series": {"OMXH25": yahoo_raw([])}
         }
         directory, path = archive_with({}, yahoo)
         with directory:
@@ -83,13 +90,7 @@ class ComparisonTests(unittest.TestCase):
         timestamp = int(datetime(2026, 11, 5, 16, tzinfo=timezone.utc).timestamp())
         yahoo = {
             "research_only": True, "trade_ready": False, "benchmark_identity_verified": False,
-            "series": {"OMXH25": {
-                "provider_symbol": "^OMXH25",
-                "provider_metadata": {"currency": "EUR", "instrumentType": "INDEX"},
-                "source_raw_base64": base64.b64encode(raw).decode("ascii"),
-                "source_sha256": hashlib.sha256(raw).hexdigest(),
-                "bars": [{"t": timestamp, "close": 6200.0}]
-            }}
+            "series": {"OMXH25": yahoo_raw([{"t": timestamp, "close": 6200.0}])}
         }
         directory, path = archive_with({}, yahoo)
         with directory:
@@ -104,13 +105,7 @@ class ComparisonTests(unittest.TestCase):
         raw = b"fixture-yahoo-response"
         yahoo = {
             "research_only": True, "trade_ready": False, "benchmark_identity_verified": False,
-            "series": {"OMXH25": {
-                "provider_symbol": "^OMXH25",
-                "provider_metadata": {"currency": "EUR", "instrumentType": "INDEX"},
-                "source_raw_base64": base64.b64encode(raw).decode("ascii"),
-                "source_sha256": hashlib.sha256(raw).hexdigest(),
-                "bars": []
-            }}
+            "series": {"OMXH25": yahoo_raw([])}
         }
         directory, path = archive_with({}, yahoo)
         with directory:
@@ -137,6 +132,21 @@ class ComparisonTests(unittest.TestCase):
                        return_value={"records": [{"date": "2026-11-05", "value": 6254.3}],
                                      "source_sha256": "test"}):
                 with self.assertRaisesRegex(ValueError, "YAHOO_RAW_HASH_MISMATCH"):
+                    compare_archive(path)
+
+    def test_modified_derived_bars_rejected_despite_valid_raw_hash(self):
+        from datetime import datetime, timezone
+        timestamp = int(datetime(2026, 11, 5, 16, tzinfo=timezone.utc).timestamp())
+        entry = yahoo_raw([{"t": timestamp, "close": 6254.3}])
+        entry["bars"][0]["close"] = 6200.0
+        yahoo = {"research_only": True, "trade_ready": False,
+                 "benchmark_identity_verified": False, "series": {"OMXH25": entry}}
+        directory, path = archive_with({}, yahoo)
+        with directory:
+            with patch("research_compare_omxh25_actual_issuer_yahoo.validate",
+                       return_value={"records": [{"date": "2026-11-05", "value": 6254.3}],
+                                     "source_sha256": "test"}):
+                with self.assertRaisesRegex(ValueError, "YAHOO_RAW_DERIVATION_MISMATCH"):
                     compare_archive(path)
 
 if __name__ == "__main__":
