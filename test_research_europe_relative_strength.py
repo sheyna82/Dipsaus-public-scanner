@@ -17,12 +17,24 @@ def fixtures():
         day=datetime.fromtimestamp(bar["t"],timezone.utc).date()
         bar["t"]=int(datetime(day.year,day.month,day.day,10,tzinfo=ZoneInfo("Europe/Helsinki")).timestamp())
     digest=hashlib.sha256(json.dumps(indices["OMXH25"]["bars"],sort_keys=True,separators=(",",":"),allow_nan=False).encode()).hexdigest()
+    indices["OMXH25"]["provider_metadata"]={"symbol":"^OMXH25","currency":"EUR","instrumentType":"INDEX","longName":"OMX Helsinki 25"}
+    indices["OMXH25"]["source_sha256"]="a"*64
     indices["OMXH25"]["daily_label_audit"]={
         "bars_sha256":digest,
         "validation_status":"consistent_unverified","checked":21,"consistent":21,
         "inconsistent_dates":[],"identity_approved":False}
     return {"trade_ready":False,"series":stocks},{"trade_ready":False,"series":indices}
 class Tests(unittest.TestCase):
+    def test_missing_source_digest_blocks(self):
+        stocks,indices=fixtures()
+        del indices["series"]["OMXH25"]["source_sha256"]
+        with self.assertRaisesRegex(ValueError,"OMXH25_SOURCE_DIGEST_MISSING"):
+            compare(stocks,indices,IDENTITY,"2026-11-06")
+    def test_wrong_provider_metadata_blocks(self):
+        stocks,indices=fixtures()
+        indices["series"]["OMXH25"]["provider_metadata"]["instrumentType"]="EQUITY"
+        with self.assertRaisesRegex(ValueError,"OMXH25_PROVIDER_METADATA_UNVERIFIED"):
+            compare(stocks,indices,IDENTITY,"2026-11-06")
     def test_forged_status_counts_and_hash_cannot_hide_wrong_timestamp(self):
         stocks,indices=fixtures()
         omx=indices["series"]["OMXH25"]
