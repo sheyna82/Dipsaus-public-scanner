@@ -12,6 +12,21 @@ def fixtures():
     indices={k:{"bars":bars(100,105)} for k in IDENTITY}
     return {"trade_ready":False,"series":stocks},{"trade_ready":False,"series":indices}
 class Tests(unittest.TestCase):
+    def test_inconsistent_omxh25_audit_vetoes_comparison(self):
+        stocks,indices=fixtures()
+        indices["series"]["OMXH25"]["daily_label_audit"]={
+            "validation_status":"blocked","checked":21,"consistent":20,
+            "inconsistent_dates":["2026-10-06"],"identity_approved":False}
+        with self.assertRaisesRegex(ValueError,"OMXH25_DAILY_LABEL_AUDIT_BLOCKED"):
+            compare(stocks,indices,IDENTITY,"2026-11-06")
+    def test_consistent_unverified_audit_does_not_claim_approval(self):
+        stocks,indices=fixtures()
+        indices["series"]["OMXH25"]["daily_label_audit"]={
+            "validation_status":"consistent_unverified","checked":21,"consistent":21,
+            "inconsistent_dates":[],"identity_approved":False}
+        result=compare(stocks,indices,IDENTITY,"2026-11-06")
+        self.assertFalse(result["trade_ready"])
+        self.assertFalse(result["selection_thresholds_approved"])
     def test_missing_evidence_blocks(self):
         with self.assertRaisesRegex(ValueError,"BENCHMARK_IDENTITY_UNVERIFIED"):
             compare({"trade_ready":False},{"trade_ready":False},{},"2026-11-06")
