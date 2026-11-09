@@ -60,6 +60,22 @@ class ProvenanceGateTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "UNSUPPORTED_CLOSE_FIELD"):
             review_official_eod_evidence(doc)
 
+    def test_reject_duplicate_close_keys(self):
+        doc = evidence()
+        raw = b'{"session":{"date":"2026-11-06","index":"OMXH25","close":1,"close":6221.79}}'
+        doc["source_raw_base64"] = base64.b64encode(raw).decode()
+        doc["source_sha256"] = hashlib.sha256(raw).hexdigest()
+        with self.assertRaisesRegex(ValueError, "RAW_CLOSE_EXTRACTION_FAILED"):
+            review_official_eod_evidence(doc)
+
+    def test_reject_nonfinite_raw_json(self):
+        doc = evidence()
+        raw = b'{"session":{"date":"2026-11-06","index":"OMXH25","close":6221.79,"extra":NaN}}'
+        doc["source_raw_base64"] = base64.b64encode(raw).decode()
+        doc["source_sha256"] = hashlib.sha256(raw).hexdigest()
+        with self.assertRaisesRegex(ValueError, "RAW_CLOSE_EXTRACTION_FAILED"):
+            review_official_eod_evidence(doc)
+
     def test_reject_naive_retrieval_time(self):
         doc = evidence()
         doc["retrieved_utc"] = "2026-11-09T15:00:00"
