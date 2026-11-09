@@ -129,5 +129,29 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "uncertain_expression_call")
         self.assertEqual(result[0]["line"], 1)
 
+    def test_default_argument_runs_at_definition_not_invocation(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "def later(value=compare()):\n"
+                  "    return value\n")
+        result = diagnose(source)
+        self.assertEqual([(x["line"], x["classification"]) for x in result],
+                         [(2, "uncertain_definition_time_call")])
+
+    def test_decorator_call_is_definition_time(self):
+        source = ("@factory()\n"
+                  "def later():\n"
+                  "    return 1\n")
+        result = diagnose(source)
+        self.assertEqual([(x["line"], x["classification"]) for x in result],
+                         [(1, "uncertain_definition_time_call")])
+
+    def test_return_body_stays_deferred_while_default_is_immediate(self):
+        source = ("def later(value=setup()):\n"
+                  "    return process()\n")
+        result = diagnose(source)
+        self.assertEqual([x["classification"] for x in result],
+                         ["uncertain_definition_time_call",
+                          "uncertain_deferred_expression_call"])
+
 if __name__ == "__main__":
     unittest.main()
