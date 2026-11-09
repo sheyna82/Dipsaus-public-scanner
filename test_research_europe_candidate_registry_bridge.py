@@ -8,10 +8,13 @@ class Tests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"BENCHMARK_IDENTITY_UNVERIFIED"):
             register_snapshot(BASE,decision_cutoff="2026-11-09")
     def test_valid_research_snapshot(self):
-        r=register_snapshot(BASE,decision_cutoff="2026-11-09",benchmark_identity_verified=True)
+        r=register_snapshot({**BASE,"symbol":"SYNTHETIC.EU"},decision_cutoff="2026-11-09",benchmark_identity_verified=True,synthetic_fixture=True)
         self.assertFalse(r["selected"])
         self.assertFalse(r["trade_ready"])
         self.assertEqual(len(r["decision_sha256"]),64)
+    def test_unsubstantiated_approval_blocks(self):
+        with self.assertRaisesRegex(ValueError,"INDEPENDENT_BENCHMARK_RECEIPT_REQUIRED"):
+            register_snapshot(BASE,decision_cutoff="2026-11-09",benchmark_identity_verified=True)
     def test_lookahead_snapshot_blocks(self):
         with self.assertRaisesRegex(ValueError,"LOOKAHEAD_SNAPSHOT"):
             register_snapshot({**BASE,"forward_return":3.0},decision_cutoff="2026-11-09",benchmark_identity_verified=True)
