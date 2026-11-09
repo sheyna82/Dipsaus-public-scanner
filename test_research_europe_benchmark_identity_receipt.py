@@ -1,4 +1,5 @@
 import unittest
+from test_research_capture_official_index_document import Tests as OfficialCaptureTests
 import hashlib,base64
 from research_europe_benchmark_identity_receipt import validate_receipt
 def fixture():
