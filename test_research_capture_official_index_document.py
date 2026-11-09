@@ -2,6 +2,7 @@ import hashlib
 import unittest
 from io import BytesIO
 from research_capture_official_index_document import capture_official_document
+from research_europe_benchmark_identity_receipt import validate_receipt
 
 URL="https://indexes.nasdaqomx.com/docs/Index_Versions_OMXH25.pdf"
 
@@ -30,6 +31,17 @@ class Tests(unittest.TestCase):
     def test_changed_response_url_blocked(self):
         with self.assertRaisesRegex(ValueError,"OFFICIAL_SOURCE_RESPONSE_BLOCKED"):
             capture_official_document(URL,opener=FakeOpener(FakeResponse(url="https://evil.example")))
+    def test_capture_integrates_with_official_receipt_contract(self):
+        captured=capture_official_document(URL,opener=FakeOpener(FakeResponse()))
+        receipt={**captured,"symbol":"SYNTHETIC.EU","provider_symbol":"^TEST",
+                 "official_index_name":"Synthetic Index","official_publisher":"Nasdaq",
+                 "reviewer":"synthetic-test","review_day":"2026-11-09",
+                 "methodology":"synthetic fixture", "identity_match":True,
+                 "currency_match":True,"price_vs_total_return_match":True,
+                 "value_discrepancy_resolved":True}
+        validated=validate_receipt(receipt)
+        self.assertFalse(validated["independently_audited"])
+        self.assertFalse(validated["trade_ready"])
     def test_html_disguised_as_pdf_blocks(self):
         with self.assertRaisesRegex(ValueError,"OFFICIAL_SOURCE_NOT_PDF"):
             capture_official_document(URL,opener=FakeOpener(FakeResponse(body=b"<html>blocked</html>")))
