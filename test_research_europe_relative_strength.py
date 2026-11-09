@@ -23,6 +23,12 @@ def fixtures():
         "inconsistent_dates":[],"identity_approved":False}
     return {"trade_ready":False,"series":stocks},{"trade_ready":False,"series":indices}
 class Tests(unittest.TestCase):
+    def test_forged_audit_count_is_rejected(self):
+        stocks,indices=fixtures()
+        audit=indices["series"]["OMXH25"]["daily_label_audit"]
+        audit["consistent"]=20
+        with self.assertRaisesRegex(ValueError,"OMXH25_DAILY_LABEL_AUDIT_BLOCKED"):
+            compare(stocks,indices,IDENTITY,"2026-11-06")
     def test_mutated_bar_digest_mismatch_blocks(self):
         stocks,indices=fixtures()
         indices["series"]["OMXH25"]["bars"][0]["close"]+=1
@@ -32,7 +38,7 @@ class Tests(unittest.TestCase):
         stocks,indices=fixtures()
         indices["series"]["OMXH25"]["bars"][0]["t"]+=3600
         indices["series"]["OMXH25"]["daily_label_audit"]["bars_sha256"]=hashlib.sha256(json.dumps(indices["series"]["OMXH25"]["bars"],sort_keys=True,separators=(",",":"),allow_nan=False).encode()).hexdigest()
-        with self.assertRaisesRegex(ValueError,"OMXH25_DAILY_LABEL_RECOMPUTE_BLOCKED"):
+        with self.assertRaisesRegex(ValueError,"OMXH25_DAILY_LABEL_AUDIT_CONTENT_MISMATCH"):
             compare(stocks,indices,IDENTITY,"2026-11-06")
     def test_duplicate_omxh25_local_session_is_blocked(self):
         stocks,indices=fixtures()
