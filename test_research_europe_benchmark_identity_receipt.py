@@ -6,7 +6,8 @@ def fixture():
             "official_index_name":"Synthetic Index","official_publisher":"Synthetic",
             "official_source_url":"https://example.org/synthetic",
             "official_document_sha256":hashlib.sha256(b"synthetic official document").hexdigest(),
-            "official_document_base64":base64.b64encode(b"synthetic official document").decode(),"reviewer":"synthetic-test",
+            "official_document_base64":base64.b64encode(b"synthetic official document").decode(),
+            "retrieval_method":"direct_https_no_redirect","retrieved_utc":"2026-11-09T12:00:00+00:00","reviewer":"synthetic-test",
             "review_day":"2026-11-09","methodology":"synthetic fixture only",
             "identity_match":True,"currency_match":True,
             "price_vs_total_return_match":True,"value_discrepancy_resolved":True}
@@ -16,6 +17,12 @@ class Tests(unittest.TestCase):
         self.assertEqual(a,b)
         self.assertFalse(a["trade_ready"])
         self.assertFalse(a["independently_audited"])
+    def test_unverified_retrieval_method_blocks(self):
+        r=fixture();r["retrieval_method"]="copied_from_webpage"
+        with self.assertRaisesRegex(ValueError,"UNVERIFIED_RETRIEVAL_METHOD"):validate_receipt(r)
+    def test_naive_retrieval_timestamp_blocks(self):
+        r=fixture();r["retrieved_utc"]="2026-11-09T12:00:00"
+        with self.assertRaisesRegex(ValueError,"INVALID_RETRIEVAL_TIMESTAMP"):validate_receipt(r)
     def test_nasdaq_publisher_requires_official_host(self):
         r=fixture();r["official_publisher"]="Nasdaq"
         r["official_source_url"]="https://example.org/synthetic"
