@@ -66,9 +66,13 @@ def compare(europe,benchmarks,identity_evidence,as_of_complete_day):
         source_meta=source_data["meta"]
         source_times=source_data["timestamp"]
         source_closes=source_data["indicators"]["quote"][0]["close"]
-        if (source_meta.get("symbol")!="^OMXH25" or
+        captured_meta={k:source_meta.get(k) for k in ("symbol","shortName","longName","currency","instrumentType","exchangeName","timezone","gmtoffset")}
+        if (captured_meta!=metadata or
+            source_meta.get("symbol")!="^OMXH25" or
             source_meta.get("currency")!="EUR" or
             source_meta.get("instrumentType")!="INDEX" or
+            not isinstance(source_meta.get("longName"),str) or
+            "Helsinki 25" not in source_meta["longName"] or
             len(source_times)!=len(source_closes)):
             raise ValueError("SOURCE_CONTRACT")
         reconstructed=[]
