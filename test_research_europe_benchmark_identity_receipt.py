@@ -16,6 +16,20 @@ class Tests(unittest.TestCase):
         self.assertEqual(a,b)
         self.assertFalse(a["trade_ready"])
         self.assertFalse(a["independently_audited"])
+    def test_nasdaq_publisher_requires_official_host(self):
+        r=fixture();r["official_publisher"]="Nasdaq"
+        r["official_source_url"]="https://example.org/synthetic"
+        with self.assertRaisesRegex(ValueError,"OFFICIAL_PUBLISHER_HOST_MISMATCH"):validate_receipt(r)
+    def test_nasdaq_official_host_allowed_but_not_independently_approved(self):
+        r=fixture();r["official_publisher"]="Nasdaq"
+        r["official_source_url"]="https://indexes.nasdaqomx.com/docs/Index_Versions_OMXH25.pdf"
+        result=validate_receipt(r)
+        self.assertFalse(result["independently_audited"])
+        self.assertFalse(result["trade_ready"])
+    def test_deceptive_url_username_blocks(self):
+        r=fixture();r["official_publisher"]="Nasdaq"
+        r["official_source_url"]="https://indexes.nasdaqomx.com@evil.example/forged"
+        with self.assertRaisesRegex(ValueError,"INVALID_OFFICIAL_SOURCE"):validate_receipt(r)
     def test_modified_document_bytes_block(self):
         r=fixture();r["official_document_base64"]=base64.b64encode(b"altered").decode()
         with self.assertRaisesRegex(ValueError,"OFFICIAL_DOCUMENT_HASH_MISMATCH"):validate_receipt(r)
