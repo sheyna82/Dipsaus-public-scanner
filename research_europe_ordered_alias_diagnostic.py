@@ -232,11 +232,18 @@ def diagnose(source):
                             if isinstance(nested, ast.Call):
                                 findings.append({"line": nested.lineno, "target": None,
                                                  "classification": "uncertain_class_body_call"})
-        elif isinstance(stmt, (ast.Assert,)):
-            for child in ast.walk(stmt.test):
-                if isinstance(child, ast.Call):
-                    findings.append({"line": child.lineno, "target": None,
-                                     "classification": "uncertain_expression_call"})
+        elif isinstance(stmt, ast.Assert):
+            # Both the condition and optional message may evaluate bindings;
+            # the message is conditional, so alias proof must stay conservative.
+            for expression in (stmt.test, stmt.msg):
+                if expression is None:
+                    continue
+                for child in ast.walk(expression):
+                    if isinstance(child, ast.NamedExpr):
+                        state[child.target.id] = None
+                    if isinstance(child, ast.Call):
+                        findings.append({"line": child.lineno, "target": None,
+                                         "classification": "uncertain_expression_call"})
         elif isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
             # A walrus binding in the call expression may shadow a previously
             # proven alias. Do not infer evaluation order or runtime identity.
