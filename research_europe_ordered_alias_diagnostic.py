@@ -210,6 +210,12 @@ def diagnose(source):
             while pending_classes:
                 current_class = pending_classes.pop()
                 for member in current_class.body:
+                    if isinstance(member, ast.Global):
+                        # Class bodies normally bind their own namespace, but
+                        # an explicit global declaration can rebind module aliases.
+                        # Conservatively invalidate all declared names.
+                        for name in member.names:
+                            state[name] = None
                     if isinstance(member, ast.ClassDef):
                         pending_classes.append(member)
                     if isinstance(member, ast.Expr):
