@@ -38,9 +38,9 @@ def simulate(bars_by_symbol, signals, *, initial_cash=50000, tranche=3500,
         indices=[i for i,b in enumerate(bars) if b["day"]==day]
         if len(indices)!=1:raise ValueError("UNKNOWN_SIGNAL_DAY")
         i=indices[0]
-        if i+hold_sessions>=len(bars):
+        if i+1+hold_sessions>=len(bars):
             continue  # no completed future exit; no invented trade
-        entry=bars[i+1];exit_bar=bars[i+hold_sessions]
+        entry=bars[i+1];exit_bar=bars[i+1+hold_sessions]
         if entry["day"]<=day:raise ValueError("LOOKAHEAD")
         candidates.append((entry["day"],symbol,day,entry,exit_bar))
     candidates.sort(key=lambda x:(x[0],x[1],x[2]))
