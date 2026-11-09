@@ -6,7 +6,7 @@ import ast
 from research_audit_europe_legacy_calls import LEGACY
 
 
-def _scan_class_creation_expressions(expressions, state, findings):
+def _scan_class_creation_expressions(expressions, state, findings, module_scope=False):
     """Conservatively scan expressions evaluated while a class is created.
 
     Deferred function and lambda bodies are not class-creation effects.
@@ -24,8 +24,10 @@ def _scan_class_creation_expressions(expressions, state, findings):
                     state.clear()
                 findings.append({"line": node.lineno, "target": None,
                                  "classification": "uncertain_class_body_call"})
-            # NamedExpr in a class-creation expression binds in class scope,
-            # not in the enclosing module's alias state.
+            # Class headers at module scope bind in the module; expressions
+            # evaluated inside a class body bind in that class namespace.
+            if isinstance(node, ast.NamedExpr) and module_scope:
+                state[node.target.id] = None
             pending.extend(ast.iter_child_nodes(node))
 
 
@@ -230,7 +232,8 @@ def diagnose(source):
             # evaluated during class creation, before its body is executed.
             _scan_class_creation_expressions(
                 list(stmt.decorator_list) + list(stmt.bases)
-                + [kw.value for kw in stmt.keywords], state, findings)
+                + [kw.value for kw in stmt.keywords], state, findings,
+                module_scope=True)
             # Class body statements execute during class creation, unlike
             # ordinary method bodies. Inspect only direct class-body calls.
             pending_classes = [stmt]
