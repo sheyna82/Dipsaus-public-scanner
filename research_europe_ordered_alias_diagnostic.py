@@ -142,6 +142,9 @@ def diagnose(source):
                 else:
                     pending.extend(ast.iter_child_nodes(child))
         elif isinstance(stmt, ast.ClassDef):
+            # Creating a class binds its name and shadows a previous import.
+            # Decorators can also replace the class, so never retain proof.
+            state[stmt.name] = None
             # Top-level class decorators, bases and keyword values are also
             # evaluated during class creation, before its body is executed.
             for expression in (list(stmt.decorator_list) + list(stmt.bases)
