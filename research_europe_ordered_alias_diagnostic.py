@@ -254,6 +254,12 @@ def diagnose(source):
                         expressions = []
                     for expression in expressions:
                         for nested in ast.walk(expression):
+                            if (isinstance(nested, ast.Call)
+                                    and isinstance(nested.func, ast.Name)
+                                    and nested.func.id == "exec"):
+                                # Dynamic code in an executing class body can
+                                # explicitly write to module globals.
+                                state.clear()
                             if isinstance(nested, ast.Call):
                                 findings.append({"line": nested.lineno, "target": None,
                                                  "classification": "uncertain_class_body_call"})
