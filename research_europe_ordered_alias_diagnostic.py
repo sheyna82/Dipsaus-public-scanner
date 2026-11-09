@@ -61,6 +61,14 @@ def diagnose(source):
                 for child in ast.walk(value):
                     if isinstance(child, ast.NamedExpr):
                         state[child.target.id] = None
+        elif isinstance(stmt, ast.Delete):
+            # Deleting a name removes its earlier alias binding. For
+            # attribute/subscript deletion, arbitrary user code may run.
+            for target in stmt.targets:
+                if isinstance(target, ast.Name):
+                    state[target.id] = None
+                else:
+                    state.clear()
         elif isinstance(stmt, ast.AugAssign):
             # Augmented assignment may mutate or replace an alias. Never
             # retain a previously proven binding after this statement.
