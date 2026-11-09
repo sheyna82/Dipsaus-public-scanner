@@ -443,3 +443,13 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - All nine exact-commit workflows completed successfully: `42697336062`, `42697336063`, `42697336250`, `42697336185`, `42697336041`, `42697335973`, `42697336297`, `42697336386`, `42697322530`.
 - Enforced legacy audit inventory in job log: 31 `historical_test`, 2 `controlled_delegation`, zero unknown classifications.
 - Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
+
+
+## Exec inside non-call expression statements: CI verification (2026-11-09)
+
+- Supplemental ordered-alias diagnostic code commit `56e2e8c77154afa77d3b0fc7f8bae34596531e15`; regression-test commit `758a46fa0f993d4075ad0eba1e33334d2add608f`.
+- A direct `exec` call nested inside a non-call expression statement, including f-string or tuple expression, conservatively invalidates earlier module alias proofs. An unrelated f-string preserves an existing alias proof in the tested case. This does not establish complete coverage of all dynamic execution contexts.
+- Exact-commit source-admission run `42705937882`, job `129462607747`: `Ran 146 tests in 0.031s`, `OK`; all three new regression tests passed individually.
+- All nine exact-commit workflows completed successfully: `42705948806`, `42705949155`, `42705948880`, `42705949019`, `42705949502`, `42705949058`, `42705948830`, `42705948904`, `42705937882`.
+- Enforced legacy audit inventory in job log: 31 `historical_test`, 2 `controlled_delegation`, zero unknown classifications.
+- Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
