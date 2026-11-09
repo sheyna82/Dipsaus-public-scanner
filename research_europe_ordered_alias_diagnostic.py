@@ -149,6 +149,8 @@ def diagnose(source):
             )
             for expression in definition_expressions:
                 for nested in ast.walk(expression):
+                    if isinstance(nested, ast.NamedExpr):
+                        state[nested.target.id] = None
                     if isinstance(nested, ast.Call):
                         findings.append({"line": nested.lineno, "target": None,
                                          "classification": "uncertain_definition_time_call"})
