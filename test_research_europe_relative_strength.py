@@ -56,7 +56,8 @@ class Tests(unittest.TestCase):
         stocks,indices=fixtures()
         indices["series"]["OMXH25"]["daily_label_audit"]={
             "validation_status":"consistent_unverified","checked":21,"consistent":21,
-            "inconsistent_dates":[],"identity_approved":False}
+            "inconsistent_dates":[],"identity_approved":False,
+            "bars_sha256":hashlib.sha256(json.dumps(indices["series"]["OMXH25"]["bars"],sort_keys=True,separators=(",",":"),allow_nan=False).encode()).hexdigest()}
         result=compare(stocks,indices,IDENTITY,"2026-11-06")
         self.assertFalse(result["trade_ready"])
         self.assertFalse(result["selection_thresholds_approved"])
