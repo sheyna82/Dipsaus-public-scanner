@@ -323,3 +323,13 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - All seven workflows completed successfully: `42694056498`, `42694056434`, `42694056427`, `42694056429`, `42694056391`, `42694056923`, `42694056857`.
 - Enforced legacy gate succeeded; log inventory: 31 `historical_test`, 2 `controlled_delegation`, zero unknown direct legacy calls.
 - Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
+
+
+## Walrus bindings in augmented-assignment RHS: CI verification (2026-11-09)
+
+- Code commit `c0b888efbae643082a8dc2dafcb75f585a04c10d`; regression-test commit `b134fa27e12894c7008696025f4a7b87ebb739a7`.
+- Supplemental ordered-alias diagnostic invalidates other aliases rebound by `ast.NamedExpr` inside an augmented-assignment RHS, including nested walrus expressions; unrelated plain-name augmented assignments preserve independent alias evidence.
+- Exact-commit source-admission GitHub Actions run `42694229282`, job `129421661855`: `Ran 110 tests in 0.027s`, `OK`; all three new regressions passed individually.
+- All seven workflows completed successfully: `42694228862`, `42694228848`, `42694228988`, `42694229078`, `42694229390`, `42694229282`, `42694228841`.
+- Enforced legacy gate succeeded; log inventory: 31 `historical_test`, 2 `controlled_delegation`, zero unknown direct legacy calls.
+- Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
