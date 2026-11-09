@@ -30,7 +30,7 @@ def evaluate(history, as_of_complete_day, benchmark_identity_verified=False):
     if len(eligible)<3:raise ValueError("INSUFFICIENT_COMPLETED_SESSIONS")
     # Two consecutive relative one-session gains; no implicit threshold approval.
     daily=[]
-    for previous,current in zip(eligible[-3:],eligible[-2:]):
+    for previous,current in zip(eligible[-3:-1],eligible[-2:]):
         stock=100*(current[1]/previous[1]-1)
         bench=100*(current[2]/previous[2]-1)
         daily.append({"day":current[0],"relative_change_pp":stock-bench})
