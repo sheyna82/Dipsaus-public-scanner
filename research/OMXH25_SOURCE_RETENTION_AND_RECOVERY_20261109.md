@@ -28,3 +28,16 @@ The CI job fetches a **fixed historical artifact ID**. After that artifact expir
 As of this record, **no durable external storage location has been verified or provisioned** by this workflow. The recovery plan is documented, not executed. Do not claim that artifact retention has been extended. The fixed-ID workflow will not remain reproducible indefinitely without preservation.
 
 Mandatory gates: `benchmark_identity_verified=false`, `independently_audited=false`, `research_only=true`, `trade_ready=false`. No merge to `main`, live scanner changes, or orders.
+
+
+## Local positive offline recovery drill — 2026-11-09
+
+A positive recovery drill was completed against the **locally retained original capture artifact ZIP**, without downloading fresh Nasdaq documents or fetching the source from GitHub during the drill. This was a local reproduction of the repository's reconstruction and verifier checks, **not an execution of the checked-in recovery entrypoint within GitHub CI**.
+
+- Source: original capture artifact `13680073011` saved locally as `github-actions-artifact-13680073011.zip`, independently rehashed SHA256 `6849ebe332ce2be42e51cd9c8537b12e755e739bc4fc4a25ec5bccfcb70fc277`.
+- Two decoded original PDFs rehashed against pinned official-source SHA256 values; each matched.
+- Reconstructed local archive `OMXH25_offline_recovery_verified_20261109.zip` SHA256 `f47b5c34b167963466eaca5feaec103a43e994d592ea6600b824633b4c7ba115`. ZIP member set, manifest, document lengths and hashes checked.
+- Local receipt `OMXH25_offline_recovery_receipt_20261109.json` records `status=verified_original_bytes`, `benchmark_identity_verified=false`, `independently_audited=false`, `research_only=true`, `trade_ready=false`.
+- CI at code commit `6e67bce14c8e88546818003e1df73e75347e4794`: **93 tests, OK**, including four new negative offline-recovery tests; all six associated workflows successful.
+
+**Limit:** this demonstrates recovery from a locally retained copy during this session. It does **not** establish durable offsite storage, indefinite artifact availability, formal benchmark identity verification or trading authorization. Next: execute the exact checked-in recovery entrypoint in a dedicated CI recovery drill using an explicitly provisioned durable source, and document storage ownership, access and retention.
