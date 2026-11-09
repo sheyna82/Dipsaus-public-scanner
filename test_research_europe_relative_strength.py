@@ -17,7 +17,7 @@ def fixtures():
         day=datetime.fromtimestamp(bar["t"],timezone.utc).date()
         bar["t"]=int(datetime(day.year,day.month,day.day,10,tzinfo=ZoneInfo("Europe/Helsinki")).timestamp())
     digest=hashlib.sha256(json.dumps(indices["OMXH25"]["bars"],sort_keys=True,separators=(",",":"),allow_nan=False).encode()).hexdigest()
-    indices["OMXH25"]["provider_metadata"]={"symbol":"^OMXH25","currency":"EUR","instrumentType":"INDEX","longName":"OMX Helsinki 25"}
+    indices["OMXH25"]["provider_metadata"]={"symbol":"^OMXH25","shortName":None,"longName":"OMX Helsinki 25","currency":"EUR","instrumentType":"INDEX","exchangeName":None,"timezone":None,"gmtoffset":None}
     omx_bars=indices["OMXH25"]["bars"]
     source={"chart":{"result":[{"meta":dict(indices["OMXH25"]["provider_metadata"]),
              "timestamp":[b["t"] for b in omx_bars],
