@@ -9,6 +9,8 @@ on:
       - 'test_research_benchmark_source_admission.py'
       - 'research_europe_relative_strength_admitted.py'
       - 'test_research_europe_relative_strength_admitted.py'
+      - 'research_europe_recovery_confirmation_admitted.py'
+      - 'test_research_europe_recovery_confirmation_admitted.py'
       - '.github/workflows/benchmark-source-admission-offline.yml'
   workflow_dispatch:
 permissions:
@@ -23,4 +25,4 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run isolated fail-closed source admission tests
-        run: python -m unittest -v test_research_benchmark_source_admission.py test_research_europe_relative_strength_admitted.py
+        run: python -m unittest -v test_research_benchmark_source_admission.py test_research_europe_relative_strength_admitted.py test_research_europe_recovery_confirmation_admitted.py
