@@ -30,6 +30,9 @@ class Tests(unittest.TestCase):
     def test_changed_response_url_blocked(self):
         with self.assertRaisesRegex(ValueError,"OFFICIAL_SOURCE_RESPONSE_BLOCKED"):
             capture_official_document(URL,opener=FakeOpener(FakeResponse(url="https://evil.example")))
+    def test_html_disguised_as_pdf_blocks(self):
+        with self.assertRaisesRegex(ValueError,"OFFICIAL_SOURCE_NOT_PDF"):
+            capture_official_document(URL,opener=FakeOpener(FakeResponse(body=b"<html>blocked</html>")))
     def test_oversized_document_blocked(self):
         with self.assertRaisesRegex(ValueError,"OFFICIAL_SOURCE_SIZE_BLOCKED"):
             capture_official_document(URL,opener=FakeOpener(FakeResponse(body=b"x"*2000001)))
