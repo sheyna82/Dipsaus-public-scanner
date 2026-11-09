@@ -40,6 +40,18 @@ def diagnose(source):
             state.clear()
             findings.append({"line": stmt.lineno, "target": None,
                              "classification": "uncertain_control_flow"})
+            # Inventory nested calls without attributing a runtime target.
+            # Nested definitions are separate scopes and are not traversed.
+            pending = list(ast.iter_child_nodes(stmt))
+            while pending:
+                child = pending.pop()
+                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef,
+                                      ast.Lambda, ast.ClassDef)):
+                    continue
+                if isinstance(child, ast.Call):
+                    findings.append({"line": child.lineno, "target": None,
+                                     "classification": "uncertain_nested_call"})
+                pending.extend(ast.iter_child_nodes(child))
         elif isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
             func = stmt.value.func
             resolved = state.get(func.id) if isinstance(func, ast.Name) else None
