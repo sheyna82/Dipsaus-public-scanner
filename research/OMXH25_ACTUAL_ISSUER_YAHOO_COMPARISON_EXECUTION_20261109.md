@@ -67,3 +67,16 @@ Scope: confirms strict JSON acceptance/rejection and three-session value corrobo
 Official Nasdaq methodology and index-version documents identify `OMXH25` as the Helsinki 25 **price-return** index in EUR (ISIN `FI0008900212`), distinct from gross-total-return `OMXH25GI`. Sources: https://indexes.nasdaqomx.com/docs/Index_Versions_OMXH25.pdf ; https://www.nasdaq.com/docs/2025/01/23/Finnish%20Equity%20Derivatives%20Factsheet.pdf . The St. Louis Fed FRED series `NASDAQOMXH25` explicitly attributes its daily data to **Nasdaq, Inc.**, with published table covering 2008-11-17 through 2026-11-06 at time of inspection: https://fred.stlouisfed.org/data/NASDAQOMXH25 and https://fred.stlouisfed.org/series/NASDAQOMXH25 . This is a useful **separate dissemination channel** for longer-run comparisons, but **not** an independently calculated index; Nasdaq remains its source. FRED labels this series copyrighted/pre-approval required: do not ingest/re-distribute a large historical dataset or assume unrestricted commercial/research rights without reviewing licensing and terms. No historical dataset was imported in this step.
 
 Nasdaq's own index description confirms the Helsinki stock-price-index methodology: https://indexes.nasdaqomx.com/index/overview/omxh25 . Nasdaq derivatives documents name Nasdaq Stockholm AB as a derivatives-market legal entity, but this does **not** independently establish why Yahoo Chart metadata for `^OMXH25` reports `exchangeName=STO`. Continue to classify `venue_mapping_explained=false` and `benchmark_identity_verified=false`; no benchmark promotion or trading approval. Next investigation: verify FRED values for a bounded overlapping sample and inspect FRED/Nasdaq usage rights before any persistent data ingestion. Distinguish independent distribution from independent index calculation.
+
+## Bounded FRED/Nasdaq/Yahoo publication-channel crosscheck — 2026-11-09
+
+Read the public FRED series landing page https://fred.stlouisfed.org/series/NASDAQOMXH25 (observations published through 2026-11-06 at inspection) and compared the **two overlapping sessions** against the original preserved official Nasdaq EOD receipt and Yahoo Chart observations:
+
+| Session | Official Nasdaq (2 dp) | Yahoo (2 dp) | FRED (published 2 dp) |
+| --- | ---: | ---: | ---: |
+| 2026-11-05 | 6254.30 | 6254.30 | 6254.30 |
+| 2026-11-06 | 6221.79 | 6221.79 | 6221.79 |
+
+FRED source page states **Source: Nasdaq, Inc.**, **Frequency: Daily**, and identifies the series as **Copyrighted: Pre-Approval Required**. This is independent **distribution-channel corroboration**, not an independent index calculation. FRED's public page did not yet display the 2026-11-09 observation at the time of inspection, so **no FRED match is claimed for 2026-11-09**. The two extra displayed observations (2026-11-04 etc.) have not been independently compared against original Yahoo raw bars in this step. No large FRED data series was fetched, saved, committed, or used for engine calculations. Licensing review remains required before data ingestion or redistribution.
+
+This finding does not resolve Yahoo `exchangeName=STO`, independently certify index identity, or authorize trading. Maintain `venue_mapping_explained=false`, `benchmark_identity_verified=false`, `independently_audited=false`, `research_only=true`, `trade_ready=false`.
