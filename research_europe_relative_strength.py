@@ -3,6 +3,8 @@ from datetime import datetime,timezone
 from zoneinfo import ZoneInfo
 import math
 import hashlib
+import base64
+import binascii
 import json
 
 PAIRS={"ASML.AS":"AEX","IFX.DE":"DAX_PRICE","NOKIA.HE":"OMXH25","RHM.DE":"DAX_PRICE"}
@@ -48,7 +50,15 @@ def compare(europe,benchmarks,identity_evidence,as_of_complete_day):
     if (not isinstance(raw_digest,str) or len(raw_digest)!=64 or
         any(ch not in "0123456789abcdef" for ch in raw_digest)):
         raise ValueError("OMXH25_SOURCE_DIGEST_MISSING")
-    # A source digest cannot be independently rechecked without retained raw bytes.
+    raw_b64=omx.get("source_raw_base64")
+    if not isinstance(raw_b64,str) or not raw_b64:
+        raise ValueError("OMXH25_RAW_SOURCE_MISSING")
+    try:
+        raw=base64.b64decode(raw_b64,validate=True)
+    except (binascii.Error,ValueError) as exc:
+        raise ValueError("OMXH25_RAW_SOURCE_INVALID") from exc
+    if not raw or len(raw)>2000000 or hashlib.sha256(raw).hexdigest()!=raw_digest:
+        raise ValueError("OMXH25_RAW_SOURCE_HASH_MISMATCH")
     # Audit digest must bind to the exact canonical daily bars used below.
     bars_digest=hashlib.sha256(json.dumps(omx["bars"],sort_keys=True,separators=(",",":"),allow_nan=False).encode()).hexdigest()
     if label_audit.get("bars_sha256")!=bars_digest:
