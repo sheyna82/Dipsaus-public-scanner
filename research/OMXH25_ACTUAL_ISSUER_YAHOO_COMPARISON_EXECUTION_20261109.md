@@ -463,3 +463,13 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - All nine exact-commit workflows completed successfully: `42706169335`, `42706168727`, `42706168675`, `42706169588`, `42706168908`, `42706168644`, `42706169628`, `42706168854`, `42706158551`.
 - Enforced legacy audit inventory in job log: 31 `historical_test`, 2 `controlled_delegation`, zero unknown classifications.
 - Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
+
+
+## Exec during class-body creation: CI verification (2026-11-09)
+
+- Supplemental ordered-alias diagnostic code commit `04800a68c56b977e41391d6709c670f131278c88`; regression-test commit `453fe46f914e81ff77eb75e84d3effb1bea5766e`.
+- Direct `exec` calls in class-body expression statements or assignment RHS conservatively invalidate earlier module alias proofs, including possible explicit `global` rebinding. A deferred method-body `exec` does not immediately invalidate the module alias in the tested case. This does not establish exhaustive coverage of nested class control flow or dynamic execution.
+- Exact-commit source-admission run `42706329073`, job `129463965288`: `Ran 153 tests in 0.028s`, `OK`; all three new regression tests passed individually.
+- All nine exact-commit workflows completed successfully: `42706340658`, `42706340702`, `42706340679`, `42706340288`, `42706340407`, `42706340331`, `42706340386`, `42706340577`, `42706329073`.
+- Enforced legacy audit inventory in job log: 31 `historical_test`, 2 `controlled_delegation`, zero unknown classifications.
+- Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
