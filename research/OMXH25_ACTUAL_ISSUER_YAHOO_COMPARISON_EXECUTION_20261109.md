@@ -516,3 +516,13 @@ Scope: static review of `research_europe_ordered_alias_diagnostic.py` after 163-
 5. **Proof model and test strategy:** retain the fail-closed enforced legacy gate as authority. Use small executable Python semantics fixtures, mutation/property-oriented test matrices and exact-commit CI evidence to validate a future refactor. No change to the live scanner, order execution, source admission, or benchmark trust receipts.
 
 Recommended next small step: add a focused, regression-only failing-case inventory for `except*` and class annotation execution semantics, then design the centralized walker **before** adding more one-off branches. No merge of draft PR #65.
+
+
+## Known execution-context gaps captured as expected failures (2026-11-09)
+
+- Regression-only commit `96269b9a46045f3aac8791ec400a90da14921ab0`; no diagnostic implementation changes in this round.
+- Added two deliberately marked `@unittest.expectedFailure` cases: direct `exec` in a class-body `except*` suite and direct `exec` in an evaluated class annotation expression. Both currently retain a stale legacy alias proof in the supplemental ordered-alias diagnostic. A plain class annotation control passes.
+- Exact-commit source-admission run `42709922767`, job `129476429959`: `Ran 166 tests in 0.033s`, `OK (expected failures=2)`; both gap cases reported `expected failure` and the control reported `ok`. Green CI does **not** mean these gaps are fixed.
+- All nine exact-commit workflows completed successfully: `42709931965`, `42709932155`, `42709932153`, `42709932154`, `42709932022`, `42709931996`, `42709931781`, `42709931841`, `42709922767`.
+- Enforced legacy audit inventory in job log: 31 `historical_test`, 2 `controlled_delegation`, zero unknown classifications.
+- Next: design an execution-context-aware centralized expression visitor, use the two known failing fixtures as acceptance tests, and only remove `expectedFailure` markers after observing actual passing tests. No merge of draft PR #65, live change, source admission promotion, or trusted receipt.
