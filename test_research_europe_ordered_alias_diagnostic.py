@@ -228,5 +228,36 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
         self.assertTrue(all(x["classification"] == "uncertain_class_body_call"
                             for x in result))
 
+    def test_nested_function_return_not_attributed_to_outer(self):
+        source = ("def outer():\n"
+                  "    def inner():\n"
+                  "        return inner_call()\n"
+                  "    return outer_call()\n")
+        result = diagnose(source)
+        self.assertEqual([(x["line"], x["classification"]) for x in result],
+                         [(4, "uncertain_deferred_expression_call")])
+
+    def test_nested_function_condition_not_attributed_to_outer(self):
+        source = ("def outer():\n"
+                  "    async def inner():\n"
+                  "        if inner_check():\n"
+                  "            pass\n"
+                  "    if outer_check():\n"
+                  "        pass\n")
+        result = diagnose(source)
+        self.assertEqual([(x["line"], x["classification"]) for x in result],
+                         [(5, "uncertain_deferred_expression_call")])
+
+    def test_nested_class_method_return_not_attributed_to_outer(self):
+        source = ("def outer():\n"
+                  "    class Inner:\n"
+                  "        def method(self):\n"
+                  "            return method_call()\n"
+                  "    return outer_call()\n")
+        result = diagnose(source)
+        self.assertEqual([(x["line"], x["classification"]) for x in result],
+                         [(5, "uncertain_deferred_expression_call")])
+
+
 if __name__ == "__main__":
     unittest.main()
