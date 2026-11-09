@@ -543,5 +543,31 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "uncertain_expression_call")
 
 
+    def test_definition_decorator_walrus_invalidates_prior_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "@(decorator := (compare := fallback))\n"
+                  "def later():\n"
+                  "    pass\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_definition_default_walrus_invalidates_prior_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "def later(value=(compare := fallback)):\n"
+                  "    pass\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_unrelated_definition_preserves_alias_proof(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "def later(value=1):\n"
+                  "    pass\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "ordered_legacy_call")
+
+
 if __name__ == "__main__":
     unittest.main()
