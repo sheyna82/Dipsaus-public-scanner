@@ -273,3 +273,13 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - All seven workflows completed successfully: `42693076908`, `42693076897`, `42693076674`, `42693077321`, `42693076550`, `42693077041`, `42693076634`.
 - Enforced legacy gate succeeded; audit log inventory: 31 `historical_test`, 2 `controlled_delegation`, zero unknown direct legacy calls.
 - Supplemental AST evidence only; no source admission promotion, trusted receipt, live scanner/trading logic modification or merge to `main`.
+
+
+## Walrus assignment in top-level call expressions: CI verification (2026-11-09)
+
+- Code commit `645285858a3df1bf46e8f7f4330fa712fac82772`; regression-test commit `07761a20abd43d5c8422971ddd7a74d5ef1a96d7`.
+- Supplemental ordered-alias diagnostic conservatively invalidates names bound by `ast.NamedExpr` within top-level call expression statements, including nested walrus assignments. It does not claim runtime identity or evaluation-order proof.
+- Exact-commit source-admission GitHub Actions run `42693254180`, job `129418271888`: `Ran 95 tests in 0.022s`, `OK`; both new walrus regressions passed individually.
+- All seven workflows completed successfully: `42693254208`, `42693254174`, `42693254180`, `42693254135`, `42693254338`, `42693254149`, `42693254246`.
+- Enforced legacy gate succeeded; log inventory: 31 `historical_test`, 2 `controlled_delegation`, zero unknown direct legacy calls.
+- Supplemental AST evidence only; no source admission promotion, trusted receipt, live scanner/trading logic modification, or merge to `main`.
