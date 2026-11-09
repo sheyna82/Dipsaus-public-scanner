@@ -2,6 +2,8 @@ name: OMXH25 original Nasdaq artifact offline verification
 on:
   pull_request:
     paths:
+      - 'research_verify_omxh25_portable_backup.py'
+      - 'research/fixtures/omxh25_offline_recovery_receipt_20261109.json'
       - 'research_recover_omxh25_offline.py'
       - 'research_rebuild_omxh25_archive.py'
       - 'research_verify_omxh25_archive.py'
@@ -53,6 +55,8 @@ jobs:
             research-omxh25/captured.zip \
             research-omxh25/offline-recovered.zip \
             research-omxh25/offline-recovery-receipt.json
+            research-omxh25/portable-positive-verification.json
+            research-omxh25/portable-positive-recovery-receipt.json
           python - <<'PY'
           import json
           from pathlib import Path
@@ -65,6 +69,46 @@ jobs:
           assert receipt["independently_audited"] is False
           assert receipt["research_only"] is True and receipt["trade_ready"] is False
           print("Offline recovery from retained local ZIP: verified_original_bytes; research only.")
+          PY
+      - name: Verify and restore portable backup from real original capture (positive test)
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import zipfile
+          from pathlib import Path
+          source = Path("research-omxh25/captured.zip").read_bytes()
+          receipt = Path("research/fixtures/omxh25_offline_recovery_receipt_20261109.json").read_bytes()
+          digest = lambda b: hashlib.sha256(b).hexdigest()
+          assert digest(source) == "6849ebe332ce2be42e51cd9c8537b12e755e739bc4fc4a25ec5bccfcb70fc277"
+          assert digest(receipt) == "d41200941994ab29caeae7fa387fd41207121caaffbf9b1c8e222af5a7b5c67b"
+          manifest = {
+              "schema": "dipsaus-omxh25-portable-backup-v1",
+              "research_only": True, "trade_ready": False, "benchmark_identity_verified": False,
+              "original_artifact_id": 13680073011,
+              "original_artifact_sha256": digest(source),
+              "files": {"original-capture.zip": digest(source),
+                        "offline-recovery-receipt.json": digest(receipt)}
+          }
+          with zipfile.ZipFile("research-omxh25/portable-backup.zip", "w", zipfile.ZIP_DEFLATED) as archive:
+              archive.writestr("original-capture.zip", source)
+              archive.writestr("offline-recovery-receipt.json", receipt)
+              archive.writestr("manifest.json", json.dumps(manifest))
+          PY
+          python research_verify_omxh25_portable_backup.py \
+            research-omxh25/portable-backup.zip \
+            --extract-original research-omxh25/portable-original.zip \
+            --derived-zip research-omxh25/portable-derived.zip \
+            --receipt-json research-omxh25/portable-positive-recovery-receipt.json \
+            | tee research-omxh25/portable-positive-verification.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path("research-omxh25/portable-positive-verification.json").read_text())
+          assert data["portable"]["status"] == "verified_portable_original_capture"
+          assert data["recovery"]["verification"]["status"] == "verified_original_bytes"
+          assert data["portable"]["trade_ready"] is False
+          print("Portable backup positive recovery: success; original PDF bytes verified.")
           PY
       - name: Publish verification receipt (not the source PDFs)
         if: success()
