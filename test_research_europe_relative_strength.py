@@ -23,6 +23,28 @@ def fixtures():
         "inconsistent_dates":[],"identity_approved":False}
     return {"trade_ready":False,"series":stocks},{"trade_ready":False,"series":indices}
 class Tests(unittest.TestCase):
+    def test_forged_status_counts_and_hash_cannot_hide_wrong_timestamp(self):
+        stocks,indices=fixtures()
+        omx=indices["series"]["OMXH25"]
+        omx["bars"][3]["t"]+=3600
+        audit=omx["daily_label_audit"]
+        audit.update({"validation_status":"consistent_unverified",
+                      "checked":len(omx["bars"]),"consistent":len(omx["bars"]),
+                      "inconsistent_dates":[],"identity_approved":False})
+        audit["bars_sha256"]=hashlib.sha256(json.dumps(omx["bars"],sort_keys=True,separators=(",",":"),allow_nan=False).encode()).hexdigest()
+        with self.assertRaisesRegex(ValueError,"OMXH25_DAILY_LABEL_AUDIT_CONTENT_MISMATCH"):
+            compare(stocks,indices,IDENTITY,"2026-11-06")
+    def test_forged_status_counts_and_hash_cannot_hide_duplicate_day(self):
+        stocks,indices=fixtures()
+        omx=indices["series"]["OMXH25"]
+        omx["bars"][4]["t"]=omx["bars"][3]["t"]
+        audit=omx["daily_label_audit"]
+        audit.update({"validation_status":"consistent_unverified",
+                      "checked":len(omx["bars"]),"consistent":len(omx["bars"]),
+                      "inconsistent_dates":[],"identity_approved":False})
+        audit["bars_sha256"]=hashlib.sha256(json.dumps(omx["bars"],sort_keys=True,separators=(",",":"),allow_nan=False).encode()).hexdigest()
+        with self.assertRaisesRegex(ValueError,"OMXH25_DAILY_LABEL_RECOMPUTE_BLOCKED"):
+            compare(stocks,indices,IDENTITY,"2026-11-06")
     def test_forged_audit_count_is_rejected(self):
         stocks,indices=fixtures()
         audit=indices["series"]["OMXH25"]["daily_label_audit"]
