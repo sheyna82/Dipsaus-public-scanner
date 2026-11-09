@@ -303,3 +303,13 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - All seven workflows completed successfully: `42693557748`, `42693557566`, `42693557814`, `42693557625`, `42693557525`, `42693557304`, `42693557480`.
 - Enforced legacy gate succeeded; log inventory: 31 `historical_test`, 2 `controlled_delegation`, zero unknown direct legacy calls.
 - Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
+
+
+## Top-level `del` alias invalidation: CI verification (2026-11-09)
+
+- Code commit `70d9297a4c96565cdf36dcc92161d257d7e46006`; regression-test commit `c807d0357f2b4093f02e83e773d601dcf6f5e53b`.
+- Supplemental ordered-alias diagnostic invalidates aliases explicitly deleted by top-level `del` and conservatively clears proof for attribute/subscript deletion with possible side effects. Deletion of an unrelated plain name preserves other aliases.
+- Exact-commit source-admission GitHub Actions run `42693817360`, job `129420229184`: `Ran 104 tests in 0.026s`, `OK`; all three new regressions passed individually.
+- All seven workflows completed successfully: `42693817669`, `42693817647`, `42693817843`, `42693817399`, `42693817697`, `42693817360`, `42693817415`.
+- Enforced legacy gate succeeded; log inventory: 31 `historical_test`, 2 `controlled_delegation`, zero unknown direct legacy calls.
+- Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
