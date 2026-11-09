@@ -1,6 +1,7 @@
 """Offline European relative strength contract tests; no external market access."""
 import unittest
 from datetime import datetime,timedelta,timezone
+from zoneinfo import ZoneInfo
 from research_europe_relative_strength import compare
 IDENTITY={k:True for k in ("AEX","DAX_PRICE","OMXH25","STOXX600_PRICE")}
 def bars(start,finish):
@@ -10,11 +11,25 @@ def bars(start,finish):
 def fixtures():
     stocks={k:{"bars":bars(100,110)} for k in ("ASML.AS","IFX.DE","NOKIA.HE","RHM.DE")}
     indices={k:{"bars":bars(100,105)} for k in IDENTITY}
+    # Use actual Helsinki 10:00 session labels across DST changes.
+    for bar in indices["OMXH25"]["bars"]:
+        day=datetime.fromtimestamp(bar["t"],timezone.utc).date()
+        bar["t"]=int(datetime(day.year,day.month,day.day,10,tzinfo=ZoneInfo("Europe/Helsinki")).timestamp())
     indices["OMXH25"]["daily_label_audit"]={
         "validation_status":"consistent_unverified","checked":21,"consistent":21,
         "inconsistent_dates":[],"identity_approved":False}
     return {"trade_ready":False,"series":stocks},{"trade_ready":False,"series":indices}
 class Tests(unittest.TestCase):
+    def test_forged_consistent_audit_cannot_override_bad_bar(self):
+        stocks,indices=fixtures()
+        indices["series"]["OMXH25"]["bars"][0]["t"]+=3600
+        with self.assertRaisesRegex(ValueError,"OMXH25_DAILY_LABEL_RECOMPUTE_BLOCKED"):
+            compare(stocks,indices,IDENTITY,"2026-11-06")
+    def test_duplicate_omxh25_local_session_is_blocked(self):
+        stocks,indices=fixtures()
+        indices["series"]["OMXH25"]["bars"][1]["t"]=indices["series"]["OMXH25"]["bars"][0]["t"]
+        with self.assertRaisesRegex(ValueError,"OMXH25_DAILY_LABEL_RECOMPUTE_BLOCKED"):
+            compare(stocks,indices,IDENTITY,"2026-11-06")
     def test_missing_omxh25_audit_vetoes_comparison(self):
         stocks,indices=fixtures()
         del indices["series"]["OMXH25"]["daily_label_audit"]
@@ -67,7 +82,9 @@ class Tests(unittest.TestCase):
     def test_incomplete_current_session_excluded(self):
         stocks,indices=fixtures()
         for v in stocks["series"].values():v["bars"].append({"t":int(datetime(2026,11,9,12,tzinfo=timezone.utc).timestamp()),"close":9999})
-        for v in indices["series"].values():v["bars"].append({"t":int(datetime(2026,11,9,12,tzinfo=timezone.utc).timestamp()),"close":1})
+        for name,v in indices["series"].items():
+            t=datetime(2026,11,9,10,tzinfo=ZoneInfo("Europe/Helsinki")) if name=="OMXH25" else datetime(2026,11,9,12,tzinfo=timezone.utc)
+            v["bars"].append({"t":int(t.timestamp()),"close":1})
         # Synthetic audit fixture must cover the appended (incomplete) observation.
         audit=indices["series"]["OMXH25"]["daily_label_audit"]
         audit["checked"]=22
