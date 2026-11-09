@@ -146,5 +146,31 @@ class LegacyCallAuditTests(unittest.TestCase):
             scopes = [x for x in inventory([file]) if x.get("kind") == "ambiguous_scope"]
             self.assertEqual([x["line"] for x in scopes], [2])
 
+    def test_global_legacy_name_redirection_is_flagged(self):
+        with tempfile.TemporaryDirectory() as root:
+            file = pathlib.Path(root) / "global_scope.py"
+            file.write_text("from research_europe_relative_strength import compare\n"
+                            "def run():\n"
+                            "    global compare\n"
+                            "    return compare()\n", encoding="utf-8")
+            self.assertTrue(any(x.get("kind") == "ambiguous_scope"
+                                and "scope_redirect" in x["target"]
+                                for x in inventory([file])))
+
+    def test_nonlocal_legacy_name_redirection_is_flagged(self):
+        with tempfile.TemporaryDirectory() as root:
+            file = pathlib.Path(root) / "nonlocal_scope.py"
+            file.write_text("from research_europe_relative_strength import compare\n"
+                            "def outer():\n"
+                            "    compare = lambda: None\n"
+                            "    def inner():\n"
+                            "        nonlocal compare\n"
+                            "        return compare()\n"
+                            "    return inner()\n", encoding="utf-8")
+            self.assertTrue(any(x.get("kind") == "ambiguous_scope"
+                                and x["line"] == 4
+                                and "scope_redirect" in x["target"]
+                                for x in inventory([file])))
+
 if __name__ == "__main__":
     unittest.main()
