@@ -403,3 +403,13 @@ Commit `8448687286596226368925157308151c986f6b36` adds supplemental class-creati
 - All nine exact-commit workflows completed successfully: `42696522846`, `42696522813`, `42696522881`, `42696522474`, `42696522492`, `42696522071`, `42696522496`, `42696522273`, `42696513154`.
 - Enforced legacy audit inventory in job log: 31 `historical_test`, 2 `controlled_delegation`, zero unknown classifications.
 - Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
+
+
+## Class-local walrus scope preservation: regression-only CI verification (2026-11-09)
+
+- Supplemental ordered-alias diagnostic regression-only commit `d85e7c567f7f3cce6b30fffdeb76f097c095ed8e`; no production or diagnostic code change was needed.
+- Three tests confirm that class-local walrus assignment, nested class base-expression walrus, and method default-expression walrus do not incorrectly invalidate an independent module-level alias proof in the examined cases.
+- Exact-commit source-admission run `42696718006`, job `129430412627`: `Ran 136 tests in 0.030s`, `OK`; all three new regression tests passed individually.
+- All nine exact-commit workflows completed successfully: `42696731867`, `42696731733`, `42696731481`, `42696731303`, `42696731710`, `42696731371`, `42696731662`, `42696731329`, `42696718006`.
+- Enforced legacy audit inventory in job log: 31 `historical_test`, 2 `controlled_delegation`, zero unknown classifications.
+- Supplemental AST evidence only; no benchmark source admission promotion, trusted receipt, live scanner/trading logic change, or merge to `main`.
