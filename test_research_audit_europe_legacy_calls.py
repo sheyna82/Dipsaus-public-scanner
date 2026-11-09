@@ -123,5 +123,28 @@ class LegacyCallAuditTests(unittest.TestCase):
             self.assertTrue(any(x.get("kind") == "ambiguous_scope"
                                 for x in inventory([file])))
 
+    def test_nested_shadowing_is_attributed_only_to_inner_scope(self):
+        with tempfile.TemporaryDirectory() as root:
+            file = pathlib.Path(root) / "nested.py"
+            file.write_text("from research_europe_relative_strength import compare\n"
+                            "def outer():\n"
+                            "    def inner():\n"
+                            "        compare = lambda: None\n"
+                            "        return compare()\n"
+                            "    return inner()\n", encoding="utf-8")
+            scopes = [x for x in inventory([file]) if x.get("kind") == "ambiguous_scope"]
+            self.assertEqual([x["line"] for x in scopes], [3])
+
+    def test_nested_function_definition_shadowing_is_flagged(self):
+        with tempfile.TemporaryDirectory() as root:
+            file = pathlib.Path(root) / "nested.py"
+            file.write_text("from research_europe_relative_strength import compare\n"
+                            "def outer():\n"
+                            "    def compare():\n"
+                            "        return None\n"
+                            "    return compare()\n", encoding="utf-8")
+            scopes = [x for x in inventory([file]) if x.get("kind") == "ambiguous_scope"]
+            self.assertEqual([x["line"] for x in scopes], [2])
+
 if __name__ == "__main__":
     unittest.main()
