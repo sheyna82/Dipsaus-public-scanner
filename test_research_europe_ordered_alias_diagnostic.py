@@ -57,5 +57,31 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
         self.assertEqual([x["classification"] for x in result],
                          ["uncertain_control_flow", "ordered_legacy_call"])
 
+    def test_nested_branch_call_is_reported_without_target_claim(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "if condition:\n"
+                  "    compare()\n")
+        result = diagnose(source)
+        self.assertEqual([x["classification"] for x in result],
+                         ["uncertain_control_flow", "uncertain_nested_call"])
+        self.assertIsNone(result[1]["target"])
+        self.assertEqual(result[1]["line"], 3)
+
+    def test_nested_loop_call_is_reported_without_target_claim(self):
+        source = ("import research_europe_recovery_confirmation as recovery\n"
+                  "for item in items:\n"
+                  "    recovery.evaluate()\n")
+        result = diagnose(source)
+        self.assertTrue(any(x["classification"] == "uncertain_nested_call"
+                            and x["line"] == 3 for x in result))
+
+    def test_function_definition_inside_branch_is_not_traversed(self):
+        source = ("if condition:\n"
+                  "    def later():\n"
+                  "        unrelated()\n")
+        result = diagnose(source)
+        self.assertFalse(any(x["classification"] == "uncertain_nested_call"
+                             for x in result))
+
 if __name__ == "__main__":
     unittest.main()
