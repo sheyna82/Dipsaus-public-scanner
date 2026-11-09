@@ -82,6 +82,10 @@ jobs:
         run: |
           python research_capture_omxh25_issuer_raw.py 'https://beta.indexes.nasdaqomx.com/Scripts/History.js?v=2.0.0.0' research-observation/omxh25-history-script-candidate.json
           python research_inspect_omxh25_history_js.py research-observation/omxh25-history-script-candidate.json research-observation/omxh25-history-script-inspection.json
+      - name: Capture Nasdaq Site.js date serializer candidate (unverified)
+        continue-on-error: true
+        run: |
+          python research_capture_omxh25_issuer_raw.py 'https://beta.indexes.nasdaqomx.com/Scripts/Site.js?v=1.0.0' research-observation/omxh25-site-script-candidate.json
       - name: Upload observations
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -94,5 +98,6 @@ jobs:
             research-observation/omxh25-issuer-history-candidate.json
             research-observation/omxh25-history-script-candidate.json
             research-observation/omxh25-history-script-inspection.json
+            research-observation/omxh25-site-script-candidate.json
           if-no-files-found: error
           retention-days: 14
