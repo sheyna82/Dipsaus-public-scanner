@@ -25,9 +25,10 @@ class HistoryPostTests(unittest.TestCase):
             def fetch(request, timeout):
                 self.assertEqual(request.get_method(), "POST")
                 self.assertIn(b"id=OMXH25", request.data)
+                self.assertIn(b"timeOfDay=EOD", request.data)
                 return FakeResponse()
             result = capture_history_post(path, "2026-11-05T00:00:00",
-                                          "2026-11-09T00:00:00", "0", fetch=fetch)
+                                          "2026-11-09T00:00:00", "EOD", fetch=fetch)
             receipt = json.loads(path.read_text())
             self.assertEqual(base64.b64decode(receipt["source_raw_base64"]), b'{"illustrative":true}')
             self.assertEqual(receipt["source_sha256"], hashlib.sha256(b'{"illustrative":true}').hexdigest())
