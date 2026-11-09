@@ -41,7 +41,7 @@ def collect(destination,fetch=None):
             raise ValueError("invalid_bars:"+name)
         out["series"][name]={"provider_symbol":symbol,"source":url,"source_sha256":hashlib.sha256(raw).hexdigest(),
                              "count":len(bars),"bars":bars}
-    out["benchmark_identity_verified"]=True
+    out["benchmark_identity_verified"]=False  # Provider alias alone cannot verify official index variant or ISIN
     with p.open("x",encoding="utf-8") as f:json.dump(out,f,sort_keys=True,separators=(",",":"));f.write("\n")
     return {"status":"research_capture_complete","counts":{k:v["count"] for k,v in out["series"].items()},"trade_ready":False}
 if __name__=="__main__":
