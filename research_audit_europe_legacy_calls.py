@@ -50,6 +50,28 @@ def inventory(paths):
                     for target in targets:
                         if isinstance(target, ast.Name):
                             functions[target.id] = module
+        # Rebinding an imported function name to an unrelated value makes
+        # AST-wide alias inference ambiguous. Report it rather than claiming
+        # the apparent calls are conclusively legacy calls.
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.Assign, ast.AnnAssign)):
+                targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                for target in targets:
+                    if not isinstance(target, ast.Name) or target.id not in functions:
+                        continue
+                    value = node.value
+                    source = None
+                    if isinstance(value, ast.Name):
+                        source = functions.get(value.id)
+                    elif (isinstance(value, ast.Attribute) and
+                          isinstance(value.value, ast.Name) and value.value.id in aliases):
+                        module = aliases[value.value.id]
+                        if value.attr == LEGACY[module]:
+                            source = module
+                    if source != functions[target.id]:
+                        hits.append({"path": str(path), "line": node.lineno,
+                                     "target": "ambiguous_legacy_alias_rebinding",
+                                     "kind": "ambiguous_alias"})
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
                 continue
