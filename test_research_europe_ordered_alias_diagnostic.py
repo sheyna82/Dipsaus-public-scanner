@@ -479,5 +479,27 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "not_proven_legacy")
 
 
+    def test_attribute_assignment_invalidates_alias_proof(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "obj.attr = replacement\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_subscript_assignment_invalidates_alias_proof(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "obj[index] = replacement\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_nested_unpacking_with_attribute_invalidates_alias_proof(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "other, (obj.attr, item) = replacement\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+
 if __name__ == "__main__":
     unittest.main()
