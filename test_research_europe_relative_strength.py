@@ -10,8 +10,16 @@ def bars(start,finish):
 def fixtures():
     stocks={k:{"bars":bars(100,110)} for k in ("ASML.AS","IFX.DE","NOKIA.HE","RHM.DE")}
     indices={k:{"bars":bars(100,105)} for k in IDENTITY}
+    indices["OMXH25"]["daily_label_audit"]={
+        "validation_status":"consistent_unverified","checked":21,"consistent":21,
+        "inconsistent_dates":[],"identity_approved":False}
     return {"trade_ready":False,"series":stocks},{"trade_ready":False,"series":indices}
 class Tests(unittest.TestCase):
+    def test_missing_omxh25_audit_vetoes_comparison(self):
+        stocks,indices=fixtures()
+        del indices["series"]["OMXH25"]["daily_label_audit"]
+        with self.assertRaisesRegex(ValueError,"OMXH25_DAILY_LABEL_AUDIT_MISSING"):
+            compare(stocks,indices,IDENTITY,"2026-11-06")
     def test_inconsistent_omxh25_audit_vetoes_comparison(self):
         stocks,indices=fixtures()
         indices["series"]["OMXH25"]["daily_label_audit"]={
