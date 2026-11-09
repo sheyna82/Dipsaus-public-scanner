@@ -55,6 +55,15 @@ def diagnose(source):
                     for child in ast.walk(target):
                         if isinstance(child, ast.Name):
                             state[child.id] = None
+                    if any(isinstance(child, (ast.Attribute, ast.Subscript))
+                           for child in ast.walk(target)):
+                        # Assignment through a property or __setitem__ may
+                        # execute arbitrary code that changes other aliases.
+                        state.clear()
+                else:
+                    # Attribute/subscript assignment can execute user code.
+                    # Never preserve unrelated alias proofs across it.
+                    state.clear()
             # Assignment RHS may itself bind names through :=. Such bindings
             # can shadow earlier imports, regardless of the outer targets.
             if value is not None:
