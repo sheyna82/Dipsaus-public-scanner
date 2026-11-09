@@ -35,6 +35,25 @@ def inventory(paths):
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
                 continue
+            dynamic = ((isinstance(node.func, ast.Name) and node.func.id == "__import__") or
+                       (isinstance(node.func, ast.Attribute) and
+                        isinstance(node.func.value, ast.Name) and
+                        node.func.value.id == "importlib" and
+                        node.func.attr == "import_module"))
+            if dynamic and node.args:
+                arg = node.args[0]
+                if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                    if arg.value in LEGACY:
+                        hits.append({"path": str(path), "line": node.lineno,
+                                     "target": arg.value + "." + LEGACY[arg.value],
+                                     "kind": "dynamic_import"})
+                else:
+                    hits.append({"path": str(path), "line": node.lineno,
+                                 "target": "unknown_dynamic_import",
+                                 "kind": "dynamic_import"})
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
             target = None
             if isinstance(node.func, ast.Name) and node.func.id in functions:
                 target = functions[node.func.id] + "." + LEGACY[functions[node.func.id]]
