@@ -1212,7 +1212,6 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "ordered_legacy_call")
 
 
-    @unittest.expectedFailure
     def test_known_gap_outer_callable_lookup_precedes_walrus_argument(self):
         source = ("from research_europe_relative_strength import compare\n"
                   "compare((compare := replacement))\n")
