@@ -21,7 +21,7 @@ def _scan_class_creation_expressions(expressions, state, findings, module_scope=
             if isinstance(node, (ast.Lambda, ast.FunctionDef, ast.AsyncFunctionDef)):
                 continue
             if isinstance(node, ast.Call):
-                if isinstance(node.func, ast.Name) and node.func.id == "exec":
+                if isinstance(node.func, ast.Name) and node.func.id in ("exec", "eval"):
                     state.clear()
                 # An immediately invoked lambda executes its body during
                 # class creation. Merely constructing a lambda does not.
@@ -106,7 +106,7 @@ def diagnose(source):
                 # Postponed annotations make execution uncertain, not proven.
                 for child in ast.walk(stmt.annotation):
                     if (isinstance(child, ast.Call) and isinstance(child.func, ast.Name)
-                            and child.func.id == "exec"):
+                            and child.func.id in ("exec", "eval")):
                         # Runtime annotation evaluation may execute code that
                         # rebinds module aliases; postponed evaluation is
                         # uncertain, so never retain an unqualified proof.
@@ -121,7 +121,7 @@ def diagnose(source):
             if value is not None:
                 for child in ast.walk(value):
                     if (isinstance(child, ast.Call) and isinstance(child.func, ast.Name)
-                            and child.func.id == "exec"):
+                            and child.func.id in ("exec", "eval")):
                         state.clear()
                     if isinstance(child, ast.NamedExpr):
                         state[child.target.id] = None
@@ -150,7 +150,7 @@ def diagnose(source):
             # not just the augmented-assignment target.
             for child in ast.walk(stmt.value):
                 if (isinstance(child, ast.Call) and isinstance(child.func, ast.Name)
-                        and child.func.id == "exec"):
+                        and child.func.id in ("exec", "eval")):
                     state.clear()
                 if isinstance(child, ast.NamedExpr):
                     state[child.target.id] = None
@@ -195,7 +195,7 @@ def diagnose(source):
             for expression in definition_expressions:
                 for nested in ast.walk(expression):
                     if (isinstance(nested, ast.Call) and isinstance(nested.func, ast.Name)
-                            and nested.func.id == "exec"):
+                            and nested.func.id in ("exec", "eval")):
                         state.clear()
                     if isinstance(nested, ast.NamedExpr):
                         state[nested.target.id] = None
@@ -368,7 +368,7 @@ def diagnose(source):
                     continue
                 for child in ast.walk(expression):
                     if (isinstance(child, ast.Call) and isinstance(child.func, ast.Name)
-                            and child.func.id == "exec"):
+                            and child.func.id in ("exec", "eval")):
                         state.clear()
                     if isinstance(child, ast.NamedExpr):
                         state[child.target.id] = None
@@ -379,7 +379,7 @@ def diagnose(source):
             # Direct exec can replace module globals dynamically. Without
             # proving its runtime namespace, no earlier alias stays proven.
             if (isinstance(stmt.value.func, ast.Name)
-                    and stmt.value.func.id == "exec"):
+                    and stmt.value.func.id in ("exec", "eval")):
                 state.clear()
             # The outer call is classified below; its nested arguments and
             # callable expression are inventoried separately as uncertain.
@@ -394,7 +394,7 @@ def diagnose(source):
                 isinstance(child, ast.Call)
                 and child is not stmt.value
                 and isinstance(child.func, ast.Name)
-                and child.func.id == "exec"
+                and child.func.id in ("exec", "eval")
                 for child in ast.walk(stmt.value))
             func = stmt.value.func
             resolved = state.get(func.id) if isinstance(func, ast.Name) else None
@@ -423,7 +423,7 @@ def diagnose(source):
             # An embedded direct exec call can also replace module bindings.
             for child in ast.walk(stmt.value):
                 if (isinstance(child, ast.Call) and isinstance(child.func, ast.Name)
-                        and child.func.id == "exec"):
+                        and child.func.id in ("exec", "eval")):
                     state.clear()
                 if isinstance(child, ast.NamedExpr):
                     state[child.target.id] = None
