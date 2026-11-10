@@ -547,3 +547,13 @@ Recommended next small step: add a focused, regression-only failing-case invento
 - All nine exact-commit workflow runs succeeded: `42711143108` (evidence integrity), `42711142956` (AMD historical), `42711143016` (European recovery), `42711142826` (EU relative strength), `42711142890` and `42711131550` (source admission), `42711143180` (AMD contracts), `42711142960` (SPY), `42711142897` (OMXH25).
 - Enforced legacy gate: 31 `historical_test`, 2 `controlled_delegation`, zero `unknown` classifications.
 - This is a bounded AST fix, **not** a claim of exhaustive Python execution modeling. Nested lambda invocations, dynamic indirection, and conditional execution remain subjects for separate research. No `main` merge, live scanner/order change, source-admission promotion, or trusted receipt promotion.
+
+
+## Ordered class-local lambda bindings: exact-commit CI verification (2026-11-10)
+
+- Regression inventory commit `67b0c55e48a2d7c9e4095ffb3c75e21142784ee2` added a known expected-failure case for a class-local lambda assigned to a name and invoked later during class creation, plus a non-invocation control. Exact-commit source-admission run `42772947026`, job `129684738505`: `Ran 170 tests in 0.026s`, `OK (expected failures=1)`; both cases were individually observed.
+- Research-only code commit `8627e382de6b1d64b1a24f008a0bb27a07cd4176` introduced an ordered, per-class `local_lambdas` registry for simple name-bound lambdas and conservative invalidation on supported rebinding forms. Test commit `f306da77fdfae41c1ba6664e26073623d9cecddb` removed the expected-failure marker and added controls for overwrite-before-call and nested-class name isolation.
+- Exact-commit source-admission run `42773440541`, job `129686338288`: `Ran 172 tests in 0.017s`, `OK`; the previously failing invocation case and both additional controls individually reported `ok`. No expected failures.
+- All nine exact-commit workflows completed successfully: `42773448886` (AMD historical), `42773448758` (EU relative strength), `42773448821` and `42773440541` (source admission), `42773448713` (European recovery), `42773449075` (OMXH25), `42773449293` (research evidence integrity), `42773448754` (SPY), `42773448809` (AMD contracts).
+- Enforced legacy audit: 31 `historical_test`, 2 `controlled_delegation`, zero `unknown` classifications.
+- Scope limitation: the class-local registry handles only simple ordered assignments and selected rebinding forms. It is not a complete model of dynamic Python name resolution, branches, exception flow, indirect calls or runtime alias mutation. No promotion to source-admission authority, no merge to `main`, no live scanner or trading-order change.
