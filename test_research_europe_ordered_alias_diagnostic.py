@@ -1074,5 +1074,36 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "ordered_legacy_call")
 
 
+    @unittest.expectedFailure
+    def test_known_gap_nested_class_conditional_rebinding_must_not_hide_exec(self):
+        # A nested conditional suite must not become unconditional on flattening.
+        source = ("from research_europe_relative_strength import compare\n"
+                  "class Later:\n"
+                  "    callback = lambda: exec('global compare; compare = fallback')\n"
+                  "    if outer_condition:\n"
+                  "        if inner_condition:\n"
+                  "            callback = lambda: None\n"
+                  "    callback()\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    @unittest.expectedFailure
+    def test_known_gap_class_try_rebinding_must_not_hide_exec(self):
+        # A try body can raise before rebinding, leaving the old lambda.
+        source = ("from research_europe_relative_strength import compare\n"
+                  "class Later:\n"
+                  "    callback = lambda: exec('global compare; compare = fallback')\n"
+                  "    try:\n"
+                  "        may_raise()\n"
+                  "        callback = lambda: None\n"
+                  "    except Exception:\n"
+                  "        pass\n"
+                  "    callback()\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+
 if __name__ == "__main__":
     unittest.main()
