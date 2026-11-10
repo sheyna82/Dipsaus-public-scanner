@@ -2,13 +2,10 @@ name: DIPSAUS Europe recovery
 on:
   workflow_dispatch:
   schedule:
-    - cron: '*/5 7-16 * * 1-5'
-      timezone: Europe/Amsterdam
-    # Continue refreshing through the European cash-session close (17:30 local).
-    - cron: '0,5,10,15,20,25,30 17 * * 1-5'
-      timezone: Europe/Amsterdam
-    - cron: '35 20 * * 1-5'
-      timezone: Europe/Amsterdam
+    # GitHub Actions cron is evaluated in UTC. Cover European cash hours in
+    # both CET (UTC+1) and CEST (UTC+2); market/session gates remain fail-closed.
+    # Offset from the top of the hour to reduce GitHub scheduler congestion.
+    - cron: '2,17,32,47 6-17 * * 1-5'
 permissions:
   contents: read
 concurrency:
