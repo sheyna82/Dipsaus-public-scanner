@@ -322,7 +322,14 @@ def diagnose(source):
                         # execute while its enclosing class is created.
                         expressions = (list(member.decorator_list)
                                        + list(member.args.defaults)
-                                       + [v for v in member.args.kw_defaults if v is not None])
+                                       + [v for v in member.args.kw_defaults if v is not None]
+                                       + [arg.annotation for arg in (
+                                           member.args.posonlyargs + member.args.args
+                                           + member.args.kwonlyargs
+                                           + ([member.args.vararg] if member.args.vararg else [])
+                                           + ([member.args.kwarg] if member.args.kwarg else []))
+                                          if arg.annotation is not None]
+                                       + ([member.returns] if member.returns is not None else []))
                     elif isinstance(member, ast.ClassDef):
                         expressions = (list(member.decorator_list) + list(member.bases)
                                        + [kw.value for kw in member.keywords])
