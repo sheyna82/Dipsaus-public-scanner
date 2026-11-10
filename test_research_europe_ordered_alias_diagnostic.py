@@ -1051,5 +1051,29 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "ordered_legacy_call")
 
 
+    @unittest.expectedFailure
+    def test_known_gap_class_branch_rebinding_must_not_hide_lambda_exec(self):
+        # A branch may not run, so a prior callable remains possible.
+        source = ("from research_europe_relative_strength import compare\n"
+                  "class Later:\n"
+                  "    callback = lambda: exec('global compare; compare = fallback')\n"
+                  "    if condition:\n"
+                  "        callback = lambda: None\n"
+                  "    callback()\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_class_unconditional_rebinding_prevents_old_lambda_exec(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "class Later:\n"
+                  "    callback = lambda: exec('global compare; compare = fallback')\n"
+                  "    callback = lambda: None\n"
+                  "    callback()\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "ordered_legacy_call")
+
+
 if __name__ == "__main__":
     unittest.main()
