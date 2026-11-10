@@ -537,3 +537,13 @@ Recommended next small step: add a focused, regression-only failing-case invento
 - All nine exact-commit workflows completed successfully: `42710689068` (SPY), `42710689388` and `42710677987` (source admission), `42710689043` (OMXH25), `42710688824` (AMD historical capture), `42710689289` (EU relative strength), `42710688787` (research evidence integrity), `42710689221` (European recovery), `42710688776` (AMD offline contracts).
 - Enforced legacy gate output in source-admission job: 31 `historical_test`, 2 `controlled_delegation`, zero `unknown` classifications. This is a bounded static diagnostic and gate result, **not** proof of exhaustive Python runtime alias analysis.
 - Scope remains research-only. No merge to `main`, production scanner or order logic change, trusted receipt promotion, or live trading action. Follow-up: independently inspect evaluation-context semantics and add focused controls before any further visitor refactor.
+
+
+## Immediately invoked class lambda: execution-context regression verified (2026-11-10)
+
+- Research-only regression inventory commit `e238c12527d8a84f6f6e09b53ffa465daa07ce9a` added two cases: direct lambda invocation during class creation containing `exec` with a global alias reassignment, and an uninvoked lambda control. Exact-commit source-admission run `42710997555`, job `129480177663`: `Ran 168 tests in 0.026s`, `OK (expected failures=1)`; the direct invocation was an expected failure and the uninvoked control passed.
+- Code commit `06b91687db35aa567acbcf8980929e7f44eff734` scans the body of a directly invoked lambda in the class-creation expression walker. Test commit `9197911a4bf473d8a20f2d9b013be183dd1bf03e` removed the expected-failure marker so the regression must pass.
+- Exact-commit source-admission run `42711142890`, job `129480675792`: `Ran 168 tests in 0.033s`, `OK`; both the direct-invocation regression and uninvoked-lambda control individually reported `ok`. No expected failures were reported.
+- All nine exact-commit workflow runs succeeded: `42711143108` (evidence integrity), `42711142956` (AMD historical), `42711143016` (European recovery), `42711142826` (EU relative strength), `42711142890` and `42711131550` (source admission), `42711143180` (AMD contracts), `42711142960` (SPY), `42711142897` (OMXH25).
+- Enforced legacy gate: 31 `historical_test`, 2 `controlled_delegation`, zero `unknown` classifications.
+- This is a bounded AST fix, **not** a claim of exhaustive Python execution modeling. Nested lambda invocations, dynamic indirection, and conditional execution remain subjects for separate research. No `main` merge, live scanner/order change, source-admission promotion, or trusted receipt promotion.
