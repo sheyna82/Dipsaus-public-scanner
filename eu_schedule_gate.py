@@ -1,16 +1,14 @@
-"""Fail-closed core-hours gate for scheduled European workflow runs.
+"""Fail-closed core-hours gate for European workflow runs, including external dispatches.
 
 This is a scheduling safeguard, not an exchange holiday calendar or trade
-authorization. Manual dispatch remains available for controlled diagnostics.
+authorization. Manual dispatch is subject to the same market-hours gate; no bypass.
 """
 from datetime import datetime, timezone
 from dipsaus_eu_session_context import eu_session_context
 
 
 def scheduled_eu_scan_allowed(event_name, now=None):
-    if event_name == "workflow_dispatch":
-        return True
-    if event_name != "schedule":
+    if event_name not in ("schedule", "workflow_dispatch"):
         return False
     now = now if now is not None else datetime.now(timezone.utc)
     return eu_session_context(now) == "CORE_HOURS_UNVERIFIED_HOLIDAYS"
