@@ -596,3 +596,12 @@ Recommended next small step: add a focused, regression-only failing-case invento
 - Source admission run `42774361175`, job `129689292443`: `Ran 181 tests in 0.028s`, `OK`, both annotation cases individually `ok`, no expected failures. All nine workflows for the exact commit succeeded: `42774367657`, `42774367705`, `42774367618`, `42774367341`, `42774367274`, `42774367289`, `42774367319`, `42774367266`, `42774361175`.
 - Legacy audit unchanged: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`. Conservative handling intentionally does not prove runtime evaluation of postponed annotations; Python version and future annotations can defer expression execution.
 - Research branch only; PR #65 draft, no merge to main, no live-scanner change, no trading action.
+
+
+## Class method annotations: verified conservative alias invalidation (2026-11-10)
+
+- Regression inventory commit `1321e150d078a7514f18aa64558a7c5d466a3a7c` identified a missing check for `exec` inside class method parameter annotations. Source admission run `42774486648`, job `129689684458`: 183 tests, exactly one expected failure; the ordinary `int` annotation control passed. The preceding dossier commit `c8f960218b87ae258617b5b5f138c66103b9dc0f` independently passed all nine workflows.
+- Minimal source fix `556efeddeb252299a17da6b7595bd5206c6f75af` includes parameter and return annotations in class method definition-time expression scanning, preserving existing decorator/default scanning. Mandatory regression test commit `a518fdd7256792c35987b81187f7438f226b9aad` removes the expected-failure marker.
+- Exact-commit source admission run `42774541402`, job `129689866708`: `Ran 183 tests in 0.020s`, `OK`; both annotation tests `ok`, no expected failures. All nine workflows succeeded: `42774549445`, `42774549474`, `42774549281`, `42774549423`, `42774549415`, `42774549813`, `42774549311`, `42774549294`, `42774541402`.
+- Legacy audit unchanged: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`. Static scanning remains intentionally conservative: Python versions and postponed annotation evaluation can affect runtime timing, and this analysis does not claim to establish actual execution of annotation expressions.
+- Research branch only; PR #65 remains draft; no merge to main, live-scanner change or trading action.
