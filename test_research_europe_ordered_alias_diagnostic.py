@@ -1009,7 +1009,6 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "ordered_legacy_call")
 
 
-    @unittest.expectedFailure
     def test_known_gap_class_local_lambda_called_later_invalidates_alias(self):
         # A class-local lambda becomes executable when invoked by name.
         source = ("from research_europe_relative_strength import compare\n"
@@ -1025,6 +1024,28 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                   "class Later:\n"
                   "    callback = lambda: exec('global compare; compare = fallback')\n"
                   "    other = 1\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "ordered_legacy_call")
+
+
+    def test_class_local_lambda_overwritten_before_call_preserves_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "class Later:\n"
+                  "    callback = lambda: exec('global compare; compare = fallback')\n"
+                  "    callback = lambda: None\n"
+                  "    callback()\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "ordered_legacy_call")
+
+    def test_class_local_lambda_name_reused_in_nested_class_isolated(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "class Later:\n"
+                  "    callback = lambda: exec('global compare; compare = fallback')\n"
+                  "    class Nested:\n"
+                  "        callback = lambda: None\n"
+                  "        callback()\n"
                   "compare()\n")
         self.assertEqual(diagnose(source)[-1]["classification"],
                          "ordered_legacy_call")
