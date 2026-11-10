@@ -686,3 +686,13 @@ Recommended next small step: add a focused, regression-only failing-case invento
 - Legacy audit unchanged: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`. No source change required for these bounded scenarios.
 - Previous documentation commit `67f5452e95f78cc498e4b91bb6abe2ec05eb88e7` passed all nine workflows.
 - Research branch only; PR #65 draft, no main merge, live-scanner change or trading action.
+
+
+## Conditional expression walrus alias controls (2026-11-10)
+
+- Test commit `59990f969f7ac376a272a7534f752a8ac150b2f5` adds three mandatory regression controls: short-circuit `and` walrus invalidates a later imported function alias; conditional walrus inside an outer call argument preserves the previously resolved outer call while invalidating subsequent calls; conditional module-alias walrus in assignment invalidates a later module method.
+- Exact-commit source admission run `42776531327`, job `129696211249`: `Ran 203 tests in 0.057s`, `OK`; all three focused tests individually `ok`, zero expected failures.
+- All nine exact-commit workflows succeeded: `42776539543`, `42776539666`, `42776539605`, `42776539362`, `42776539639`, `42776539495`, `42776539435`, `42776539661`, `42776531327`.
+- Legacy audit unchanged: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`. No source modification needed for these bounded scenarios.
+- Previous documentation commit `c9d193195eaaf967f8cc7d447d961c8e8663d2a5` passed all nine workflows.
+- Research branch only; PR #65 draft, no merge to main, live-scanner modification or trading action.
