@@ -379,6 +379,15 @@ def diagnose(source):
                 if isinstance(child, ast.Call) and child is not stmt.value:
                     findings.append({"line": child.lineno, "target": None,
                                      "classification": "uncertain_expression_call"})
+            # The outer callable is looked up before its arguments. Resolve
+            # that callable now, then invalidate aliases affected by nested
+            # exec before analyzing any subsequent statement.
+            nested_exec = any(
+                isinstance(child, ast.Call)
+                and child is not stmt.value
+                and isinstance(child.func, ast.Name)
+                and child.func.id == "exec"
+                for child in ast.walk(stmt.value))
             func = stmt.value.func
             resolved = state.get(func.id) if isinstance(func, ast.Name) else None
             if isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name):
@@ -392,6 +401,8 @@ def diagnose(source):
             else:
                 findings.append({"line": stmt.lineno, "target": None,
                                  "classification": "not_proven_legacy"})
+            if nested_exec:
+                state.clear()
         elif isinstance(stmt, ast.Expr):
             # Non-call expressions may still bind names via walrus operators,
             # e.g. a conditional expression or an f-string. Invalidate these
