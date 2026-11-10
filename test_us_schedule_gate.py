@@ -23,6 +23,20 @@ class TestUSScheduleGate(unittest.TestCase):
         self.check(2026, 3, 16, 9, 30, True)
         self.check(2026, 10, 26, 9, 30, True)
 
+    def test_utc_open_boundaries_across_dst(self):
+        for year, month, day, open_hour in [
+            (2026, 1, 12, 14),
+            (2026, 3, 16, 13),
+            (2026, 7, 10, 13),
+            (2026, 10, 26, 13),
+            (2026, 11, 10, 14),
+        ]:
+            with self.subTest(date=(year, month, day)):
+                before = datetime(year, month, day, open_hour, 29, tzinfo=timezone.utc)
+                opened = datetime(year, month, day, open_hour, 30, tzinfo=timezone.utc)
+                self.assertFalse(scheduled_us_scan_allowed("workflow_dispatch", before))
+                self.assertTrue(scheduled_us_scan_allowed("workflow_dispatch", opened))
+
     def test_weekend(self):
         self.check(2026, 11, 8, 12, 0, False)
 
