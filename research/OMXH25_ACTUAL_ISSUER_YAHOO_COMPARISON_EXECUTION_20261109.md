@@ -646,3 +646,13 @@ Recommended next small step: add a focused, regression-only failing-case invento
 - Legacy audit unchanged: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`. Verified bounded AST classification, not a general proof of runtime alias identity.
 - Previous documentation commit `a2691e957323c80dfde3a6f9b4e7b0a2530975e5` passed all nine workflows.
 - Research branch only; PR #65 draft; no main merge, live-scanner modification or trading action.
+
+
+## Module attribute outer-call lookup with walrus argument (2026-11-10)
+
+- Test commit `ba114fad393b324feec8526aa6ae633c3f0ae5de` adds two mandatory regression controls for `module.compare((module := replacement))`: the outer call resolves the imported module before argument rebinding; a later `module.compare()` is no longer proven.
+- Exact-commit source admission run `42775217255`, job `129692007937`: `Ran 192 tests in 0.042s`, `OK`; both new tests individually `ok`, zero expected failures.
+- All nine exact-commit workflows succeeded: `42775225066`, `42775225084`, `42775225152`, `42775225210`, `42775225094`, `42775225264`, `42775225271`, `42775225089`, `42775217255`.
+- Legacy audit unchanged: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`. Existing correction covers this bounded module-attribute case; no source change required.
+- Previous documentation commit `222d7074df8351cca6b98299cfdc8b2edbc06108` passed all nine workflows.
+- Research branch only; PR #65 draft, no main merge, live-scanner change or trading action.
