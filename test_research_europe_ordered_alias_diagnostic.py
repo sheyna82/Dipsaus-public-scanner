@@ -1330,7 +1330,6 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "not_proven_legacy")
 
 
-    @unittest.expectedFailure
     def test_known_gap_eval_global_rebinding_invalidates_following_call(self):
         # eval can mutate globals through a side-effecting expression.
         source = ("from research_europe_relative_strength import compare\n"
