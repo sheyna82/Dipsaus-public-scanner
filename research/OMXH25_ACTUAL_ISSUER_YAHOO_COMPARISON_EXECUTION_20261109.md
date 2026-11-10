@@ -587,3 +587,12 @@ Recommended next small step: add a focused, regression-only failing-case invento
 - Source-admission run `42774183645`, job `129688717123`: `Ran 179 tests in 0.037s`, `OK`, both semantic-order regression tests individually `ok`, no expected failures. All nine workflows for `f79c0080ffe81d44a0ca39f37d1047669f1d79b9` succeeded: `42774183906`, `42774183991`, `42774183963`, `42774183660`, `42774183584`, `42774183645`, `42774183737`, `42774183642`, `42774177551`.
 - Legacy gate unchanged: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`. This is bounded evidence for nested direct `exec` in a module-level call expression; it is not a claim of complete Python dynamic execution coverage.
 - Research branch only; PR #65 remains draft. No main merge, live-scanner modification, or trading action.
+
+
+## Evaluated annotation exec: verified conservative alias invalidation (2026-11-10)
+
+- Regression inventory commit `78ab0985738e0bc8976bfb870de65b628c9efaa1`: direct `exec` within an annotated assignment's annotation expression was not invalidating previously proven module aliases. Exact-commit source admission run `42774288137`, job `129689052324`: 181 tests, exactly one expected failure; ordinary `int` annotation control passed. All nine workflows succeeded.
+- Minimal code fix `fc4d2032f6b7847a953809c25f4be7ea4f6e7811` clears module alias proofs on direct `exec` encountered in an `AnnAssign` annotation expression. Test commit `a6d2ab54f019ac243b4177df4461f92e45e4ce2e` promotes regression to mandatory.
+- Source admission run `42774361175`, job `129689292443`: `Ran 181 tests in 0.028s`, `OK`, both annotation cases individually `ok`, no expected failures. All nine workflows for the exact commit succeeded: `42774367657`, `42774367705`, `42774367618`, `42774367341`, `42774367274`, `42774367289`, `42774367319`, `42774367266`, `42774361175`.
+- Legacy audit unchanged: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`. Conservative handling intentionally does not prove runtime evaluation of postponed annotations; Python version and future annotations can defer expression execution.
+- Research branch only; PR #65 draft, no merge to main, no live-scanner change, no trading action.
