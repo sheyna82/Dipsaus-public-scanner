@@ -707,3 +707,12 @@ Recommended next small step: add a focused, regression-only failing-case invento
 - Enforcement commit `e920ec59ae4e9e893fc1baa10ce1539d150763cc`: removed the temporary expected-failure decorator. All nine exact-commit workflows succeeded: `42778012883`, `42778012435`, `42778012037`, `42778012098`, `42778012265`, `42778012400`, `42778012005`, `42778011993`, `42778005124`.
 - Independent source-admission log checks: run `42778012037`, job `129700999149`, and run `42778005124`, job `129700976598`, both report `Ran 204 tests`, `OK`, and the new eval regression `ok`. Both audit outputs: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`.
 - Scope limitation: this correction addresses syntactically direct `eval` calls within the existing scanner's covered expression contexts; it does not claim complete dynamic-Python side-effect analysis. PR #65 remains draft. No merge, live modification, or trading action.
+
+
+## Nested eval argument evaluation-order regression (2026-11-10)
+
+- Test-only commit `ab0eae2caafe76a83b82edca10954d6237ecf7bf` adds mandatory `test_nested_eval_argument_preserves_outer_call_and_invalidates_next`. It verifies that the outer imported callable is resolved before nested argument evaluation, while a nested direct `eval` can invalidate the alias for the next statement.
+- Exact-commit source-admission run `42778738392`, job `129703341053`, and run `42778743875`, job `129703358843`, both report `Ran 205 tests`, `OK`, and the focused test `ok`.
+- All nine exact-commit workflows succeeded: `42778743864`, `42778743809`, `42778744167`, `42778743875`, `42778743726`, `42778743807`, `42778743996`, `42778744154`, `42778738392`.
+- Legacy audit unchanged in both source-admission jobs: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`.
+- No diagnostic source change required. Research branch only; PR #65 remains draft. No merge to main, live-scanner modification, or trading action.
