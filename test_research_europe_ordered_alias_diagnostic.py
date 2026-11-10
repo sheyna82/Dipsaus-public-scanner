@@ -1140,5 +1140,25 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "ordered_legacy_call")
 
 
+    @unittest.expectedFailure
+    def test_known_gap_class_method_annotation_exec_invalidates_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "class Container:\n"
+                  "    def method(self, arg: exec('global compare; compare = fallback')):\n"
+                  "        pass\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_class_method_plain_annotation_keeps_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "class Container:\n"
+                  "    def method(self, arg: int):\n"
+                  "        pass\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "ordered_legacy_call")
+
+
 if __name__ == "__main__":
     unittest.main()
