@@ -676,3 +676,13 @@ Recommended next small step: add a focused, regression-only failing-case invento
 - Legacy audit unchanged: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`. Existing code already handles these bounded callable-position expressions; no source modification required.
 - Previous documentation commit `b4127370f0a974c2b408e251e80cebe22a3a53a5` passed all nine workflows.
 - Research branch only; PR #65 draft, no merge to main, live-scanner modification or trading action.
+
+
+## Nested walrus argument and module alias ordering (2026-11-10)
+
+- Test commit `d3f195e7f472e1df4d9f059b6e659e0be09a5c80` adds two mandatory controls: a module alias rebound inside a positional argument preserves the already resolved outer module method but invalidates the next call; a walrus nested inside an argument wrapper has the same before/after distinction for an imported callable.
+- Exact-commit source admission run `42776357535`, job `129695647311`: `Ran 200 tests in 0.027s`, `OK`, both focused tests individually `ok`, zero expected failures.
+- All nine exact-commit workflows succeeded: `42776362027`, `42776362244`, `42776361990`, `42776362446`, `42776361989`, `42776362242`, `42776362430`, `42776362445`, `42776357535`.
+- Legacy audit unchanged: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`. No source change required for these bounded scenarios.
+- Previous documentation commit `67f5452e95f78cc498e4b91bb6abe2ec05eb88e7` passed all nine workflows.
+- Research branch only; PR #65 draft, no main merge, live-scanner change or trading action.
