@@ -1051,7 +1051,6 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "ordered_legacy_call")
 
 
-    @unittest.expectedFailure
     def test_known_gap_class_branch_rebinding_must_not_hide_lambda_exec(self):
         # A branch may not run, so a prior callable remains possible.
         source = ("from research_europe_relative_strength import compare\n"
