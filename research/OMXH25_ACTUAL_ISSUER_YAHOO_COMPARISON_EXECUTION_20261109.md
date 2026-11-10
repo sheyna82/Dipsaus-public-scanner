@@ -635,3 +635,14 @@ Recommended next small step: add a focused, regression-only failing-case invento
 - Legacy audit unchanged: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`. This bounded correction does not assert full Python expression-order modeling for all callable expressions.
 - Previous dossier commit `a2691e957323c80dfde3a6f9b4e7b0a2530975e5` passed all nine workflows.
 - Research branch only; PR #65 draft, no merge to main, no live-scanner change or trading action.
+
+
+## Ordered outer callable lookup before walrus argument rebinding: fixed and verified (2026-11-10)
+
+- Reproduction commit `4dc2ec1a2bc477f4c80001f65b92471acace37b1`: 190 tests, exactly one expected failure for `compare((compare := replacement))`, while the subsequent-call invalidation control passed; all nine exact-commit workflows succeeded. Legacy audit 31 historical, 2 controlled delegation, 0 unknown.
+- Source fix `d155a7f05ff8420dd6338c94e5348eee755ed4fc` moves the invalidation of `ast.NamedExpr` targets in top-level expression calls until after resolving/classifying the outer callable. This respects Python's lookup-before-argument-evaluation ordering while keeping later statements conservative.
+- Required regression test commit `28008b9e1a03963d879b1e519896197d2462fecd` removes `expectedFailure`. Source admission run `42775032667`, job `129691424849`: `Ran 190 tests in 0.035s`, `OK`, both focused tests `ok`, zero expected failures.
+- Nine exact-commit workflows succeeded: `42775038706`, `42775038504`, `42775038335`, `42775038230`, `42775038218`, `42775038249`, `42775038344`, `42775038231`, `42775032667`.
+- Legacy audit unchanged: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`. Verified bounded AST classification, not a general proof of runtime alias identity.
+- Previous documentation commit `a2691e957323c80dfde3a6f9b4e7b0a2530975e5` passed all nine workflows.
+- Research branch only; PR #65 draft; no main merge, live-scanner modification or trading action.
