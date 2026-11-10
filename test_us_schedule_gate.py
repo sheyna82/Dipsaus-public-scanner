@@ -37,6 +37,24 @@ class TestUSScheduleGate(unittest.TestCase):
                 self.assertFalse(scheduled_us_scan_allowed("workflow_dispatch", before))
                 self.assertTrue(scheduled_us_scan_allowed("workflow_dispatch", opened))
 
+    def test_published_exchange_holidays(self):
+        for year, month, day in [
+            (2026, 11, 26), (2026, 12, 25),
+            (2027, 1, 1), (2027, 3, 26), (2027, 7, 5),
+            (2027, 11, 25), (2027, 12, 24),
+        ]:
+            with self.subTest(day=(year, month, day)):
+                self.check(year, month, day, 12, 0, False)
+
+    def test_published_early_closes(self):
+        for year, month, day in [(2026, 11, 27), (2026, 12, 24), (2027, 11, 26)]:
+            with self.subTest(day=(year, month, day)):
+                self.check(year, month, day, 12, 59, True)
+                self.check(year, month, day, 13, 0, False)
+
+    def test_unknown_year_fails_closed(self):
+        self.check(2028, 1, 3, 12, 0, False)
+
     def test_weekend(self):
         self.check(2026, 11, 8, 12, 0, False)
 
