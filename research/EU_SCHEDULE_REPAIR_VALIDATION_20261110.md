@@ -20,3 +20,11 @@
 - Before any separately authorized live deployment: verify desired cadence and time window, explicit UTC/DST behavior, duplicate/concurrency policy, market-session gating, data-provider quota impact, and rollback plan. Do not merge draft PR #65 as a shortcut.
 - After any separately authorized deployment: compare scheduled trigger times and actual run starts for at least one full European session, measure gaps and data freshness, and ensure PRE-ALERT receives fresh EU handoffs. A green job alone is insufficient.
 - No changes to `main`, no live-scanner modification, no merge, no trading order.
+
+## Follow-up: fail-closed session gate and exact CI evidence
+
+- Research-branch commits `0465cb71cd28b1b16692dd6df5b7fa685bc23641`, `315d86bac4469b684381a03a9e5f4f7ca14b3c4d`, and `920a5967949259cc36d06b9fc24e7858720ec23e` add a scheduled-only `eu_schedule_gate.py`, wire its `GITHUB_OUTPUT` to the EU workflow steps, and add CET/CEST/weekend/manual regression tests. The gate accepts only `CORE_HOURS_UNVERIFIED_HOLIDAYS` for scheduled runs; manual dispatch is preserved for diagnostics. It does **not** verify exchange holidays or authorize trades.
+- Commit `1d90385adac519eb892ff058329a1bca35ac6c62` explicitly adds `python -m unittest -v test_eu_schedule_gate.py` to the research source-admission CI, ensuring the four tests are actually executed.
+- All nine commit-specific CI workflows succeeded. Source-admission runs `42822806307` (job `129852329479`) and `42822818079` (job `129852366085`) each logged `Ran 4 tests` and four `ok` results: winter core hours, summer core hours, weekend/unknown fail-closed, manual dispatch.
+- **Release remains blocked**: CI does not establish scheduled execution reliability on `main`, and the 15-minute research cadence is a change from the prior intended five-minute cadence. Before deployment, obtain explicit approval for that cadence, verify provider quotas, review scheduled-gate step wiring and rollback, then measure a complete live trading session after a separately authorized minimal change. Do not merge draft PR #65 to deploy this isolated workflow fix.
+- `main` unchanged, PR #65 draft, no trading orders.
