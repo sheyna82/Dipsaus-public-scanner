@@ -9,8 +9,20 @@ concurrency:
   group: dipsaus-us-runtime
   cancel-in-progress: false
 jobs:
+  session_gate:
+    runs-on: ubuntu-latest
+    outputs:
+      allowed: ${{ steps.session.outputs.allowed }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - id: session
+        name: Check US regular market hours
+        run: python us_schedule_gate.py
   scanner:
-    if: github.repository == 'sheyna82/Dipsaus-public-scanner' && github.event.repository.private == false
+    needs: session_gate
+    if: needs.session_gate.outputs.allowed == 'true' && github.repository == 'sheyna82/Dipsaus-public-scanner' && github.event.repository.private == false
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
