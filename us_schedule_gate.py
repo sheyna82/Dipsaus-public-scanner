@@ -1,6 +1,6 @@
 """Fail-closed US regular-session gate for scheduled and external workflow starts.
 
-This is a scheduling safeguard, not an exchange holiday calendar or trade authorization.
+This is a scheduling safeguard with a pinned NYSE holiday calendar, not trade authorization.
 """
 from datetime import date, datetime, time, timezone
 from zoneinfo import ZoneInfo
