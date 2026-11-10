@@ -605,3 +605,13 @@ Recommended next small step: add a focused, regression-only failing-case invento
 - Exact-commit source admission run `42774541402`, job `129689866708`: `Ran 183 tests in 0.020s`, `OK`; both annotation tests `ok`, no expected failures. All nine workflows succeeded: `42774549445`, `42774549474`, `42774549281`, `42774549423`, `42774549415`, `42774549813`, `42774549311`, `42774549294`, `42774541402`.
 - Legacy audit unchanged: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`. Static scanning remains intentionally conservative: Python versions and postponed annotation evaluation can affect runtime timing, and this analysis does not claim to establish actual execution of annotation expressions.
 - Research branch only; PR #65 remains draft; no merge to main, live-scanner change or trading action.
+
+
+## Nested class method return annotations: existing protection verified (2026-11-10)
+
+- Regression test commit `6933e1def8b2c3debbe90482f736e400dc582e5a` added positive and negative controls for nested class method return annotations: direct `exec` must invalidate the previously proven imported alias, while an ordinary `int` annotation must preserve it.
+- Exact-commit source admission run `42774706593`, job `129690386207`: `Ran 185 tests in 0.035s`, `OK`, both new tests individually `ok`, no expected failures. Legacy audit unchanged: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`.
+- All nine workflows succeeded for this test commit: `42774712143`, `42774712470`, `42774712018`, `42774712377`, `42774712311`, `42774712145`, `42774712280`, `42774712030`, `42774706593`.
+- Existing conservative class-creation scanning already handles the tested nested return-annotation cases. No source fix required. This is static syntactic assurance, not proof of runtime execution of postponed annotations.
+- Previous documentation commit `0833ed9b8edc3da6e004f5de6bc48a39560d81a5` also passed all nine workflows.
+- Research branch only; PR #65 draft, no main merge, live-scanner change or trading action.
