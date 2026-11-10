@@ -32,6 +32,8 @@ jobs:
           python-version: '3.12'
       - name: Run isolated fail-closed source admission tests
         run: python -m unittest -v test_research_benchmark_source_admission.py test_research_europe_relative_strength_admitted.py test_research_europe_recovery_confirmation_admitted.py test_research_audit_europe_legacy_calls.py test_research_gate_europe_legacy_calls.py test_research_europe_ordered_alias_diagnostic.py
+      - name: Verify EU schedule gate winter summer and manual dispatch
+        run: python -m unittest -v test_eu_schedule_gate.py
       - name: Inventory legacy direct call sites (audit only)
         run: python research_audit_europe_legacy_calls.py
       - name: Fail on unreviewed direct EU legacy call sites
