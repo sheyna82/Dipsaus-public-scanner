@@ -248,6 +248,7 @@ def diagnose(source):
             while pending_classes:
                 current_class = pending_classes.pop()
                 local_lambdas = {}
+                conditional_members = set()
                 pending_members = list(current_class.body)
                 while pending_members:
                     member = pending_members.pop(0)
@@ -266,6 +267,9 @@ def diagnose(source):
                             elif field == 'cases' and isinstance(value, list):
                                 for case in value:
                                     suites.extend(case.body)
+                        # Flattening a conditional suite does not prove that
+                        # its assignments execute on every runtime path.
+                        conditional_members.update(id(item) for item in suites)
                         pending_members[0:0] = suites
                         # Expressions in the control-flow header can execute too.
                         header_expressions = []
@@ -320,6 +324,14 @@ def diagnose(source):
                         expressions = []
                     _scan_class_creation_expressions(expressions, state, findings,
                                                      local_lambdas=local_lambdas)
+                    # Conditional rebinding cannot discard a callable that
+                    # may still execute on another runtime path. Fail closed
+                    # rather than treating the flattened suite as guaranteed.
+                    if id(member) in conditional_members:
+                        if isinstance(member, (ast.Assign, ast.AnnAssign,
+                                               ast.AugAssign, ast.Delete)):
+                            state.clear()
+                        continue
                     # Only track simple, ordered class-local lambda bindings.
                     # Any other assignment invalidates the tracked callable.
                     if isinstance(member, ast.Assign):
