@@ -6,7 +6,8 @@ import ast
 from research_audit_europe_legacy_calls import LEGACY
 
 
-def _scan_class_creation_expressions(expressions, state, findings, module_scope=False):
+def _scan_class_creation_expressions(expressions, state, findings, module_scope=False,
+                                     local_lambdas=None):
     """Conservatively scan expressions evaluated while a class is created.
 
     Deferred function and lambda bodies are not class-creation effects.
@@ -26,6 +27,9 @@ def _scan_class_creation_expressions(expressions, state, findings, module_scope=
                 # class creation. Merely constructing a lambda does not.
                 if isinstance(node.func, ast.Lambda):
                     pending.append(node.func.body)
+                elif (isinstance(node.func, ast.Name) and local_lambdas is not None
+                      and node.func.id in local_lambdas):
+                    pending.append(local_lambdas[node.func.id].body)
                 findings.append({"line": node.lineno, "target": None,
                                  "classification": "uncertain_class_body_call"})
             # Class headers at module scope bind in the module; expressions
@@ -243,6 +247,7 @@ def diagnose(source):
             pending_classes = [stmt]
             while pending_classes:
                 current_class = pending_classes.pop()
+                local_lambdas = {}
                 pending_members = list(current_class.body)
                 while pending_members:
                     member = pending_members.pop(0)
@@ -277,7 +282,8 @@ def diagnose(source):
                         elif isinstance(member, (ast.Try, ast.TryStar)):
                             header_expressions = [handler.type for handler in member.handlers
                                                   if handler.type is not None]
-                        _scan_class_creation_expressions(header_expressions, state, findings)
+                        _scan_class_creation_expressions(header_expressions, state, findings,
+                                                     local_lambdas=local_lambdas)
                     # A global declaration can occur inside class-body control
                     # flow. Skip nested function/class scopes, which have their
                     # own declarations; nested classes are processed separately.
@@ -312,7 +318,23 @@ def diagnose(source):
                                        + [kw.value for kw in member.keywords])
                     else:
                         expressions = []
-                    _scan_class_creation_expressions(expressions, state, findings)
+                    _scan_class_creation_expressions(expressions, state, findings,
+                                                     local_lambdas=local_lambdas)
+                    # Only track simple, ordered class-local lambda bindings.
+                    # Any other assignment invalidates the tracked callable.
+                    if isinstance(member, ast.Assign):
+                        for target in member.targets:
+                            if isinstance(target, ast.Name):
+                                if isinstance(member.value, ast.Lambda):
+                                    local_lambdas[target.id] = member.value
+                                else:
+                                    local_lambdas.pop(target.id, None)
+                    elif isinstance(member, (ast.AnnAssign, ast.AugAssign)):
+                        if isinstance(member.target, ast.Name):
+                            local_lambdas.pop(member.target.id, None)
+                    elif isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef,
+                                             ast.ClassDef)):
+                        local_lambdas.pop(member.name, None)
         elif isinstance(stmt, ast.Assert):
             # Both the condition and optional message may evaluate bindings;
             # the message is conditional, so alias proof must stay conservative.
