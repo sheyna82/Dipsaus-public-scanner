@@ -1,8 +1,8 @@
 name: DIPSAUS US recovery
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '35 13,14,15,16,18,20 * * 1-5'
+  # Scheduled starts move to cron-job.org only after a verified handoff.
+  # Keep workflow_dispatch protected by us_schedule_gate.py.
 permissions:
   contents: read
 concurrency:
