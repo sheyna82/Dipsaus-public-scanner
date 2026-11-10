@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from us_schedule_gate import scheduled_us_scan_allowed
@@ -10,6 +11,18 @@ class TestUSScheduleGate(unittest.TestCase):
     def check(self, year, month, day, hour, minute, expected, event="workflow_dispatch"):
         instant = datetime(year, month, day, hour, minute, tzinfo=NY)
         self.assertEqual(scheduled_us_scan_allowed(event, instant), expected)
+
+    def test_workflow_requires_gate_before_scanner(self):
+        workflow = Path(".github/workflows/shadow-us.yml").read_text(encoding="utf-8")
+        self.assertIn("  session_gate:", workflow)
+        self.assertIn("    needs: session_gate", workflow)
+        self.assertIn("needs.session_gate.outputs.allowed == 'true'", workflow)
+        self.assertIn("run: python us_schedule_gate.py", workflow)
+        self.assertIn("run: python safe_runner.py us", workflow)
+
+    def test_workflow_disables_notifications(self):
+        workflow = Path(".github/workflows/shadow-us.yml").read_text(encoding="utf-8")
+        self.assertIn("SCANNER_NOTIFICATIONS_ENABLED: 'false'", workflow)
 
     def test_winter_boundaries(self):
         for hour, minute, expected in [(9, 29, False), (9, 30, True), (15, 59, True), (16, 0, False)]:
