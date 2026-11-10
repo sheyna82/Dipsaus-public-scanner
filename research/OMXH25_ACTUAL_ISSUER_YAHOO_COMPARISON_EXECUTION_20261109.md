@@ -666,3 +666,13 @@ Recommended next small step: add a focused, regression-only failing-case invento
 - Legacy audit unchanged: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`. Existing correction covers these bounded examples; no source modification required.
 - Previous documentation commit `e8cd7eea72db328537ba74fc95d10dc98739e569` passed all nine workflows.
 - Research branch only; PR #65 draft, no merge to main, live-scanner modification or trading action.
+
+
+## Walrus in callable position versus argument position (2026-11-10)
+
+- Test commit `c76a0d9a27292d1dc0c38f3e86bfbc5621c55943` adds three mandatory regression controls: `(compare := replacement)()` and `(module := replacement).compare()` must not be attributed to the previously imported legacy callable, and the new binding must invalidate later alias proof.
+- Exact-commit source admission run `42776150545`, job `129694996686`: `Ran 198 tests in 0.052s`, `OK`; all three focused tests individually `ok`, zero expected failures.
+- All nine exact-commit workflows succeeded: `42776156893`, `42776156493`, `42776156484`, `42776157133`, `42776156482`, `42776156704`, `42776156609`, `42776156571`, `42776150545`.
+- Legacy audit unchanged: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`. Existing code already handles these bounded callable-position expressions; no source modification required.
+- Previous documentation commit `b4127370f0a974c2b408e251e80cebe22a3a53a5` passed all nine workflows.
+- Research branch only; PR #65 draft, no merge to main, live-scanner modification or trading action.
