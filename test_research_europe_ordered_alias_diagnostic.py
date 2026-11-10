@@ -1159,5 +1159,26 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "ordered_legacy_call")
 
 
+    def test_nested_class_method_return_annotation_exec_invalidates_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "class Outer:\n"
+                  "    class Inner:\n"
+                  "        def method(self) -> exec('global compare; compare = fallback'):\n"
+                  "            pass\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_nested_class_method_plain_return_annotation_preserves_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "class Outer:\n"
+                  "    class Inner:\n"
+                  "        def method(self) -> int:\n"
+                  "            pass\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "ordered_legacy_call")
+
+
 if __name__ == "__main__":
     unittest.main()
