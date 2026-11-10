@@ -1110,7 +1110,6 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
         self.assertEqual(diagnose(source)[-1]["classification"],
                          "ordered_legacy_call")
 
-    @unittest.expectedFailure
     def test_exec_argument_invalidates_following_legacy_call(self):
         # A later call resolves the global name again after exec may rebind it.
         source = ("from research_europe_relative_strength import compare\n"
