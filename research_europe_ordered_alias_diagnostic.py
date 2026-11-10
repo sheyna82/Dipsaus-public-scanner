@@ -381,11 +381,6 @@ def diagnose(source):
             if (isinstance(stmt.value.func, ast.Name)
                     and stmt.value.func.id == "exec"):
                 state.clear()
-            # A walrus binding in the call expression may shadow a previously
-            # proven alias. Do not infer evaluation order or runtime identity.
-            for child in ast.walk(stmt.value):
-                if isinstance(child, ast.NamedExpr):
-                    state[child.target.id] = None
             # The outer call is classified below; its nested arguments and
             # callable expression are inventoried separately as uncertain.
             for child in ast.walk(stmt.value):
@@ -414,6 +409,11 @@ def diagnose(source):
             else:
                 findings.append({"line": stmt.lineno, "target": None,
                                  "classification": "not_proven_legacy"})
+            # A walrus inside the arguments runs after the outer callable
+            # has been resolved. Invalidate those names for later statements.
+            for child in ast.walk(stmt.value):
+                if isinstance(child, ast.NamedExpr):
+                    state[child.target.id] = None
             if nested_exec:
                 state.clear()
         elif isinstance(stmt, ast.Expr):
