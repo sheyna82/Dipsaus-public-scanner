@@ -1125,7 +1125,6 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "ordered_legacy_call")
 
 
-    @unittest.expectedFailure
     def test_known_gap_annotation_exec_invalidates_following_call(self):
         source = ("from research_europe_relative_strength import compare\n"
                   "item: exec('global compare; compare = fallback')\n"
