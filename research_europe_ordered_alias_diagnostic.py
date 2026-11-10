@@ -105,6 +105,12 @@ def diagnose(source):
                 # Even without a value, a walrus may shadow a prior alias.
                 # Postponed annotations make execution uncertain, not proven.
                 for child in ast.walk(stmt.annotation):
+                    if (isinstance(child, ast.Call) and isinstance(child.func, ast.Name)
+                            and child.func.id == "exec"):
+                        # Runtime annotation evaluation may execute code that
+                        # rebinds module aliases; postponed evaluation is
+                        # uncertain, so never retain an unqualified proof.
+                        state.clear()
                     if isinstance(child, ast.NamedExpr):
                         state[child.target.id] = None
                     if isinstance(child, ast.Call):
