@@ -577,3 +577,13 @@ Recommended next small step: add a focused, regression-only failing-case invento
 - All nine exact-commit workflows succeeded: `42773818276` (evidence integrity), `42773818315` and `42773811803` (source admission), `42773818312` (OMXH25), `42773818223` (EU relative strength), `42773818569` (European recovery), `42773818268` (AMD historical), `42773818533` (SPY), `42773818283` (AMD contracts).
 - Legacy gate unchanged: 31 `historical_test`, 2 `controlled_delegation`, zero `unknown` classifications. Earlier documentation commit `45ab865016b3b15173684b817d0b0acc33c9a9c1` also completed nine successful workflows.
 - Evidence is restricted to these tested AST cases. It does not prove full path sensitivity, exception ordering, or Python dynamic name resolution. No merge, live-scanner change, or trading action.
+
+
+## Nested exec call-argument evaluation: proven follow-up alias invalidation (2026-11-10)
+
+- Initial regression inventory `d5c95fed8d085b899252eac03e315d7f27fcd18e` incorrectly expected the outer call itself to lose proof. Python evaluates a callable before its arguments, so that expectation was revised before any code change.
+- Corrected regression inventory `ed9e8ede97c79aecfc7f4cece36eca08043b339d` distinguishes `compare(exec(...))` (outer callable already resolved) from a *subsequent* `compare()` (name resolved again after potential global rebinding). Source-admission run `42774109955`, job `129688480136`, recorded 179 tests with exactly one expected failure, and nine exact-commit workflows succeeded.
+- Minimal implementation `5a41f3e21c59078e76c8925bc2e37083b4e0dbc5` invalidates alias state **after** classifying the outer call if nested direct `exec` is present. Mandatory regression-test commit `f79c0080ffe81d44a0ca39f37d1047669f1d79b9` removes the expected-failure marker.
+- Source-admission run `42774183645`, job `129688717123`: `Ran 179 tests in 0.037s`, `OK`, both semantic-order regression tests individually `ok`, no expected failures. All nine workflows for `f79c0080ffe81d44a0ca39f37d1047669f1d79b9` succeeded: `42774183906`, `42774183991`, `42774183963`, `42774183660`, `42774183584`, `42774183645`, `42774183737`, `42774183642`, `42774177551`.
+- Legacy gate unchanged: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`. This is bounded evidence for nested direct `exec` in a module-level call expression; it is not a claim of complete Python dynamic execution coverage.
+- Research branch only; PR #65 remains draft. No main merge, live-scanner modification, or trading action.
