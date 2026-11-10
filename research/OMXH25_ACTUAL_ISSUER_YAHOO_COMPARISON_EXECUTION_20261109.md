@@ -557,3 +557,13 @@ Recommended next small step: add a focused, regression-only failing-case invento
 - All nine exact-commit workflows completed successfully: `42773448886` (AMD historical), `42773448758` (EU relative strength), `42773448821` and `42773440541` (source admission), `42773448713` (European recovery), `42773449075` (OMXH25), `42773449293` (research evidence integrity), `42773448754` (SPY), `42773448809` (AMD contracts).
 - Enforced legacy audit: 31 `historical_test`, 2 `controlled_delegation`, zero `unknown` classifications.
 - Scope limitation: the class-local registry handles only simple ordered assignments and selected rebinding forms. It is not a complete model of dynamic Python name resolution, branches, exception flow, indirect calls or runtime alias mutation. No promotion to source-admission authority, no merge to `main`, no live scanner or trading-order change.
+
+
+## Conditional class lambda rebinding: verified conservative regression (2026-11-10)
+
+- Regression inventory commit `75f5c8071448f627c51d3613a9fef49ce53b00e3` added a branch-dependent lambda overwrite case as `expectedFailure` and an unconditional overwrite control. Exact-commit source-admission run `42773575479`, job `129686769135`: `Ran 174 tests in 0.020s`, `OK (expected failures=1)`. The branch-dependent case was an expected failure; unconditional control passed.
+- Research-only code commit `5203de44ff82d6fdb3843687d19dd80ef6e9007d` makes the class-body walker fail closed for conditional assignment/deletion nodes when flattening compound suites; test commit `cfc2c61fa177926192bb47b60e7007526646c394` removes the expected-failure marker.
+- Exact-commit source-admission run `42773648060`, job `129687002749`: `Ran 174 tests in 0.019s`, `OK`; both conditional and unconditional overwrite cases individually `ok`, no expected failures.
+- All nine exact-commit workflow runs completed successfully: `42773654446` (EU relative strength), `42773654684` and `42773648060` (source admission), `42773654401` (SPY), `42773654306` (European recovery), `42773654615` (OMXH25), `42773654651` (evidence integrity), `42773654460` (AMD historical), `42773654499` (AMD contracts).
+- Enforced legacy gate remains 31 `historical_test`, 2 `controlled_delegation`, zero `unknown` classifications.
+- Scope limitation: flattening nested control-flow suites is not path-sensitive execution modeling; other conditional expression side effects, exceptional exits, name indirection, and dynamic Python semantics remain outside proven coverage. This evidence does not authorize production promotion or a merge. `main`, live scanner and trading orders unchanged.
