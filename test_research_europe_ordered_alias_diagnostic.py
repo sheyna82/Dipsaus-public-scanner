@@ -1140,7 +1140,6 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "ordered_legacy_call")
 
 
-    @unittest.expectedFailure
     def test_known_gap_class_method_annotation_exec_invalidates_alias(self):
         source = ("from research_europe_relative_strength import compare\n"
                   "class Container:\n"
