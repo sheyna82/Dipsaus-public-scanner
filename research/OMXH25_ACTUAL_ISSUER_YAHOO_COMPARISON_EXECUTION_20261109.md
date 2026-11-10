@@ -615,3 +615,13 @@ Recommended next small step: add a focused, regression-only failing-case invento
 - Existing conservative class-creation scanning already handles the tested nested return-annotation cases. No source fix required. This is static syntactic assurance, not proof of runtime execution of postponed annotations.
 - Previous documentation commit `0833ed9b8edc3da6e004f5de6bc48a39560d81a5` also passed all nine workflows.
 - Research branch only; PR #65 draft, no main merge, live-scanner change or trading action.
+
+
+## Nested class method decorators and defaults: existing protection verified (2026-11-10)
+
+- Test commit `69bd1504c4c3aa03a00c02cfd934a1549ea4749c` adds three regression controls: direct `exec` in a nested class method decorator and in a default argument must invalidate previously proven module aliases; an ordinary default must preserve the alias.
+- Exact-commit source admission run `42774804092`, job `129690697382`: `Ran 188 tests in 0.024s`, `OK`, all three tests individually `ok`, no expected failures.
+- All nine exact-commit workflows succeeded: `42774811393`, `42774811350`, `42774811469`, `42774811806`, `42774811455`, `42774811360`, `42774811372`, `42774811464`, `42774804092`.
+- Legacy audit unchanged: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`. Existing class-creation expression scanner handles these bounded cases; no code fix required. This does not prove general runtime behavior or timing of deferred annotations.
+- Previous documentation commit `3170e7c98b566f9a177a0a218bb395f9765f92ce` also passed all nine workflows.
+- Research branch only; PR #65 draft, no merge to main, no live-scanner change or trading action.
