@@ -567,3 +567,13 @@ Recommended next small step: add a focused, regression-only failing-case invento
 - All nine exact-commit workflow runs completed successfully: `42773654446` (EU relative strength), `42773654684` and `42773648060` (source admission), `42773654401` (SPY), `42773654306` (European recovery), `42773654615` (OMXH25), `42773654651` (evidence integrity), `42773654460` (AMD historical), `42773654499` (AMD contracts).
 - Enforced legacy gate remains 31 `historical_test`, 2 `controlled_delegation`, zero `unknown` classifications.
 - Scope limitation: flattening nested control-flow suites is not path-sensitive execution modeling; other conditional expression side effects, exceptional exits, name indirection, and dynamic Python semantics remain outside proven coverage. This evidence does not authorize production promotion or a merge. `main`, live scanner and trading orders unchanged.
+
+
+## Nested conditional and exceptional class lambda paths: verified existing protection (2026-11-10)
+
+- Test inventory commit `59d62e19c6e2c351515da1d8c8886fbd946b7f7d` introduced nested conditional rebinding and `try`/`except` rebinding cases as `expectedFailure`. Exact-commit source-admission run `42773760404`, job `129687372091`, showed **two unexpected successes** and therefore failed: both cases were already correctly classified by the existing conservative implementation. This was a test expectation error, not evidence of a code regression.
+- Test-only correction commit `ed2503bdc05691bbddb049450bbbeee472fb9385` removed the two `expectedFailure` decorators. No analysis-code change was needed.
+- Exact-commit source-admission run `42773818315`, job `129687556324`: `Ran 176 tests in 0.019s`, `OK`, both new cases individually `ok`, no expected failures.
+- All nine exact-commit workflows succeeded: `42773818276` (evidence integrity), `42773818315` and `42773811803` (source admission), `42773818312` (OMXH25), `42773818223` (EU relative strength), `42773818569` (European recovery), `42773818268` (AMD historical), `42773818533` (SPY), `42773818283` (AMD contracts).
+- Legacy gate unchanged: 31 `historical_test`, 2 `controlled_delegation`, zero `unknown` classifications. Earlier documentation commit `45ab865016b3b15173684b817d0b0acc33c9a9c1` also completed nine successful workflows.
+- Evidence is restricted to these tested AST cases. It does not prove full path sensitivity, exception ordering, or Python dynamic name resolution. No merge, live-scanner change, or trading action.
