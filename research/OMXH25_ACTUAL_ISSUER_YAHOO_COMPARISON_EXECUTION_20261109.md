@@ -625,3 +625,13 @@ Recommended next small step: add a focused, regression-only failing-case invento
 - Legacy audit unchanged: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`. Existing class-creation expression scanner handles these bounded cases; no code fix required. This does not prove general runtime behavior or timing of deferred annotations.
 - Previous documentation commit `3170e7c98b566f9a177a0a218bb395f9765f92ce` also passed all nine workflows.
 - Research branch only; PR #65 draft, no merge to main, no live-scanner change or trading action.
+
+
+## Outer callable lookup before walrus argument rebinding (2026-11-10)
+
+- Regression inventory commit `4dc2ec1a2bc477f4c80001f65b92471acace37b1`: `compare((compare := replacement))` must classify the outer call using the pre-argument alias while invalidating that alias for subsequent calls. Source admission run `42774919019`, job `129691060016`: 190 tests, one expected failure (outer-call lookup), subsequent-call control passed; all nine workflows succeeded.
+- Minimal fix `d155a7f05ff8420dd6338c94e5348eee755ed4fc` moves walrus alias invalidation after resolving and recording the outer call, preserving existing nested `exec` invalidation. Mandatory regression commit `28008b9e1a03963d879b1e519896197d2462fecd` removes the expected-failure marker.
+- Exact-commit source admission run `42775032667`, job `129691424849`: `Ran 190 tests in 0.035s`, `OK`, both walrus tests individually `ok`, no expected failures. All nine workflows succeeded: `42775038335`, `42775038230`, `42775038218`, `42775038249`, `42775038344`, `42775038231`, `42775038706`, `42775038504`, `42775032667`.
+- Legacy audit unchanged: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`. This bounded correction does not assert full Python expression-order modeling for all callable expressions.
+- Previous dossier commit `a2691e957323c80dfde3a6f9b4e7b0a2530975e5` passed all nine workflows.
+- Research branch only; PR #65 draft, no merge to main, no live-scanner change or trading action.
