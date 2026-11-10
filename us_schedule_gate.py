@@ -8,7 +8,9 @@ from zoneinfo import ZoneInfo
 NEW_YORK = ZoneInfo("America/New_York")
 
 # Published NYSE cash-equity schedule (2026–2027).
-# https://www.nyse.com/markets/hours-calendars
+# Source: NYSE Group release, 2025-12-23, 2026-2028 holiday calendar.
+# https://ir.theice.com/press/news-details/2025/NYSE-Group-Announces-2026-2027-and-2028-Holiday-and-Early-Closings-Calendar/
+# Note: July 2 in 2026 and 2027 is NOT an NYSE cash-equities early close.
 # Unknown years fail closed pending calendar review. Unscheduled exchange
 # closures are not represented here and require an operational override.
 CLOSED_DAYS = frozenset(date.fromisoformat(day) for day in (
