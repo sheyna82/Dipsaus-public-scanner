@@ -1339,5 +1339,16 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "not_proven_legacy")
 
 
+    def test_nested_eval_argument_preserves_outer_call_and_invalidates_next(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "compare(wrapper(eval(\"globals().__setitem__('compare', replacement)\")))\n"
+                  "compare()\n")
+        classifications = [finding["classification"] for finding in diagnose(source)
+                           if finding["classification"] in ("ordered_legacy_call",
+                                                             "not_proven_legacy")]
+        self.assertEqual(classifications, ["ordered_legacy_call",
+                                           "not_proven_legacy"])
+
+
 if __name__ == "__main__":
     unittest.main()
