@@ -1103,5 +1103,20 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "not_proven_legacy")
 
 
+    @unittest.expectedFailure
+    def test_known_gap_exec_argument_invalidates_outer_legacy_call(self):
+        # Call arguments execute before the outer callable is invoked.
+        source = ("from research_europe_relative_strength import compare\n"
+                  "compare(exec('global compare; compare = fallback'))\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_outer_legacy_call_without_exec_argument_remains_proven(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "compare(1)\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "ordered_legacy_call")
+
+
 if __name__ == "__main__":
     unittest.main()
