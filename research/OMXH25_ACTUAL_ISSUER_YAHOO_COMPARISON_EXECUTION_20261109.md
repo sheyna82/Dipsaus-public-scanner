@@ -696,3 +696,14 @@ Recommended next small step: add a focused, regression-only failing-case invento
 - Legacy audit unchanged: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`. No source modification needed for these bounded scenarios.
 - Previous documentation commit `c9d193195eaaf967f8cc7d447d961c8e8663d2a5` passed all nine workflows.
 - Research branch only; PR #65 draft, no merge to main, live-scanner modification or trading action.
+
+
+## Dynamic eval alias invalidation: regression-first proof (2026-11-10)
+
+- Scope: conservative supplemental ordered Python AST diagnostic, research branch only; no change to fail-closed production gate or live scanner.
+- Reproducer: imported `compare` alias, followed by `eval("globals().__setitem__('compare', replacement)")`, followed by `compare()`. The later call must not be classified as a proven imported legacy call because dynamic evaluation may mutate module globals.
+- Regression-only commit `c6da7d31b69e0dcf585b9a9506339b8a92c37c1c`: new `test_known_gap_eval_global_rebinding_invalidates_following_call` marked `@unittest.expectedFailure`. Both source-admission workflows passed with `Ran 204 tests` and `OK (expected failures=1)`; all nine workflows succeeded.
+- Minimal source correction `4086ba1823fa4b916b254fc85896159c105909ec`: existing direct `exec` invalidation checks also conservatively treat direct `eval` calls as potential alias invalidators. Source-admission run `42777961289`, job `129700827499`, produced `unexpected success` for the focused regression and correctly failed the suite while the expected-failure decorator remained.
+- Enforcement commit `e920ec59ae4e9e893fc1baa10ce1539d150763cc`: removed the temporary expected-failure decorator. All nine exact-commit workflows succeeded: `42778012883`, `42778012435`, `42778012037`, `42778012098`, `42778012265`, `42778012400`, `42778012005`, `42778011993`, `42778005124`.
+- Independent source-admission log checks: run `42778012037`, job `129700999149`, and run `42778005124`, job `129700976598`, both report `Ran 204 tests`, `OK`, and the new eval regression `ok`. Both audit outputs: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`.
+- Scope limitation: this correction addresses syntactically direct `eval` calls within the existing scanner's covered expression contexts; it does not claim complete dynamic-Python side-effect analysis. PR #65 remains draft. No merge, live modification, or trading action.
