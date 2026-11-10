@@ -1212,5 +1212,20 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "ordered_legacy_call")
 
 
+    @unittest.expectedFailure
+    def test_known_gap_outer_callable_lookup_precedes_walrus_argument(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "compare((compare := replacement))\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "ordered_legacy_call")
+
+    def test_walrus_argument_invalidates_alias_for_subsequent_call(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "compare((compare := replacement))\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+
 if __name__ == "__main__":
     unittest.main()
