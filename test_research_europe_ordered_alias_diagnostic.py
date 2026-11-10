@@ -1240,5 +1240,29 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "not_proven_legacy")
 
 
+    def test_keyword_walrus_preserves_outer_call_before_rebinding(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "compare(value=(compare := replacement))\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "ordered_legacy_call")
+
+    def test_keyword_walrus_invalidates_subsequent_call(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "compare(value=(compare := replacement))\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_nested_argument_exec_preserves_outer_call_but_invalidates_next(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "compare(wrapper(exec('global compare; compare = replacement')))\n"
+                  "compare()\n")
+        classifications = [finding["classification"] for finding in diagnose(source)
+                           if finding["classification"] in ("ordered_legacy_call",
+                                                             "not_proven_legacy")]
+        self.assertEqual(classifications, ["ordered_legacy_call",
+                                           "not_proven_legacy"])
+
+
 if __name__ == "__main__":
     unittest.main()
