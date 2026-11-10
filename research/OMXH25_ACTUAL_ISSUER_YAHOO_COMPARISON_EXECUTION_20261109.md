@@ -656,3 +656,13 @@ Recommended next small step: add a focused, regression-only failing-case invento
 - Legacy audit unchanged: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`. Existing correction covers this bounded module-attribute case; no source change required.
 - Previous documentation commit `222d7074df8351cca6b98299cfdc8b2edbc06108` passed all nine workflows.
 - Research branch only; PR #65 draft, no main merge, live-scanner change or trading action.
+
+
+## Keyword walrus and nested exec argument evaluation controls (2026-11-10)
+
+- Test commit `02e12827b51e9c06ae6305514c2ca6d1e795503a` adds three mandatory controls: keyword-argument walrus must preserve the already resolved outer callable; the rebinding must invalidate subsequent calls; a nested `exec` in a call argument must preserve the already resolved outer call but invalidate the later alias proof.
+- Exact-commit source admission run `42775323640`, job `129692355340`: `Ran 195 tests in 0.033s`, `OK`; all three focused tests individually `ok`, zero expected failures.
+- All nine exact-commit workflows succeeded: `42775328649`, `42775328816`, `42775328674`, `42775328864`, `42775328654`, `42775329048`, `42775328668`, `42775328685`, `42775323640`.
+- Legacy audit unchanged: 31 `historical_test`, 2 `controlled_delegation`, 0 `unknown`. Existing correction covers these bounded examples; no source modification required.
+- Previous documentation commit `e8cd7eea72db328537ba74fc95d10dc98739e569` passed all nine workflows.
+- Research branch only; PR #65 draft, no merge to main, live-scanner modification or trading action.
