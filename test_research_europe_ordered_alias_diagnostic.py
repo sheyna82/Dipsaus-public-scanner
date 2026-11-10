@@ -1009,5 +1009,26 @@ class OrderedAliasDiagnosticTests(unittest.TestCase):
                          "ordered_legacy_call")
 
 
+    @unittest.expectedFailure
+    def test_known_gap_class_local_lambda_called_later_invalidates_alias(self):
+        # A class-local lambda becomes executable when invoked by name.
+        source = ("from research_europe_relative_strength import compare\n"
+                  "class Later:\n"
+                  "    callback = lambda: exec('global compare; compare = fallback')\n"
+                  "    callback()\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "not_proven_legacy")
+
+    def test_class_local_lambda_stored_without_call_preserves_alias(self):
+        source = ("from research_europe_relative_strength import compare\n"
+                  "class Later:\n"
+                  "    callback = lambda: exec('global compare; compare = fallback')\n"
+                  "    other = 1\n"
+                  "compare()\n")
+        self.assertEqual(diagnose(source)[-1]["classification"],
+                         "ordered_legacy_call")
+
+
 if __name__ == "__main__":
     unittest.main()
