@@ -35,5 +35,26 @@ class TLSContractTests(unittest.TestCase):
         a=review_eu_tls_contract(**self.args)
         b=review_eu_tls_contract(**self.args,plan_digest=a["contract_sha256"])
         self.assertEqual(a["contract_sha256"],b["contract_sha256"])
+    def test_dns_answer_order_does_not_change_contract_digest(self):
+        first=review_eu_tls_contract(**{**self.args,
+            "resolved_addresses":["8.8.8.8","1.1.1.1"]})
+        reverse=review_eu_tls_contract(**{**self.args,
+            "resolved_addresses":["1.1.1.1","8.8.8.8"]})
+        self.assertEqual(first["status"],"OFFLINE_TLS_CONTRACT_ONLY")
+        self.assertEqual(first["contract"],reverse["contract"])
+        self.assertEqual(first["contract_sha256"],reverse["contract_sha256"])
+        self.assertFalse(reverse["connection_authorized"])
+    def test_different_dns_set_changes_contract_digest(self):
+        first=review_eu_tls_contract(**self.args)
+        changed=review_eu_tls_contract(**{**self.args,
+            "resolved_addresses":["8.8.8.8","1.1.1.1"]})
+        self.assertNotEqual(first["contract_sha256"],changed["contract_sha256"])
+        self.assertFalse(changed["trade_ready"])
+    def test_claimed_tls_verified_cannot_change_contract_or_authorize(self):
+        false_claim=review_eu_tls_contract(**self.args,claimed_tls_verified=False)
+        true_claim=review_eu_tls_contract(**self.args,claimed_tls_verified=True)
+        self.assertEqual(false_claim["contract_sha256"],true_claim["contract_sha256"])
+        self.assertEqual(false_claim["status"],true_claim["status"])
+        self.assertFalse(true_claim["connection_authorized"])
     def test_disallowed_host(self): self.check_block(url="https://evil.test")
 if __name__=="__main__": unittest.main()
