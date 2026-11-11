@@ -64,6 +64,22 @@ class EuSourceSeparationTests(unittest.TestCase):
         d=fixture()
         d["ask_evidence"]["source_url"]="https://user:pass@example.org/ask"
         self.assertIn("ASK_SOURCE_URL_INVALID",audit_eu_source_separation(d)["blocks"])
+    def test_ambiguous_host_labels_fail_closed(self):
+        for url in ("https://example..org/ask", "https://example.org../ask",
+                    "https://./ask", "https://../ask"):
+            with self.subTest(url=url):
+                d=fixture()
+                d["ask_evidence"]["source_url"]=url
+                result=audit_eu_source_separation(d)
+                self.assertIn("ASK_SOURCE_URL_INVALID",result["blocks"])
+                self.assertEqual(result["status"],"BLOCKED")
+                self.assertFalse(result["trade_ready"])
+    def test_backslash_url_fails_closed(self):
+        d=fixture()
+        d["ask_evidence"]["source_url"]="https://example.org/ask\\\\other"
+        result=audit_eu_source_separation(d)
+        self.assertIn("ASK_SOURCE_URL_INVALID",result["blocks"])
+        self.assertFalse(result["order_placement_enabled"])
     def test_bad_candidate_rejected(self):
         self.assertIn("INVALID_CANDIDATE",audit_eu_source_separation(None)["blocks"])
 
