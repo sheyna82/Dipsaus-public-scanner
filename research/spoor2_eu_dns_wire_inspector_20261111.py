@@ -77,8 +77,25 @@ def inspect_dns_wire_response(payload, *, expected_name, expected_type=1, expect
                     return {**base,"blocks":["INVALID_DNSSEC_RECORD_STRUCTURE"]}
                 if rtype==48 and (rdlength<5 or rdata[2]!=3 or rdata[3]==0):
                     return {**base,"blocks":["INVALID_DNSSEC_RECORD_STRUCTURE"]}
-                if rtype==46 and rdlength<19:
-                    return {**base,"blocks":["INVALID_DNSSEC_RECORD_STRUCTURE"]}
+                if rtype==46:
+                    if rdlength<20 or rdata[:2]==b"\\x00\\x00" or rdata[2]==0:
+                        return {**base,"blocks":["INVALID_DNSSEC_RECORD_STRUCTURE"]}
+                    # RFC 4034 RRSIG signer name is uncompressed wire-format.
+                    signer_offset=18
+                    while True:
+                        if signer_offset>=len(rdata):
+                            return {**base,"blocks":["INVALID_DNSSEC_RECORD_STRUCTURE"]}
+                        label_size=rdata[signer_offset]
+                        if label_size & 0xc0 or label_size>63:
+                            return {**base,"blocks":["INVALID_DNSSEC_RECORD_STRUCTURE"]}
+                        signer_offset+=1
+                        if label_size==0:
+                            break
+                        if signer_offset+label_size>=len(rdata):
+                            return {**base,"blocks":["INVALID_DNSSEC_RECORD_STRUCTURE"]}
+                        signer_offset+=label_size
+                    if signer_offset>=len(rdata):
+                        return {**base,"blocks":["INVALID_DNSSEC_RECORD_STRUCTURE"]}
             if rtype in (1,28) and (rclass!=1 or rdlength!=(4 if rtype==1 else 16)):
                 return {**base,"blocks":["INVALID_ADDRESS_RECORD_STRUCTURE"]}
             pos+=rdlength
