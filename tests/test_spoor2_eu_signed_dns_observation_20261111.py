@@ -24,8 +24,7 @@ class SignedDNSObservationTests(unittest.TestCase):
             trusted_public_key_b64=base64.b64encode(
                 key.public_key().public_bytes(Encoding.Raw,PublicFormat.Raw)).decode())
     def test_signed_record_still_not_admitted(self):
-        try: signed=self._signed()
-        except ImportError: self.skipTest("cryptography not installed")
+        signed=self._signed()
         r=verify_signed_dns_observation(**self.args,**signed)
         self.assertEqual(r["status"],"SIGNED_DNS_OBSERVATION_VERIFIED_ONLY")
         self.assertTrue(r["signature_verified"])
