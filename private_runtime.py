@@ -11,7 +11,7 @@ CONFIG_NAMES = {
     'manual_recovery_triggers.json', 'manual_recovery_triggers_supplemental.json',
     'portfolio_reentry_watch.json', 'profit_exit_watch.json',
     'notification_quality_gate.json', 'us_live_trigger_routes.json',
-    'prealert_notification_state.json',
+    'prealert_notification_state.json', 'candidate_registry.json',
 }
 
 
@@ -21,6 +21,7 @@ SECRET_CONFIG = {
     'SCANNER_PORTFOLIO_WATCH': 'portfolio_reentry_watch.json',
     'SCANNER_PROFIT_WATCH': 'profit_exit_watch.json',
     'SCANNER_NOTIFICATION_GATE': 'notification_quality_gate.json',
+    'SCANNER_CANDIDATE_REGISTRY': 'candidate_registry.json',
 }
 
 

@@ -184,6 +184,25 @@ def main():
     if args.read_only and (args.live or args.mode != 'prealert'):
         raise RuntimeError('READ_ONLY_MODE_INVALID')
     hydrate()
+    # Shadow-only canonical nomination check after private hydration.
+    # Never print candidate identities or presume the manual config is canonical.
+    if args.mode == 'prealert':
+        try:
+            from private_candidate_registry import reconcile_registry_with_manual_config
+            registry_path = Path('config/candidate_registry.json')
+            if not registry_path.exists():
+                print('CANONICAL_CANDIDATE_COVERAGE: unavailable_registry_missing', flush=True)
+            else:
+                registry = json.loads(registry_path.read_text())
+                primary = json.loads(Path('config/manual_recovery_triggers.json').read_text())
+                supplemental_path = Path('config/manual_recovery_triggers_supplemental.json')
+                supplemental = json.loads(supplemental_path.read_text()) if supplemental_path.exists() else {}
+                canonical = reconcile_registry_with_manual_config(registry, primary, supplemental)
+                print('CANONICAL_CANDIDATE_COVERAGE: ' + ' '.join(
+                    key + '=' + str(canonical[key]) for key in
+                    ('required', 'configured', 'missing', 'discovery_unverified', 'manual_complete', 'complete')), flush=True)
+        except Exception:
+            print('CANONICAL_CANDIDATE_COVERAGE: unavailable', flush=True)
     store = PrivateStore(args.mode); state = store.load()
     if args.mode in ('prealert', 'us') and type(store).__module__ == 'private_runtime':
         sync_private_notification_gate(store)
@@ -219,6 +238,21 @@ def main():
         run('manual_recovery_trigger_watch.py'); run('profit_exit_watch.py')
         # Retain the existing recheck while avoiding a public summary or artifacts.
         run('manual_recovery_trigger_watch.py')
+        # Shadow-only candidate coverage audit. This uses the already hydrated
+        # private config and the just-written report; only counters reach logs.
+        # Failures cannot block the established notification pipeline.
+        try:
+            from candidate_coverage_runtime_gate import check_hydrated_runtime
+            from private_candidate_registry import public_aggregate
+            coverage = check_hydrated_runtime()
+            state['latest_candidate_coverage'] = coverage
+            print('CANDIDATE_COVERAGE: ' + ' '.join(
+                key + '=' + str(coverage[key]) for key in
+                ('active', 'fresh_checked', 'blocked', 'deferred', 'overdue', 'reconciled')),
+                flush=True)
+        except Exception:
+            # Never disclose config paths, symbols, raw exceptions or holdings.
+            print('CANDIDATE_COVERAGE: unavailable', flush=True)
         entries = json.loads(Path('reports/manual_recovery_trigger_report.json').read_text())
         exits = json.loads(Path('reports/profit_exit_watch_report.json').read_text())
         state['profit_watch_state'] = exits.pop('dynamic_state', state.get('profit_watch_state', {}))
@@ -368,6 +402,12 @@ def main():
             diagnostics['new_confirmed_sends'] = sum(1 for value in state.get('signals', {}).values() if isinstance(value, dict) and value.get('delivery') == 'sent') - before_sent
             state['latest_notification_diagnostics'] = diagnostics
             store.save(state)
+            # Shadow-only, aggregate notification state audit; no sends and no symbols.
+            from notification_delivery_audit import format_public_delivery_summary
+            try:
+                print(format_public_delivery_summary(state), flush=True)
+            except (ValueError, TypeError):
+                print('NOTIFICATION_DELIVERY_AUDIT: unavailable', flush=True)
             # Public logs expose only aggregate funnel counts, never symbols or holdings.
             print('NOTIFICATION_MARKET_FUNNEL: ' + json.dumps(diagnostics['market_funnel_counts'], sort_keys=True), flush=True)
             print('NOTIFICATION_DIAGNOSTICS: private_aggregate_saved=true entry_rows=' + str(diagnostics['entry_rows_examined']) + ' exit_rows=' + str(diagnostics['exit_rows_examined']) + ' eu_rows=' + str(diagnostics['eu_rows_examined']), flush=True)
@@ -386,6 +426,28 @@ def main():
                        'europe_swing_research.py', 'europe_intraday_confirmation.py',
                        'europe_quote_execution_audit.py', 'europe_combined_recovery_report.py'):
             run(script)
+        # Shadow-only, aggregate EU coverage audit. A failed audit is visible
+        # but never interrupts the existing EU report handoff.
+        try:
+            from discovery_coverage_audit import audit_eu_pipeline
+            def _load_eu_stage(name):
+                return json.loads(Path('reports', name).read_text())
+            eu_coverage = audit_eu_pipeline(
+                _load_eu_stage('europe_swing_research.json'),
+                _load_eu_stage('europe_intraday_confirmation.json'),
+                _load_eu_stage('europe_quote_execution_audit.json'),
+                _load_eu_stage('europe_combined_recovery_report.json'))
+            state['latest_eu_candidate_coverage'] = eu_coverage
+            print('EU_CANDIDATE_COVERAGE: ' + ' '.join(
+                key + '=' + str(eu_coverage[key]) for key in
+                ('eligible', 'intraday', 'quote', 'joined',
+                 'missing_intraday', 'missing_quote', 'missing_joined',
+                 'intraday_blocked', 'quote_blocked', 'complete', 'all_data_available')),
+                flush=True)
+        except Exception:
+            state['latest_eu_candidate_coverage'] = {
+                'available': False, 'complete': False, 'all_data_available': False}
+            print('EU_CANDIDATE_COVERAGE: unavailable', flush=True)
         state['latest_eu_report'] = json.loads(Path('reports/europe_combined_recovery_report.json').read_text())
         store.save(state)
         # Confirm the persisted EU handoff, not merely successful provider data.
@@ -406,6 +468,36 @@ def main():
             batch = (start + i) % 21
             run('us_recovery_pilot.py', US_BATCH=batch)
             Path(f'reports/us_batch_runs/batch_{batch}.json').write_bytes(Path('reports/us_recovery_pilot.json').read_bytes())
+        # Shadow-only proof for each selected US batch; no per-symbol logs.
+        try:
+            from discovery_coverage_audit import audit_us_batch
+            # Audit only the seven batches refreshed in THIS run. The directory
+            # may also contain older batches from prior sweeps.
+            current_batch_ids = [(start + i) % 21 for i in range(7)]
+            batch_reports = [json.loads(
+                Path(f'reports/us_batch_runs/batch_{batch}.json').read_text())
+                for batch in current_batch_ids]
+            if any(report.get('batch_index') != batch
+                   for batch, report in zip(current_batch_ids, batch_reports)):
+                raise ValueError('US_BATCH_ID_MISMATCH')
+            batch_coverage = [audit_us_batch(report) for report in batch_reports]
+            us_coverage = {
+                'batches': len(batch_coverage),
+                'selected': sum(x['selected'] for x in batch_coverage),
+                'screened': sum(x['screened_count_only'] for x in batch_coverage),
+                'provider_failures': sum(x['provider_failures'] for x in batch_coverage),
+                'complete': len(batch_coverage) == 7 and all(x['complete'] for x in batch_coverage),
+                'all_data_available': len(batch_coverage) == 7 and all(x.get('all_data_available') for x in batch_coverage),
+            }
+            state['latest_us_candidate_coverage'] = us_coverage
+            print('US_CANDIDATE_COVERAGE: ' + ' '.join(
+                key + '=' + str(us_coverage[key]) for key in
+                ('batches', 'selected', 'screened', 'provider_failures', 'complete', 'all_data_available')),
+                flush=True)
+        except Exception:
+            state['latest_us_candidate_coverage'] = {
+                'available': False, 'complete': False, 'all_data_available': False}
+            print('US_CANDIDATE_COVERAGE: unavailable', flush=True)
         run('us_auto_prealert_handoff.py'); run('us_live_trigger_routes.py')
         state['us_routes'] = json.loads(Path('reports/us_live_trigger_routes.json').read_text())
         state['latest_us_reports'] = {p.name: json.loads(p.read_text()) for p in Path('reports/us_batch_runs').glob('*.json')}
