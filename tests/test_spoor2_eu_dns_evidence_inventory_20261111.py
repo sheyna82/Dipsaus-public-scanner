@@ -38,6 +38,23 @@ class EvidenceInventoryTests(unittest.TestCase):
         raw=bytearray(packet())
         raw[3]|=0x40
         self.assertEqual(inventory(bytes(raw))["blocks"],["INVALID_HEADER"])
+    def test_packet_hash_covers_full_original_wire_bytes(self):
+        raw=packet(record=rr(kind=48,rdata=bytes.fromhex("01000308ff")),count=1)
+        result=inventory(raw)
+        self.assertEqual(result["packet_sha256"],hashlib.sha256(raw).hexdigest())
+        self.assertEqual(result["records"][0]["type"],48)
+        self.assertFalse(result["dnssec_verified"])
+    def test_record_order_is_preserved(self):
+        raw=packet(record=rr(kind=43,rdata=b"first")+rr(kind=46,rdata=b"second"),count=2)
+        result=inventory(raw)
+        self.assertEqual([item["type"] for item in result["records"]],[43,46])
+        self.assertEqual(result["records"][1]["rdata_sha256"],hashlib.sha256(b"second").hexdigest())
+        self.assertFalse(result["connection_authorized"])
+    def test_forward_owner_pointer_fails_closed(self):
+        malformed=bytes.fromhex("c0ff")+struct.pack("!HHIH",43,1,30,4)+b"test"
+        self.assertEqual(inventory(packet(record=malformed,count=1))["status"],"BLOCKED")
+    def test_declared_extra_record_fails_closed(self):
+        self.assertEqual(inventory(packet(record=rr(),count=2))["status"],"BLOCKED")
     def test_nonbinary_input_fails_closed(self):
         self.assertEqual(inventory("not bytes")["status"],"BLOCKED")
     def test_duplicate_records_retained_as_observations(self):
