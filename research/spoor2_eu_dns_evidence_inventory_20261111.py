@@ -2,13 +2,15 @@
 import hashlib
 import struct
 
-def inventory_dns_rr_evidence(packet, *, expected_name=None, expected_type=None, expected_id=None, max_records=256):
+def inventory_dns_rr_evidence(packet, *, expected_name=None, expected_type=None, expected_id=None, max_records=256, max_total_rdata_bytes=32768):
     blocked={"status":"BLOCKED","dnssec_verified":False,"dns_admitted":False,
              "connection_authorized":False,"trade_ready":False,"order_placement_enabled":False}
     if type(packet) is not bytes or not 12<=len(packet)<=65535:
         return {**blocked,"blocks":["INVALID_PACKET"]}
     if type(max_records) is not int or not 1<=max_records<=4096:
         return {**blocked,"blocks":["INVALID_RECORD_LIMIT"]}
+    if type(max_total_rdata_bytes) is not int or not 1<=max_total_rdata_bytes<=65535:
+        return {**blocked,"blocks":["INVALID_RDATA_BUDGET"]}
     if expected_name is not None and (not isinstance(expected_name,str) or not expected_name or len(expected_name)>253):
         return {**blocked,"blocks":["INVALID_EXPECTED_QUESTION"]}
     if expected_type is not None and (type(expected_type) is not int or not 1<=expected_type<=65535):
@@ -34,6 +36,7 @@ def inventory_dns_rr_evidence(packet, *, expected_name=None, expected_type=None,
             return {**blocked,"blocks":["DNS_QUESTION_MISMATCH"]}
         pos+=4
         records=[]
+        total_rdata_bytes=0
         for section,count in (("answer",an),("authority",ns),("additional",ar)):
             for _ in range(count):
                 owner,pos=_name(packet,pos)
@@ -41,6 +44,9 @@ def inventory_dns_rr_evidence(packet, *, expected_name=None, expected_type=None,
                 kind,cls,ttl,size=struct.unpack_from("!HHIH",packet,pos)
                 pos+=10
                 if pos+size>len(packet): raise ValueError("rdata")
+                total_rdata_bytes+=size
+                if total_rdata_bytes>max_total_rdata_bytes:
+                    return {**blocked,"blocks":["DNS_RDATA_BUDGET_EXCEEDED"]}
                 records.append({"section":section,"owner":owner,"type":kind,
                                 "class":cls,"ttl":ttl,"rdata_length":size,
                                 "rdata_sha256":hashlib.sha256(packet[pos:pos+size]).hexdigest()})
@@ -52,4 +58,5 @@ def inventory_dns_rr_evidence(packet, *, expected_name=None, expected_type=None,
             "packet_sha256":hashlib.sha256(packet).hexdigest(),
             "question":{"name":question_name,"type":question_type,"class":question_class},
             "records":records,
+            "total_rdata_bytes":total_rdata_bytes,
             "blocks":["DNSSEC_NOT_CRYPTOGRAPHICALLY_VERIFIED","SOURCE_NOT_AUTHENTICATED"]}
