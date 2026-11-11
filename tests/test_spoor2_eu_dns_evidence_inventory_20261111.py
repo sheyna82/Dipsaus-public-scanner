@@ -55,6 +55,18 @@ class EvidenceInventoryTests(unittest.TestCase):
         self.assertEqual(inventory(packet(record=malformed,count=1))["status"],"BLOCKED")
     def test_declared_extra_record_fails_closed(self):
         self.assertEqual(inventory(packet(record=rr(),count=2))["status"],"BLOCKED")
+    def test_matching_expected_question_and_transaction(self):
+        x=inventory(packet(),expected_name="EXAMPLE.COM.",expected_type=1,expected_id=7)
+        self.assertEqual(x["status"],"EVIDENCE_INVENTORY_ONLY")
+        self.assertFalse(x["dnssec_verified"])
+    def test_wrong_expected_name_blocks(self):
+        self.assertEqual(inventory(packet(),expected_name="other.example")["blocks"],["DNS_QUESTION_MISMATCH"])
+    def test_wrong_expected_type_blocks(self):
+        self.assertEqual(inventory(packet(),expected_type=28)["blocks"],["DNS_QUESTION_MISMATCH"])
+    def test_wrong_expected_transaction_blocks(self):
+        self.assertEqual(inventory(packet(),expected_id=8)["blocks"],["DNS_TRANSACTION_ID_MISMATCH"])
+    def test_boolean_expected_transaction_blocks(self):
+        self.assertEqual(inventory(packet(),expected_id=True)["blocks"],["INVALID_EXPECTED_ID"])
     def test_nonbinary_input_fails_closed(self):
         self.assertEqual(inventory("not bytes")["status"],"BLOCKED")
     def test_duplicate_records_retained_as_observations(self):
