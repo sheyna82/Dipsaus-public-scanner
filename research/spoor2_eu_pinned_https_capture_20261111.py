@@ -21,8 +21,11 @@ def capture_pinned_https(url, *, allowed_hosts, resolved_addresses,
     """
     base={"status":"BLOCKED","trade_ready":False,
           "order_placement_enabled":False,"connection_authorized":False}
-    parsed=urlsplit(url) if isinstance(url,str) else None
-    host=parsed.hostname if parsed else None
+    try:
+        parsed=urlsplit(url) if isinstance(url,str) else None
+        host=parsed.hostname if parsed else None
+    except ValueError:
+        return {**base,"blocks":["INVALID_URL"]}
     review=review_eu_tls_contract(
         url,allowed_hosts=allowed_hosts,resolved_addresses=resolved_addresses,
         selected_address=selected_address,sni_hostname=host,
@@ -51,6 +54,9 @@ def capture_pinned_https(url, *, allowed_hosts, resolved_addresses,
         tls=context.wrap_socket(raw,server_hostname=host)
         raw=None
         tls.settimeout(timeout_seconds)
+        tls_peer=tls.getpeername()
+        if tls_peer[0]!=contract["selected_address"] or tls_peer[1]!=443:
+            return {**base,"blocks":["TLS_SOCKET_PEER_MISMATCH"]}
         request=("GET "+path+" HTTP/1.1\\r\\nHost: "+host+
                  "\\r\\nAccept: application/octet-stream\\r\\n"+
                  "Accept-Encoding: identity\\r\\nConnection: close\\r\\n\\r\\n")
