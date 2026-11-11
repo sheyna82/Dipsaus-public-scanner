@@ -6,7 +6,8 @@ US stocks from both most-active and day-gainer universes, then recognises an
 intraday bottom -> higher-low -> reclaim pattern. Research/pre-alert only; never a
 buy signal.
 """
-import csv, io, json, math, re, urllib.parse, urllib.request
+import csv, io, json, math, re, threading, time, urllib.parse, urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -17,10 +18,26 @@ CHART="https://query1.finance.yahoo.com/v8/finance/chart/"
 # Current-security identity boundary for reused tickers.
 LISTING_START_UTC={"SPCX":datetime(2026,6,12,tzinfo=timezone.utc).timestamp()}
 
+NETWORK_AUDIT={"requests":0,"failures":0,"elapsed_s":0.0,"slow_requests":0}
+NETWORK_AUDIT_LOCK=threading.Lock()
+
 def get_json(url, params=None):
     if params: url += "?" + urllib.parse.urlencode(params)
     req=urllib.request.Request(url,headers=HEADERS)
-    with urllib.request.urlopen(req,timeout=15) as r: return json.loads(r.read().decode())
+    started=time.monotonic()
+    with NETWORK_AUDIT_LOCK:
+        NETWORK_AUDIT["requests"]+=1
+    try:
+        with urllib.request.urlopen(req,timeout=15) as r: return json.loads(r.read().decode())
+    except Exception:
+        with NETWORK_AUDIT_LOCK:
+            NETWORK_AUDIT["failures"]+=1
+        raise
+    finally:
+        elapsed=time.monotonic()-started
+        with NETWORK_AUDIT_LOCK:
+            NETWORK_AUDIT["elapsed_s"]+=elapsed
+            if elapsed>=5: NETWORK_AUDIT["slow_requests"]+=1
 
 def chart(symbol, rng, interval):
     d=get_json(CHART+urllib.parse.quote(symbol),{"range":rng,"interval":interval,"includePrePost":"false"})
@@ -98,15 +115,42 @@ def intraday_structure(rows):
             "higher_low":round(higher_low,3),"higher_low_margin_pct":round(hl_margin,2),
             "reclaim_observed":reclaim,"path_efficiency":round(efficiency,3)}
 
+def ordered_bounded_map(fn, items, workers=4, window=8):
+    """Bound in-flight requests and preserve input order without eager universe-wide dispatch."""
+    if not (1 <= workers <= window):
+        raise ValueError("invalid concurrency limits")
+    iterator=iter(items)
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        pending=[]
+        for _ in range(window):
+            try: pending.append(pool.submit(fn,next(iterator)))
+            except StopIteration: break
+        while pending:
+            future=pending.pop(0)
+            yield future.result()
+            try: pending.append(pool.submit(fn,next(iterator)))
+            except StopIteration: pass
+
 def main():
+    started=time.monotonic()
     now=datetime.now(timezone.utc); candidates=[]; failures={}
-    audit={"universe_total":0,"missing_price_or_cap_after_probe":0,"below_price_or_cap":0,"insufficient_daily_history":0,"outside_recovery_or_liquidity_gate":0,"discovery_gate_rejected":0,"qualified":0}
-    for q in universe():
+    audit={"universe_total":0,"missing_price_or_cap_after_probe":0,"quick_probe_rejected":0,"probe_errors":0,"below_price_or_cap":0,"insufficient_daily_history":0,"outside_recovery_or_liquidity_gate":0,"discovery_gate_rejected":0,"qualified":0}
+    universe_rows=universe()
+    def probe_if_needed(q):
+        if isinstance(q.get("regularMarketPrice"),(int,float)) and isinstance(q.get("marketCap"),(int,float)):
+            return None
+        try:
+            return get_json(CHART+urllib.parse.quote(q.get("symbol")),{"range":"1mo","interval":"1d"})["chart"]["result"][0]
+        except Exception:
+            return None
+    for q, prefetched_probe in zip(universe_rows, ordered_bounded_map(probe_if_needed, universe_rows)):
         audit["universe_total"]+=1
         symbol=q.get("symbol"); price=q.get("regularMarketPrice"); change=q.get("regularMarketChangePercent"); cap=q.get("marketCap")
         if not isinstance(price,(int,float)) or not isinstance(cap,(int,float)):
             try:
-                probe=get_json(CHART+urllib.parse.quote(symbol),{"range":"1mo","interval":"1d"})["chart"]["result"][0]
+                if prefetched_probe is None:
+                    raise ValueError("Probe unavailable")
+                probe=prefetched_probe
                 meta=probe.get("meta",{}); price=price if isinstance(price,(int,float)) else meta.get("regularMarketPrice")
                 cap=cap if isinstance(cap,(int,float)) else meta.get("marketCap")
                 pq=probe.get("indicators",{}).get("quote",[{}])[0]; closes=[x for x in pq.get("close",[]) if isinstance(x,(int,float))]
@@ -115,9 +159,11 @@ def main():
                 if price and highs and vols:
                     quick_dd=(min(closes[-20:])/max(highs)-1)*100 if closes else 0
                     quick_turn=price*(sum(vols[-20:])/max(1,len(vols[-20:])))
-                    if quick_dd>-6 or quick_turn<35_000_000: continue
+                    if quick_dd>-6 or quick_turn<35_000_000:
+                        audit["quick_probe_rejected"]+=1
+                        continue
             except Exception:
-                pass
+                audit["probe_errors"]+=1
         if not isinstance(price,(int,float)) or not isinstance(cap,(int,float)):
             audit["missing_price_or_cap_after_probe"]+=1
             continue
@@ -164,5 +210,7 @@ def main():
          "candidate_count":len(candidates),"structure_count":sum(x["structure_quality_pass"] for x in candidates),
          "candidates":candidates[:30],"failures":failures}
     OUT.parent.mkdir(exist_ok=True); OUT.write_text(json.dumps(out,indent=2)); print(json.dumps(out,indent=2))
+    # Aggregate-only telemetry; no tickers, URLs, prices, holdings or credentials.
+    print("US_DISCOVERY_AUDIT: "+json.dumps({"universe_count":audit["universe_total"],"missing_price_or_cap":audit["missing_price_or_cap_after_probe"],"quick_probe_rejected":audit["quick_probe_rejected"],"probe_errors":audit["probe_errors"],"qualified_count":audit["qualified"],"requests":NETWORK_AUDIT["requests"],"failed_requests":NETWORK_AUDIT["failures"],"slow_requests":NETWORK_AUDIT["slow_requests"],"request_seconds":round(NETWORK_AUDIT["elapsed_s"],2),"total_seconds":round(time.monotonic()-started,2)},sort_keys=True),flush=True)
 if __name__=="__main__": main()
 
