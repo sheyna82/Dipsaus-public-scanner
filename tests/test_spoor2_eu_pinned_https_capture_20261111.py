@@ -38,9 +38,9 @@ class PinnedCaptureTests(unittest.TestCase):
         response.status=200
         response.getheader.return_value="identity"
         response.read.return_value=b"evidence"
-        with patch("socket.create_connection",return_value=raw), \\
-             patch("ssl.create_default_context") as ctx, \\
-             patch("http.client.HTTPResponse",return_value=response):
+        with (patch("socket.create_connection",return_value=raw),
+             patch("ssl.create_default_context") as ctx,
+             patch("http.client.HTTPResponse",return_value=response)):
             ctx.return_value.wrap_socket.return_value=tls
             r=capture_pinned_https(**self.args)
         self.assertEqual(r["status"],"HTTPS_CAPTURED_READ_ONLY")
@@ -54,8 +54,8 @@ class PinnedCaptureTests(unittest.TestCase):
         raw.getpeername.return_value=("8.8.8.8",443)
         tls=MagicMock()
         tls.getpeername.return_value=("1.1.1.1",443)
-        with patch("socket.create_connection",return_value=raw), \\
-             patch("ssl.create_default_context") as ctx:
+        with (patch("socket.create_connection",return_value=raw),
+             patch("ssl.create_default_context") as ctx):
             ctx.return_value.wrap_socket.return_value=tls
             r=capture_pinned_https(**self.args)
         self.assertEqual(r["blocks"],["TLS_SOCKET_PEER_MISMATCH"])
