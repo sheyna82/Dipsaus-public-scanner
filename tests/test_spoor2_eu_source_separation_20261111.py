@@ -32,6 +32,26 @@ class EuSourceSeparationTests(unittest.TestCase):
         self.assertEqual(result["status"],"BLOCKED")
         self.assertIn("BROKER_TECHNICAL_SOURCE_URL_REUSED",result["blocks"])
         self.assertFalse(result["trade_ready"])
+    def test_equivalent_https_host_case_and_default_port_rejected(self):
+        d=fixture()
+        d["ask_evidence"]["source_url"]="https://EXAMPLE.org:443/ask"
+        d["target_bid_evidence"]["source_url"]="https://example.org/ask"
+        result=audit_eu_source_separation(d)
+        self.assertIn("BROKER_TECHNICAL_SOURCE_URL_REUSED",result["blocks"])
+        self.assertFalse(result["trade_ready"])
+    def test_equivalent_root_path_rejected(self):
+        d=fixture()
+        d["ask_evidence"]["source_url"]="https://example.org"
+        d["invalidation_evidence"]["source_url"]="https://example.org/"
+        self.assertIn("BROKER_TECHNICAL_SOURCE_URL_REUSED",
+                      audit_eu_source_separation(d)["blocks"])
+    def test_distinct_query_not_claimed_equivalent(self):
+        d=fixture()
+        d["ask_evidence"]["source_url"]="https://example.org/quotes?id=1"
+        d["target_bid_evidence"]["source_url"]="https://example.org/quotes?id=2"
+        result=audit_eu_source_separation(d)
+        self.assertNotIn("BROKER_TECHNICAL_SOURCE_URL_REUSED",result["blocks"])
+        self.assertFalse(result["trade_ready"])
     def test_distinct_paths_same_host_remain_unattested(self):
         result=audit_eu_source_separation(fixture())
         self.assertEqual(result["status"],"PROVENANCE_ONLY_NOT_ATTESTED")
