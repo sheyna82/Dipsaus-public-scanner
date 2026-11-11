@@ -3,7 +3,7 @@ import unittest
 from research.spoor2_eu_dns_wire_inspector_20261111 import inspect_dns_wire_response as inspect
 
 def packet(flags=0x8180,qd=1,tail=b"",answer=b""):
-    q=b"\\x07example\\x03com\\x00"+struct.pack("!HH",1,1)
+    q=b"\x07example\x03com\x00"+struct.pack("!HH",1,1)
     return struct.pack("!HHHHHH",42,flags,qd,1 if answer else 0,0,0)+q+answer+tail
 
 class DNSWireInspectorTests(unittest.TestCase):
@@ -23,12 +23,12 @@ class DNSWireInspectorTests(unittest.TestCase):
     def test_truncated_packet(self):
         self.assertEqual(inspect(packet()[:15],expected_name="example.com")["blocks"],["MALFORMED_DNS_WIRE_RESPONSE"])
     def test_compression_cycle(self):
-        p=struct.pack("!HHHHHH",42,0x8180,1,0,0,0)+b"\\xc0\\x0c"+struct.pack("!HH",1,1)
+        p=struct.pack("!HHHHHH",42,0x8180,1,0,0,0)+b"\xc0\x0c"+struct.pack("!HH",1,1)
         self.assertEqual(inspect(p,expected_name="example.com")["blocks"],["MALFORMED_DNS_WIRE_RESPONSE"])
     def test_trailing_bytes(self):
         self.assertEqual(inspect(packet(tail=b"x"),expected_name="example.com")["blocks"],["DNS_TRAILING_BYTES"])
     def test_truncated_answer(self):
-        a=b"\\xc0\\x0c"+struct.pack("!HHIH",1,1,30,4)+b"\\x01"
+        a=b"\xc0\x0c"+struct.pack("!HHIH",1,1,30,4)+b"\x01"
         self.assertEqual(inspect(packet(answer=a),expected_name="example.com")["blocks"],["MALFORMED_DNS_WIRE_RESPONSE"])
     def test_tc_flag_rejected(self):
         self.assertEqual(inspect(packet(flags=0x8380),expected_name="example.com")["blocks"],["DNS_RESPONSE_FLAGS_REJECTED"])
