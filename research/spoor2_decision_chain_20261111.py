@@ -4,6 +4,7 @@ Fail closed: this module never grants trade qualification. Its inputs are
 untrusted research data, including any claimed verified/trade_ready booleans.
 No network, broker API, ntfy sender, secrets, or order placement.
 """
+import math
 from research.spoor2_level_evidence_audit_20261111 import audit_levels
 from research.spoor2_candidate_levels_20261111 import money_scenario
 from research.spoor2_notification_policy_20261111 import (
@@ -52,8 +53,8 @@ def evaluate_research_chain(candidate, *, now_utc):
                             or isinstance(money_value, bool)
                             or not isinstance(technical_value, (int, float))
                             or isinstance(technical_value, bool)
-                            or not __import__("math").isfinite(money_value)
-                            or not __import__("math").isfinite(technical_value)
+                            or not math.isfinite(money_value)
+                            or not math.isfinite(technical_value)
                             or abs(money_value - technical_value) > 0.000001):
                         blocks.append(label + "_EVIDENCE_MISMATCH")
             try:
