@@ -2,21 +2,32 @@
 import hashlib
 import struct
 
-def inventory_dns_rr_evidence(packet):
+def inventory_dns_rr_evidence(packet, *, expected_name=None, expected_type=None, expected_id=None):
     blocked={"status":"BLOCKED","dnssec_verified":False,"dns_admitted":False,
              "connection_authorized":False,"trade_ready":False,"order_placement_enabled":False}
     if type(packet) is not bytes or not 12<=len(packet)<=65535:
         return {**blocked,"blocks":["INVALID_PACKET"]}
+    if expected_name is not None and (not isinstance(expected_name,str) or not expected_name or len(expected_name)>253):
+        return {**blocked,"blocks":["INVALID_EXPECTED_QUESTION"]}
+    if expected_type is not None and (type(expected_type) is not int or not 1<=expected_type<=65535):
+        return {**blocked,"blocks":["INVALID_EXPECTED_QUESTION"]}
+    if expected_id is not None and (type(expected_id) is not int or not 0<=expected_id<=65535):
+        return {**blocked,"blocks":["INVALID_EXPECTED_ID"]}
     try:
         from research.spoor2_eu_dns_wire_inspector_20261111 import _name
         txid,flags,qd,an,ns,ar=struct.unpack_from("!HHHHHH",packet)
         if (not flags & 0x8000 or flags & 0x0200 or flags & 0x7800 or
             flags & 0x000f or flags & 0x0040 or flags & 0x0010 or qd!=1):
             return {**blocked,"blocks":["INVALID_HEADER"]}
+        if expected_id is not None and txid!=expected_id:
+            return {**blocked,"blocks":["DNS_TRANSACTION_ID_MISMATCH"]}
         question_name,pos=_name(packet,12)
         if pos+4>len(packet): raise ValueError("question")
         question_type,question_class=struct.unpack_from("!HH",packet,pos)
         if question_class!=1: raise ValueError("question class")
+        if ((expected_name is not None and question_name!=expected_name.rstrip(".").lower()) or
+            (expected_type is not None and question_type!=expected_type)):
+            return {**blocked,"blocks":["DNS_QUESTION_MISMATCH"]}
         pos+=4
         records=[]
         for section,count in (("answer",an),("authority",ns),("additional",ar)):
