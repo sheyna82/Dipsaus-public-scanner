@@ -32,30 +32,25 @@ class SignedDNSObservationTests(unittest.TestCase):
         self.assertFalse(r["connection_authorized"])
         self.assertFalse(r["trade_ready"])
     def test_modified_address_blocks_binding(self):
-        try: signed=self._signed()
-        except ImportError: self.skipTest("cryptography not installed")
+        signed=self._signed()
         signed["signed_record"]={**self.record,"addresses":["1.1.1.1"]}
         r=verify_signed_dns_observation(**self.args,**signed)
         self.assertEqual(r["blocks"],["SIGNED_RECORD_BINDING_MISMATCH"])
     def test_invalid_signature_blocks(self):
-        try: signed=self._signed()
-        except ImportError: self.skipTest("cryptography not installed")
+        signed=self._signed()
         signed["signature_b64"]=base64.b64encode(b"x"*64).decode()
         r=verify_signed_dns_observation(**self.args,**signed)
         self.assertEqual(r["blocks"],["INVALID_DNS_OBSERVATION_SIGNATURE"])
     def test_expired_record_blocks(self):
-        try: signed=self._signed()
-        except ImportError: self.skipTest("cryptography not installed")
+        signed=self._signed()
         r=verify_signed_dns_observation(**{**self.args,"verification_time_utc":"2026-11-11T13:00:00Z"},**signed)
         self.assertEqual(r["blocks"],["DNS_OBSERVATION_OUTSIDE_VALIDITY_WINDOW"])
     def test_invalid_time_type_blocks(self):
-        try: signed=self._signed()
-        except ImportError: self.skipTest("cryptography not installed")
+        signed=self._signed()
         r=verify_signed_dns_observation(**{**self.args,"verification_time_utc":123},**signed)
         self.assertEqual(r["blocks"],["INVALID_VERIFICATION_TIME"])
     def test_unavailable_crypto_blocks(self):
-        try: signed=self._signed()
-        except ImportError: self.skipTest("cryptography not installed")
+        signed=self._signed()
         with patch.dict("sys.modules",{"cryptography.hazmat.primitives.asymmetric.ed25519":None}):
             r=verify_signed_dns_observation(**self.args,**signed)
         self.assertEqual(r["blocks"],["CRYPTOGRAPHIC_VERIFIER_UNAVAILABLE"])
