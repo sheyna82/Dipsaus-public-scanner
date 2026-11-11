@@ -73,9 +73,9 @@ def inspect_dns_wire_response(payload, *, expected_name, expected_type=1, expect
                 rdata=payload[pos:pos+rdlength]
                 if rclass!=1:
                     return {**base,"blocks":["INVALID_DNSSEC_RECORD_STRUCTURE"]}
-                if rtype==43 and (rdlength<5 or rdata[3]==0):
+                if rtype==43 and (rdlength<5 or rdata[3] not in (1,2,4) or rdlength-4!={1:20,2:32,4:48}.get(rdata[3])):
                     return {**base,"blocks":["INVALID_DNSSEC_RECORD_STRUCTURE"]}
-                if rtype==48 and rdlength<5:
+                if rtype==48 and (rdlength<5 or rdata[2]!=3 or rdata[3]==0):
                     return {**base,"blocks":["INVALID_DNSSEC_RECORD_STRUCTURE"]}
                 if rtype==46 and rdlength<19:
                     return {**base,"blocks":["INVALID_DNSSEC_RECORD_STRUCTURE"]}
