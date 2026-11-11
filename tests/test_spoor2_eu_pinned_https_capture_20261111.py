@@ -59,6 +59,42 @@ class PinnedCaptureTests(unittest.TestCase):
             ctx.return_value.wrap_socket.return_value=tls
             r=capture_pinned_https(**self.args)
         self.assertEqual(r["blocks"],["TLS_SOCKET_PEER_MISMATCH"])
+    def _mock_response(self, *, status=200, encoding="identity", body=b"evidence", error=None):
+        raw=MagicMock()
+        raw.getpeername.return_value=("8.8.8.8",443)
+        tls=MagicMock()
+        tls.getpeername.return_value=("8.8.8.8",443)
+        response=MagicMock()
+        response.status=status
+        response.getheader.return_value=encoding
+        response.read.return_value=body
+        if error is not None:
+            response.read.side_effect=error
+        with (patch("socket.create_connection",return_value=raw),
+              patch("ssl.create_default_context") as ctx,
+              patch("http.client.HTTPResponse",return_value=response)):
+            ctx.return_value.wrap_socket.return_value=tls
+            return capture_pinned_https(**self.args)
+    def test_http_redirect_rejected(self):
+        r=self._mock_response(status=302)
+        self.assertEqual(r["blocks"],["UNEXPECTED_HTTP_STATUS"])
+    def test_compressed_body_rejected(self):
+        r=self._mock_response(encoding="gzip")
+        self.assertEqual(r["blocks"],["UNSUPPORTED_CONTENT_ENCODING"])
+    def test_oversized_body_rejected(self):
+        r=self._mock_response(body=b"x"*(1048576+1))
+        self.assertEqual(r["blocks"],["RESPONSE_SIZE_EXCEEDED"])
+    def test_truncated_response_exception_blocks(self):
+        import http.client
+        r=self._mock_response(error=http.client.IncompleteRead(b"partial",12))
+        self.assertEqual(r["blocks"],["HTTPS_CAPTURE_FAILED"])
+    def test_invalid_certificate_blocks(self):
+        import ssl
+        with patch("socket.create_connection") as connect, patch("ssl.create_default_context") as ctx:
+            connect.return_value.getpeername.return_value=("8.8.8.8",443)
+            ctx.return_value.wrap_socket.side_effect=ssl.SSLCertVerificationError("bad cert")
+            r=capture_pinned_https(**self.args)
+        self.assertEqual(r["blocks"],["HTTPS_CAPTURE_FAILED"])
     def test_resource_limits_block(self):
         with patch("socket.create_connection",side_effect=AssertionError("network forbidden")):
             r=capture_pinned_https(**{**self.args,"max_response_bytes":0})
