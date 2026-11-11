@@ -69,6 +69,8 @@ def inspect_dns_wire_response(payload, *, expected_name, expected_type=1, expect
             pos+=10
             if pos+rdlength>len(payload):
                 raise ValueError("truncated rdata")
+            if rtype in (1,28) and (rclass!=1 or rdlength!=(4 if rtype==1 else 16)):
+                return {**base,"blocks":["INVALID_ADDRESS_RECORD_STRUCTURE"]}
             pos+=rdlength
         if pos!=len(payload):
             return {**base,"blocks":["DNS_TRAILING_BYTES"]}
