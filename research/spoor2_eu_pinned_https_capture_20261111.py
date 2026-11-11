@@ -57,9 +57,9 @@ def capture_pinned_https(url, *, allowed_hosts, resolved_addresses,
         tls_peer=tls.getpeername()
         if tls_peer[0]!=contract["selected_address"] or tls_peer[1]!=443:
             return {**base,"blocks":["TLS_SOCKET_PEER_MISMATCH"]}
-        request=("GET "+path+" HTTP/1.1\\r\\nHost: "+host+
-                 "\\r\\nAccept: application/octet-stream\\r\\n"+
-                 "Accept-Encoding: identity\\r\\nConnection: close\\r\\n\\r\\n")
+        request=("GET "+path+" HTTP/1.1\r\nHost: "+host+
+                 "\r\nAccept: application/octet-stream\r\n"+
+                 "Accept-Encoding: identity\r\nConnection: close\r\n\r\n")
         tls.sendall(request.encode("ascii"))
         response=http.client.HTTPResponse(tls)
         response.begin()
