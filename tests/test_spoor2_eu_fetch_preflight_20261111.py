@@ -45,6 +45,23 @@ class FetchPreflightTests(unittest.TestCase):
                      ("market-data.example.org",))
         self.assertEqual(result["status"],"OFFLINE_PREFLIGHT_ONLY")
         self.assertFalse(result["fetch_allowed"])
+    def test_url_host_must_match_validated_allowlist_host(self):
+        # A URL hostname is admitted only through an already validated allowlist.
+        for url in ("https://data.example.org/quote",
+                    "https://DATA.EXAMPLE.ORG:443/quote"):
+            with self.subTest(url=url):
+                result=check(url)
+                self.assertEqual(result["status"],"OFFLINE_PREFLIGHT_ONLY")
+                self.assertFalse(result["fetch_allowed"])
+                self.assertFalse(result["trade_ready"])
+        for host in ("data..example.org", "-data.example.org",
+                     "data-.example.org", "data_example.org",
+                     "a"*64+".example.org"):
+            with self.subTest(host=host):
+                result=check("https://"+host+"/quote",(host,))
+                self.assertEqual(result["status"],"BLOCKED")
+                self.assertIn("INVALID_ALLOWLIST",result["blocks"])
+                self.assertFalse(result["fetch_allowed"])
     def test_empty_allowlist_blocked(self):
         self.assertIn("INVALID_ALLOWLIST",check("https://data.example.org/",())["blocks"])
     def test_invalid_allowlist_blocked(self):
