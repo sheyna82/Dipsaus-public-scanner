@@ -22,9 +22,18 @@ def evaluate_research_chain(candidate, *, now_utc):
         return {"status": "BLOCKED", "blocks": ["INVALID_SYMBOL"],
                 "notification_channel": "NONE", "trade_ready": False,
                 "order_placement_enabled": False}
+    # This chain prices USD setups only. EU/GBp quotes must not be silently
+    # interpreted as USD or converted without a separately audited adapter.
+    market = candidate.get("market")
+    quote_currency = candidate.get("quote_currency")
+    market_blocks = []
+    if market is not None and market != "US":
+        market_blocks.append("MARKET_NOT_SUPPORTED_BY_USD_CHAIN")
+    if quote_currency is not None and quote_currency != "USD":
+        market_blocks.append("QUOTE_CURRENCY_NOT_USD")
     levels = audit_levels(candidate.get("technical_evidence"), now_utc=now_utc)
     provenance = audit_source_independence(candidate.get("technical_evidence"))
-    blocks = list(levels.get("blocks", [])) + list(provenance["blocks"])
+    blocks = market_blocks + list(levels.get("blocks", [])) + list(provenance["blocks"])
     scenario = None
     args = candidate.get("money_inputs")
     if not isinstance(args, dict):
