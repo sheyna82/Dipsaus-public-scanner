@@ -41,7 +41,7 @@ class DNSChallengeAdmissionTests(unittest.TestCase):
         self.assertFalse(os.path.exists(self.db))
     def test_trusted_fixture_consumes_exact_signed_record_digest(self):
         payload=json.dumps(self.record,sort_keys=True,separators=(",",":"),ensure_ascii=True).encode()
-        with patch("research.spoor2_eu_signed_dns_observation_20261111.review_dns_signer_trust_anchor",return_value={"key_trusted":True,"blocks":[]}):
+        with patch("research.spoor2_eu_signed_dns_observation_20261111.review_dns_signer_trust_anchor",return_value={"key_trusted":True,"blocks":[]}), patch("research.spoor2_eu_dns_challenge_admission_20261111.review_dns_challenge_issuance",return_value={"issued":True,"issuer_attested":True,"blocks":[]}):
             r=review_dns_challenge_admission(self.db,**self.args)
             self.assertTrue(r["consumed"])
             self.assertFalse(r["dns_admitted"])
@@ -51,6 +51,19 @@ class DNSChallengeAdmissionTests(unittest.TestCase):
             replay=review_dns_challenge_admission(self.db,**self.args)
             self.assertEqual(replay["blocks"],["CHALLENGE_CONSUMPTION_FAILED"])
             self.assertEqual(replay["ledger_blocks"],["DNS_CHALLENGE_ALREADY_CONSUMED"])
+    def test_unissued_nonce_blocks_even_with_trusted_test_key(self):
+        with patch("research.spoor2_eu_signed_dns_observation_20261111.review_dns_signer_trust_anchor",return_value={"key_trusted":True,"blocks":[]}):
+            r=review_dns_challenge_admission(self.db,**self.args)
+        self.assertEqual(r["blocks"],["CHALLENGE_ISSUANCE_NOT_VERIFIED"])
+        self.assertFalse(os.path.exists(self.db))
+    def test_claimed_issuer_does_not_authorize_consumption(self):
+        from research.spoor2_eu_dns_challenge_issuance_20261111 import issue_dns_challenge
+        issuance_db=os.path.join(self.temp.name,"issued.sqlite3")
+        issue_dns_challenge(issuance_db,nonce="a"*64,issuer_id="self-declared")
+        with patch("research.spoor2_eu_signed_dns_observation_20261111.review_dns_signer_trust_anchor",return_value={"key_trusted":True,"blocks":[]}):
+            r=review_dns_challenge_admission(self.db,issuance_database_path=issuance_db,**self.args)
+        self.assertEqual(r["blocks"],["CHALLENGE_ISSUER_NOT_ATTESTED"])
+        self.assertFalse(os.path.exists(self.db))
     def test_missing_nonce_does_not_consume(self):
         r=review_dns_challenge_admission(self.db,**{**self.args,"challenge_nonce":None})
         self.assertEqual(r["blocks"],["SIGNATURE_NOT_VERIFIED"])
