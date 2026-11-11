@@ -77,6 +77,18 @@ class EvidenceInventoryTests(unittest.TestCase):
         self.assertEqual(inventory(packet(),max_records=True)["blocks"],["INVALID_RECORD_LIMIT"])
     def test_record_limit_zero_rejected(self):
         self.assertEqual(inventory(packet(),max_records=0)["blocks"],["INVALID_RECORD_LIMIT"])
+    def test_cumulative_rdata_budget_rejects_excess(self):
+        raw=packet(record=rr(rdata=b"abc")+rr(rdata=b"def"),count=2)
+        self.assertEqual(inventory(raw,max_total_rdata_bytes=5)["blocks"],["DNS_RDATA_BUDGET_EXCEEDED"])
+    def test_cumulative_rdata_budget_accepts_exact(self):
+        raw=packet(record=rr(rdata=b"abc")+rr(rdata=b"def"),count=2)
+        result=inventory(raw,max_total_rdata_bytes=6)
+        self.assertEqual(result["total_rdata_bytes"],6)
+        self.assertFalse(result["dnssec_verified"])
+    def test_boolean_rdata_budget_rejected(self):
+        self.assertEqual(inventory(packet(),max_total_rdata_bytes=True)["blocks"],["INVALID_RDATA_BUDGET"])
+    def test_zero_rdata_budget_rejected(self):
+        self.assertEqual(inventory(packet(),max_total_rdata_bytes=0)["blocks"],["INVALID_RDATA_BUDGET"])
     def test_nonbinary_input_fails_closed(self):
         self.assertEqual(inventory("not bytes")["status"],"BLOCKED")
     def test_duplicate_records_retained_as_observations(self):
