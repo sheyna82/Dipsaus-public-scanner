@@ -2,11 +2,13 @@
 import hashlib
 import struct
 
-def inventory_dns_rr_evidence(packet, *, expected_name=None, expected_type=None, expected_id=None):
+def inventory_dns_rr_evidence(packet, *, expected_name=None, expected_type=None, expected_id=None, max_records=256):
     blocked={"status":"BLOCKED","dnssec_verified":False,"dns_admitted":False,
              "connection_authorized":False,"trade_ready":False,"order_placement_enabled":False}
     if type(packet) is not bytes or not 12<=len(packet)<=65535:
         return {**blocked,"blocks":["INVALID_PACKET"]}
+    if type(max_records) is not int or not 1<=max_records<=4096:
+        return {**blocked,"blocks":["INVALID_RECORD_LIMIT"]}
     if expected_name is not None and (not isinstance(expected_name,str) or not expected_name or len(expected_name)>253):
         return {**blocked,"blocks":["INVALID_EXPECTED_QUESTION"]}
     if expected_type is not None and (type(expected_type) is not int or not 1<=expected_type<=65535):
@@ -16,6 +18,8 @@ def inventory_dns_rr_evidence(packet, *, expected_name=None, expected_type=None,
     try:
         from research.spoor2_eu_dns_wire_inspector_20261111 import _name
         txid,flags,qd,an,ns,ar=struct.unpack_from("!HHHHHH",packet)
+        if an+ns+ar>max_records:
+            return {**blocked,"blocks":["DNS_RECORD_LIMIT_EXCEEDED"]}
         if (not flags & 0x8000 or flags & 0x0200 or flags & 0x7800 or
             flags & 0x000f or flags & 0x0040 or flags & 0x0010 or qd!=1):
             return {**blocked,"blocks":["INVALID_HEADER"]}
