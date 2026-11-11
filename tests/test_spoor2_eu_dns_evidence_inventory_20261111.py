@@ -37,6 +37,7 @@ class EvidenceInventoryTests(unittest.TestCase):
             wire=raw[record["wire_start"]:record["wire_end"]]
             data=raw[record["rdata_start"]:record["rdata_end"]]
             self.assertEqual(len(wire),record["wire_end"]-record["wire_start"])
+            self.assertEqual(hashlib.sha256(wire).hexdigest(),record["wire_sha256"])
             self.assertEqual(len(data),record["rdata_length"])
             self.assertEqual(hashlib.sha256(data).hexdigest(),record["rdata_sha256"])
             self.assertLessEqual(record["wire_start"],record["rdata_start"])
