@@ -4,7 +4,7 @@ import unittest
 from research.spoor2_eu_dns_evidence_inventory_20261111 import inventory_dns_rr_evidence as inventory
 
 def packet(*, record=b"", count=0, trailing=b""):
-    q=b"\\x07example\\x03com\\x00"+struct.pack("!HH",1,1)
+    q=bytes.fromhex("076578616d706c6503636f6d00")+struct.pack("!HH",1,1)
     return struct.pack("!HHHHHH",7,0x8180,1,count,0,0)+q+record+trailing
 
 def rr(kind=43, rdata=b"test"):
