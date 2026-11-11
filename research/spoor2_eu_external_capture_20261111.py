@@ -23,7 +23,10 @@ def audit_external_capture(record, raw_bytes, *, now_utc, max_age_seconds=900):
         url=record["source_url"]
         parts=urlsplit(url)
         if (parts.scheme!="https" or not parts.hostname or parts.username or parts.password
-            or parts.fragment or parts.port not in (None,443) or any(c.isspace() for c in url)):
+            or parts.fragment or parts.port not in (None,443) or any(c.isspace() for c in url)
+            or "\\" in url or "%" in parts.netloc
+            or parts.hostname.endswith("..")
+            or not all(label for label in parts.hostname.rstrip(".").split("."))):
             raise ValueError
         captured=datetime.fromisoformat(record["captured_utc"].replace("Z","+00:00"))
         if captured.tzinfo is None:
