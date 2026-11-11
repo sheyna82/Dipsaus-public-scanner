@@ -1,0 +1,40 @@
+"""Offline evidence-source independence gate for Spoor 2.
+
+A source label or verified flag is not independent evidence. Require an
+inspectable source record, a distinct provider identity, and a separate
+source family for broker quote vs technical levels. No network or trades.
+"""
+from urllib.parse import urlparse
+
+def audit_source_independence(evidence):
+    blocks = []
+    if not isinstance(evidence, dict):
+        return {"status": "BLOCKED", "blocks": ["INVALID_EVIDENCE"], "trade_ready": False}
+    records = {}
+    for role in ("broker", "invalidation", "resistance"):
+        record = evidence.get(role + "_evidence")
+        if not isinstance(record, dict):
+            blocks.append(role.upper() + "_EVIDENCE_MISSING")
+            continue
+        provider = record.get("provider_id")
+        family = record.get("source_family")
+        record_id = record.get("source_record_id")
+        url = record.get("source_url")
+        if not all(isinstance(v, str) and v.strip() for v in (provider, family, record_id, url)):
+            blocks.append(role.upper() + "_PROVENANCE_INCOMPLETE")
+            continue
+        parsed = urlparse(url)
+        if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
+            blocks.append(role.upper() + "_SOURCE_URL_INVALID")
+            continue
+        records[role] = (provider.strip().lower(), family.strip().lower(), record_id.strip())
+    if len(records) == 3:
+        broker, invalidation, resistance = (records[k] for k in ("broker", "invalidation", "resistance"))
+        if broker[0] in (invalidation[0], resistance[0]):
+            blocks.append("BROKER_TECHNICAL_PROVIDER_NOT_INDEPENDENT")
+        if broker[1] in (invalidation[1], resistance[1]):
+            blocks.append("BROKER_TECHNICAL_SOURCE_FAMILY_NOT_INDEPENDENT")
+        if len(set(records.values())) != 3:
+            blocks.append("SOURCE_RECORD_REUSED")
+    return {"status": "PROVENANCE_RECORDED_REQUIRES_EXTERNAL_VERIFICATION" if not blocks else "BLOCKED",
+            "blocks": blocks, "trade_ready": False, "order_placement_enabled": False}
