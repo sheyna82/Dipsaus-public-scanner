@@ -31,6 +31,20 @@ class FetchPreflightTests(unittest.TestCase):
         result=check("https://data.example.org/quote",("data..example.org",))
         self.assertIn("INVALID_ALLOWLIST",result["blocks"])
         self.assertFalse(result["trade_ready"])
+    def test_malformed_dns_labels_in_allowlist_fail_closed(self):
+        hosts=("-data.example.org", "data-.example.org",
+               "a"*64+".example.org", "a"*254)
+        for host in hosts:
+            with self.subTest(host=host):
+                result=check("https://data.example.org/quote",(host,))
+                self.assertEqual(result["status"],"BLOCKED")
+                self.assertIn("INVALID_ALLOWLIST",result["blocks"])
+                self.assertFalse(result["fetch_allowed"])
+    def test_valid_hyphenated_host_stays_offline_only(self):
+        result=check("https://market-data.example.org/quote",
+                     ("market-data.example.org",))
+        self.assertEqual(result["status"],"OFFLINE_PREFLIGHT_ONLY")
+        self.assertFalse(result["fetch_allowed"])
     def test_empty_allowlist_blocked(self):
         self.assertIn("INVALID_ALLOWLIST",check("https://data.example.org/",())["blocks"])
     def test_invalid_allowlist_blocked(self):
