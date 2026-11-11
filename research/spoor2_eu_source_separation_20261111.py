@@ -33,8 +33,9 @@ def audit_eu_source_separation(candidate):
                      and not any(ch.isspace() for ch in url)
                      and "\\" not in url
                      and parsed.hostname != ""
-                     and not any(not label for label in parsed.hostname.rstrip(".").split("."))
-                     and parsed.hostname.endswith("..") is False
+                     and not parsed.hostname.endswith("..")
+                     and all(label for label in parsed.hostname.rstrip(".").split("."))
+                     and "%" not in parsed.netloc
                      and parsed.port in (None, 443)
                      and parsed.fragment == "")
         except ValueError:
