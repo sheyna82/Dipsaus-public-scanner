@@ -1,0 +1,40 @@
+import unittest
+from research.spoor2_eu_source_separation_20261111 import audit_eu_source_separation
+
+def fixture():
+    return {r+"_evidence":{"provider_id":"provider-"+r,"source_family":"family-"+r,
+                            "source_record_id":"record-"+r,
+                            "source_url":"https://example.org/"+r}
+            for r in ("ask","target_bid","invalidation","fx","fees")}
+
+class EuSourceSeparationTests(unittest.TestCase):
+    def test_distinct_metadata_still_unattested(self):
+        r=audit_eu_source_separation(fixture())
+        self.assertEqual(r["status"],"PROVENANCE_ONLY_NOT_ATTESTED")
+        self.assertFalse(r["trade_ready"])
+    def test_same_broker_provider_rejected(self):
+        d=fixture()
+        d["target_bid_evidence"]["provider_id"]=d["ask_evidence"]["provider_id"]
+        self.assertIn("BROKER_TECHNICAL_SOURCE_NOT_SEPARATED",audit_eu_source_separation(d)["blocks"])
+    def test_same_source_family_rejected(self):
+        d=fixture()
+        d["invalidation_evidence"]["source_family"]=d["ask_evidence"]["source_family"]
+        self.assertIn("BROKER_TECHNICAL_SOURCE_NOT_SEPARATED",audit_eu_source_separation(d)["blocks"])
+    def test_reused_record_rejected(self):
+        d=fixture()
+        d["target_bid_evidence"]["provider_id"]=d["ask_evidence"]["provider_id"]
+        d["target_bid_evidence"]["source_record_id"]=d["ask_evidence"]["source_record_id"]
+        self.assertIn("SOURCE_RECORD_REUSED",audit_eu_source_separation(d)["blocks"])
+    def test_missing_family_rejected(self):
+        d=fixture()
+        del d["ask_evidence"]["source_family"]
+        self.assertIn("ASK_SOURCE_IDENTITY_INCOMPLETE",audit_eu_source_separation(d)["blocks"])
+    def test_bad_url_rejected(self):
+        d=fixture()
+        d["ask_evidence"]["source_url"]="https://user:pass@example.org/ask"
+        self.assertIn("ASK_SOURCE_URL_INVALID",audit_eu_source_separation(d)["blocks"])
+    def test_bad_candidate_rejected(self):
+        self.assertIn("INVALID_CANDIDATE",audit_eu_source_separation(None)["blocks"])
+
+if __name__=="__main__":
+    unittest.main()
