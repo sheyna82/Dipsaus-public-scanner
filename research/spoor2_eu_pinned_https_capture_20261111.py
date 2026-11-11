@@ -13,7 +13,8 @@ from research.spoor2_eu_tls_contract_20261111 import review_eu_tls_contract
 
 def capture_pinned_https(url, *, allowed_hosts, resolved_addresses,
                          selected_address, timeout_seconds=10,
-                         max_response_bytes=1048576, transport=None):
+                         max_response_bytes=1048576, transport=None,
+                         network_enabled=False):
     """Return fail-closed result; optional transport is only for offline tests.
 
     A transport override cannot attest a live capture, so its output is
@@ -39,6 +40,9 @@ def capture_pinned_https(url, *, allowed_hosts, resolved_addresses,
     if transport is not None:
         return {**base,"status":"SIMULATED_TRANSPORT_ONLY",
                 "blocks":["TRANSPORT_INJECTED_NOT_ATTESTED"],
+                "contract_sha256":review["contract_sha256"]}
+    if network_enabled is not True:
+        return {**base,"blocks":["NETWORK_DISABLED_BY_DEFAULT"],
                 "contract_sha256":review["contract_sha256"]}
     raw=None
     tls=None
