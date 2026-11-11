@@ -1,0 +1,58 @@
+name: DIPSAUS diversified sector universe tests
+on:
+  push:
+    branches:
+      - research/offline-technical-risk-20261021
+    paths:
+      - 'research_swing_coverage_gated_benchmark.py'
+      - 'test_research_swing_coverage_gated_benchmark.py'
+      - 'research_swing_broad_us_eu_universe.py'
+      - 'test_research_swing_broad_us_eu_universe.py'
+      - 'research_swing_intratrade_excursion.py'
+      - 'test_research_swing_intratrade_excursion.py'
+      - 'research_swing_portfolio_proxy.py'
+      - 'test_research_swing_portfolio_proxy.py'
+      - 'research_swing_exit_policy_ab.py'
+      - 'test_research_swing_exit_policy_ab.py'
+      - 'research_swing_warning_diagnostic_scorecard.py'
+      - 'test_research_swing_warning_diagnostic_scorecard.py'
+      - 'research_swing_warning_component_ablation.py'
+      - 'test_research_swing_warning_component_ablation.py'
+      - 'research_swing_failure_warning_evaluation.py'
+      - 'test_research_swing_failure_warning_evaluation.py'
+      - 'research_swing_failure_warning.py'
+      - 'test_research_swing_failure_warning.py'
+      - 'research_swing_individual_risk.py'
+      - 'test_research_swing_individual_risk.py'
+      - 'research_swing_regime_archive_ab.py'
+      - 'test_research_swing_regime_archive_ab.py'
+      - 'research_swing_regime_ab_comparison.py'
+      - 'test_research_swing_regime_ab_comparison.py'
+      - 'research_swing_short_regime_gate.py'
+      - 'test_research_swing_short_regime_gate.py'
+      - 'research_swing_international_candidates.py'
+      - 'test_research_swing_international_candidates.py'
+      - 'research_swing_historical_panel_coverage.py'
+      - 'test_research_swing_historical_panel_coverage.py'
+      - '.github/workflows/swing-diversified-universe-research.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'research_swing_diversified_universe.py'
+      - 'test_research_swing_diversified_universe.py'
+      - 'research_swing_historical_panel_coverage.py'
+      - 'test_research_swing_historical_panel_coverage.py'
+      - '.github/workflows/swing-diversified-universe-research.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diversified-universe-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - run: python -m unittest -v test_research_swing_diversified_universe test_research_swing_historical_panel_coverage test_research_swing_coverage_gated_benchmark test_research_swing_broad_us_eu_universe test_research_swing_international_candidates test_research_swing_short_regime_gate test_research_swing_regime_ab_comparison test_research_swing_regime_archive_ab test_research_swing_intratrade_excursion test_research_swing_individual_risk test_research_swing_failure_warning test_research_swing_failure_warning_evaluation test_research_swing_warning_component_ablation test_research_swing_warning_diagnostic_scorecard test_research_swing_exit_policy_ab test_research_swing_portfolio_proxy

@@ -26,6 +26,22 @@ class EventWatchTests(unittest.TestCase):
         self.assertEqual(len([k for k in state["signals"] if k.startswith("EVENT_RESEARCH|TSLA|")]),1)
         self.assertTrue(all("Geen koopbevestiging" in body for _,body in sent))
         self.assertTrue(all(v["delivery"]=="sent" for v in state["signals"].values()))
+    def test_issuer_date_flows_to_research_notification(self):
+        from unittest.mock import patch
+        store = FakeStore()
+        state = {"signals": {}}
+        sent = []
+        with patch("company_event_watch.refresh_discovered_events", return_value=[]):
+            notify_events(store, state, lambda symbol, body: sent.append((symbol, body)),
+                          date(2026, 11, 2))
+        pltr = [body for symbol, body in sent
+                if symbol == "PLTR" and "EVENT OPPORTUNITY RESEARCH" in body]
+        self.assertEqual(len(pltr), 1)
+        self.assertIn("EVENT_HOLD", pltr[0])
+        self.assertNotIn("Insufficient evidence: issuer_confirmed_date", pltr[0])
+        self.assertIn("fresh_quote", pltr[0])
+        self.assertIn("Geen koopbevestiging", pltr[0])
+
     def test_discovery_filters_and_marks_estimates(self):
         def fetch(_):
             return {"earningsCalendar":[

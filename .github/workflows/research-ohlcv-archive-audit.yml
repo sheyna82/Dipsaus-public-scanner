@@ -1,0 +1,30 @@
+name: Research OHLCV archive audit tests
+on:
+  pull_request:
+    paths:
+      - 'research/swing_lifecycle/ohlcv_archive_audit.py'
+      - 'research/swing_lifecycle/test_ohlcv_archive_audit.py'
+      - 'research/swing_lifecycle/purged_training_split.py'
+      - 'research/swing_lifecycle/test_purged_training_split.py'
+      - 'research/swing_lifecycle/dipsaus_point_in_time_audit.py'
+      - '.github/workflows/research-ohlcv-archive-audit.yml'
+      - 'incremental_database.py'
+      - 'test_incremental_artifact_order.py'
+      - 'test_incremental_artifact_restore_mock.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  archive-audit-unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test archive audit with synthetic data
+        run: |
+          python -m unittest discover -s research/swing_lifecycle -p 'test_ohlcv_archive_audit.py' -v
+          python -m unittest -v test_incremental_artifact_order test_incremental_artifact_restore_mock
+          python -m unittest discover -s research/swing_lifecycle -p 'test_purged_training_split.py' -v
+          python -m unittest discover -s research/swing_lifecycle -p 'test_dipsaus_point_in_time_audit.py' -v

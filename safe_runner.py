@@ -223,6 +223,11 @@ def main():
         exits = json.loads(Path('reports/profit_exit_watch_report.json').read_text())
         state['profit_watch_state'] = exits.pop('dynamic_state', state.get('profit_watch_state', {}))
         state['latest_watch_reports'] = {'entries': entries, 'exits': exits}
+        # Private research-only evidence gaps; never log individual quotes or tickers.
+        # This does not alter notifications, eligibility, or execution gates.
+        from event_quote_gap_boundary import safe_quote_gap_research
+        state['latest_event_quote_gap_research'] = safe_quote_gap_research(
+            entries.get('rows'), datetime.now(timezone.utc))
         # Shadow-only: connect only verified, time-stamped PRE-ALERT evidence.
         # Unconnected research gates remain UNKNOWN; never authorize notifications.
         from dipsaus_unified_research import evaluate as evaluate_unified_research

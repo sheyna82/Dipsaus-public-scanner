@@ -16,6 +16,15 @@ class OpportunityTests(unittest.TestCase):
         result=classify_event_opportunities("2026-10-29",day,full)
         self.assertTrue(all(not x["eligible"] for x in result))
         self.assertIn("stop-loss",result[0]["reason"])
+    def test_verified_date_is_not_reported_missing(self):
+        stages = classify_event_opportunities(
+            "2026-11-02", date(2026, 11, 2),
+            {"issuer_confirmed_date": "2026-11-02"})
+        hold = next(x for x in stages if x["stage"] == "EVENT_HOLD")
+        self.assertNotIn("issuer_confirmed_date", hold["reason"])
+        self.assertIn("fresh_quote", hold["reason"])
+        self.assertFalse(hold["eligible"])
+
     def test_post_event_and_no_chase(self):
         x=classify_event_opportunities("2026-10-21",date(2026,10,22))
         self.assertEqual(x[0]["stage"],"POST_EVENT_RECOVERY")
