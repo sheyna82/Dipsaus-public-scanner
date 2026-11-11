@@ -67,6 +67,16 @@ class EvidenceInventoryTests(unittest.TestCase):
         self.assertEqual(inventory(packet(),expected_id=8)["blocks"],["DNS_TRANSACTION_ID_MISMATCH"])
     def test_boolean_expected_transaction_blocks(self):
         self.assertEqual(inventory(packet(),expected_id=True)["blocks"],["INVALID_EXPECTED_ID"])
+    def test_record_limit_rejects_declared_count_before_parsing(self):
+        self.assertEqual(inventory(packet(record=rr()+rr(),count=2),max_records=1)["blocks"],["DNS_RECORD_LIMIT_EXCEEDED"])
+    def test_record_limit_accepts_exact_count(self):
+        result=inventory(packet(record=rr()+rr(),count=2),max_records=2)
+        self.assertEqual(len(result["records"]),2)
+        self.assertFalse(result["dnssec_verified"])
+    def test_boolean_record_limit_rejected(self):
+        self.assertEqual(inventory(packet(),max_records=True)["blocks"],["INVALID_RECORD_LIMIT"])
+    def test_record_limit_zero_rejected(self):
+        self.assertEqual(inventory(packet(),max_records=0)["blocks"],["INVALID_RECORD_LIMIT"])
     def test_nonbinary_input_fails_closed(self):
         self.assertEqual(inventory("not bytes")["status"],"BLOCKED")
     def test_duplicate_records_retained_as_observations(self):
