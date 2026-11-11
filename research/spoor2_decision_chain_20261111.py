@@ -34,6 +34,28 @@ def evaluate_research_chain(candidate, *, now_utc):
         if any(key not in args for key in required):
             blocks.append("MONEY_INPUTS_INCOMPLETE")
         else:
+            # Financial inputs must describe exactly the audited technical setup.
+            # Otherwise a plausible R/R can be computed against a different
+            # invalidation or target than the evidence actually supports.
+            tech = candidate.get("technical_evidence")
+            if not isinstance(tech, dict):
+                blocks.append("TECHNICAL_EVIDENCE_MISSING")
+            else:
+                pairs = (
+                    ("ask_usd", "broker_ask_usd", "ENTRY"),
+                    ("invalidation_usd", "invalidation_usd", "INVALIDATION"),
+                    ("exit_bid_usd", "resistance_usd", "EXIT_RESISTANCE"),
+                )
+                for money_key, technical_key, label in pairs:
+                    money_value, technical_value = args.get(money_key), tech.get(technical_key)
+                    if (not isinstance(money_value, (int, float))
+                            or isinstance(money_value, bool)
+                            or not isinstance(technical_value, (int, float))
+                            or isinstance(technical_value, bool)
+                            or not __import__("math").isfinite(money_value)
+                            or not __import__("math").isfinite(technical_value)
+                            or abs(money_value - technical_value) > 0.000001):
+                        blocks.append(label + "_EVIDENCE_MISMATCH")
             try:
                 scenario = money_scenario(**{key: args[key] for key in required},
                     slippage_buy_usd=args.get("slippage_buy_usd", 0),
