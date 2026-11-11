@@ -12,6 +12,10 @@ def audit_external_capture(record, raw_bytes, *, now_utc, max_age_seconds=900):
           "order_placement_enabled":False}
     if not isinstance(record,dict) or type(raw_bytes) is not bytes or not isinstance(now_utc,datetime) or now_utc.tzinfo is None:
         return {**base,"blocks":["INVALID_CAPTURE_INPUT"]}
+    if type(max_age_seconds) is not int or not 0<=max_age_seconds<=86400:
+        return {**base,"blocks":["INVALID_MAX_AGE"]}
+    if now_utc.utcoffset() is None:
+        return {**base,"blocks":["INVALID_CAPTURE_INPUT"]}
     fields=("provider_id","source_record_id","source_url","captured_utc","content_sha256")
     if any(not isinstance(record.get(k),str) or not record[k].strip() for k in fields):
         return {**base,"blocks":["CAPTURE_METADATA_INCOMPLETE"]}
