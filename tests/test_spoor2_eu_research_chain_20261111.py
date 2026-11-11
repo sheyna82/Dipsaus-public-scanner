@@ -48,5 +48,30 @@ class EuropeanResearchChainTests(unittest.TestCase):
     def test_bad_candidate_blocks(self):
         self.assertEqual(evaluate_eu_research_chain(None,now_utc=NOW)["blocks"],["INVALID_CANDIDATE"])
 
+    def test_receipt_present_and_reproducible(self):
+        d=sample()
+        first=evaluate_eu_research_chain(d,now_utc=NOW)
+        second=evaluate_eu_research_chain(d,now_utc=NOW)
+        self.assertEqual(first["evidence_receipt"]["status"],"LOCAL_RECEIPT_ONLY")
+        self.assertEqual(first["evidence_receipt"]["payload_sha256"],
+                         second["evidence_receipt"]["payload_sha256"])
+        self.assertFalse(first["trade_ready"])
+
+    def test_receipt_detects_evidence_change(self):
+        d=sample()
+        first=evaluate_eu_research_chain(d,now_utc=NOW)
+        d["ask_evidence"]["source_record_id"]="changed"
+        second=evaluate_eu_research_chain(d,now_utc=NOW)
+        self.assertNotEqual(first["evidence_receipt"]["payload_sha256"],
+                            second["evidence_receipt"]["payload_sha256"])
+
+    def test_noncanonical_input_blocks_before_scenario(self):
+        d=sample()
+        d["ask_evidence"]["extra_float"]=1.5
+        r=evaluate_eu_research_chain(d,now_utc=NOW)
+        self.assertEqual(r["status"],"BLOCKED")
+        self.assertIn("NONCANONICAL_EVIDENCE",r["blocks"])
+        self.assertEqual(r["notification_channel"],"NONE")
+
 if __name__=="__main__":
     unittest.main()
