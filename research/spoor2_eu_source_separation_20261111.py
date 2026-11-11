@@ -31,6 +31,10 @@ def audit_eu_source_separation(candidate):
             valid = (parsed.scheme == "https" and parsed.hostname is not None
                      and not parsed.username and not parsed.password
                      and not any(ch.isspace() for ch in url)
+                     and "\\" not in url
+                     and parsed.hostname != ""
+                     and not any(not label for label in parsed.hostname.rstrip(".").split("."))
+                     and parsed.hostname.endswith("..") is False
                      and parsed.port in (None, 443)
                      and parsed.fragment == "")
         except ValueError:
