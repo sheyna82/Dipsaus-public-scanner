@@ -13,7 +13,7 @@ def valid_fixture():
         technical[name + "_evidence"] = {
             "verified": True, "source": "offline-test-only",
             "source_record_id": "fixture-" + name,
-            "checked_utc": NOW.isoformat(), "observed_price_usd": value}
+            "checked_utc": NOW.isoformat(), "observed_price_usd": value, **({"formed_utc": "2026-11-02T10:00:00+00:00", "structure_still_valid": True} if name != "broker" else {})}
     return {
         "symbol": "TEST", "trade_ready": True, "rr_verified": True,
         "technical_evidence": technical,
