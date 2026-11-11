@@ -74,6 +74,17 @@ class EuSourceSeparationTests(unittest.TestCase):
                 self.assertIn("ASK_SOURCE_URL_INVALID",result["blocks"])
                 self.assertEqual(result["status"],"BLOCKED")
                 self.assertFalse(result["trade_ready"])
+    def test_percent_encoded_authority_fails_closed(self):
+        for url in ("https://exa%6dple.org/ask",
+                    "https://example.org%2f.attacker.invalid/ask",
+                    "https://example.org%3a443/ask"):
+            with self.subTest(url=url):
+                d=fixture()
+                d["ask_evidence"]["source_url"]=url
+                result=audit_eu_source_separation(d)
+                self.assertEqual(result["status"],"BLOCKED")
+                self.assertIn("ASK_SOURCE_URL_INVALID",result["blocks"])
+                self.assertFalse(result["trade_ready"])
     def test_backslash_url_fails_closed(self):
         d=fixture()
         d["ask_evidence"]["source_url"]="https://example.org/ask\\\\other"
