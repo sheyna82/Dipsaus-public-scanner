@@ -22,6 +22,32 @@ class EvidenceInventoryTests(unittest.TestCase):
         self.assertEqual(x["records"][0]["type"],43)
         self.assertEqual(x["records"][0]["rdata_sha256"],hashlib.sha256(b"test").hexdigest())
         self.assertFalse(x["dns_admitted"])
+    def test_wire_offsets_reconstruct_each_record_and_rdata(self):
+        first=rr(kind=43,rdata=b"first")
+        second=rr(kind=46,rdata=b"second")
+        raw=packet(record=first+second,count=2)
+        result=inventory(raw)
+        self.assertEqual(result["status"],"EVIDENCE_INVENTORY_ONLY")
+        question_end=12+len(bytes.fromhex("076578616d706c6503636f6d00"))+4
+        self.assertEqual(result["records"][0]["wire_start"],question_end)
+        self.assertEqual(result["records"][0]["wire_end"],question_end+len(first))
+        self.assertEqual(result["records"][1]["wire_start"],question_end+len(first))
+        self.assertEqual(result["records"][1]["wire_end"],len(raw))
+        for record in result["records"]:
+            wire=raw[record["wire_start"]:record["wire_end"]]
+            data=raw[record["rdata_start"]:record["rdata_end"]]
+            self.assertEqual(len(wire),record["wire_end"]-record["wire_start"])
+            self.assertEqual(len(data),record["rdata_length"])
+            self.assertEqual(hashlib.sha256(data).hexdigest(),record["rdata_sha256"])
+            self.assertLessEqual(record["wire_start"],record["rdata_start"])
+            self.assertLessEqual(record["rdata_end"],record["wire_end"])
+        self.assertFalse(result["dnssec_verified"])
+        self.assertFalse(result["trade_ready"])
+    def test_empty_rdata_offsets_are_equal(self):
+        raw=packet(record=rr(rdata=b""),count=1)
+        record=inventory(raw)["records"][0]
+        self.assertEqual(record["rdata_start"],record["rdata_end"])
+        self.assertEqual(record["rdata_sha256"],hashlib.sha256(b"").hexdigest())
     def test_truncated_record_fails_closed(self):
         self.assertEqual(inventory(packet(record=rr()[:-1],count=1))["status"],"BLOCKED")
     def test_trailing_bytes_fails_closed(self):
