@@ -23,6 +23,14 @@ class FetchPreflightTests(unittest.TestCase):
         self.assertIn("UNSAFE_URL",check("https://data.example.org:8443/")["blocks"])
     def test_whitespace_blocked(self):
         self.assertIn("URL_CONTROL_OR_WHITESPACE",check("https://data.example.org/\n")["blocks"])
+    def test_encoded_authority_blocked_before_host_matching(self):
+        result=check("https://data.example.org%2f.evil.test/quote")
+        self.assertIn("UNSAFE_URL",result["blocks"])
+        self.assertFalse(result["fetch_allowed"])
+    def test_repeated_dot_allowlist_blocked(self):
+        result=check("https://data.example.org/quote",("data..example.org",))
+        self.assertIn("INVALID_ALLOWLIST",result["blocks"])
+        self.assertFalse(result["trade_ready"])
     def test_empty_allowlist_blocked(self):
         self.assertIn("INVALID_ALLOWLIST",check("https://data.example.org/",())["blocks"])
     def test_invalid_allowlist_blocked(self):
