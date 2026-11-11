@@ -13,7 +13,7 @@ def review_eu_fetch_request(url, *, allowed_hosts):
     if not isinstance(url,str) or not isinstance(allowed_hosts,(tuple,list,frozenset)):
         return {**base,"blocks":["INVALID_FETCH_POLICY_INPUT"]}
     if not allowed_hosts or any(not isinstance(h,str) or not h or h!=h.lower()
-                                or h.startswith(".") or h.endswith(".")
+                                or h.startswith(".") or h.endswith(".") or ".." in h
                                 or any(c not in "abcdefghijklmnopqrstuvwxyz0123456789-." for c in h)
                                 for h in allowed_hosts):
         return {**base,"blocks":["INVALID_ALLOWLIST"]}
@@ -24,7 +24,8 @@ def review_eu_fetch_request(url, *, allowed_hosts):
         host=p.hostname
         if (p.scheme!="https" or not host or p.username is not None or
             p.password is not None or p.fragment or p.port not in (None,443)
-            or p.netloc.endswith(".") or "\\" in url):
+            or p.netloc.endswith(".") or "\\" in url
+            or "%" in p.netloc):
             return {**base,"blocks":["UNSAFE_URL"]}
         try:
             ipaddress.ip_address(host)
