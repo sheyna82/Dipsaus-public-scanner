@@ -25,6 +25,17 @@ class EuSourceSeparationTests(unittest.TestCase):
         d["target_bid_evidence"]["provider_id"]=d["ask_evidence"]["provider_id"]
         d["target_bid_evidence"]["source_record_id"]=d["ask_evidence"]["source_record_id"]
         self.assertIn("SOURCE_RECORD_REUSED",audit_eu_source_separation(d)["blocks"])
+    def test_identical_url_rejected_despite_distinct_claimed_providers(self):
+        d=fixture()
+        d["target_bid_evidence"]["source_url"]=d["ask_evidence"]["source_url"]
+        result=audit_eu_source_separation(d)
+        self.assertEqual(result["status"],"BLOCKED")
+        self.assertIn("BROKER_TECHNICAL_SOURCE_URL_REUSED",result["blocks"])
+        self.assertFalse(result["trade_ready"])
+    def test_distinct_paths_same_host_remain_unattested(self):
+        result=audit_eu_source_separation(fixture())
+        self.assertEqual(result["status"],"PROVENANCE_ONLY_NOT_ATTESTED")
+        self.assertIn("EXTERNAL_SOURCE_ATTESTATION_NOT_CONNECTED",result["blocks"])
     def test_missing_family_rejected(self):
         d=fixture()
         del d["ask_evidence"]["source_family"]
