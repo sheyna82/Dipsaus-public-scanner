@@ -17,6 +17,8 @@ def review_eu_tls_contract(url, *, allowed_hosts, resolved_addresses, selected_a
         return {**base, "blocks":["INVALID_CONNECTION_PLAN"], "connection_review":plan}
     host = plan["host"]
     valid = plan["address_review"]["validated_addresses"]
+    if not isinstance(selected_address, str) or not selected_address or selected_address.strip() != selected_address:
+        return {**base, "blocks":["INVALID_SELECTED_ADDRESS"]}
     try:
         address = ipaddress.ip_address(selected_address).compressed
     except (ValueError, TypeError):
