@@ -144,6 +144,15 @@ def sync_private_notification_gate(store):
     Path('config/notification_quality_gate.json').write_text(json.dumps(gate))
 
 
+def is_active_portfolio_holding(item):
+    """Closed historical swings are not current holdings, regardless of stored shares."""
+    return (isinstance(item, dict)
+            and item.get('status') != 'CLOSED-SWING'
+            and isinstance(item.get('shares'), (int, float))
+            and not isinstance(item.get('shares'), bool)
+            and 0 < item['shares'] < float('inf'))
+
+
 def sync_canonical_positions(store, target):
     """Sync private canonical holdings, with safe stage-only error diagnostics."""
     import base64
@@ -207,9 +216,9 @@ def main():
         if profit_path.exists() and portfolio_path.exists():
             profit_cfg = json.loads(profit_path.read_text())
             holdings = {symbol for symbol, item in profit_cfg.get('positions', {}).items()
-                        if isinstance(item, dict) and item.get('shares', 0) > 0}
+                        if is_active_portfolio_holding(item)}
             holdings.update(item.get('provider_symbol') for item in profit_cfg.get('positions', {}).values()
-                            if isinstance(item, dict) and item.get('shares', 0) > 0 and item.get('provider_symbol'))
+                            if is_active_portfolio_holding(item) and item.get('provider_symbol'))
             portfolio_cfg = json.loads(portfolio_path.read_text())
             portfolio_cfg['candidates'] = {
                 symbol: item for symbol, item in portfolio_cfg.get('candidates', {}).items()
@@ -284,7 +293,7 @@ def main():
         if args.live:
             before_sent = sum(1 for value in state.get('signals', {}).values()
                               if isinstance(value, dict) and value.get('delivery') == 'sent')
-            active_exit_symbols = set(json.loads(Path('config/profit_exit_watch.json').read_text()).get('positions', {}))
+            active_exit_symbols = {symbol for symbol, item in json.loads(Path('config/profit_exit_watch.json').read_text()).get('positions', {}).items() if is_active_portfolio_holding(item)}
             active_exits = [row for row in exits['rows'] if row.get('symbol') in active_exit_symbols]
             # Silent, private macro headline context: no additional phone messages. 
             from silent_macro_context import update_silent_context 
@@ -361,7 +370,7 @@ def main():
             profit_cfg = json.loads(Path('config/profit_exit_watch.json').read_text())
             holdings = set()
             for symbol, item in profit_cfg.get('positions', {}).items():
-                if isinstance(item, dict) and item.get('shares', 0) > 0:
+                if is_active_portfolio_holding(item):
                     holdings.add(item.get('provider_symbol') or symbol)
             notify_eu_research(store, state, eu_report, holdings)
             diagnostics = notification_diagnostics(entries, exits, eu_report, state, active_exit_symbols)
