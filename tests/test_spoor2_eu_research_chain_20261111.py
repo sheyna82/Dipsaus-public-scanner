@@ -8,7 +8,7 @@ def sample():
            budget_eur="3500", eur_per_base_unit="1.2", buy_fee_eur="3",
            sell_fee_eur="3", buy_fx_rate="0.0025", sell_fx_rate="0.0025")
     for role in ("ask", "target_bid", "invalidation", "fx", "fees"):
-        d[role+"_evidence"]=dict(provider_id=role, source_record_id="fixture-"+role,
+        d[role+"_evidence"]=dict(provider_id=role, source_family="family-"+role, source_record_id="fixture-"+role,
             source_url="https://example.org/"+role, checked_utc=NOW.isoformat())
     for role in ("ask", "target_bid", "invalidation"):
         d[role+"_evidence"].update(quote_unit="GBp", observed_price=d[role])
@@ -84,6 +84,20 @@ class EuropeanResearchChainTests(unittest.TestCase):
         self.assertIn("EXTERNAL_SOURCE_ATTESTATION_NOT_CONNECTED",r["blocks"])
         self.assertEqual(r["notification_channel"],"RESEARCH_PREVIEW_ONLY")
         self.assertFalse(r["order_placement_enabled"])
+
+    def test_source_separation_gate_blocks_reused_provider(self):
+        d=sample()
+        d["target_bid_evidence"]["provider_id"]=d["ask_evidence"]["provider_id"]
+        r=evaluate_eu_research_chain(d,now_utc=NOW)
+        self.assertEqual(r["status"],"BLOCKED")
+        self.assertIn("BROKER_TECHNICAL_SOURCE_NOT_SEPARATED",r["blocks"])
+        self.assertFalse(r["trade_ready"])
+
+    def test_source_separation_gate_allows_metadata_review_only(self):
+        r=evaluate_eu_research_chain(sample(),now_utc=NOW)
+        self.assertEqual(r["source_separation"]["status"],"PROVENANCE_ONLY_NOT_ATTESTED")
+        self.assertEqual(r["status"],"RESEARCH_ONLY")
+        self.assertIn("EXTERNAL_SOURCE_ATTESTATION_NOT_CONNECTED",r["blocks"])
 
 if __name__=="__main__":
     unittest.main()
