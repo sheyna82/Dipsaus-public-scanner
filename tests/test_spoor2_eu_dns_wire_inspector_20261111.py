@@ -6,6 +6,13 @@ def packet(flags=0x8180,qd=1,tail=b"",answer=b""):
     q=b"\x07example\x03com\x00"+struct.pack("!HH",1,1)
     return struct.pack("!HHHHHH",42,flags,qd,1 if answer else 0,0,0)+q+answer+tail
 
+
+def rr(record_type, record_class=1, address=b"\\x01\\x02\\x03\\x04"):
+    """Build an RR with a backward owner-name pointer and exact binary RDATA."""
+    if not isinstance(address, bytes):
+        raise TypeError("RDATA must be bytes")
+    return bytes.fromhex("c00c")+struct.pack("!HHIH",record_type,record_class,30,len(address))+address
+
 class DNSWireInspectorTests(unittest.TestCase):
     def test_normal_packet_is_not_admitted(self):
         r=inspect(packet(),expected_name="example.com",expected_id=42)
@@ -47,6 +54,10 @@ class DNSWireInspectorTests(unittest.TestCase):
         r=inspect(packet(answer=a),expected_name="example.com")
         self.assertEqual(r["status"],"DNS_WIREFORMAT_PARSED_ONLY")
         self.assertFalse(r["dns_admitted"])
+    def test_rr_fixture_is_binary_and_exact(self):
+        a=rr(1)
+        self.assertEqual(a,bytes.fromhex("c00c000100010000001e000401020304"))
+        self.assertEqual(len(a),16)
     def test_cd_flag_rejected(self):
         self.assertEqual(inspect(packet(flags=0x8190),expected_name="example.com")["blocks"],["DNS_RESPONSE_FLAGS_REJECTED"])
     def test_reserved_z_flag_rejected(self):
