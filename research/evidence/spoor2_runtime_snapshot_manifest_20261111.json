@@ -1,0 +1,30 @@
+{
+  "schema_version": "spoor2-runtime-snapshot-evidence-v1",
+  "captured_for_research_date": "2026-11-11",
+  "source_repository": "sheyna82/Dipsaus-scanner",
+  "source_git_ref_at_lookup": "main",
+  "note": "Immutable Git blob SHA-1 IDs from GitHub contents API; these are NOT SHA-256 checksums. Run offline snapshot audit on the exact downloaded bytes to obtain SHA-256. No source snapshot bytes are committed to the public research repository.",
+  "sources": [
+    {
+      "market": "US",
+      "path": "migration_runtime/public_scanner_us_state.json",
+      "git_blob_sha": "deb568fe686a3f258dc304d20003a251bc4999b6",
+      "size_bytes": 2549942,
+      "report_count": 7,
+      "candidate_count": 416,
+      "schema_blocked_count": 0
+    },
+    {
+      "market": "EU",
+      "path": "migration_runtime/public_scanner_eu_state.json",
+      "git_blob_sha": "ec042f197a2f192a25c3488cda1fdcfba44b5604",
+      "size_bytes": 133768,
+      "report_count": 1,
+      "candidate_count": 61,
+      "schema_blocked_count": 0
+    }
+  ],
+  "verification_scope": "Observed actual source contents and independently reproduced schema rules against 477 candidates in the connector session. The committed offline Python CLI has been tested on fixtures; execution against exact source bytes and SHA-256 generation remains to be done.",
+  "trade_ready": false,
+  "live_changes": false
+}
