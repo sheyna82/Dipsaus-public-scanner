@@ -1,0 +1,31 @@
+name: Spoor 2 isolated research regression
+on:
+  push:
+    branches:
+      - research/integrated-evidence-20261106
+    paths:
+      - 'research/spoor2_candidate_levels_20261111.py'
+      - 'research/spoor2_notification_policy_20261111.py'
+      - 'tests/test_spoor2_candidate_levels_20261111.py'
+      - 'tests/test_spoor2_notification_policy_20261111.py'
+      - '.github/workflows/spoor2-isolated-tests.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  spoor2-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Compile isolated modules and tests
+        run: python -m py_compile research/spoor2_candidate_levels_20261111.py research/spoor2_notification_policy_20261111.py tests/test_spoor2_candidate_levels_20261111.py tests/test_spoor2_notification_policy_20261111.py
+      - name: Run isolated fail-closed regression tests
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: python -m unittest discover -s tests -p 'test_spoor2_*.py' -v
