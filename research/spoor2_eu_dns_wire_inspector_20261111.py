@@ -15,7 +15,7 @@ def _name(packet, offset):
             if offset+1>=len(packet):
                 raise ValueError("truncated pointer")
             pointer=((length & 0x3f)<<8)|packet[offset+1]
-            if pointer>=len(packet):
+            if pointer>=offset:
                 raise ValueError("pointer outside packet")
             if end is None: end=offset+2
             offset=pointer
@@ -49,7 +49,8 @@ def inspect_dns_wire_response(payload, *, expected_name, expected_type=1, expect
         txid,flags,qd,an,ns,ar=struct.unpack("!HHHHHH",payload[:12])
         if expected_id is not None and txid!=expected_id:
             return {**base,"blocks":["DNS_TRANSACTION_ID_MISMATCH"]}
-        if not flags & 0x8000 or flags & 0x7800 or flags & 0x0200 or flags & 0x000f:
+        if (not flags & 0x8000 or flags & 0x7800 or flags & 0x0200 or
+            flags & 0x000f or flags & 0x0040 or flags & 0x0010):
             return {**base,"blocks":["DNS_RESPONSE_FLAGS_REJECTED"]}
         if qd!=1:
             return {**base,"blocks":["DNS_QUESTION_COUNT_REJECTED"]}
