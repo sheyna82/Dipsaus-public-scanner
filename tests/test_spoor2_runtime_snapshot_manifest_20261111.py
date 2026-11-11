@@ -1,4 +1,4 @@
-"""Pin observed source snapshot manifest without claiming unrun SHA-256 audit."""
+"""Verify pinned snapshot source identifiers and separately computed SHA256."""
 import json
 import unittest
 from pathlib import Path
@@ -16,8 +16,9 @@ class RuntimeManifestTests(unittest.TestCase):
         for source in manifest["sources"]:
             self.assertEqual(len(source["git_blob_sha"]), 40)
             self.assertGreater(source["size_bytes"], 0)
-            self.assertNotIn("sha256", source)
-        self.assertIn("remains to be done", manifest["verification_scope"])
+            self.assertEqual(len(source["sha256"]), 64)
+            int(source["sha256"], 16)
+        self.assertIn("remains unverified", manifest["verification_scope"])
 
 
 if __name__ == "__main__":
