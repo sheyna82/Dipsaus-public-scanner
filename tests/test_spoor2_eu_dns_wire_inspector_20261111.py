@@ -30,6 +30,13 @@ class DNSWireInspectorTests(unittest.TestCase):
     def test_truncated_answer(self):
         a=b"\xc0\x0c"+struct.pack("!HHIH",1,1,30,4)+b"\x01"
         self.assertEqual(inspect(packet(answer=a),expected_name="example.com")["blocks"],["MALFORMED_DNS_WIRE_RESPONSE"])
+    def test_forward_compression_pointer_rejected(self):
+        p=struct.pack("!HHHHHH",42,0x8180,1,0,0,0)+b"\\xc0\\x0e\\x00"+struct.pack("!HH",1,1)
+        self.assertEqual(inspect(p,expected_name="example.com")["blocks"],["MALFORMED_DNS_WIRE_RESPONSE"])
+    def test_cd_flag_rejected(self):
+        self.assertEqual(inspect(packet(flags=0x8190),expected_name="example.com")["blocks"],["DNS_RESPONSE_FLAGS_REJECTED"])
+    def test_reserved_z_flag_rejected(self):
+        self.assertEqual(inspect(packet(flags=0x81c0),expected_name="example.com")["blocks"],["DNS_RESPONSE_FLAGS_REJECTED"])
     def test_tc_flag_rejected(self):
         self.assertEqual(inspect(packet(flags=0x8380),expected_name="example.com")["blocks"],["DNS_RESPONSE_FLAGS_REJECTED"])
     def test_servfail_rejected(self):
