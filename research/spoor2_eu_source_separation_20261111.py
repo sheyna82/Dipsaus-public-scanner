@@ -14,6 +14,7 @@ def audit_eu_source_separation(candidate):
     if not isinstance(candidate, dict):
         return {**result, "blocks": ["INVALID_CANDIDATE"]}
     identities = {}
+    canonical_urls = {}
     blocks = []
     for role in ROLES:
         record = candidate.get(role + "_evidence")
@@ -39,6 +40,10 @@ def audit_eu_source_separation(candidate):
             continue
         identities[role] = (provider.casefold(), family.casefold(),
                             source_id, parsed.hostname.casefold())
+        # Compare only unambiguous equivalences: DNS host case, default HTTPS
+        # port and an empty path versus /. Preserve query and path spelling.
+        canonical_urls[role] = (parsed.hostname.casefold().rstrip("."),
+                                parsed.path or "/", parsed.query)
     if "ask" in identities:
         for role in TECHNICAL:
             if role not in identities:
@@ -48,7 +53,7 @@ def audit_eu_source_separation(candidate):
                 blocks.append("BROKER_TECHNICAL_SOURCE_NOT_SEPARATED")
             if ask[0] == other[0] and ask[2] == other[2]:
                 blocks.append("SOURCE_RECORD_REUSED")
-            if candidate["ask_evidence"]["source_url"].strip() == candidate[role + "_evidence"]["source_url"].strip():
+            if canonical_urls["ask"] == canonical_urls[role]:
                 blocks.append("BROKER_TECHNICAL_SOURCE_URL_REUSED")
     blocks.append("EXTERNAL_SOURCE_ATTESTATION_NOT_CONNECTED")
     return {**result, "blocks": list(dict.fromkeys(blocks)),
