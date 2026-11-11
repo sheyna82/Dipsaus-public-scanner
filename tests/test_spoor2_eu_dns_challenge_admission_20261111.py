@@ -2,6 +2,9 @@ import base64
 import json
 import os
 import tempfile
+import hashlib
+import sqlite3
+from unittest.mock import patch
 import unittest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding,PublicFormat
@@ -36,6 +39,18 @@ class DNSChallengeAdmissionTests(unittest.TestCase):
         r=review_dns_challenge_admission(self.db,**{**self.args,"signature_b64":"bad"})
         self.assertEqual(r["blocks"],["SIGNATURE_NOT_VERIFIED"])
         self.assertFalse(os.path.exists(self.db))
+    def test_trusted_fixture_consumes_exact_signed_record_digest(self):
+        payload=json.dumps(self.record,sort_keys=True,separators=(",",":"),ensure_ascii=True).encode()
+        with patch("research.spoor2_eu_signed_dns_observation_20261111.review_dns_signer_trust_anchor",return_value={"key_trusted":True,"blocks":[]}):
+            r=review_dns_challenge_admission(self.db,**self.args)
+            self.assertTrue(r["consumed"])
+            self.assertFalse(r["dns_admitted"])
+            with sqlite3.connect(self.db) as conn:
+                row=conn.execute("SELECT nonce,observation_sha256 FROM consumed_challenges").fetchone()
+            self.assertEqual(row,("a"*64,hashlib.sha256(payload).hexdigest()))
+            replay=review_dns_challenge_admission(self.db,**self.args)
+            self.assertEqual(replay["blocks"],["CHALLENGE_CONSUMPTION_FAILED"])
+            self.assertEqual(replay["ledger_blocks"],["DNS_CHALLENGE_ALREADY_CONSUMED"])
     def test_missing_nonce_does_not_consume(self):
         r=review_dns_challenge_admission(self.db,**{**self.args,"challenge_nonce":None})
         self.assertEqual(r["blocks"],["SIGNATURE_NOT_VERIFIED"])
