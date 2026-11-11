@@ -3,7 +3,7 @@
   "captured_for_research_date": "2026-11-11",
   "source_repository": "sheyna82/Dipsaus-scanner",
   "source_git_ref_at_lookup": "main",
-  "note": "Immutable Git blob SHA-1 IDs from GitHub contents API; these are NOT SHA-256 checksums. Run offline snapshot audit on the exact downloaded bytes to obtain SHA-256. No source snapshot bytes are committed to the public research repository.",
+  "note": "Immutable Git blob IDs plus SHA256 of UTF-8 content returned by GitHub blob API. Byte lengths match GitHub blob sizes; SHA256 implementation checked against standard 'abc' test vector. Original source bytes not committed to public research repo.",
   "sources": [
     {
       "market": "US",
@@ -12,7 +12,8 @@
       "size_bytes": 2549942,
       "report_count": 7,
       "candidate_count": 416,
-      "schema_blocked_count": 0
+      "schema_blocked_count": 0,
+      "sha256": "4d9b5c36142a80f4f440f4e834ebec2c6e51c7d3625ae135eb1ab40f724a0b8d"
     },
     {
       "market": "EU",
@@ -21,10 +22,11 @@
       "size_bytes": 133768,
       "report_count": 1,
       "candidate_count": 61,
-      "schema_blocked_count": 0
+      "schema_blocked_count": 0,
+      "sha256": "2707e730cfae9126e62f1d4b2f8d015bd0e46233eb85c4b3eb26293d92698ef2"
     }
   ],
-  "verification_scope": "Observed actual source contents and independently reproduced schema rules against 477 candidates in the connector session. The committed offline Python CLI has been tested on fixtures; execution against exact source bytes and SHA-256 generation remains to be done.",
+  "verification_scope": "477 candidates independently schema-checked from fetched runtime contents; SHA256 calculated on the exact fetched UTF-8 text with byte-length agreement and SHA256 known-answer test. Offline Python CLI execution on these original snapshots remains unverified.",
   "trade_ready": false,
   "live_changes": false
 }
