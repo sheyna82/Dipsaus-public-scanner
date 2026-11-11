@@ -34,16 +34,16 @@ class DNSWireInspectorTests(unittest.TestCase):
         p=struct.pack("!HHHHHH",42,0x8180,1,0,0,0)+b"\xc0\x0e\x00"+struct.pack("!HH",1,1)
         self.assertEqual(inspect(p,expected_name="example.com")["blocks"],["MALFORMED_DNS_WIRE_RESPONSE"])
     def test_a_record_wrong_length_rejected(self):
-        a=b"\\xc0\\x0c"+struct.pack("!HHIH",1,1,30,3)+b"\\x01\\x02\\x03"
+        a=b"\xc0\x0c"+struct.pack("!HHIH",1,1,30,3)+b"\x01\x02\x03"
         self.assertEqual(inspect(packet(answer=a),expected_name="example.com")["blocks"],["INVALID_ADDRESS_RECORD_STRUCTURE"])
     def test_aaaa_record_wrong_length_rejected(self):
-        a=b"\\xc0\\x0c"+struct.pack("!HHIH",28,1,30,4)+b"\\x01\\x02\\x03\\x04"
+        a=b"\xc0\x0c"+struct.pack("!HHIH",28,1,30,4)+b"\x01\x02\x03\x04"
         self.assertEqual(inspect(packet(answer=a),expected_name="example.com")["blocks"],["INVALID_ADDRESS_RECORD_STRUCTURE"])
     def test_a_record_wrong_class_rejected(self):
-        a=b"\\xc0\\x0c"+struct.pack("!HHIH",1,3,30,4)+b"\\x01\\x02\\x03\\x04"
+        a=b"\xc0\x0c"+struct.pack("!HHIH",1,3,30,4)+b"\x01\x02\x03\x04"
         self.assertEqual(inspect(packet(answer=a),expected_name="example.com")["blocks"],["INVALID_ADDRESS_RECORD_STRUCTURE"])
     def test_valid_a_record_still_not_admitted(self):
-        a=b"\\xc0\\x0c"+struct.pack("!HHIH",1,1,30,4)+b"\\x01\\x02\\x03\\x04"
+        a=b"\xc0\x0c"+struct.pack("!HHIH",1,1,30,4)+b"\x01\x02\x03\x04"
         r=inspect(packet(answer=a),expected_name="example.com")
         self.assertEqual(r["status"],"DNS_WIREFORMAT_PARSED_ONLY")
         self.assertFalse(r["dns_admitted"])
