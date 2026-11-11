@@ -1,0 +1,28 @@
+name: Validate DIPSAUS trade lifecycle (no notifications)
+on:
+  pull_request:
+    paths:
+      - 'risk_budget_plan.py'
+      - 'trade_lifecycle.py'
+      - 'test_risk_budget_plan.py'
+      - 'test_trade_lifecycle.py'
+      - 'test_scenario_replay.py'
+      - '.github/workflows/validate-trade-lifecycle.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Unit tests for research-only trade plan
+        run: python -m unittest -v test_risk_budget_plan test_trade_lifecycle test_scenario_replay
+      - name: Compile all new modules
+        run: python -m py_compile risk_budget_plan.py trade_lifecycle.py
