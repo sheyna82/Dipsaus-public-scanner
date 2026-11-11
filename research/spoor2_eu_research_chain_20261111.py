@@ -7,6 +7,7 @@ from research.spoor2_eu_financial_evidence_20261111 import audit_eu_financial_in
 from research.spoor2_eu_money_scenario_20261111 import european_money_scenario
 from research.spoor2_eu_evidence_receipt_20261111 import build_eu_evidence_receipt
 from research.spoor2_eu_receipt_verifier_20261111 import verify_eu_evidence_receipt
+from research.spoor2_eu_source_separation_20261111 import audit_eu_source_separation
 
 _REQUIRED = ("quote_unit", "ask", "target_bid", "invalidation", "budget_eur",
              "eur_per_base_unit", "buy_fee_eur", "sell_fee_eur",
@@ -28,14 +29,16 @@ def evaluate_eu_research_chain(candidate, *, now_utc):
         return {**result, "blocks": receipt_verification["blocks"],
                 "evidence_receipt": receipt,
                 "receipt_verification": receipt_verification}
+    source_separation = audit_eu_source_separation(candidate)
     audit = audit_eu_financial_inputs(candidate, now_utc=now_utc)
     args = {key: candidate[key] for key in _REQUIRED}
     args["buy_slippage"] = candidate.get("buy_slippage", "0")
     args["sell_slippage"] = candidate.get("sell_slippage", "0")
     scenario = european_money_scenario(**args)
-    blocks = list(dict.fromkeys(audit["blocks"] + scenario.get("blocks", []) + receipt["blocks"] + receipt_verification["blocks"]))
-    return {**result, "status": "RESEARCH_ONLY" if scenario["status"] == "ILLUSTRATIVE_NOT_VERIFIED" else "BLOCKED",
+    blocks = list(dict.fromkeys(audit["blocks"] + source_separation["blocks"] + scenario.get("blocks", []) + receipt["blocks"] + receipt_verification["blocks"]))
+    return {**result, "status": "RESEARCH_ONLY" if scenario["status"] == "ILLUSTRATIVE_NOT_VERIFIED" and source_separation["status"] == "PROVENANCE_ONLY_NOT_ATTESTED" else "BLOCKED",
             "blocks": blocks, "evidence_audit": audit,
             "evidence_receipt": receipt,
             "receipt_verification": receipt_verification,
+            "source_separation": source_separation,
             "scenario": scenario, "notification_channel": "RESEARCH_PREVIEW_ONLY"}
