@@ -65,6 +65,23 @@ class DecisionChainTests(unittest.TestCase):
         self.assertIn("INDEPENDENT_TRADE_ATTESTATION_NOT_CONNECTED", result["blocks"])
         self.assertFalse(result["trade_ready"])
 
+    def test_european_gbp_pence_never_enters_usd_chain(self):
+        row = valid_fixture()
+        row["market"] = "EU"
+        row["quote_currency"] = "GBp"
+        result = evaluate_research_chain(row, now_utc=NOW)
+        self.assertIn("MARKET_NOT_SUPPORTED_BY_USD_CHAIN", result["blocks"])
+        self.assertIn("QUOTE_CURRENCY_NOT_USD", result["blocks"])
+        self.assertFalse(result["trade_ready"])
+
+    def test_eur_quote_never_enters_usd_chain(self):
+        row = valid_fixture()
+        row["market"] = "US"
+        row["quote_currency"] = "EUR"
+        result = evaluate_research_chain(row, now_utc=NOW)
+        self.assertIn("QUOTE_CURRENCY_NOT_USD", result["blocks"])
+        self.assertFalse(result["trade_ready"])
+
     def test_missing_money_inputs_stays_research(self):
         row = valid_fixture()
         row.pop("money_inputs")
