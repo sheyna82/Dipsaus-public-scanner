@@ -67,7 +67,17 @@ def capture_pinned_https(url, *, allowed_hosts, resolved_addresses,
             return {**base,"blocks":["UNEXPECTED_HTTP_STATUS"],"http_status":response.status}
         if response.getheader("Content-Encoding","identity").lower()!="identity":
             return {**base,"blocks":["UNSUPPORTED_CONTENT_ENCODING"]}
+        lengths=response.msg.get_all("Content-Length",[]) if response.msg is not None else []
+        if (len(lengths)!=1 or not isinstance(lengths[0],str)
+            or not lengths[0].isascii() or not lengths[0].isdecimal()
+            or response.chunked or response.getheader("Transfer-Encoding") is not None):
+            return {**base,"blocks":["UNTRUSTED_RESPONSE_FRAMING"]}
+        expected_size=int(lengths[0])
+        if expected_size>max_response_bytes:
+            return {**base,"blocks":["RESPONSE_SIZE_EXCEEDED"]}
         body=response.read(max_response_bytes+1)
+        if len(body)!=expected_size or response.length not in (0,None):
+            return {**base,"blocks":["INCOMPLETE_RESPONSE_BODY"]}
         if len(body)>max_response_bytes:
             return {**base,"blocks":["RESPONSE_SIZE_EXCEEDED"]}
         return {**base,"status":"HTTPS_CAPTURED_READ_ONLY",
