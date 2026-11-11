@@ -8,6 +8,7 @@ import hashlib
 import json
 from datetime import datetime
 from research.spoor2_eu_dns_provenance_20261111 import review_dns_provenance
+from research.spoor2_eu_dns_signer_trust_anchor_20261111 import review_dns_signer_trust_anchor
 
 def _canonical(record):
     return json.dumps(record,sort_keys=True,separators=(",",":"),ensure_ascii=True).encode("ascii")
@@ -58,9 +59,11 @@ def verify_signed_dns_observation(url, *, allowed_hosts, resolved_addresses,
     except (ValueError,TypeError,base64.binascii.Error,InvalidSignature):
         # All malformed or invalid signatures fail closed without exposing data.
         return {**base,"blocks":["INVALID_DNS_OBSERVATION_SIGNATURE"]}
+    anchor=review_dns_signer_trust_anchor(trusted_public_key_b64)
     return {**base,"status":"SIGNED_DNS_OBSERVATION_VERIFIED_ONLY",
-            "signature_verified":True,"dns_admitted":False,
-            "blocks":["TRUST_KEY_PROVENANCE_NOT_INDEPENDENTLY_ATTESTED",
+            "signature_verified":True,"key_trusted":anchor["key_trusted"],
+            "dns_admitted":False,
+            "blocks":anchor["blocks"]+["TRUST_KEY_PROVENANCE_NOT_INDEPENDENTLY_ATTESTED",
                       "DNSSEC_NOT_VERIFIED","RESOLVER_INDEPENDENCE_NOT_VERIFIED",
                       "NETWORK_CONNECTION_NOT_AUTHORIZED"],
             "record_sha256":hashlib.sha256(_canonical(signed_record)).hexdigest(),
