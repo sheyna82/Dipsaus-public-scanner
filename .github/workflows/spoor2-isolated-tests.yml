@@ -9,11 +9,13 @@ on:
       - 'research/spoor2_historical_report_bridge_20261111.py'
       - 'research/spoor2_level_evidence_audit_20261111.py'
       - 'research/spoor2_decision_chain_20261111.py'
+      - 'research/spoor2_runtime_schema_adapters_20261111.py'
       - 'tests/test_spoor2_candidate_levels_20261111.py'
       - 'tests/test_spoor2_notification_policy_20261111.py'
       - 'tests/test_spoor2_historical_report_bridge_20261111.py'
       - 'tests/test_spoor2_level_evidence_audit_20261111.py'
       - 'tests/test_spoor2_decision_chain_20261111.py'
+      - 'tests/test_spoor2_runtime_schema_adapters_20261111.py'
       - '.github/workflows/spoor2-isolated-tests.yml'
   workflow_dispatch:
 permissions:
@@ -30,7 +32,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Compile isolated modules and tests
-        run: python -m py_compile research/spoor2_candidate_levels_20261111.py research/spoor2_notification_policy_20261111.py tests/test_spoor2_candidate_levels_20261111.py tests/test_spoor2_notification_policy_20261111.py research/spoor2_historical_report_bridge_20261111.py tests/test_spoor2_historical_report_bridge_20261111.py research/spoor2_level_evidence_audit_20261111.py tests/test_spoor2_level_evidence_audit_20261111.py research/spoor2_decision_chain_20261111.py tests/test_spoor2_decision_chain_20261111.py
+        run: python -m py_compile research/spoor2_candidate_levels_20261111.py research/spoor2_notification_policy_20261111.py tests/test_spoor2_candidate_levels_20261111.py tests/test_spoor2_notification_policy_20261111.py research/spoor2_historical_report_bridge_20261111.py tests/test_spoor2_historical_report_bridge_20261111.py research/spoor2_level_evidence_audit_20261111.py tests/test_spoor2_level_evidence_audit_20261111.py research/spoor2_decision_chain_20261111.py tests/test_spoor2_decision_chain_20261111.py research/spoor2_runtime_schema_adapters_20261111.py tests/test_spoor2_runtime_schema_adapters_20261111.py
       - name: Run isolated fail-closed regression tests
         env:
           SCANNER_NOTIFICATIONS_ENABLED: 'false'
