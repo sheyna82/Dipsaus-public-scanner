@@ -13,6 +13,9 @@ def valid_fixture():
         technical[name + "_evidence"] = {
             "verified": True, "source": "offline-test-only",
             "source_record_id": "fixture-" + name,
+            "provider_id": "broker-fixture" if name == "broker" else "exchange-fixture",
+            "source_family": "broker" if name == "broker" else "exchange",
+            "source_url": "https://example.org/fixture/" + name,
             "checked_utc": NOW.isoformat(), "observed_price_usd": value, **({"formed_utc": "2026-11-02T10:00:00+00:00", "structure_still_valid": True} if name != "broker" else {})}
     return {
         "symbol": "TEST", "trade_ready": True, "rr_verified": True,
@@ -40,6 +43,27 @@ class DecisionChainTests(unittest.TestCase):
         result = evaluate_research_chain(row, now_utc=NOW)
         self.assertIn("RESISTANCE_EVIDENCE_MISSING", result["blocks"])
         self.assertEqual(result["notification_channel"], "RESEARCH")
+
+    def test_same_provider_is_blocked_in_decision_chain(self):
+        row = valid_fixture()
+        row["technical_evidence"]["invalidation_evidence"]["provider_id"] = "broker-fixture"
+        result = evaluate_research_chain(row, now_utc=NOW)
+        self.assertIn("BROKER_TECHNICAL_PROVIDER_NOT_INDEPENDENT", result["blocks"])
+        self.assertEqual(result["source_independence_audit"]["status"], "BLOCKED")
+        self.assertFalse(result["trade_ready"])
+
+    def test_missing_provenance_is_blocked_in_decision_chain(self):
+        row = valid_fixture()
+        row["technical_evidence"]["broker_evidence"].pop("source_record_id")
+        result = evaluate_research_chain(row, now_utc=NOW)
+        self.assertIn("BROKER_PROVENANCE_INCOMPLETE", result["blocks"])
+
+    def test_independent_fixture_still_requires_external_attestation(self):
+        result = evaluate_research_chain(valid_fixture(), now_utc=NOW)
+        self.assertEqual(result["source_independence_audit"]["status"],
+                         "PROVENANCE_RECORDED_REQUIRES_EXTERNAL_VERIFICATION")
+        self.assertIn("INDEPENDENT_TRADE_ATTESTATION_NOT_CONNECTED", result["blocks"])
+        self.assertFalse(result["trade_ready"])
 
     def test_missing_money_inputs_stays_research(self):
         row = valid_fixture()
