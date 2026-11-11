@@ -1,0 +1,108 @@
+name: Spoor 2 pinned runtime end-to-end audit
+on:
+  push:
+    branches:
+      - research/integrated-evidence-20261106
+    paths:
+      - '.github/workflows/spoor2-pinned-snapshot-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pinned-snapshot-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Verify immutable Git blobs and run original Python CLI
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          import subprocess
+          import sys
+          import tempfile
+          import urllib.request
+          from pathlib import Path
+
+          manifest_path = Path("research/evidence/spoor2_runtime_snapshot_manifest_20261111.json")
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          assert manifest["source_repository"] == "sheyna82/Dipsaus-scanner"
+          sources = manifest["sources"]
+          assert len(sources) == 2 and {s["market"] for s in sources} == {"US", "EU"}
+          expected_paths = {
+              "US": "migration_runtime/public_scanner_us_state.json",
+              "EU": "migration_runtime/public_scanner_eu_state.json",
+          }
+          with tempfile.TemporaryDirectory(prefix="spoor2-pinned-") as directory:
+              paths = {}
+              for source in sources:
+                  market = source["market"]
+                  assert source["path"] == expected_paths[market]
+                  blob_sha = source["git_blob_sha"]
+                  assert len(blob_sha) == 40 and all(c in "0123456789abcdef" for c in blob_sha)
+                  url = ("https://api.github.com/repos/sheyna82/Dipsaus-scanner/git/blobs/"
+                         + blob_sha)
+                  req = urllib.request.Request(url, headers={
+                      "Accept": "application/vnd.github.raw+json",
+                      "User-Agent": "DIPSAUS-spoor2-pinned-audit",
+                  })
+                  with urllib.request.urlopen(req, timeout=40) as response:
+                      payload = response.read()
+                  sha256 = hashlib.sha256(payload).hexdigest()
+                  git_sha = hashlib.sha1(
+                      b"blob " + str(len(payload)).encode("ascii") + b"\\0" + payload
+                  ).hexdigest()
+                  assert git_sha == blob_sha, f"{market}: Git blob mismatch"
+                  assert len(payload) == source["size_bytes"], f"{market}: byte count mismatch"
+                  assert sha256 == source["sha256"], f"{market}: SHA256 mismatch"
+                  target = Path(directory) / (market + ".json")
+                  target.write_bytes(payload)
+                  paths[market] = target
+                  print(f"{market} pinned blob verified: size={len(payload)} sha256={sha256}")
+
+              completed = subprocess.run(
+                  [sys.executable, "-m", "research.spoor2_snapshot_audit_20261111",
+                   str(paths["US"]), str(paths["EU"]), str(manifest_path)],
+                  capture_output=True, text=True, check=False,
+              )
+              if completed.returncode != 0:
+                  print(completed.stderr, file=sys.stderr)
+                  print(completed.stdout[:10000], file=sys.stderr)
+                  raise SystemExit(f"Snapshot audit failed with exit code {completed.returncode}")
+              audit = json.loads(completed.stdout)
+              assert audit["status"] == "SCHEMA_AUDIT_ONLY"
+              assert audit["trade_ready"] is False
+              assert audit["order_placement_enabled"] is False
+              counts = {}
+              for source in sources:
+                  market = source["market"]
+                  result = audit["sources"][market]
+                  assert result["status"] == "SCHEMA_AUDIT_ONLY"
+                  assert result["sha256"] == source["sha256"]
+                  assert result["size_bytes"] == source["size_bytes"]
+                  assert len(result["reports"]) == source["report_count"]
+                  assert all(r["status"] == "SCHEMA_REVIEW_ONLY" for r in result["reports"])
+                  total = sum(r["total"] for r in result["reports"])
+                  blocked = sum(r["blocked"] for r in result["reports"])
+                  assert total == source["candidate_count"], f"{market}: candidate mismatch"
+                  assert blocked == source["schema_blocked_count"], f"{market}: blocked mismatch"
+                  assert all(r["trade_ready"] is False for r in result["reports"])
+                  counts[market] = total
+                  print(f"{market} Python schema audit verified: reports={len(result['reports'])} candidates={total} blocked={blocked}")
+              assert counts == {"US": 416, "EU": 61}
+              canonical = json.dumps(audit, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+              digest = hashlib.sha256(canonical).hexdigest()
+              print(f"Audit result canonical SHA256: {digest}")
+              print(f"Audit code commit: {os.environ['GITHUB_SHA']}")
+              print("AUDIT PASSED — SCHEMA ONLY; trade_ready=false; no orders or notifications")
+          PY
