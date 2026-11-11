@@ -1,0 +1,84 @@
+"""Isolated, non-executable DIPSAUS research calculations (never an entry signal).
+
+Historical pivots are *candidates*, not independently validated resistance.
+A 10-day low is a *reference*, not automatically structural invalidation.
+"""
+import math
+
+
+def _positive(value):
+    return (isinstance(value, (int, float)) and not isinstance(value, bool)
+            and math.isfinite(value) and value > 0)
+
+
+def research_levels(recovery_map, reference_price):
+    """Return transparent candidate levels, with all verification flags false."""
+    if not _positive(reference_price) or not isinstance(recovery_map, dict):
+        return {"status": "UNKNOWN", "trade_ready": False}
+    zones = recovery_map.get("historical_overhead_pivot_zones") or []
+    resistance = sorted({
+        float(z["low_usd"]) for z in zones
+        if isinstance(z, dict) and _positive(z.get("low_usd"))
+        and z["low_usd"] > reference_price
+    })
+    invalidation = recovery_map.get("recent_10d_low_invalidation_reference_usd")
+    if not _positive(invalidation) or invalidation >= reference_price:
+        invalidation = None
+    return {
+        "status": "HISTORICAL_REFERENCES_ONLY",
+        "entry_reference_usd": reference_price,
+        "invalidation_reference_usd": invalidation,
+        "resistance_references_usd": resistance,
+        "required_2r_target_usd": round(reference_price + 2 * (reference_price - invalidation), 4)
+            if invalidation is not None else None,
+        "invalidation_verified": False,
+        "resistance_verified": False,
+        "broker_quote_verified": False,
+        "trade_ready": False,
+    }
+
+
+def money_scenario(*, budget_eur, ask_usd, exit_bid_usd, invalidation_usd,
+                   eur_per_usd, buy_fee_eur, sell_fee_eur, buy_fx_rate,
+                   sell_fx_rate, slippage_buy_usd=0, slippage_sell_usd=0):
+    """Whole-share illustrative scenario; no validated setup or order execution.
+
+    FX rates are fractional costs per conversion (e.g. 0.0025 for 0.25%).
+    Sell-side price is the executable *bid*, not the last trade.
+    """
+    fields = (budget_eur, ask_usd, exit_bid_usd, invalidation_usd,
+              eur_per_usd, buy_fee_eur, sell_fee_eur, buy_fx_rate,
+              sell_fx_rate, slippage_buy_usd, slippage_sell_usd)
+    if any(not isinstance(x, (int, float)) or isinstance(x, bool)
+           or not math.isfinite(x) for x in fields):
+        return {"status": "UNKNOWN", "trade_ready": False}
+    if not all(_positive(x) for x in (budget_eur, ask_usd, exit_bid_usd,
+                                     invalidation_usd, eur_per_usd)):
+        return {"status": "UNKNOWN", "trade_ready": False}
+    if any(x < 0 for x in (buy_fee_eur, sell_fee_eur, buy_fx_rate, sell_fx_rate,
+                          slippage_buy_usd, slippage_sell_usd)):
+        return {"status": "UNKNOWN", "trade_ready": False}
+    if buy_fx_rate >= 1 or sell_fx_rate >= 1:
+        return {"status": "UNKNOWN", "trade_ready": False}
+    entry = ask_usd + slippage_buy_usd
+    exit_price = exit_bid_usd - slippage_sell_usd
+    if not invalidation_usd < entry or exit_price <= 0:
+        return {"status": "UNKNOWN", "trade_ready": False}
+    unit_cost = entry * eur_per_usd * (1 + buy_fx_rate)
+    shares = math.floor((budget_eur - buy_fee_eur) / unit_cost)
+    if shares < 1:
+        return {"status": "BUDGET_BLOCKED", "trade_ready": False}
+    buy_total = shares * unit_cost + buy_fee_eur
+    sell_total = shares * exit_price * eur_per_usd * (1 - sell_fx_rate) - sell_fee_eur
+    risk_per_share = entry - invalidation_usd
+    rr = (exit_price - entry) / risk_per_share
+    return {
+        "status": "ILLUSTRATIVE_NOT_VERIFIED",
+        "whole_shares": shares,
+        "purchase_eur": round(buy_total, 2),
+        "net_profit_eur": round(sell_total - buy_total, 2),
+        "reference_rr": round(rr, 4),
+        "risk_eur_before_exit_friction": round(shares * risk_per_share * eur_per_usd, 2),
+        "trade_ready": False,
+        "limitations": "Historical levels unverified; FX movement, market depth, taxes and additional costs excluded.",
+    }
