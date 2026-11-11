@@ -45,8 +45,8 @@ class PinnedCaptureTests(unittest.TestCase):
             r=capture_pinned_https(**self.args)
         self.assertEqual(r["status"],"HTTPS_CAPTURED_READ_ONLY")
         sent=tls.sendall.call_args.args[0]
-        self.assertIn(b"GET /prices HTTP/1.1\\r\\nHost: data.example.org\\r\\n",sent)
-        self.assertTrue(sent.endswith(b"\\r\\n\\r\\n"))
+        self.assertIn(b"GET /prices HTTP/1.1\r\nHost: data.example.org\r\n",sent)
+        self.assertTrue(sent.endswith(b"\r\n\r\n"))
         self.assertNotIn(b"\\\\r\\\\n",sent)
         self.assertFalse(r["trade_ready"])
     def test_tls_peer_switch_blocks(self):
