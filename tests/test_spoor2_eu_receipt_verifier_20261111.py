@@ -20,7 +20,7 @@ class EuReceiptVerifierTests(unittest.TestCase):
     def test_modified_payload_fails(self):
         p=fixture()
         r=receipt(p)
-        p["ask_evidence"]["source_record_id"]="modified"
+        p["ask_evidence"]["source_record_id"]="changed-ask"
         self.assertIn("RECEIPT_SHA256_MISMATCH",verify_eu_evidence_receipt(p,r)["blocks"])
     def test_modified_digest_fails(self):
         p=fixture()
