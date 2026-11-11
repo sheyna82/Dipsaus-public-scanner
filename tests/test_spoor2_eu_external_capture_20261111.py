@@ -14,6 +14,17 @@ class ExternalCaptureTests(unittest.TestCase):
         self.assertEqual(r["status"],"CAPTURE_BYTES_MATCH_UNATTESTED")
         self.assertFalse(r["source_attested"])
         self.assertFalse(r["trade_ready"])
+    def test_invalid_age_budgets_fail_closed(self):
+        for budget in (True, -1, 86401, 1.5, "900", None):
+            with self.subTest(budget=budget):
+                result=audit_external_capture(fixture(),RAW,now_utc=NOW,max_age_seconds=budget)
+                self.assertEqual(result["status"],"BLOCKED")
+                self.assertEqual(result["blocks"],["INVALID_MAX_AGE"])
+                self.assertFalse(result["source_attested"])
+    def test_exact_zero_age_budget_is_valid_but_unattested(self):
+        result=audit_external_capture(fixture(),RAW,now_utc=NOW,max_age_seconds=0)
+        self.assertEqual(result["status"],"CAPTURE_BYTES_MATCH_UNATTESTED")
+        self.assertFalse(result["source_attested"])
     def test_changed_bytes_blocked(self):
         self.assertIn("CAPTURE_CONTENT_HASH_MISMATCH",audit_external_capture(fixture(),RAW+b"!",now_utc=NOW)["blocks"])
     def test_wrong_length_blocked(self):
