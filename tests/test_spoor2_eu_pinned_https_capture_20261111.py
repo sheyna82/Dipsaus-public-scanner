@@ -36,7 +36,10 @@ class PinnedCaptureTests(unittest.TestCase):
         tls.getpeername.return_value=("8.8.8.8",443)
         response=MagicMock()
         response.status=200
-        response.getheader.return_value="identity"
+        response.msg.get_all.return_value=["8"]
+        response.chunked=False
+        response.length=0
+        response.getheader.side_effect=lambda name, default=None: "identity" if name=="Content-Encoding" else default
         response.read.return_value=b"evidence"
         with (patch("socket.create_connection",return_value=raw),
              patch("ssl.create_default_context") as ctx,
@@ -66,7 +69,10 @@ class PinnedCaptureTests(unittest.TestCase):
         tls.getpeername.return_value=("8.8.8.8",443)
         response=MagicMock()
         response.status=status
-        response.getheader.return_value=encoding
+        response.msg.get_all.return_value=[str(len(body))]
+        response.chunked=False
+        response.length=0
+        response.getheader.side_effect=lambda name, default=None: encoding if name=="Content-Encoding" else default
         response.read.return_value=body
         if error is not None:
             response.read.side_effect=error
@@ -95,6 +101,45 @@ class PinnedCaptureTests(unittest.TestCase):
             ctx.return_value.wrap_socket.side_effect=ssl.SSLCertVerificationError("bad cert")
             r=capture_pinned_https(**self.args)
         self.assertEqual(r["blocks"],["HTTPS_CAPTURE_FAILED"])
+    def test_missing_content_length_blocks(self):
+        with patch("http.client.HTTPResponse") as response:
+            response.return_value.msg.get_all.return_value=[]
+            response.return_value.status=200
+            response.return_value.getheader.side_effect=lambda name,default=None: "identity" if name=="Content-Encoding" else default
+            with patch("socket.create_connection") as connect, patch("ssl.create_default_context") as ctx:
+                connect.return_value.getpeername.return_value=("8.8.8.8",443)
+                ctx.return_value.wrap_socket.return_value.getpeername.return_value=("8.8.8.8",443)
+                r=capture_pinned_https(**self.args)
+        self.assertEqual(r["blocks"],["UNTRUSTED_RESPONSE_FRAMING"])
+    def test_conflicting_content_lengths_block(self):
+        r=self._mock_response_with_framing(["8","9"])
+        self.assertEqual(r["blocks"],["UNTRUSTED_RESPONSE_FRAMING"])
+    def test_truncated_body_without_exception_blocks(self):
+        r=self._mock_response_with_framing(["10"],body=b"short")
+        self.assertEqual(r["blocks"],["INCOMPLETE_RESPONSE_BODY"])
+    def test_invalid_content_length_blocks(self):
+        r=self._mock_response_with_framing(["eight"])
+        self.assertEqual(r["blocks"],["UNTRUSTED_RESPONSE_FRAMING"])
+    def test_chunked_body_blocks(self):
+        r=self._mock_response_with_framing(["8"],chunked=True)
+        self.assertEqual(r["blocks"],["UNTRUSTED_RESPONSE_FRAMING"])
+    def _mock_response_with_framing(self,lengths,body=b"evidence",chunked=False):
+        raw=MagicMock()
+        raw.getpeername.return_value=("8.8.8.8",443)
+        tls=MagicMock()
+        tls.getpeername.return_value=("8.8.8.8",443)
+        response=MagicMock()
+        response.status=200
+        response.getheader.side_effect=lambda name,default=None: "identity" if name=="Content-Encoding" else default
+        response.msg.get_all.return_value=lengths
+        response.chunked=chunked
+        response.length=0
+        response.read.return_value=body
+        with (patch("socket.create_connection",return_value=raw),
+              patch("ssl.create_default_context") as ctx,
+              patch("http.client.HTTPResponse",return_value=response)):
+            ctx.return_value.wrap_socket.return_value=tls
+            return capture_pinned_https(**self.args)
     def test_resource_limits_block(self):
         with patch("socket.create_connection",side_effect=AssertionError("network forbidden")):
             r=capture_pinned_https(**{**self.args,"max_response_bytes":0})
