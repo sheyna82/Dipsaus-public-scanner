@@ -39,6 +39,18 @@ class ExternalCaptureTests(unittest.TestCase):
     def test_credentials_url_blocked(self):
         d=fixture();d["source_url"]="https://user:pass@example.org/quotes"
         self.assertIn("CAPTURE_URL_OR_TIME_INVALID",audit_external_capture(d,RAW,now_utc=NOW)["blocks"])
+    def test_ambiguous_urls_rejected_consistently(self):
+        for url in ("https://exa%6dple.org/quotes",
+                    "https://example..org/quotes",
+                    "https://example.org../quotes",
+                    "https://example.org/quotes\\\\other"):
+            with self.subTest(url=url):
+                d=fixture()
+                d["source_url"]=url
+                result=audit_external_capture(d,RAW,now_utc=NOW)
+                self.assertEqual(result["status"],"BLOCKED")
+                self.assertIn("CAPTURE_URL_OR_TIME_INVALID",result["blocks"])
+                self.assertFalse(result["source_attested"])
     def test_empty_bytes_blocked(self):
         self.assertIn("CAPTURE_EMPTY",audit_external_capture(fixture(),b"",now_utc=NOW)["blocks"])
     def test_nonbytes_blocked(self):
