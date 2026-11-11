@@ -4,9 +4,19 @@ from research.spoor2_eu_pinned_https_capture_20261111 import capture_pinned_http
 
 class PinnedCaptureTests(unittest.TestCase):
     def setUp(self):
-        self.args=dict(url="https://data.example.org/prices",
+        self.args=dict(network_enabled=True,url="https://data.example.org/prices",
             allowed_hosts=["data.example.org"],resolved_addresses=["8.8.8.8"],
             selected_address="8.8.8.8")
+    def test_network_disabled_by_default_even_for_valid_inputs(self):
+        args={k:v for k,v in self.args.items() if k!="network_enabled"}
+        with patch("socket.create_connection",side_effect=AssertionError("network forbidden")):
+            r=capture_pinned_https(**args)
+        self.assertEqual(r["blocks"],["NETWORK_DISABLED_BY_DEFAULT"])
+        self.assertFalse(r["trade_ready"])
+    def test_non_boolean_opt_in_never_enables_network(self):
+        with patch("socket.create_connection",side_effect=AssertionError("network forbidden")):
+            r=capture_pinned_https(**{**self.args,"network_enabled":1})
+        self.assertEqual(r["blocks"],["NETWORK_DISABLED_BY_DEFAULT"])
     def test_injected_transport_never_authorizes(self):
         with patch("socket.create_connection",side_effect=AssertionError("network forbidden")):
             r=capture_pinned_https(**self.args,transport=object())
