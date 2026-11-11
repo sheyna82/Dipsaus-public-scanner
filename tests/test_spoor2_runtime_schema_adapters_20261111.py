@@ -29,8 +29,8 @@ class RuntimeAdapterTests(unittest.TestCase):
         report = {"candidates": [{
             "symbol": "TESTEU", "currency": "EUR",
             "historical_close": 52.05,
-            "historical_first_friction": 54.5,
-            "historical_meaningful_resistance": 60,
+            "historical_first_friction": {"price": 54.5, "pivot_touches": 3, "historical_dates": ["2026-10-10"]},
+            "historical_meaningful_resistance": {"price": 60, "pivot_touches": 2, "historical_dates": ["2026-09-01"]},
             "provider_bid": 52.01, "provider_ask": 52.09,
             "provider_freshness_pass": True, "broker_verify_now": True,
             "trade_ready": True,
@@ -38,9 +38,26 @@ class RuntimeAdapterTests(unittest.TestCase):
         row = adapt_runtime_report(report, "EU")["rows"][0]
         self.assertEqual(row["notification_channel"], "RESEARCH")
         self.assertFalse(row["trade_ready"])
-        self.assertEqual(row["historical_first_friction"], 54.5)
+        self.assertEqual(row["historical_first_friction"]["price"], 54.5)
+        self.assertFalse(row["historical_first_friction"]["verified"])
         self.assertNotIn("broker_quote_verified", row)
         self.assertIn("EU_EXECUTABLE_BROKER_EVIDENCE_NOT_CONNECTED", row["blocks"])
+
+    def test_gbp_pence_remains_unconverted_and_unverified(self):
+        report = {"candidates": [{
+            "symbol": "RIO.L", "currency": "GBp",
+            "historical_close": 6450,
+            "historical_first_friction": {"price": 6460, "pivot_touches": 1,
+                                           "historical_dates": ["2026-10-29"]},
+            "historical_meaningful_resistance": {"price": 7227,
+                                                  "pivot_touches": 5,
+                                                  "historical_dates": ["2026-10-09"]},
+        }]}
+        row = adapt_runtime_report(report, "EU")["rows"][0]
+        self.assertEqual(row["currency"], "GBp")
+        self.assertEqual(row["historical_meaningful_resistance"]["price"], 7227)
+        self.assertFalse(row["currency_unit_verified"])
+        self.assertFalse(row["trade_ready"])
 
     def test_unknown_market_and_malformed_report(self):
         self.assertEqual(adapt_runtime_report({}, "US")["status"], "UNKNOWN")
