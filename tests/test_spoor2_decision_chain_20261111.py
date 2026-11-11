@@ -58,6 +58,18 @@ class DecisionChainTests(unittest.TestCase):
         self.assertIn("SCENARIO_RR_BELOW_TWO", result["blocks"])
         self.assertFalse(result["trade_ready"])
 
+    def test_money_prices_cannot_differ_from_audited_levels(self):
+        for money_field, replacement, expected in (
+            ("ask_usd", 53, "ENTRY_EVIDENCE_MISMATCH"),
+            ("invalidation_usd", 48, "INVALIDATION_EVIDENCE_MISMATCH"),
+            ("exit_bid_usd", 62, "EXIT_RESISTANCE_EVIDENCE_MISMATCH"),
+        ):
+            row = valid_fixture()
+            row["money_inputs"][money_field] = replacement
+            result = evaluate_research_chain(row, now_utc=NOW)
+            self.assertIn(expected, result["blocks"])
+            self.assertFalse(result["trade_ready"])
+
     def test_bad_costs_fail_closed(self):
         row = valid_fixture()
         row["money_inputs"]["buy_fee_eur"] = float("nan")
