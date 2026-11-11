@@ -52,6 +52,7 @@ def inventory_dns_rr_evidence(packet, *, expected_name=None, expected_type=None,
                                 "class":cls,"ttl":ttl,"rdata_length":size,
                                 "wire_start":record_start,"wire_end":pos+size,
                                 "rdata_start":pos,"rdata_end":pos+size,
+                                "wire_sha256":hashlib.sha256(packet[record_start:pos+size]).hexdigest(),
                                 "rdata_sha256":hashlib.sha256(packet[pos:pos+size]).hexdigest()})
                 pos+=size
         if pos!=len(packet): raise ValueError("trailing")
