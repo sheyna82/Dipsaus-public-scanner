@@ -22,12 +22,16 @@ def _utc(value):
     return dt.astimezone(timezone.utc) if dt.tzinfo else None
 
 
-def audit_levels(evidence, *, now_utc, max_age_seconds=900):
+def audit_levels(evidence, *, now_utc, max_age_seconds=900, structure_review_max_age_seconds=86400):
     blocks = []
     if not isinstance(evidence, dict) or not isinstance(now_utc, datetime) or now_utc.tzinfo is None:
         return {"status": "BLOCKED", "blocks": ["INVALID_INPUT"], "trade_ready": False}
     if not isinstance(max_age_seconds, (int, float)) or isinstance(max_age_seconds, bool) or not 0 < max_age_seconds <= 86400:
         return {"status": "BLOCKED", "blocks": ["INVALID_MAX_AGE"], "trade_ready": False}
+    if (not isinstance(structure_review_max_age_seconds, (int, float))
+            or isinstance(structure_review_max_age_seconds, bool)
+            or not 0 < structure_review_max_age_seconds <= 604800):
+        return {"status": "BLOCKED", "blocks": ["INVALID_STRUCTURE_REVIEW_AGE"], "trade_ready": False}
     entry = evidence.get("broker_ask_usd")
     invalidation = evidence.get("invalidation_usd")
     resistance = evidence.get("resistance_usd")
@@ -51,8 +55,18 @@ def audit_levels(evidence, *, now_utc, max_age_seconds=900):
             blocks.append(label.upper() + "_RECORD_MISSING")
         ts = _utc(item.get("checked_utc"))
         age = (now_utc.astimezone(timezone.utc) - ts).total_seconds() if ts else None
-        if age is None or not 0 <= age <= max_age_seconds:
+        allowed_age = max_age_seconds if label == "broker" else structure_review_max_age_seconds
+        if age is None or not 0 <= age <= allowed_age:
             blocks.append(label.upper() + "_STALE_OR_FUTURE")
+        # Historical structure can be old, but its current validity must have
+        # been reviewed and timestamped. checked_utc is the review timestamp,
+        # not the original date of the pivot formation.
+        if label != "broker":
+            if item.get("structure_still_valid") is not True:
+                blocks.append(label.upper() + "_STRUCTURE_NOT_REVALIDATED")
+            formed = _utc(item.get("formed_utc"))
+            if formed is None or ts is None or formed > ts:
+                blocks.append(label.upper() + "_FORMATION_TIME_INVALID")
         observed = item.get("observed_price_usd")
         expected = {"broker": entry, "invalidation": invalidation, "resistance": resistance}[label]
         if not _price(observed) or not _price(expected) or abs(observed - expected) > 0.000001:
