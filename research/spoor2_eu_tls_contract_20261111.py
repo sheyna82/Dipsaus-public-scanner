@@ -35,8 +35,9 @@ def review_eu_tls_contract(url, *, allowed_hosts, resolved_addresses, selected_a
         or not 1 <= timeout_seconds <= 30 or isinstance(max_response_bytes,bool)
         or not isinstance(max_response_bytes,int) or not 1 <= max_response_bytes <= 10485760):
         return {**base, "blocks":["INVALID_RESOURCE_LIMITS"]}
+    # DNS answer ordering is not part of the set identity used for evidence.
     contract = {"url":url, "host":host, "selected_address":address,
-                "validated_addresses":valid, "sni_hostname":host,
+                "validated_addresses":sorted(valid), "sni_hostname":host,
                 "certificate_hostname":host, "certificate_validation_required":True,
                 "redirects_allowed":False, "dns_reresolution_allowed":False,
                 "timeout_seconds":timeout_seconds, "max_response_bytes":max_response_bytes}
