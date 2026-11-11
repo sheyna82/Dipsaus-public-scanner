@@ -78,7 +78,7 @@ def inspect_dns_wire_response(payload, *, expected_name, expected_type=1, expect
                 if rtype==48 and (rdlength<5 or rdata[2]!=3 or rdata[3]==0):
                     return {**base,"blocks":["INVALID_DNSSEC_RECORD_STRUCTURE"]}
                 if rtype==46:
-                    if rdlength<20 or rdata[:2]==b"\\x00\\x00" or rdata[2]==0:
+                    if rdlength<20 or rdata[:2]==bytes.fromhex("0000") or rdata[2]==0:
                         return {**base,"blocks":["INVALID_DNSSEC_RECORD_STRUCTURE"]}
                     # RFC 4034 RRSIG signer name is uncompressed wire-format.
                     signer_offset=18
