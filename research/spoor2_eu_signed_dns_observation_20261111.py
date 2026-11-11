@@ -16,7 +16,8 @@ def _canonical(record):
 def verify_signed_dns_observation(url, *, allowed_hosts, resolved_addresses,
                                   resolver_identity, observation_utc,
                                   signed_record, signature_b64, trusted_public_key_b64,
-                                  verification_time_utc, max_age_seconds=300):
+                                  verification_time_utc, challenge_nonce=None,
+                                  max_age_seconds=300):
     base={"status":"BLOCKED","dnssec_verified":False,"dns_admitted":False,
           "connection_authorized":False,"trade_ready":False,
           "order_placement_enabled":False}
@@ -25,9 +26,13 @@ def verify_signed_dns_observation(url, *, allowed_hosts, resolved_addresses,
         observation_utc=observation_utc)
     if provenance["status"]!="OFFLINE_DNS_PROVENANCE_CLAIMS_ONLY":
         return {**base,"blocks":["INVALID_DNS_PROVENANCE"]}
+    if (not isinstance(challenge_nonce,str) or len(challenge_nonce)<32 or
+        len(challenge_nonce)>128 or any(c not in "0123456789abcdef" for c in challenge_nonce)):
+        return {**base,"blocks":["MISSING_OR_INVALID_DNS_CHALLENGE_NONCE"]}
+    expected={**provenance["record"],"challenge_nonce":challenge_nonce}
     if (not isinstance(signed_record,dict) or
-        set(signed_record)!=set(provenance["record"]) or
-        signed_record!=provenance["record"]):
+        set(signed_record)!=set(expected) or
+        signed_record!=expected):
         return {**base,"blocks":["SIGNED_RECORD_BINDING_MISMATCH"]}
     if type(max_age_seconds) is not int or not 1<=max_age_seconds<=3600:
         return {**base,"blocks":["INVALID_AGE_POLICY"]}
@@ -63,7 +68,8 @@ def verify_signed_dns_observation(url, *, allowed_hosts, resolved_addresses,
     return {**base,"status":"SIGNED_DNS_OBSERVATION_VERIFIED_ONLY",
             "signature_verified":True,"key_trusted":anchor["key_trusted"],
             "dns_admitted":False,
-            "blocks":anchor["blocks"]+["TRUST_KEY_PROVENANCE_NOT_INDEPENDENTLY_ATTESTED",
+            "blocks":anchor["blocks"]+["CHALLENGE_ISSUANCE_AND_SINGLE_USE_NOT_ATTESTED",
+                      "TRUST_KEY_PROVENANCE_NOT_INDEPENDENTLY_ATTESTED",
                       "DNSSEC_NOT_VERIFIED","RESOLVER_INDEPENDENCE_NOT_VERIFIED",
                       "NETWORK_CONNECTION_NOT_AUTHORIZED"],
             "record_sha256":hashlib.sha256(_canonical(signed_record)).hexdigest(),
