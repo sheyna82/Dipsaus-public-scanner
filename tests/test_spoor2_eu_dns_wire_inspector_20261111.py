@@ -87,6 +87,24 @@ class DNSWireInspectorTests(unittest.TestCase):
         result=inspect(packet(answer=a),expected_name="example.com")
         self.assertEqual(result["status"],"DNS_WIREFORMAT_PARSED_ONLY")
         self.assertFalse(result["dnssec_verified"])
+    def test_rrsig_missing_signature_rejected(self):
+        header=struct.pack("!HBBIIIH",1,8,2,60,1000,500,123)
+        a=rr(46,address=header+bytes.fromhex("00"))
+        self.assertEqual(inspect(packet(answer=a),expected_name="example.com")["blocks"],["INVALID_DNSSEC_RECORD_STRUCTURE"])
+    def test_rrsig_compressed_signer_rejected(self):
+        header=struct.pack("!HBBIIIH",1,8,2,60,1000,500,123)
+        a=rr(46,address=header+bytes.fromhex("c00c01"))
+        self.assertEqual(inspect(packet(answer=a),expected_name="example.com")["blocks"],["INVALID_DNSSEC_RECORD_STRUCTURE"])
+    def test_rrsig_valid_structure_still_unverified(self):
+        header=struct.pack("!HBBIIIH",1,8,2,60,1000,500,123)
+        a=rr(46,address=header+bytes.fromhex("00aabb"))
+        result=inspect(packet(answer=a),expected_name="example.com")
+        self.assertEqual(result["status"],"DNS_WIREFORMAT_PARSED_ONLY")
+        self.assertFalse(result["dnssec_verified"])
+    def test_rrsig_missing_type_covered_rejected(self):
+        header=struct.pack("!HBBIIIH",0,8,2,60,1000,500,123)
+        a=rr(46,address=header+bytes.fromhex("00aabb"))
+        self.assertEqual(inspect(packet(answer=a),expected_name="example.com")["blocks"],["INVALID_DNSSEC_RECORD_STRUCTURE"])
     def test_cd_flag_rejected(self):
         self.assertEqual(inspect(packet(flags=0x8190),expected_name="example.com")["blocks"],["DNS_RESPONSE_FLAGS_REJECTED"])
     def test_reserved_z_flag_rejected(self):
