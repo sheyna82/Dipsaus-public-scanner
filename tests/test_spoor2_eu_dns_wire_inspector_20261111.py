@@ -58,6 +58,21 @@ class DNSWireInspectorTests(unittest.TestCase):
         a=rr(1)
         self.assertEqual(a,bytes.fromhex("c00c000100010000001e000401020304"))
         self.assertEqual(len(a),16)
+    def test_ds_missing_digest_rejected(self):
+        a=rr(43,address=bytes.fromhex("12340802"))
+        self.assertEqual(inspect(packet(answer=a),expected_name="example.com")["blocks"],["INVALID_DNSSEC_RECORD_STRUCTURE"])
+    def test_dnskey_missing_key_rejected(self):
+        a=rr(48,address=bytes.fromhex("01000308"))
+        self.assertEqual(inspect(packet(answer=a),expected_name="example.com")["blocks"],["INVALID_DNSSEC_RECORD_STRUCTURE"])
+    def test_rrsig_short_header_rejected(self):
+        a=rr(46,address=bytes(18))
+        self.assertEqual(inspect(packet(answer=a),expected_name="example.com")["blocks"],["INVALID_DNSSEC_RECORD_STRUCTURE"])
+    def test_dnssec_record_parse_does_not_verify(self):
+        a=rr(43,address=bytes.fromhex("12340802aa"))
+        result=inspect(packet(answer=a),expected_name="example.com")
+        self.assertEqual(result["status"],"DNS_WIREFORMAT_PARSED_ONLY")
+        self.assertFalse(result["dnssec_verified"])
+        self.assertFalse(result["dns_admitted"])
     def test_cd_flag_rejected(self):
         self.assertEqual(inspect(packet(flags=0x8190),expected_name="example.com")["blocks"],["DNS_RESPONSE_FLAGS_REJECTED"])
     def test_reserved_z_flag_rejected(self):
