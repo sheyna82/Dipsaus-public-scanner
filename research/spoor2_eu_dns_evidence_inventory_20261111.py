@@ -39,6 +39,7 @@ def inventory_dns_rr_evidence(packet, *, expected_name=None, expected_type=None,
         total_rdata_bytes=0
         for section,count in (("answer",an),("authority",ns),("additional",ar)):
             for _ in range(count):
+                record_start=pos
                 owner,pos=_name(packet,pos)
                 if pos+10>len(packet): raise ValueError("rr header")
                 kind,cls,ttl,size=struct.unpack_from("!HHIH",packet,pos)
@@ -49,6 +50,8 @@ def inventory_dns_rr_evidence(packet, *, expected_name=None, expected_type=None,
                     return {**blocked,"blocks":["DNS_RDATA_BUDGET_EXCEEDED"]}
                 records.append({"section":section,"owner":owner,"type":kind,
                                 "class":cls,"ttl":ttl,"rdata_length":size,
+                                "wire_start":record_start,"wire_end":pos+size,
+                                "rdata_start":pos,"rdata_end":pos+size,
                                 "rdata_sha256":hashlib.sha256(packet[pos:pos+size]).hexdigest()})
                 pos+=size
         if pos!=len(packet): raise ValueError("trailing")
