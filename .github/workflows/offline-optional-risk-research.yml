@@ -1,0 +1,24 @@
+name: Offline optional risk research
+on:
+  pull_request:
+    paths:
+      - 'dipsaus_optional_risk_research.py'
+      - 'test_dipsaus_optional_risk_research.py'
+      - 'dipsaus_risk_profit_research.py'
+      - 'test_dipsaus_risk_profit_research.py'
+      - 'dipsaus_risk_scenario_study.py'
+      - 'test_dipsaus_risk_scenario_study.py'
+      - 'dipsaus_historical_risk_study.py'
+      - 'test_dipsaus_historical_risk_study.py'
+      - '.github/workflows/offline-optional-risk-research.yml'
+permissions:
+  contents: read
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m unittest -v test_dipsaus_optional_risk_research test_dipsaus_risk_profit_research test_dipsaus_risk_scenario_study test_dipsaus_historical_risk_study
