@@ -7,7 +7,7 @@ def packet(flags=0x8180,qd=1,tail=b"",answer=b""):
     return struct.pack("!HHHHHH",42,flags,qd,1 if answer else 0,0,0)+q+answer+tail
 
 
-def rr(record_type, record_class=1, address=b"\\x01\\x02\\x03\\x04"):
+def rr(record_type, record_class=1, address=bytes.fromhex("01020304")):
     """Build an RR with a backward owner-name pointer and exact binary RDATA."""
     if not isinstance(address, bytes):
         raise TypeError("RDATA must be bytes")
