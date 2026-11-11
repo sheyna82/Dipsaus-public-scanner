@@ -73,5 +73,17 @@ class EuropeanResearchChainTests(unittest.TestCase):
         self.assertIn("NONCANONICAL_EVIDENCE",r["blocks"])
         self.assertEqual(r["notification_channel"],"NONE")
 
+    def test_independent_receipt_verification_is_required(self):
+        r=evaluate_eu_research_chain(sample(),now_utc=NOW)
+        self.assertTrue(r["receipt_verification"]["receipt_verified"])
+        self.assertEqual(r["receipt_verification"]["status"],"LOCAL_INTEGRITY_VERIFIED")
+        self.assertFalse(r["trade_ready"])
+
+    def test_receipt_verification_never_removes_external_block(self):
+        r=evaluate_eu_research_chain(sample(),now_utc=NOW)
+        self.assertIn("EXTERNAL_SOURCE_ATTESTATION_NOT_CONNECTED",r["blocks"])
+        self.assertEqual(r["notification_channel"],"RESEARCH_PREVIEW_ONLY")
+        self.assertFalse(r["order_placement_enabled"])
+
 if __name__=="__main__":
     unittest.main()
