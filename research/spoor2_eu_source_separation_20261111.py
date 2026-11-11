@@ -48,6 +48,8 @@ def audit_eu_source_separation(candidate):
                 blocks.append("BROKER_TECHNICAL_SOURCE_NOT_SEPARATED")
             if ask[0] == other[0] and ask[2] == other[2]:
                 blocks.append("SOURCE_RECORD_REUSED")
+            if candidate["ask_evidence"]["source_url"].strip() == candidate[role + "_evidence"]["source_url"].strip():
+                blocks.append("BROKER_TECHNICAL_SOURCE_URL_REUSED")
     blocks.append("EXTERNAL_SOURCE_ATTESTATION_NOT_CONNECTED")
     return {**result, "blocks": list(dict.fromkeys(blocks)),
             "source_separation_metadata_complete": len(identities) == len(ROLES),
