@@ -105,6 +105,17 @@ class DNSWireInspectorTests(unittest.TestCase):
         header=struct.pack("!HBBIIIH",0,8,2,60,1000,500,123)
         a=rr(46,address=header+bytes.fromhex("00aabb"))
         self.assertEqual(inspect(packet(answer=a),expected_name="example.com")["blocks"],["INVALID_DNSSEC_RECORD_STRUCTURE"])
+    def test_rrsig_type_covered_zero_binary_regression(self):
+        header=struct.pack("!HBBIIIH",0,8,2,60,1000,500,123)
+        self.assertEqual(header[:2],bytes.fromhex("0000"))
+        result=inspect(packet(answer=rr(46,address=header+bytes.fromhex("00aabb"))),expected_name="example.com")
+        self.assertEqual(result["blocks"],["INVALID_DNSSEC_RECORD_STRUCTURE"])
+    def test_rrsig_nonzero_type_binary_regression(self):
+        header=struct.pack("!HBBIIIH",1,8,2,60,1000,500,123)
+        self.assertEqual(header[:2],bytes.fromhex("0001"))
+        result=inspect(packet(answer=rr(46,address=header+bytes.fromhex("00aabb"))),expected_name="example.com")
+        self.assertEqual(result["status"],"DNS_WIREFORMAT_PARSED_ONLY")
+        self.assertFalse(result["dnssec_verified"])
     def test_cd_flag_rejected(self):
         self.assertEqual(inspect(packet(flags=0x8190),expected_name="example.com")["blocks"],["DNS_RESPONSE_FLAGS_REJECTED"])
     def test_reserved_z_flag_rejected(self):
