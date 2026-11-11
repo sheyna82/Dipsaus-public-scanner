@@ -26,6 +26,18 @@ class EvidenceInventoryTests(unittest.TestCase):
         self.assertEqual(inventory(packet(record=rr()[:-1],count=1))["status"],"BLOCKED")
     def test_trailing_bytes_fails_closed(self):
         self.assertEqual(inventory(packet(trailing=b"x"))["status"],"BLOCKED")
+    def test_question_metadata_preserved(self):
+        x=inventory(packet())
+        self.assertEqual(x["question"],{"name":"example.com","type":1,"class":1})
+        self.assertFalse(x["dns_admitted"])
+    def test_checking_disabled_flag_rejected(self):
+        raw=bytearray(packet())
+        raw[3]|=0x10
+        self.assertEqual(inventory(bytes(raw))["blocks"],["INVALID_HEADER"])
+    def test_reserved_flag_rejected(self):
+        raw=bytearray(packet())
+        raw[3]|=0x40
+        self.assertEqual(inventory(bytes(raw))["blocks"],["INVALID_HEADER"])
     def test_nonbinary_input_fails_closed(self):
         self.assertEqual(inventory("not bytes")["status"],"BLOCKED")
     def test_duplicate_records_retained_as_observations(self):
