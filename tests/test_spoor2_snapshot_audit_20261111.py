@@ -31,6 +31,32 @@ class SnapshotAuditTests(unittest.TestCase):
         self.assertEqual(result["sources"]["EU"]["reports"][0]["status"], "INVALID_REPORT")
         self.assertFalse(result["trade_ready"])
 
+    def test_pinned_fingerprint_mismatch_blocks_report(self):
+        us_bytes = b'{"latest_us_reports":{"batch_1.json":{"candidates":[]}}}'
+        eu_bytes = b'{"latest_eu_report":{"candidates":[]}}'
+        expected = {
+            "US": {"sha256": "0" * 64, "size_bytes": len(us_bytes)},
+            "EU": {"sha256": hashlib.sha256(eu_bytes).hexdigest(),
+                   "size_bytes": len(eu_bytes)},
+        }
+        result = audit_snapshots(us_bytes, eu_bytes, expected)
+        self.assertEqual(result["sources"]["US"]["status"],
+                         "SOURCE_FINGERPRINT_MISMATCH")
+        self.assertEqual(result["sources"]["US"]["reports"], [])
+        self.assertEqual(result["sources"]["EU"]["status"], "SCHEMA_AUDIT_ONLY")
+
+    def test_pinned_fingerprint_accepts_exact_bytes(self):
+        us_bytes = b'{"latest_us_reports":{"batch_1.json":{"candidates":[]}}}'
+        eu_bytes = b'{"latest_eu_report":{"candidates":[]}}'
+        expected = {
+            market: {"sha256": hashlib.sha256(payload).hexdigest(),
+                     "size_bytes": len(payload)}
+            for market, payload in (("US", us_bytes), ("EU", eu_bytes))
+        }
+        result = audit_snapshots(us_bytes, eu_bytes, expected)
+        self.assertEqual(result["sources"]["US"]["status"], "SCHEMA_AUDIT_ONLY")
+        self.assertEqual(result["sources"]["EU"]["status"], "SCHEMA_AUDIT_ONLY")
+
     def test_bad_us_report_does_not_crash(self):
         result = audit_snapshots(b'{"latest_us_reports":{"batch_1.json":null}}',
                                  b'{"latest_eu_report":{"candidates":[]}}')
