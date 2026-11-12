@@ -59,6 +59,27 @@ class DecisionChainTests(unittest.TestCase):
         self.assertIn("EXTERNAL_INSTRUMENT_ATTESTATION_NOT_CONNECTED", result["blocks"])
         self.assertFalse(result["trade_ready"])
 
+    def test_missing_signed_evidence_blocks_chain(self):
+        result = evaluate_research_chain(valid_fixture(), now_utc=NOW)
+        self.assertIn("INSTRUMENT_SIGNED_EVIDENCE_MISSING", result["blocks"])
+        self.assertFalse(result["instrument_signature_audit"]["source_attested"])
+        self.assertFalse(result["trade_ready"])
+
+    def test_self_claimed_signature_does_not_authorize_chain(self):
+        row = valid_fixture()
+        row["instrument_signed_evidence"] = {
+            "signed_record": {key: row[key] for key in
+                              ("symbol", "market", "venue_mic", "isin")},
+            "signature_b64": "not-a-signature",
+            "signer_public_key_b64": "not-a-key",
+            "signature_verified": True,
+            "source_attested": True,
+        }
+        result = evaluate_research_chain(row, now_utc=NOW)
+        self.assertIn("INVALID_INSTRUMENT_SIGNATURE_ENCODING", result["blocks"])
+        self.assertFalse(result["instrument_signature_audit"]["source_attested"])
+        self.assertFalse(result["offline_notification_route"]["send_enabled"])
+
     def test_even_claimed_verified_stays_research(self):
         result = evaluate_research_chain(valid_fixture(), now_utc=NOW)
         self.assertEqual(result["notification_channel"], "RESEARCH")
