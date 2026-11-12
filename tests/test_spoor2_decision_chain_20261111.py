@@ -37,6 +37,14 @@ class DecisionChainTests(unittest.TestCase):
         self.assertIn("INDEPENDENT_TRADE_ATTESTATION_NOT_CONNECTED", result["blocks"])
         self.assertIn("GEEN KOOP", result["notification_subject"])
 
+    def test_decision_chain_never_routes_to_live_ntfy(self):
+        result = evaluate_research_chain(valid_fixture(), now_utc=NOW)
+        route = result["offline_notification_route"]
+        self.assertEqual(route["route"], "RESEARCH_ONLY")
+        self.assertFalse(route["send_enabled"])
+        self.assertFalse(route["topic_configured"])
+        self.assertFalse(result["trade_ready"])
+
     def test_missing_evidence_stays_research(self):
         row = valid_fixture()
         row["technical_evidence"].pop("resistance_evidence")
