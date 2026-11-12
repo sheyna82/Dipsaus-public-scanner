@@ -229,6 +229,33 @@ class DecisionChainTests(unittest.TestCase):
         self.assertIn("NET_SCENARIO_RR_BELOW_TWO", result["blocks"])
         self.assertFalse(result["order_placement_enabled"])
 
+    def test_net_rr_just_below_two_cannot_round_into_qualification(self):
+        row = valid_fixture()
+        row["market"] = "US"
+        row["quote_currency"] = "USD"
+        # Find a resistance where exact net R/R is just below two,
+        # while the four-decimal display value rounds to 2.0000.
+        from research.spoor2_candidate_levels_20261111 import money_scenario
+        low, high = 58.0, 65.0
+        for _ in range(60):
+            mid = (low + high) / 2
+            inputs = {**row["money_inputs"], "exit_bid_usd": mid}
+            value = money_scenario(**inputs)["net_reference_rr_unrounded"]
+            if value < 1.99999:
+                low = mid
+            else:
+                high = mid
+        target = (low + high) / 2
+        row["technical_evidence"]["resistance_usd"] = target
+        row["technical_evidence"]["resistance_evidence"]["observed_price_usd"] = target
+        row["money_inputs"]["exit_bid_usd"] = target
+        result = evaluate_research_chain(row, now_utc=NOW)
+        scenario = result["money_scenario"]
+        self.assertLess(scenario["net_reference_rr_unrounded"], 2)
+        self.assertEqual(scenario["net_reference_rr_after_friction"], 2.0)
+        self.assertIn("NET_SCENARIO_RR_BELOW_TWO", result["blocks"])
+        self.assertFalse(result["trade_ready"])
+
     def test_money_prices_cannot_differ_from_audited_levels(self):
         for money_field, replacement, expected in (
             ("ask_usd", 53, "ENTRY_EVIDENCE_MISMATCH"),
