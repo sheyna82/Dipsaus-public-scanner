@@ -26,6 +26,8 @@ def audit_instrument_source_attestation(attestation):
         return {**base, "blocks": ["INSTRUMENT_SIGNER_KEY_INVALID"]}
     if len(raw) != 32:
         return {**base, "blocks": ["INSTRUMENT_SIGNER_KEY_INVALID"]}
+    if base64.b64encode(raw).decode("ascii") != key:
+        return {**base, "blocks": ["INSTRUMENT_SIGNER_KEY_NONCANONICAL"]}
     fingerprint = hashlib.sha256(raw).hexdigest()
     if fingerprint not in APPROVED_INSTRUMENT_SIGNER_KEY_SHA256:
         return {**base, "blocks": ["INSTRUMENT_SIGNER_NOT_INDEPENDENTLY_APPROVED"],
