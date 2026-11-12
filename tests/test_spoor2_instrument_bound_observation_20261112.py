@@ -85,8 +85,11 @@ class BoundInstrumentObservationTests(unittest.TestCase):
             format=serialization.PublicFormat.Raw)).decode("ascii")
         def alternate(encoded):
             alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-            index = alphabet.index(encoded[-2])
-            return encoded[:-2] + alphabet[index ^ 1] + "="
+            padding = len(encoded) - len(encoded.rstrip("="))
+            self.assertIn(padding, (1, 2))
+            position = len(encoded) - padding - 1
+            index = alphabet.index(encoded[position])
+            return encoded[:position] + alphabet[index ^ 1] + encoded[position + 1:]
         self.assertEqual(base64.b64decode(key), base64.b64decode(alternate(key)))
         self.assertEqual(base64.b64decode(signature), base64.b64decode(alternate(signature)))
         for sig, pub in ((alternate(signature), key), (signature, alternate(key))):
