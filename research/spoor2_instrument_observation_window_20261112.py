@@ -17,6 +17,9 @@ def audit_instrument_observation_window(observed_utc, verification_utc,
         32 <= len(challenge_nonce) <= 128
     ) or any(c not in "0123456789abcdef" for c in challenge_nonce):
         return {**base, "blocks": ["INSTRUMENT_CHALLENGE_INVALID"]}
+    if (isinstance(observed_utc, str) and len(observed_utc) > 64 or
+            isinstance(verification_utc, str) and len(verification_utc) > 64):
+        return {**base, "blocks": ["INSTRUMENT_OBSERVATION_TIME_OVERSIZED"]}
     try:
         if not isinstance(observed_utc, str) or not isinstance(verification_utc, str):
             raise ValueError("missing timestamps")
