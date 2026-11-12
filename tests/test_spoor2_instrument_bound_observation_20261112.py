@@ -62,5 +62,15 @@ class BoundInstrumentObservationTests(unittest.TestCase):
         self.assertIn("INVALID_BOUND_INSTRUMENT_RECORD", r["blocks"])
 
 
+    def test_oversized_bound_identity_blocks_before_time_window(self):
+        oversized = {**RECORD, "symbol": "X" * 100000}
+        candidate = {**IDENTITY, "symbol": oversized["symbol"]}
+        r = verify(candidate, oversized, "", "",
+                   verification_utc="invalid-time")
+        self.assertIn("BOUND_INSTRUMENT_RECORD_OVERSIZED", r["blocks"])
+        self.assertFalse(r["signature_verified"])
+        self.assertFalse(r["trade_ready"])
+        self.assertFalse(r["order_placement_enabled"])
+
 if __name__ == "__main__":
     unittest.main()
