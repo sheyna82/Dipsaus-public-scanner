@@ -35,5 +35,11 @@ class InstrumentObservationWindowTests(unittest.TestCase):
                       audit(OBS, OBS, NONCE, max_age_seconds=True)["blocks"])
 
 
+    def test_oversized_timestamp_is_rejected_before_parse(self):
+        r = audit("2026-11-12T10:00:00Z" + "0" * 100000, OBS, NONCE)
+        self.assertIn("INSTRUMENT_OBSERVATION_TIME_OVERSIZED", r["blocks"])
+        self.assertFalse(r["freshness_attested"])
+
+
 if __name__ == "__main__":
     unittest.main()
