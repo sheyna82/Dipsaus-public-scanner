@@ -81,6 +81,13 @@ def evaluate_research_chain(candidate, *, now_utc):
                     blocks.append("NET_PROFIT_BELOW_150")
                 if scenario.get("reference_rr", 0) < 2:
                     blocks.append("SCENARIO_RR_BELOW_TWO")
+                # A gross 2R is not sufficient once execution friction is
+                # included. Missing or invalid net R/R fails closed.
+                net_rr = scenario.get("net_reference_rr_after_friction")
+                if (not isinstance(net_rr, (int, float))
+                        or isinstance(net_rr, bool)
+                        or not math.isfinite(net_rr) or net_rr < 2):
+                    blocks.append("NET_SCENARIO_RR_BELOW_TWO")
     # Never accept claimed trade_ready or claimed independent verification
     # from a historical dossier. Real broker/event/portfolio attestations
     # require a separate trusted source and future integration review.
