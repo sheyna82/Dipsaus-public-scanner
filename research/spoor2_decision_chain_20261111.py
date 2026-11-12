@@ -5,6 +5,7 @@ untrusted research data, including any claimed verified/trade_ready booleans.
 No network, broker API, ntfy sender, secrets, or order placement.
 """
 import math
+from datetime import datetime, timedelta
 from research.spoor2_level_evidence_audit_20261111 import audit_levels
 from research.spoor2_source_independence_20261111 import audit_source_independence
 from research.spoor2_instrument_identity_20261112 import audit_instrument_identity
@@ -18,6 +19,11 @@ from research.spoor2_notification_policy_20261111 import (
 def evaluate_research_chain(candidate, *, now_utc):
     if not isinstance(candidate, dict):
         return {"status": "BLOCKED", "blocks": ["INVALID_CANDIDATE"],
+                "notification_channel": "NONE", "trade_ready": False,
+                "order_placement_enabled": False}
+    if (not isinstance(now_utc, datetime) or now_utc.tzinfo is None
+            or now_utc.utcoffset() != timedelta(0)):
+        return {"status": "BLOCKED", "blocks": ["INVALID_UTC_TIME_REFERENCE"],
                 "notification_channel": "NONE", "trade_ready": False,
                 "order_placement_enabled": False}
     symbol = candidate.get("symbol")
