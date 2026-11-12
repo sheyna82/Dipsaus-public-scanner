@@ -41,5 +41,29 @@ class InstrumentObservationWindowTests(unittest.TestCase):
         self.assertFalse(r["freshness_attested"])
 
 
+    def test_noncanonical_utc_timestamps_block(self):
+        invalid = (
+            "2026-11-12 10:00:00Z",
+            "2026-11-12t10:00:00Z",
+            "20261112T100000Z",
+            "2026-11-12T10:00Z",
+            "2026-11-12T10:00:00.1234567Z",
+            "2026-11-12T10:00:00+00:00",
+            "2026-11-12T10:00:00Z ",
+        )
+        for timestamp in invalid:
+            with self.subTest(timestamp=timestamp):
+                r = audit(timestamp, OBS, NONCE)
+                self.assertIn("INSTRUMENT_OBSERVATION_TIME_INVALID", r["blocks"])
+                self.assertFalse(r["freshness_attested"])
+                self.assertFalse(r["trade_ready"])
+
+    def test_canonical_fractional_utc_stays_blocked_for_replay(self):
+        r = audit("2026-11-12T10:00:00.123456Z",
+                  "2026-11-12T10:00:01.123456Z", NONCE)
+        self.assertEqual(r["status"], "TIME_WINDOW_CLAIMS_CONSISTENT_ONLY")
+        self.assertFalse(r["replay_prevented"])
+        self.assertFalse(r["order_placement_enabled"])
+
 if __name__ == "__main__":
     unittest.main()
