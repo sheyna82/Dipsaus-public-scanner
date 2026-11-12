@@ -41,16 +41,19 @@ def audit_source_independence(evidence):
                 or re.search(r'%(?:0[0-9A-Fa-f]|1[0-9A-Fa-f]|7[Ff])', url)):
             blocks.append(role.upper() + "_SOURCE_URL_INVALID")
             continue
-        parsed = urlparse(url)
-        if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
-            blocks.append(role.upper() + "_SOURCE_URL_INVALID")
-            continue
-        records[role] = (provider.strip().lower(), family.strip().lower(), record_id.strip())
         try:
+            parsed = urlparse(url)
+            host_name = parsed.hostname
             port = parsed.port
+            username = parsed.username
+            password = parsed.password
         except ValueError:
             blocks.append(role.upper() + "_SOURCE_URL_INVALID")
             continue
+        if parsed.scheme != "https" or not host_name or username or password:
+            blocks.append(role.upper() + "_SOURCE_URL_INVALID")
+            continue
+        records[role] = (provider.strip().lower(), family.strip().lower(), record_id.strip())
         # Canonicalize harmless URL variations without collapsing distinct
         # query-addressed exchange records into the same evidence location.
         host = parsed.hostname.lower().rstrip(".")
