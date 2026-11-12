@@ -35,6 +35,11 @@ def audit_source_independence(evidence):
         if not all(isinstance(v, str) and v.strip() for v in (provider, family, record_id, url)):
             blocks.append(role.upper() + "_PROVENANCE_INCOMPLETE")
             continue
+        # URL parsers may silently strip tabs, newlines, or surrounding
+        # whitespace. Reject them rather than auditing a modified address.
+        if url != url.strip() or any(ord(ch) < 32 or ord(ch) == 127 for ch in url):
+            blocks.append(role.upper() + "_SOURCE_URL_INVALID")
+            continue
         # Malformed percent escapes and encoded controls make the identity
         # of a URL ambiguous across clients and must fail closed.
         if (re.search(r'%(?![0-9A-Fa-f]{2})', url)
