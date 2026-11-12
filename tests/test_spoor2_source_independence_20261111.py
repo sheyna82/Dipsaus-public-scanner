@@ -192,6 +192,29 @@ class SourceIndependenceTests(unittest.TestCase):
         self.assertIn("BROKER_SOURCE_URL_INVALID", result["blocks"])
         self.assertFalse(result["trade_ready"])
 
+    def test_raw_newline_in_source_url_fails_closed(self):
+        data = sample()
+        data["broker_evidence"]["source_url"] = (
+            "https://example.org/quote\n?symbol=ABC")
+        result = audit_source_independence(data)
+        self.assertIn("BROKER_SOURCE_URL_INVALID", result["blocks"])
+        self.assertFalse(result["trade_ready"])
+
+    def test_surrounding_url_whitespace_fails_closed(self):
+        data = sample()
+        data["broker_evidence"]["source_url"] = (
+            " https://example.org/quote ")
+        result = audit_source_independence(data)
+        self.assertIn("BROKER_SOURCE_URL_INVALID", result["blocks"])
+        self.assertEqual(result["status"], "BLOCKED")
+
+    def test_raw_delete_control_in_url_fails_closed(self):
+        data = sample()
+        data["broker_evidence"]["source_url"] = (
+            "https://example.org/quote\x7f")
+        self.assertIn("BROKER_SOURCE_URL_INVALID",
+                      audit_source_independence(data)["blocks"])
+
     def test_bogus_input_fails_closed(self):
         self.assertEqual(audit_source_independence(None)["status"], "BLOCKED")
 
