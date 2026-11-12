@@ -98,5 +98,38 @@ class SignedInstrumentRecordTests(unittest.TestCase):
                     self.assertFalse(r["trade_ready"])
                     self.assertFalse(r["order_placement_enabled"])
 
+    def test_unicode_normalization_does_not_change_signed_identity(self):
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+        from cryptography.hazmat.primitives import serialization
+        import unicodedata
+        private = Ed25519PrivateKey.generate()
+        nfc = "\\u00e9".encode("ascii").decode("unicode_escape")
+        nfd = unicodedata.normalize("NFD", nfc)
+        self.assertNotEqual(nfc, nfd)
+        original = {**IDENTITY, "symbol": "T" + nfc}
+        changed = {**IDENTITY, "symbol": "T" + nfd}
+        record = original
+        payload = json.dumps(record, sort_keys=True, separators=(",", ":"),
+                             ensure_ascii=True).encode("ascii")
+        sig = base64.b64encode(private.sign(payload)).decode("ascii")
+        key = base64.b64encode(private.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw)).decode("ascii")
+        verified = verify_instrument_signed_record(original, record, sig, key)
+        self.assertTrue(verified["signature_verified"])
+        self.assertFalse(verified["source_attested"])
+        self.assertFalse(verified["trade_ready"])
+        self.assertFalse(verified["order_placement_enabled"])
+        mismatched = verify_instrument_signed_record(changed, record, sig, key)
+        self.assertIn("INSTRUMENT_SIGNED_RECORD_BINDING_MISMATCH", mismatched["blocks"])
+        self.assertFalse(mismatched["signature_verified"])
+        self.assertFalse(mismatched["trade_ready"])
+        self.assertFalse(mismatched["order_placement_enabled"])
+        tampered = verify_instrument_signed_record(changed, changed, sig, key)
+        self.assertIn("INSTRUMENT_SIGNATURE_INVALID", tampered["blocks"])
+        self.assertFalse(tampered["signature_verified"])
+        self.assertFalse(tampered["trade_ready"])
+        self.assertFalse(tampered["order_placement_enabled"])
+
 if __name__ == "__main__":
     unittest.main()
