@@ -178,6 +178,20 @@ class SourceIndependenceTests(unittest.TestCase):
         result = audit_source_independence(data)
         self.assertNotIn("BROKER_SOURCE_URL_INVALID", result["blocks"])
 
+    def test_unclosed_ipv6_authority_fails_closed_without_exception(self):
+        data = sample()
+        data["broker_evidence"]["source_url"] = "https://[::1/quote"
+        result = audit_source_independence(data)
+        self.assertIn("BROKER_SOURCE_URL_INVALID", result["blocks"])
+        self.assertEqual(result["status"], "BLOCKED")
+
+    def test_invalid_ipv6_authority_fails_closed_without_exception(self):
+        data = sample()
+        data["broker_evidence"]["source_url"] = "https://[not-ipv6]/quote"
+        result = audit_source_independence(data)
+        self.assertIn("BROKER_SOURCE_URL_INVALID", result["blocks"])
+        self.assertFalse(result["trade_ready"])
+
     def test_bogus_input_fails_closed(self):
         self.assertEqual(audit_source_independence(None)["status"], "BLOCKED")
 
