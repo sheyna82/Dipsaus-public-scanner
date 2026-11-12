@@ -35,6 +35,12 @@ def audit_source_independence(evidence):
         if not all(isinstance(v, str) and v.strip() for v in (provider, family, record_id, url)):
             blocks.append(role.upper() + "_PROVENANCE_INCOMPLETE")
             continue
+        # Malformed percent escapes and encoded controls make the identity
+        # of a URL ambiguous across clients and must fail closed.
+        if (re.search(r'%(?![0-9A-Fa-f]{2})', url)
+                or re.search(r'%(?:0[0-9A-Fa-f]|1[0-9A-Fa-f]|7[Ff])', url)):
+            blocks.append(role.upper() + "_SOURCE_URL_INVALID")
+            continue
         parsed = urlparse(url)
         if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
             blocks.append(role.upper() + "_SOURCE_URL_INVALID")
