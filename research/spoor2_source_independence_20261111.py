@@ -5,6 +5,17 @@ inspectable source record, a distinct provider identity, and a separate
 source family for broker quote vs technical levels. No network or trades.
 """
 from urllib.parse import urlparse, parse_qsl, urlencode
+import re
+
+_UNRESERVED = frozenset('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~')
+
+def _canonical_path(path):
+    # RFC 3986: decode only unreserved octets; encoded slash remains distinct.
+    def normalize(match):
+        char = chr(int(match.group(1), 16))
+        return char if char in _UNRESERVED else '%' + match.group(1).upper()
+    return re.sub(r'%([0-9a-fA-F]{2})', normalize, path).rstrip('/') or '/'
+
 
 def audit_source_independence(evidence):
     blocks = []
@@ -42,10 +53,10 @@ def audit_source_independence(evidence):
         record_locations[role] = (
             record_id.strip(),
             authority,
-            parsed.path.rstrip("/") or "/",
+            _canonical_path(parsed.path),
             query,
         )
-    if len(records) == 3:
+    if len(records) == 3 and len(record_locations) == 3:
         broker, invalidation, resistance = (records[k] for k in ("broker", "invalidation", "resistance"))
         if broker[0] in (invalidation[0], resistance[0]):
             blocks.append("BROKER_TECHNICAL_PROVIDER_NOT_INDEPENDENT")
