@@ -229,6 +229,24 @@ class DecisionChainTests(unittest.TestCase):
         self.assertIn("NET_SCENARIO_RR_BELOW_TWO", result["blocks"])
         self.assertFalse(result["order_placement_enabled"])
 
+    def test_gross_rr_just_below_two_cannot_round_into_qualification(self):
+        row = valid_fixture()
+        row["market"] = "US"
+        row["quote_currency"] = "USD"
+        ask = row["money_inputs"]["ask_usd"]
+        invalidation = row["money_inputs"]["invalidation_usd"]
+        # Gross RR = 1.99999, which rounds to 2.0000 for display.
+        resistance = ask + 1.99999 * (ask - invalidation)
+        row["technical_evidence"]["resistance_usd"] = resistance
+        row["technical_evidence"]["resistance_evidence"]["observed_price_usd"] = resistance
+        row["money_inputs"]["exit_bid_usd"] = resistance
+        result = evaluate_research_chain(row, now_utc=NOW)
+        scenario = result["money_scenario"]
+        self.assertLess(scenario["reference_rr_unrounded"], 2)
+        self.assertEqual(scenario["reference_rr"], 2.0)
+        self.assertIn("SCENARIO_RR_BELOW_TWO", result["blocks"])
+        self.assertFalse(result["trade_ready"])
+
     def test_net_rr_just_below_two_cannot_round_into_qualification(self):
         row = valid_fixture()
         row["market"] = "US"
