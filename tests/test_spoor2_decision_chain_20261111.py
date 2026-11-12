@@ -168,6 +168,31 @@ class DecisionChainTests(unittest.TestCase):
         self.assertIn("QUOTE_CURRENCY_NOT_USD", result["blocks"])
         self.assertFalse(result["trade_ready"])
 
+    def test_undeclared_market_and_currency_fail_closed(self):
+        row = valid_fixture()
+        result = evaluate_research_chain(row, now_utc=NOW)
+        self.assertIn("MARKET_NOT_DECLARED_FOR_USD_CHAIN", result["blocks"])
+        self.assertIn("QUOTE_CURRENCY_NOT_DECLARED_FOR_USD_CHAIN", result["blocks"])
+        self.assertFalse(result["trade_ready"])
+        self.assertFalse(result["offline_notification_route"]["send_enabled"])
+
+    def test_explicit_usd_market_avoids_declaration_blocks(self):
+        row = valid_fixture()
+        row["market"] = "US"
+        row["quote_currency"] = "USD"
+        result = evaluate_research_chain(row, now_utc=NOW)
+        self.assertNotIn("MARKET_NOT_DECLARED_FOR_USD_CHAIN", result["blocks"])
+        self.assertNotIn("QUOTE_CURRENCY_NOT_DECLARED_FOR_USD_CHAIN", result["blocks"])
+        self.assertIn("INDEPENDENT_TRADE_ATTESTATION_NOT_CONNECTED", result["blocks"])
+        self.assertFalse(result["trade_ready"])
+
+    def test_partially_declared_currency_fails_closed(self):
+        row = valid_fixture()
+        row["market"] = "US"
+        result = evaluate_research_chain(row, now_utc=NOW)
+        self.assertIn("QUOTE_CURRENCY_NOT_DECLARED_FOR_USD_CHAIN", result["blocks"])
+        self.assertFalse(result["order_placement_enabled"])
+
     def test_missing_money_inputs_stays_research(self):
         row = valid_fixture()
         row.pop("money_inputs")
