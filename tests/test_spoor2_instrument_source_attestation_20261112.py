@@ -40,5 +40,21 @@ class InstrumentAttestationTests(unittest.TestCase):
         self.assertFalse(r["source_attested"])
 
 
+    def test_noncanonical_signer_key_padding_bits_block(self):
+        canonical = base64.b64encode(b"a" * 32).decode()
+        self.assertTrue(canonical.endswith("E="))
+        noncanonical = canonical[:-2] + "F="
+        self.assertEqual(base64.b64decode(noncanonical, validate=True),
+                         base64.b64decode(canonical, validate=True))
+        r = audit_instrument_source_attestation({
+            "signer_public_key_b64": noncanonical,
+            "source_attested": True,
+            "trade_ready": True,
+        })
+        self.assertIn("INSTRUMENT_SIGNER_KEY_NONCANONICAL", r["blocks"])
+        self.assertFalse(r["source_attested"])
+        self.assertFalse(r["trade_ready"])
+        self.assertFalse(r["order_placement_enabled"])
+
 if __name__ == "__main__":
     unittest.main()
