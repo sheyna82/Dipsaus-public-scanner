@@ -49,6 +49,29 @@ class NotificationPolicyTests(unittest.TestCase):
         self.assertIn("GECONTROLEERDE INSTAPCHECK",
                       policy.notification_subject("BTE", qualified))
 
+    def test_offline_topics_are_logically_separate(self):
+        research=policy.offline_notification_route(
+            policy.classify_notification({"phase":"BREAKOUT-SEEN"}))
+        review=policy.offline_notification_route(
+            policy.classify_notification(self.qualified()))
+        self.assertEqual(research["route"],"RESEARCH_ONLY")
+        self.assertEqual(review["route"],"INDEPENDENT_REVIEW_ONLY")
+        self.assertNotEqual(research["route"],review["route"])
+        for result in (research,review):
+            self.assertFalse(result["send_enabled"])
+            self.assertFalse(result["topic_configured"])
+            self.assertFalse(result["order_placement_enabled"])
+
+    def test_untrusted_classifications_cannot_route(self):
+        for item in (None,{},{"channel":"RESEARCH","qualified":True},
+                     {"channel":"TRADE_QUALIFIED_REVIEW","qualified":True},
+                     {"channel":"TRADE_QUALIFIED_REVIEW",
+                      "qualified":True,"order_placement_enabled":True}):
+            with self.subTest(item=item):
+                r=policy.offline_notification_route(item)
+                self.assertEqual(r["route"],"NONE")
+                self.assertFalse(r["send_enabled"])
+
     def test_unknown_input_is_not_sent(self):
         self.assertEqual(policy.classify_notification({})["channel"], "NONE")
         self.assertEqual(policy.classify_notification(None)["channel"], "NONE")
