@@ -32,6 +32,9 @@ def verify_bound_instrument_observation(candidate, signed_record, signature_b64,
         for k in ("symbol", "market", "venue_mic", "isin")
     ):
         return {**base, "blocks": ["BOUND_INSTRUMENT_IDENTITY_MISMATCH"]}
+    if any(isinstance(signed_record.get(k), str) and len(signed_record[k]) > 128
+           for k in ("observed_utc", "challenge_nonce")):
+        return {**base, "blocks": ["BOUND_INSTRUMENT_RECORD_OVERSIZED"]}
     window = audit_instrument_observation_window(
         signed_record["observed_utc"], verification_utc,
         signed_record["challenge_nonce"], max_age_seconds=max_age_seconds)
