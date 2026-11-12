@@ -4,7 +4,7 @@ A source label or verified flag is not independent evidence. Require an
 inspectable source record, a distinct provider identity, and a separate
 source family for broker quote vs technical levels. No network or trades.
 """
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qsl, urlencode
 
 def audit_source_independence(evidence):
     blocks = []
@@ -29,7 +29,22 @@ def audit_source_independence(evidence):
             blocks.append(role.upper() + "_SOURCE_URL_INVALID")
             continue
         records[role] = (provider.strip().lower(), family.strip().lower(), record_id.strip())
-        record_locations[role] = (record_id.strip(), parsed.hostname.lower(), parsed.path.rstrip("/"))
+        try:
+            port = parsed.port
+        except ValueError:
+            blocks.append(role.upper() + "_SOURCE_URL_INVALID")
+            continue
+        # Canonicalize harmless URL variations without collapsing distinct
+        # query-addressed exchange records into the same evidence location.
+        host = parsed.hostname.lower().rstrip(".")
+        authority = host if port in (None, 443) else host + ":" + str(port)
+        query = urlencode(sorted(parse_qsl(parsed.query, keep_blank_values=True)))
+        record_locations[role] = (
+            record_id.strip(),
+            authority,
+            parsed.path.rstrip("/") or "/",
+            query,
+        )
     if len(records) == 3:
         broker, invalidation, resistance = (records[k] for k in ("broker", "invalidation", "resistance"))
         if broker[0] in (invalidation[0], resistance[0]):
