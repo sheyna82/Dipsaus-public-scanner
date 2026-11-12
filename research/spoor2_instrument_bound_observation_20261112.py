@@ -53,6 +53,9 @@ def verify_bound_instrument_observation(candidate, signed_record, signature_b64,
     try:
         signature = base64.b64decode(signature_b64, validate=True)
         key = base64.b64decode(signer_public_key_b64, validate=True)
+        if (base64.b64encode(signature).decode("ascii") != signature_b64 or
+                base64.b64encode(key).decode("ascii") != signer_public_key_b64):
+            raise ValueError("noncanonical base64")
         if len(signature) != 64 or len(key) != 32:
             raise ValueError("wrong length")
     except (ValueError, base64.binascii.Error):
