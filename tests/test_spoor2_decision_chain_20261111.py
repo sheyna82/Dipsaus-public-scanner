@@ -120,6 +120,34 @@ class DecisionChainTests(unittest.TestCase):
                 2026, 11, 11, 11, tzinfo=timezone(timedelta(hours=1))))
         self.assertIn("INVALID_UTC_TIME_REFERENCE", result["blocks"])
 
+    def test_malformed_bound_observation_types_fail_closed(self):
+        for malformed in (None, True, 123, [], "signed", {"signed_record": []},
+                          {"signed_record": {"symbol": []}},
+                          {"signed_record": {"symbol": "TEST"},
+                           "signature_b64": [], "signer_public_key_b64": {}}):
+            with self.subTest(malformed=repr(malformed)):
+                row = valid_fixture()
+                row["instrument_bound_observation"] = malformed
+                result = evaluate_research_chain(row, now_utc=NOW)
+                self.assertFalse(result["trade_ready"])
+                self.assertFalse(result["order_placement_enabled"])
+                self.assertTrue(result["instrument_bound_observation_audit"]["blocks"])
+                self.assertFalse(result["offline_notification_route"]["send_enabled"])
+
+    def test_malformed_signed_evidence_types_fail_closed(self):
+        for malformed in (None, True, 123, [], "signed", {"signed_record": []},
+                          {"signed_record": {"symbol": []}},
+                          {"signed_record": {"symbol": "TEST"},
+                           "signature_b64": [], "signer_public_key_b64": {}}):
+            with self.subTest(malformed=repr(malformed)):
+                row = valid_fixture()
+                row["instrument_signed_evidence"] = malformed
+                result = evaluate_research_chain(row, now_utc=NOW)
+                self.assertFalse(result["trade_ready"])
+                self.assertFalse(result["order_placement_enabled"])
+                self.assertTrue(result["instrument_signature_audit"]["blocks"])
+                self.assertFalse(result["offline_notification_route"]["send_enabled"])
+
     def test_even_claimed_verified_stays_research(self):
         result = evaluate_research_chain(valid_fixture(), now_utc=NOW)
         self.assertEqual(result["notification_channel"], "RESEARCH")
