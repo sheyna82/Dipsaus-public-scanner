@@ -65,6 +65,40 @@ class SourceIndependenceTests(unittest.TestCase):
         self.assertNotIn("SOURCE_RECORD_REUSED", result["blocks"])
         self.assertFalse(result["trade_ready"])
 
+    def test_url_host_case_default_port_and_fragment_cannot_mask_reuse(self):
+        data = sample()
+        data["broker_evidence"]["source_url"] = (
+            "https://EXAMPLE.ORG:443/record/broker/#first")
+        data["resistance_evidence"]["source_url"] = (
+            "https://example.org/record/broker#second")
+        self.assertIn("SOURCE_RECORD_REUSED",
+                      audit_source_independence(data)["blocks"])
+
+    def test_query_parameter_order_cannot_mask_reuse(self):
+        data = sample()
+        data["broker_evidence"]["source_url"] = (
+            "https://example.org/history?symbol=ABC&date=2026-11-11")
+        data["resistance_evidence"]["source_url"] = (
+            "https://example.org/history?date=2026-11-11&symbol=ABC")
+        self.assertIn("SOURCE_RECORD_REUSED",
+                      audit_source_independence(data)["blocks"])
+
+    def test_distinct_query_addressed_records_are_not_collapsed(self):
+        data = sample()
+        data["broker_evidence"]["source_url"] = (
+            "https://example.org/history?record=broker")
+        data["resistance_evidence"]["source_url"] = (
+            "https://example.org/history?record=resistance")
+        self.assertNotIn("SOURCE_RECORD_REUSED",
+                         audit_source_independence(data)["blocks"])
+
+    def test_malformed_port_fails_closed(self):
+        data = sample()
+        data["broker_evidence"]["source_url"] = (
+            "https://example.org:invalid/record")
+        self.assertIn("BROKER_SOURCE_URL_INVALID",
+                      audit_source_independence(data)["blocks"])
+
     def test_bogus_input_fails_closed(self):
         self.assertEqual(audit_source_independence(None)["status"], "BLOCKED")
 
