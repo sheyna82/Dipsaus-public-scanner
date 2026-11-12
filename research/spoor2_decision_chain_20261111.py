@@ -9,7 +9,7 @@ from research.spoor2_level_evidence_audit_20261111 import audit_levels
 from research.spoor2_source_independence_20261111 import audit_source_independence
 from research.spoor2_candidate_levels_20261111 import money_scenario
 from research.spoor2_notification_policy_20261111 import (
-    classify_notification, notification_subject,
+    classify_notification, notification_subject, offline_notification_route,
 )
 
 def evaluate_research_chain(candidate, *, now_utc):
@@ -101,6 +101,7 @@ def evaluate_research_chain(candidate, *, now_utc):
         "money_scenario": scenario,
         "blocks": list(dict.fromkeys(blocks)),
         "notification_channel": classification["channel"],
+        "offline_notification_route": offline_notification_route(classification),
         "notification_subject": notification_subject(symbol, classification),
         "trade_ready": False,
         "order_placement_enabled": False,
