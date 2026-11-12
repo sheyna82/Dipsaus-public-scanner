@@ -45,6 +45,32 @@ class DecisionChainTests(unittest.TestCase):
         self.assertFalse(route["topic_configured"])
         self.assertFalse(result["trade_ready"])
 
+    def test_end_to_end_entry_zone_finance_and_route_remain_offline(self):
+        result = evaluate_research_chain(valid_fixture(), now_utc=NOW)
+        self.assertEqual(result["entry_zone_research"]["status"],
+                         "ILLUSTRATIVE_ENTRY_ZONE_ONLY")
+        self.assertEqual(result["money_scenario"]["status"],
+                         "ILLUSTRATIVE_NOT_VERIFIED")
+        self.assertIn("NET_SCENARIO_RR_BELOW_TWO", result["blocks"])
+        self.assertEqual(result["offline_notification_route"]["route"],
+                         "RESEARCH_ONLY")
+        self.assertFalse(result["offline_notification_route"]["send_enabled"])
+        self.assertFalse(result["trade_ready"])
+        self.assertFalse(result["order_placement_enabled"])
+
+    def test_end_to_end_insufficient_entry_room_fails_closed(self):
+        row = valid_fixture()
+        row["technical_evidence"]["resistance_usd"] = 54
+        row["technical_evidence"]["resistance_evidence"]["observed_price_usd"] = 54
+        row["money_inputs"]["exit_bid_usd"] = 54
+        result = evaluate_research_chain(row, now_utc=NOW)
+        self.assertEqual(result["entry_zone_research"]["status"],
+                         "REFERENCE_RR_BELOW_MINIMUM")
+        self.assertIn("RESEARCH_ENTRY_ZONE_NOT_ESTABLISHED",result["blocks"])
+        self.assertEqual(result["offline_notification_route"]["route"],
+                         "RESEARCH_ONLY")
+        self.assertFalse(result["trade_ready"])
+
     def test_missing_evidence_stays_research(self):
         row = valid_fixture()
         row["technical_evidence"].pop("resistance_evidence")
