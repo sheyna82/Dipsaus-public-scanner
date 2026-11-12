@@ -93,6 +93,36 @@ class DecisionChainTests(unittest.TestCase):
         self.assertIn("ENTRY_ZONE_EVIDENCE_INCOMPLETE",result["blocks"])
         self.assertFalse(result["trade_ready"])
 
+    def test_observed_price_tampering_blocks_even_if_math_is_valid(self):
+        row = valid_fixture()
+        row["technical_evidence"]["resistance_evidence"]["observed_price_usd"] = 62
+        result = evaluate_research_chain(row, now_utc=NOW)
+        self.assertEqual(result["entry_zone_research"]["status"],
+                         "ILLUSTRATIVE_ENTRY_ZONE_ONLY")
+        self.assertIn("RESISTANCE_PRICE_MISMATCH", result["blocks"])
+        self.assertIn("ENTRY_ZONE_EVIDENCE_INCOMPLETE", result["blocks"])
+        self.assertFalse(result["trade_ready"])
+
+    def test_future_quote_timestamp_blocks_even_if_math_is_valid(self):
+        row = valid_fixture()
+        row["technical_evidence"]["broker_evidence"]["checked_utc"] = (
+            "2026-11-12T10:00:00+00:00")
+        result = evaluate_research_chain(row, now_utc=NOW)
+        self.assertIn("BROKER_STALE_OR_FUTURE", result["blocks"])
+        self.assertIn("ENTRY_ZONE_EVIDENCE_INCOMPLETE", result["blocks"])
+        self.assertFalse(result["offline_notification_route"]["send_enabled"])
+
+    def test_reused_broker_source_family_blocks_independent_review(self):
+        row = valid_fixture()
+        row["technical_evidence"]["resistance_evidence"]["source_family"] = "broker"
+        result = evaluate_research_chain(row, now_utc=NOW)
+        self.assertIn("BROKER_TECHNICAL_SOURCE_FAMILY_NOT_INDEPENDENT",
+                      result["blocks"])
+        self.assertIn("ENTRY_ZONE_EVIDENCE_INCOMPLETE", result["blocks"])
+        self.assertEqual(result["offline_notification_route"]["route"],
+                         "RESEARCH_ONLY")
+        self.assertFalse(result["trade_ready"])
+
     def test_missing_evidence_stays_research(self):
         row = valid_fixture()
         row["technical_evidence"].pop("resistance_evidence")
