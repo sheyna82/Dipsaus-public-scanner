@@ -35,7 +35,7 @@ class InstrumentAttestationTests(unittest.TestCase):
 
 
     def test_oversized_signer_key_is_rejected_before_decode(self):
-        r = audit({"signer_public_key_b64": "A" * 100000})
+        r = audit_instrument_source_attestation({"signer_public_key_b64": "A" * 100000})
         self.assertIn("INSTRUMENT_SIGNER_KEY_OVERSIZED", r["blocks"])
         self.assertFalse(r["source_attested"])
 
