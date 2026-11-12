@@ -71,6 +71,28 @@ class DecisionChainTests(unittest.TestCase):
                          "RESEARCH_ONLY")
         self.assertFalse(result["trade_ready"])
 
+    def test_mathematical_zone_does_not_override_missing_provenance(self):
+        row = valid_fixture()
+        row["technical_evidence"]["resistance_evidence"].pop("source_record_id")
+        result = evaluate_research_chain(row, now_utc=NOW)
+        self.assertEqual(result["entry_zone_research"]["status"],
+                         "ILLUSTRATIVE_ENTRY_ZONE_ONLY")
+        self.assertIn("ENTRY_ZONE_EVIDENCE_INCOMPLETE",result["blocks"])
+        self.assertEqual(result["offline_notification_route"]["route"],
+                         "RESEARCH_ONLY")
+        self.assertFalse(result["trade_ready"])
+
+    def test_mathematical_zone_does_not_override_stale_quote(self):
+        row = valid_fixture()
+        row["technical_evidence"]["broker_evidence"]["checked_utc"] = (
+            "2026-11-10T10:00:00+00:00")
+        result = evaluate_research_chain(row, now_utc=NOW)
+        self.assertEqual(result["entry_zone_research"]["status"],
+                         "ILLUSTRATIVE_ENTRY_ZONE_ONLY")
+        self.assertIn("BROKER_STALE_OR_FUTURE",result["blocks"])
+        self.assertIn("ENTRY_ZONE_EVIDENCE_INCOMPLETE",result["blocks"])
+        self.assertFalse(result["trade_ready"])
+
     def test_missing_evidence_stays_research(self):
         row = valid_fixture()
         row["technical_evidence"].pop("resistance_evidence")
