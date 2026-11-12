@@ -38,6 +38,36 @@ def research_levels(recovery_map, reference_price):
     }
 
 
+
+def research_entry_zone(*, broker_ask_usd, invalidation_reference_usd,
+                        resistance_reference_usd, minimum_rr=2):
+    """Illustrative ask-to-ceiling zone at a reference R/R, never a signal.
+
+    Solves (resistance - entry) / (entry - invalidation) >= minimum_rr.
+    Ignores fees, spread changes, FX and slippage; source levels are unverified.
+    """
+    base = {"status": "UNKNOWN", "trade_ready": False,
+            "entry_zone_verified": False, "order_placement_enabled": False}
+    values = (broker_ask_usd, invalidation_reference_usd,
+              resistance_reference_usd, minimum_rr)
+    if not all(_positive(v) for v in values) or minimum_rr < 2:
+        return base
+    if not invalidation_reference_usd < broker_ask_usd < resistance_reference_usd:
+        return base
+    ceiling = ((resistance_reference_usd
+                + minimum_rr * invalidation_reference_usd)
+               / (1 + minimum_rr))
+    if not math.isfinite(ceiling):
+        return base
+    if broker_ask_usd > ceiling:
+        return {**base, "status": "REFERENCE_RR_BELOW_MINIMUM",
+                "minimum_rr": minimum_rr, "entry_ceiling_reference_usd": ceiling}
+    return {**base, "status": "ILLUSTRATIVE_ENTRY_ZONE_ONLY",
+            "entry_zone_reference_usd": [broker_ask_usd, ceiling],
+            "entry_ceiling_reference_usd": ceiling, "minimum_rr": minimum_rr,
+            "limitations": "Unverified levels; ignores execution costs and changing quotes."}
+
+
 def money_scenario(*, budget_eur, ask_usd, exit_bid_usd, invalidation_usd,
                    eur_per_usd, buy_fee_eur, sell_fee_eur, buy_fx_rate,
                    sell_fx_rate, slippage_buy_usd=0, slippage_sell_usd=0):
