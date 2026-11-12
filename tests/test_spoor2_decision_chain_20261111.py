@@ -80,6 +80,29 @@ class DecisionChainTests(unittest.TestCase):
         self.assertFalse(result["instrument_signature_audit"]["source_attested"])
         self.assertFalse(result["offline_notification_route"]["send_enabled"])
 
+    def test_missing_bound_observation_blocks_chain(self):
+        result = evaluate_research_chain(valid_fixture(), now_utc=NOW)
+        self.assertIn("INSTRUMENT_BOUND_OBSERVATION_MISSING", result["blocks"])
+        self.assertFalse(result["instrument_bound_observation_audit"]["source_attested"])
+        self.assertFalse(result["trade_ready"])
+
+    def test_self_claimed_bound_observation_does_not_authorize_chain(self):
+        row = valid_fixture()
+        row["instrument_bound_observation"] = {
+            "signed_record": {**{key: row[key] for key in
+                                ("symbol", "market", "venue_mic", "isin")},
+                              "observed_utc": "2026-11-11T09:59:00Z",
+                              "challenge_nonce": "a" * 32},
+            "signature_b64": "not-a-signature",
+            "signer_public_key_b64": "not-a-key",
+            "signature_verified": True,
+            "replay_prevented": True,
+        }
+        result = evaluate_research_chain(row, now_utc=NOW)
+        self.assertIn("INVALID_BOUND_INSTRUMENT_SIGNATURE_ENCODING", result["blocks"])
+        self.assertFalse(result["instrument_bound_observation_audit"]["replay_prevented"])
+        self.assertFalse(result["offline_notification_route"]["send_enabled"])
+
     def test_even_claimed_verified_stays_research(self):
         result = evaluate_research_chain(valid_fixture(), now_utc=NOW)
         self.assertEqual(result["notification_channel"], "RESEARCH")
