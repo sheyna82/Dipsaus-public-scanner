@@ -102,7 +102,7 @@ def evaluate_research_chain(candidate, *, now_utc):
                     blocks.append("SCENARIO_RR_BELOW_TWO")
                 # A gross 2R is not sufficient once execution friction is
                 # included. Missing or invalid net R/R fails closed.
-                net_rr = scenario.get("net_reference_rr_after_friction")
+                net_rr = scenario.get("net_reference_rr_unrounded")
                 if (not isinstance(net_rr, (int, float))
                         or isinstance(net_rr, bool)
                         or not math.isfinite(net_rr) or net_rr < 2):
