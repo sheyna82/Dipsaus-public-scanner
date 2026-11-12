@@ -4,6 +4,11 @@ Caller-supplied timestamps/nonces are claims, not proof of trusted issuance.
 No stateful replay store is connected; never admit an observation for trading.
 """
 from datetime import datetime, timezone
+import re
+
+UTC_TIMESTAMP_PATTERN = re.compile(
+    r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,6})?Z\Z"
+)
 
 
 def audit_instrument_observation_window(observed_utc, verification_utc,
@@ -23,8 +28,9 @@ def audit_instrument_observation_window(observed_utc, verification_utc,
     try:
         if not isinstance(observed_utc, str) or not isinstance(verification_utc, str):
             raise ValueError("missing timestamps")
-        if not observed_utc.endswith("Z") or not verification_utc.endswith("Z"):
-            raise ValueError("not explicit UTC")
+        if not (UTC_TIMESTAMP_PATTERN.fullmatch(observed_utc) and
+                UTC_TIMESTAMP_PATTERN.fullmatch(verification_utc)):
+            raise ValueError("noncanonical UTC timestamp")
         observed = datetime.fromisoformat(observed_utc.replace("Z", "+00:00"))
         verified = datetime.fromisoformat(verification_utc.replace("Z", "+00:00"))
         if (observed.tzinfo is None or verified.tzinfo is None or
