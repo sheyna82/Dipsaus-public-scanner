@@ -7,7 +7,7 @@ No network, broker API, ntfy sender, secrets, or order placement.
 import math
 from research.spoor2_level_evidence_audit_20261111 import audit_levels
 from research.spoor2_source_independence_20261111 import audit_source_independence
-from research.spoor2_candidate_levels_20261111 import money_scenario
+from research.spoor2_candidate_levels_20261111 import money_scenario, research_entry_zone
 from research.spoor2_notification_policy_20261111 import (
     classify_notification, notification_subject, offline_notification_route,
 )
@@ -35,6 +35,17 @@ def evaluate_research_chain(candidate, *, now_utc):
     provenance = audit_source_independence(candidate.get("technical_evidence"))
     blocks = market_blocks + list(levels.get("blocks", [])) + list(provenance["blocks"])
     scenario = None
+    entry_zone = None
+    technical = candidate.get("technical_evidence")
+    if isinstance(technical, dict):
+        entry_zone = research_entry_zone(
+            broker_ask_usd=technical.get("broker_ask_usd"),
+            invalidation_reference_usd=technical.get("invalidation_usd"),
+            resistance_reference_usd=technical.get("resistance_usd"))
+        if entry_zone["status"] != "ILLUSTRATIVE_ENTRY_ZONE_ONLY":
+            blocks.append("RESEARCH_ENTRY_ZONE_NOT_ESTABLISHED")
+    else:
+        blocks.append("RESEARCH_ENTRY_ZONE_NOT_ESTABLISHED")
     args = candidate.get("money_inputs")
     if not isinstance(args, dict):
         blocks.append("MONEY_INPUTS_MISSING")
@@ -99,6 +110,7 @@ def evaluate_research_chain(candidate, *, now_utc):
         "technical_audit": levels,
         "source_independence_audit": provenance,
         "money_scenario": scenario,
+        "entry_zone_research": entry_zone,
         "blocks": list(dict.fromkeys(blocks)),
         "notification_channel": classification["channel"],
         "offline_notification_route": offline_notification_route(classification),
