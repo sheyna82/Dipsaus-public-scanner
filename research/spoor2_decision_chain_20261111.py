@@ -35,9 +35,21 @@ def evaluate_research_chain(candidate, *, now_utc):
         market_blocks.append("QUOTE_CURRENCY_NOT_DECLARED_FOR_USD_CHAIN")
     elif quote_currency != "USD":
         market_blocks.append("QUOTE_CURRENCY_NOT_USD")
+    # A quoted price and technical levels must be tied to the same named
+    # instrument. A URL or a claimed verification flag alone is insufficient.
+    instrument_blocks = []
+    technical_records = candidate.get("technical_evidence")
+    for role in ("broker", "invalidation", "resistance"):
+        record = (technical_records.get(role + "_evidence")
+                  if isinstance(technical_records, dict) else None)
+        observed_symbol = record.get("symbol") if isinstance(record, dict) else None
+        if not isinstance(observed_symbol, str) or not observed_symbol.strip():
+            instrument_blocks.append(role.upper() + "_INSTRUMENT_NOT_DECLARED")
+        elif observed_symbol.strip() != symbol.strip():
+            instrument_blocks.append(role.upper() + "_INSTRUMENT_MISMATCH")
     levels = audit_levels(candidate.get("technical_evidence"), now_utc=now_utc)
     provenance = audit_source_independence(candidate.get("technical_evidence"))
-    blocks = market_blocks + list(levels.get("blocks", [])) + list(provenance["blocks"])
+    blocks = market_blocks + instrument_blocks + list(levels.get("blocks", [])) + list(provenance["blocks"])
     scenario = None
     entry_zone = None
     technical = candidate.get("technical_evidence")
