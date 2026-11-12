@@ -62,6 +62,12 @@ def audit_source_independence(evidence):
             blocks.append("BROKER_TECHNICAL_PROVIDER_NOT_INDEPENDENT")
         if broker[1] in (invalidation[1], resistance[1]):
             blocks.append("BROKER_TECHNICAL_SOURCE_FAMILY_NOT_INDEPENDENT")
+        # Conflicting source-family claims for one provider are not evidence.
+        provider_families = {}
+        for provider, family, _ in records.values():
+            provider_families.setdefault(provider, set()).add(family)
+        if any(len(families) > 1 for families in provider_families.values()):
+            blocks.append("PROVIDER_SOURCE_FAMILY_CONFLICT")
         if (len(set(records.values())) != 3
                 or len({item[0] for item in record_locations.values()}) != 3
                 or len({item[1:] for item in record_locations.values()}) != 3):
