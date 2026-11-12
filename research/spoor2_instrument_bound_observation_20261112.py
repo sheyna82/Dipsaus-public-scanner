@@ -43,6 +43,12 @@ def verify_bound_instrument_observation(candidate, signed_record, signature_b64,
         signed_record["challenge_nonce"], max_age_seconds=max_age_seconds)
     if window["status"] != "TIME_WINDOW_CLAIMS_CONSISTENT_ONLY":
         return {**base, "blocks": window["blocks"]}
+    # Reject isolated UTF-16 surrogate code points in instrument identity.
+    # Keep valid Unicode unchanged; do not alter signed JSON serialization.
+    if any(0xD800 <= ord(ch) <= 0xDFFF
+           for field in ("symbol", "market", "venue_mic", "isin")
+           for ch in signed_record[field]):
+        return {**base, "blocks": ["BOUND_INSTRUMENT_IDENTITY_INVALID_UNICODE"]}
     # Reject oversized base64 before decoding or allocating signature buffers.
     if (isinstance(signature_b64, str) and len(signature_b64) > 88 or
             isinstance(signer_public_key_b64, str) and
