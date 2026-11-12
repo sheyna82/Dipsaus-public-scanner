@@ -103,6 +103,23 @@ class DecisionChainTests(unittest.TestCase):
         self.assertFalse(result["instrument_bound_observation_audit"]["replay_prevented"])
         self.assertFalse(result["offline_notification_route"]["send_enabled"])
 
+    def test_missing_clock_fails_closed_without_exception(self):
+        result = evaluate_research_chain(valid_fixture(), now_utc=None)
+        self.assertEqual(result["blocks"], ["INVALID_UTC_TIME_REFERENCE"])
+        self.assertFalse(result["trade_ready"])
+
+    def test_naive_clock_fails_closed_without_exception(self):
+        result = evaluate_research_chain(
+            valid_fixture(), now_utc=datetime(2026, 11, 11, 10))
+        self.assertIn("INVALID_UTC_TIME_REFERENCE", result["blocks"])
+
+    def test_non_utc_offset_fails_closed_without_exception(self):
+        from datetime import timedelta
+        result = evaluate_research_chain(
+            valid_fixture(), now_utc=datetime(
+                2026, 11, 11, 11, tzinfo=timezone(timedelta(hours=1))))
+        self.assertIn("INVALID_UTC_TIME_REFERENCE", result["blocks"])
+
     def test_even_claimed_verified_stays_research(self):
         result = evaluate_research_chain(valid_fixture(), now_utc=NOW)
         self.assertEqual(result["notification_channel"], "RESEARCH")
