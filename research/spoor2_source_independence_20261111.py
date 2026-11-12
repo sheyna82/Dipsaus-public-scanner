@@ -49,7 +49,13 @@ def audit_source_independence(evidence):
         # query-addressed exchange records into the same evidence location.
         host = parsed.hostname.lower().rstrip(".")
         authority = host if port in (None, 443) else host + ":" + str(port)
-        query = urlencode(sorted(parse_qsl(parsed.query, keep_blank_values=True)))
+        # Reject ambiguous query keys: servers may interpret duplicates
+        # differently (first wins, last wins, or ordered multi-values).
+        query_pairs = parse_qsl(parsed.query, keep_blank_values=True)
+        if len({key for key, _ in query_pairs}) != len(query_pairs):
+            blocks.append(role.upper() + "_SOURCE_QUERY_AMBIGUOUS")
+            continue
+        query = urlencode(sorted(query_pairs))
         record_locations[role] = (
             record_id.strip(),
             authority,
