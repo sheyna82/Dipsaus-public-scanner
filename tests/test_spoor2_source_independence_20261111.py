@@ -99,6 +99,31 @@ class SourceIndependenceTests(unittest.TestCase):
         self.assertIn("BROKER_SOURCE_URL_INVALID",
                       audit_source_independence(data)["blocks"])
 
+    def test_unreserved_percent_encoding_cannot_mask_reused_url(self):
+        data = sample()
+        data["broker_evidence"]["source_url"] = (
+            "https://example.org/record/%62roker")
+        data["resistance_evidence"]["source_url"] = (
+            "https://example.org/record/broker")
+        self.assertIn("SOURCE_RECORD_REUSED",
+                      audit_source_independence(data)["blocks"])
+
+    def test_reserved_encoded_slash_is_not_silently_decoded(self):
+        data = sample()
+        data["broker_evidence"]["source_url"] = (
+            "https://example.org/record%2Fbroker")
+        data["resistance_evidence"]["source_url"] = (
+            "https://example.org/record/broker")
+        self.assertNotIn("SOURCE_RECORD_REUSED",
+                         audit_source_independence(data)["blocks"])
+
+    def test_invalid_port_does_not_produce_spurious_reuse_finding(self):
+        data = sample()
+        data["broker_evidence"]["source_url"] = "https://example.org:bad/record"
+        result = audit_source_independence(data)
+        self.assertIn("BROKER_SOURCE_URL_INVALID", result["blocks"])
+        self.assertNotIn("SOURCE_RECORD_REUSED", result["blocks"])
+
     def test_bogus_input_fails_closed(self):
         self.assertEqual(audit_source_independence(None)["status"], "BLOCKED")
 
