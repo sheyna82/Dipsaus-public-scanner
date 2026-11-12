@@ -81,6 +81,31 @@ class Spoor2ResearchTests(unittest.TestCase):
         self.assertEqual(result["reference_rr"], 2.0)
         self.assertFalse(result["trade_ready"])
 
+    def test_net_rr_accounts_for_round_trip_friction(self):
+        base=dict(budget_eur=3500, ask_usd=52, exit_bid_usd=58,
+                  invalidation_usd=49, eur_per_usd=0.92,
+                  buy_fee_eur=0, sell_fee_eur=0,
+                  buy_fx_rate=0, sell_fx_rate=0)
+        zero=module.money_scenario(**base)
+        friction=module.money_scenario(**{**base,"buy_fee_eur":3,
+            "sell_fee_eur":3,"buy_fx_rate":0.0025,"sell_fx_rate":0.0025})
+        self.assertAlmostEqual(zero["net_reference_rr_after_friction"],2.0)
+        self.assertLess(friction["net_reference_rr_after_friction"],2)
+        self.assertGreater(friction["net_downside_eur_at_invalidation"],0)
+        self.assertFalse(friction["trade_ready"])
+
+    def test_net_rr_changes_with_execution_slippage(self):
+        base=dict(budget_eur=3500, ask_usd=52, exit_bid_usd=60,
+                  invalidation_usd=49, eur_per_usd=0.92,
+                  buy_fee_eur=2, sell_fee_eur=2,
+                  buy_fx_rate=0.0025, sell_fx_rate=0.0025)
+        normal=module.money_scenario(**base)
+        slipped=module.money_scenario(**{**base,"slippage_buy_usd":0.2,
+            "slippage_sell_usd":0.2})
+        self.assertLess(slipped["net_reference_rr_after_friction"],
+                        normal["net_reference_rr_after_friction"])
+        self.assertFalse(slipped["trade_ready"])
+
     def test_bad_inputs_fail_closed(self):
         common = dict(budget_eur=3500, ask_usd=52, exit_bid_usd=60,
                       invalidation_usd=49, eur_per_usd=0.92,
