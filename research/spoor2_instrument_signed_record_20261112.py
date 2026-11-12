@@ -25,6 +25,12 @@ def verify_instrument_signed_record(candidate, signed_record, signature_b64,
         signed_record[k] != candidate.get(k) for k in _FIELDS
     ):
         return {**base, "blocks": ["INSTRUMENT_SIGNED_RECORD_BINDING_MISMATCH"]}
+    # Reject isolated UTF-16 surrogate code points in instrument identity.
+    # Keep valid Unicode unchanged; do not alter signed JSON serialization.
+    if any(0xD800 <= ord(ch) <= 0xDFFF
+           for field in ("symbol", "market", "venue_mic", "isin")
+           for ch in signed_record[field]):
+        return {**base, "blocks": ["INSTRUMENT_SIGNED_RECORD_INVALID_UNICODE"]}
     # Reject oversized base64 before decoding or allocating signature buffers.
     if (isinstance(signature_b64, str) and len(signature_b64) > 88 or
             isinstance(signer_public_key_b64, str) and
