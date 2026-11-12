@@ -57,3 +57,24 @@ def notification_subject(symbol, classification):
     if classification.get("channel") == "RESEARCH":
         return "DIPSAUS | ONDERZOEK - GEEN KOOP | " + symbol
     return "DIPSAUS | GEEN MELDING"
+
+
+def offline_notification_route(classification):
+    """Describe separate future topics; never publish or disclose credentials.
+
+    This is a logical route only. The production ntfy topic configuration is
+    intentionally not read, inferred, or modified.
+    """
+    base = {"status": "OFFLINE_ROUTING_ONLY", "send_enabled": False,
+            "order_placement_enabled": False, "topic_configured": False}
+    if not isinstance(classification, dict):
+        return {**base, "route": "NONE", "reason": "INVALID_CLASSIFICATION"}
+    channel = classification.get("channel")
+    if channel == "RESEARCH" and classification.get("qualified") is False:
+        return {**base, "route": "RESEARCH_ONLY", "reason": "RESEARCH_NOT_TRADE"}
+    if (channel == "TRADE_QUALIFIED_REVIEW"
+            and classification.get("qualified") is True
+            and classification.get("order_placement_enabled") is False):
+        return {**base, "route": "INDEPENDENT_REVIEW_ONLY",
+                "reason": "HUMAN_REVIEW_REQUIRED"}
+    return {**base, "route": "NONE", "reason": "UNTRUSTED_CLASSIFICATION"}
