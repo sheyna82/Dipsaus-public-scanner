@@ -101,7 +101,7 @@ class BoundInstrumentObservationTests(unittest.TestCase):
                 self.assertFalse(r["order_placement_enabled"])
 
     def test_isolated_unicode_surrogates_block_before_crypto(self):
-        for surrogate in ("\\ud800", "\\udfff"):
+        for surrogate in (chr(0xD800), chr(0xDFFF)):
             for field in ("symbol", "market", "venue_mic", "isin"):
                 with self.subTest(field=field, surrogate=repr(surrogate)):
                     identity = {**IDENTITY, field: "X" + surrogate}
