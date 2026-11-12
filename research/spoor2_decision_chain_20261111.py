@@ -9,6 +9,7 @@ from research.spoor2_level_evidence_audit_20261111 import audit_levels
 from research.spoor2_source_independence_20261111 import audit_source_independence
 from research.spoor2_instrument_identity_20261112 import audit_instrument_identity
 from research.spoor2_instrument_signed_record_20261112 import verify_instrument_signed_record
+from research.spoor2_instrument_bound_observation_20261112 import verify_bound_instrument_observation
 from research.spoor2_candidate_levels_20261111 import money_scenario, research_entry_zone
 from research.spoor2_notification_policy_20261111 import (
     classify_notification, notification_subject, offline_notification_route,
@@ -60,9 +61,20 @@ def evaluate_research_chain(candidate, *, now_utc):
                            "source_attested": False, "trade_ready": False,
                            "order_placement_enabled": False,
                            "blocks": ["INSTRUMENT_SIGNED_EVIDENCE_MISSING"]}
+    bound = candidate.get("instrument_bound_observation")
+    if isinstance(bound, dict):
+        bound_audit = verify_bound_instrument_observation(
+            candidate, bound.get("signed_record"), bound.get("signature_b64"),
+            bound.get("signer_public_key_b64"),
+            verification_utc=now_utc.isoformat().replace("+00:00", "Z"))
+    else:
+        bound_audit = {"status": "BLOCKED", "signature_verified": False,
+                       "source_attested": False, "replay_prevented": False,
+                       "trade_ready": False, "order_placement_enabled": False,
+                       "blocks": ["INSTRUMENT_BOUND_OBSERVATION_MISSING"]}
     levels = audit_levels(candidate.get("technical_evidence"), now_utc=now_utc)
     provenance = audit_source_independence(candidate.get("technical_evidence"))
-    blocks = market_blocks + instrument_blocks + list(identity["blocks"]) + list(signature_audit["blocks"]) + list(levels.get("blocks", [])) + list(provenance["blocks"])
+    blocks = market_blocks + instrument_blocks + list(identity["blocks"]) + list(signature_audit["blocks"]) + list(bound_audit["blocks"]) + list(levels.get("blocks", [])) + list(provenance["blocks"])
     scenario = None
     entry_zone = None
     technical = candidate.get("technical_evidence")
@@ -143,6 +155,7 @@ def evaluate_research_chain(candidate, *, now_utc):
         "technical_audit": levels,
         "instrument_identity_audit": identity,
         "instrument_signature_audit": signature_audit,
+        "instrument_bound_observation_audit": bound_audit,
         "source_independence_audit": provenance,
         "money_scenario": scenario,
         "entry_zone_research": entry_zone,
