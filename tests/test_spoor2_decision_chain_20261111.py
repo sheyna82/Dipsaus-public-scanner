@@ -200,6 +200,8 @@ class DecisionChainTests(unittest.TestCase):
 
     def test_undeclared_market_and_currency_fail_closed(self):
         row = valid_fixture()
+        row.pop("market")
+        row.pop("quote_currency")
         result = evaluate_research_chain(row, now_utc=NOW)
         self.assertIn("MARKET_NOT_DECLARED_FOR_USD_CHAIN", result["blocks"])
         self.assertIn("QUOTE_CURRENCY_NOT_DECLARED_FOR_USD_CHAIN", result["blocks"])
@@ -219,6 +221,7 @@ class DecisionChainTests(unittest.TestCase):
     def test_partially_declared_currency_fails_closed(self):
         row = valid_fixture()
         row["market"] = "US"
+        row.pop("quote_currency")
         result = evaluate_research_chain(row, now_utc=NOW)
         self.assertIn("QUOTE_CURRENCY_NOT_DECLARED_FOR_USD_CHAIN", result["blocks"])
         self.assertFalse(result["order_placement_enabled"])
