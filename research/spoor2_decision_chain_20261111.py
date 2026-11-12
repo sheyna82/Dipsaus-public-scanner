@@ -8,6 +8,7 @@ import math
 from research.spoor2_level_evidence_audit_20261111 import audit_levels
 from research.spoor2_source_independence_20261111 import audit_source_independence
 from research.spoor2_instrument_identity_20261112 import audit_instrument_identity
+from research.spoor2_instrument_signed_record_20261112 import verify_instrument_signed_record
 from research.spoor2_candidate_levels_20261111 import money_scenario, research_entry_zone
 from research.spoor2_notification_policy_20261111 import (
     classify_notification, notification_subject, offline_notification_route,
@@ -49,9 +50,19 @@ def evaluate_research_chain(candidate, *, now_utc):
         elif observed_symbol.strip() != symbol.strip():
             instrument_blocks.append(role.upper() + "_INSTRUMENT_MISMATCH")
     identity = audit_instrument_identity(candidate)
+    signed = candidate.get("instrument_signed_evidence")
+    if isinstance(signed, dict):
+        signature_audit = verify_instrument_signed_record(
+            candidate, signed.get("signed_record"), signed.get("signature_b64"),
+            signed.get("signer_public_key_b64"))
+    else:
+        signature_audit = {"status": "BLOCKED", "signature_verified": False,
+                           "source_attested": False, "trade_ready": False,
+                           "order_placement_enabled": False,
+                           "blocks": ["INSTRUMENT_SIGNED_EVIDENCE_MISSING"]}
     levels = audit_levels(candidate.get("technical_evidence"), now_utc=now_utc)
     provenance = audit_source_independence(candidate.get("technical_evidence"))
-    blocks = market_blocks + instrument_blocks + list(identity["blocks"]) + list(levels.get("blocks", [])) + list(provenance["blocks"])
+    blocks = market_blocks + instrument_blocks + list(identity["blocks"]) + list(signature_audit["blocks"]) + list(levels.get("blocks", [])) + list(provenance["blocks"])
     scenario = None
     entry_zone = None
     technical = candidate.get("technical_evidence")
@@ -131,6 +142,7 @@ def evaluate_research_chain(candidate, *, now_utc):
         "status": "RESEARCH_ONLY",
         "technical_audit": levels,
         "instrument_identity_audit": identity,
+        "instrument_signature_audit": signature_audit,
         "source_independence_audit": provenance,
         "money_scenario": scenario,
         "entry_zone_research": entry_zone,
