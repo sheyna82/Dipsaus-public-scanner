@@ -98,7 +98,7 @@ def evaluate_research_chain(candidate, *, now_utc):
                     blocks.append("MONEY_CALCULATION_BLOCKED")
                 elif scenario.get("net_profit_eur", 0) < 150:
                     blocks.append("NET_PROFIT_BELOW_150")
-                if scenario.get("reference_rr", 0) < 2:
+                if scenario.get("reference_rr_unrounded", 0) < 2:
                     blocks.append("SCENARIO_RR_BELOW_TWO")
                 # A gross 2R is not sufficient once execution friction is
                 # included. Missing or invalid net R/R fails closed.
