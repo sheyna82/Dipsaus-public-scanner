@@ -145,5 +145,29 @@ class BoundInstrumentObservationTests(unittest.TestCase):
         self.assertFalse(tampered["trade_ready"])
         self.assertFalse(tampered["order_placement_enabled"])
 
+    def test_nonstring_identity_fields_fail_closed(self):
+        for field in ("symbol", "market", "venue_mic", "isin"):
+            for value in (None, 123, True, [], {}):
+                with self.subTest(field=field, value=repr(value)):
+                    identity = {**IDENTITY, field: value}
+                    record = {**RECORD, field: value}
+                    r = verify(identity, record, "", "", verification_utc=NOW)
+                    self.assertIn("BOUND_INSTRUMENT_IDENTITY_MISMATCH", r["blocks"])
+                    self.assertFalse(r["signature_verified"])
+                    self.assertFalse(r["source_attested"])
+                    self.assertFalse(r["trade_ready"])
+                    self.assertFalse(r["order_placement_enabled"])
+
+    def test_unverified_isin_mic_claims_never_grant_authority(self):
+        identity = {**IDENTITY, "isin": "INVALID-ISIN", "venue_mic": "ZZZZ"}
+        record = {**RECORD, "isin": identity["isin"], "venue_mic": identity["venue_mic"]}
+        sig, key = signed(record)
+        r = verify(identity, record, sig, key, verification_utc=NOW)
+        self.assertTrue(r["signature_verified"])
+        self.assertFalse(r["source_attested"])
+        self.assertFalse(r["trade_ready"])
+        self.assertFalse(r["order_placement_enabled"])
+        self.assertIn("INSTRUMENT_SIGNER_NOT_INDEPENDENTLY_APPROVED", r["blocks"])
+
 if __name__ == "__main__":
     unittest.main()
