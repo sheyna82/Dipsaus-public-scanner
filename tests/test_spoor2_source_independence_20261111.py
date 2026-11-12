@@ -45,6 +45,26 @@ class SourceIndependenceTests(unittest.TestCase):
         del data["broker_evidence"]["source_record_id"]
         self.assertIn("BROKER_PROVENANCE_INCOMPLETE", audit_source_independence(data)["blocks"])
 
+    def test_record_id_reuse_blocks_even_with_different_provider_alias(self):
+        data = sample()
+        data["resistance_evidence"]["source_record_id"] = (
+            data["broker_evidence"]["source_record_id"])
+        self.assertIn("SOURCE_RECORD_REUSED",
+                      audit_source_independence(data)["blocks"])
+
+    def test_source_url_reuse_blocks_even_with_different_record_id(self):
+        data = sample()
+        data["resistance_evidence"]["source_url"] = (
+            data["broker_evidence"]["source_url"])
+        self.assertIn("SOURCE_RECORD_REUSED",
+                      audit_source_independence(data)["blocks"])
+
+    def test_distinct_technical_records_on_same_venue_are_allowed(self):
+        data = sample()
+        result = audit_source_independence(data)
+        self.assertNotIn("SOURCE_RECORD_REUSED", result["blocks"])
+        self.assertFalse(result["trade_ready"])
+
     def test_bogus_input_fails_closed(self):
         self.assertEqual(audit_source_independence(None)["status"], "BLOCKED")
 
