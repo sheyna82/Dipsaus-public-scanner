@@ -24,6 +24,37 @@ class Spoor2ResearchTests(unittest.TestCase):
         self.assertFalse(result["trade_ready"])
         self.assertFalse(result["resistance_verified"])
 
+    def test_entry_zone_ceiling_is_mathematically_two_r(self):
+        r=module.research_entry_zone(
+            broker_ask_usd=52, invalidation_reference_usd=49,
+            resistance_reference_usd=60)
+        self.assertEqual(r["status"],"ILLUSTRATIVE_ENTRY_ZONE_ONLY")
+        self.assertAlmostEqual(r["entry_ceiling_reference_usd"],(60+2*49)/3)
+        self.assertEqual(r["entry_zone_reference_usd"][0],52)
+        self.assertFalse(r["entry_zone_verified"])
+        self.assertFalse(r["trade_ready"])
+        self.assertFalse(r["order_placement_enabled"])
+
+    def test_entry_zone_blocks_when_reference_rr_too_low(self):
+        r=module.research_entry_zone(
+            broker_ask_usd=55, invalidation_reference_usd=49,
+            resistance_reference_usd=60)
+        self.assertEqual(r["status"],"REFERENCE_RR_BELOW_MINIMUM")
+        self.assertNotIn("entry_zone_reference_usd",r)
+        self.assertFalse(r["trade_ready"])
+
+    def test_entry_zone_invalid_inputs_fail_closed(self):
+        for ask,invalid,level,rr in ((52,52,60,2),(60,49,60,2),
+                                     (52,49,60,1.5),(True,49,60,2),
+                                     (float("nan"),49,60,2),
+                                     (52,49,float("inf"),2)):
+            with self.subTest(values=(ask,invalid,level,rr)):
+                r=module.research_entry_zone(
+                    broker_ask_usd=ask,invalidation_reference_usd=invalid,
+                    resistance_reference_usd=level,minimum_rr=rr)
+                self.assertEqual(r["status"],"UNKNOWN")
+                self.assertFalse(r["trade_ready"])
+
     def test_whole_shares_and_costs(self):
         result = module.money_scenario(
             budget_eur=3500, ask_usd=52.05, exit_bid_usd=58.15,
