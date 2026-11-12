@@ -34,5 +34,11 @@ class InstrumentAttestationTests(unittest.TestCase):
         self.assertFalse(result["order_placement_enabled"])
 
 
+    def test_oversized_signer_key_is_rejected_before_decode(self):
+        r = audit({"signer_public_key_b64": "A" * 100000})
+        self.assertIn("INSTRUMENT_SIGNER_KEY_OVERSIZED", r["blocks"])
+        self.assertFalse(r["source_attested"])
+
+
 if __name__ == "__main__":
     unittest.main()
