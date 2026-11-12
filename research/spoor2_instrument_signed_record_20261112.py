@@ -25,6 +25,13 @@ def verify_instrument_signed_record(candidate, signed_record, signature_b64,
         signed_record[k] != candidate.get(k) for k in _FIELDS
     ):
         return {**base, "blocks": ["INSTRUMENT_SIGNED_RECORD_BINDING_MISMATCH"]}
+    # Reject oversized base64 before decoding or allocating signature buffers.
+    if (isinstance(signature_b64, str) and len(signature_b64) > 88 or
+            isinstance(signer_public_key_b64, str) and
+            len(signer_public_key_b64) > 44):
+        return {**base, "blocks": ["INSTRUMENT_CRYPTO_INPUT_OVERSIZED"]}
+    if any(len(signed_record.get(k, "")) > 256 for k in ("symbol", "market", "venue_mic", "isin") if isinstance(signed_record.get(k), str)):
+        return {**base, "blocks": ["INSTRUMENT_SIGNED_RECORD_OVERSIZED"]}
     if not isinstance(signature_b64, str) or not isinstance(signer_public_key_b64, str):
         return {**base, "blocks": ["INVALID_INSTRUMENT_SIGNATURE_ENCODING"]}
     try:
