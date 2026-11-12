@@ -124,6 +124,20 @@ class SourceIndependenceTests(unittest.TestCase):
         self.assertIn("BROKER_SOURCE_URL_INVALID", result["blocks"])
         self.assertNotIn("SOURCE_RECORD_REUSED", result["blocks"])
 
+    def test_same_provider_with_conflicting_families_blocks(self):
+        data = sample()
+        data["resistance_evidence"]["source_family"] = "vendor"
+        result = audit_source_independence(data)
+        self.assertIn("PROVIDER_SOURCE_FAMILY_CONFLICT", result["blocks"])
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertFalse(result["trade_ready"])
+
+    def test_same_provider_same_family_with_distinct_records_remains_valid(self):
+        result = audit_source_independence(sample())
+        self.assertNotIn("PROVIDER_SOURCE_FAMILY_CONFLICT", result["blocks"])
+        self.assertEqual(result["status"],
+                         "PROVENANCE_RECORDED_REQUIRES_EXTERNAL_VERIFICATION")
+
     def test_bogus_input_fails_closed(self):
         self.assertEqual(audit_source_independence(None)["status"], "BLOCKED")
 
