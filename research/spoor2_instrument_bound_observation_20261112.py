@@ -37,6 +37,13 @@ def verify_bound_instrument_observation(candidate, signed_record, signature_b64,
         signed_record["challenge_nonce"], max_age_seconds=max_age_seconds)
     if window["status"] != "TIME_WINDOW_CLAIMS_CONSISTENT_ONLY":
         return {**base, "blocks": window["blocks"]}
+    # Reject oversized base64 before decoding or allocating signature buffers.
+    if (isinstance(signature_b64, str) and len(signature_b64) > 88 or
+            isinstance(signer_public_key_b64, str) and
+            len(signer_public_key_b64) > 44):
+        return {**base, "blocks": ["BOUND_INSTRUMENT_CRYPTO_INPUT_OVERSIZED"]}
+    if any(len(signed_record.get(k, "")) > 256 for k in ("symbol", "market", "venue_mic", "isin") if isinstance(signed_record.get(k), str)):
+        return {**base, "blocks": ["BOUND_INSTRUMENT_RECORD_OVERSIZED"]}
     if not isinstance(signature_b64, str) or not isinstance(signer_public_key_b64, str):
         return {**base, "blocks": ["INVALID_BOUND_INSTRUMENT_SIGNATURE_ENCODING"]}
     try:
