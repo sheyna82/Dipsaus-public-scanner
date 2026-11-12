@@ -138,6 +138,24 @@ class SourceIndependenceTests(unittest.TestCase):
         self.assertEqual(result["status"],
                          "PROVENANCE_RECORDED_REQUIRES_EXTERNAL_VERIFICATION")
 
+    def test_duplicate_query_keys_fail_closed(self):
+        data = sample()
+        data["broker_evidence"]["source_url"] = (
+            "https://example.org/quote?symbol=ABC&symbol=XYZ")
+        result = audit_source_independence(data)
+        self.assertIn("BROKER_SOURCE_QUERY_AMBIGUOUS", result["blocks"])
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertFalse(result["trade_ready"])
+
+    def test_distinct_query_keys_remain_inspectable(self):
+        data = sample()
+        data["broker_evidence"]["source_url"] = (
+            "https://example.org/quote?symbol=ABC&date=2026-11-12")
+        result = audit_source_independence(data)
+        self.assertNotIn("BROKER_SOURCE_QUERY_AMBIGUOUS", result["blocks"])
+        self.assertEqual(result["status"],
+                         "PROVENANCE_RECORDED_REQUIRES_EXTERNAL_VERIFICATION")
+
     def test_bogus_input_fails_closed(self):
         self.assertEqual(audit_source_independence(None)["status"], "BLOCKED")
 
