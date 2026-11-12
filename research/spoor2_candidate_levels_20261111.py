@@ -100,7 +100,8 @@ def money_scenario(*, budget_eur, ask_usd, exit_bid_usd, invalidation_usd,
         return {"status": "UNKNOWN", "trade_ready": False}
     entry = ask_usd + slippage_buy_usd
     exit_price = exit_bid_usd - slippage_sell_usd
-    if not invalidation_usd < entry or exit_price <= 0:
+    invalidation_exit_price = invalidation_usd - slippage_sell_usd
+    if not invalidation_usd < entry or exit_price <= 0 or invalidation_exit_price <= 0:
         return {"status": "UNKNOWN", "trade_ready": False}
     unit_cost = entry * eur_per_usd * (1 + buy_fx_rate)
     shares = math.floor((budget_eur - buy_fee_eur) / unit_cost)
@@ -111,8 +112,8 @@ def money_scenario(*, budget_eur, ask_usd, exit_bid_usd, invalidation_usd,
     risk_per_share = entry - invalidation_usd
     rr = (exit_price - entry) / risk_per_share
     # Scenario downside: liquidate at the invalidation reference, including
-    # sell-side FX friction and fee. This is NOT an automatic stop order.
-    invalidation_proceeds = (shares * invalidation_usd * eur_per_usd
+    # sell-side slippage, FX friction and fee. This is NOT a stop order.
+    invalidation_proceeds = (shares * invalidation_exit_price * eur_per_usd
                              * (1 - sell_fx_rate) - sell_fee_eur)
     downside_eur = buy_total - invalidation_proceeds
     net_profit = sell_total - buy_total
