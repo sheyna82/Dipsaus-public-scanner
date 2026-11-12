@@ -96,7 +96,7 @@ def evaluate_research_chain(candidate, *, now_utc):
             else:
                 if scenario.get("status") != "ILLUSTRATIVE_NOT_VERIFIED":
                     blocks.append("MONEY_CALCULATION_BLOCKED")
-                elif scenario.get("net_profit_eur", 0) < 150:
+                elif scenario.get("net_profit_eur_unrounded", 0) < 150:
                     blocks.append("NET_PROFIT_BELOW_150")
                 if scenario.get("reference_rr_unrounded", 0) < 2:
                     blocks.append("SCENARIO_RR_BELOW_TWO")
