@@ -24,7 +24,15 @@ def research_levels(recovery_map, reference_price):
     invalidation = recovery_map.get("recent_10d_low_invalidation_reference_usd")
     if not _positive(invalidation) or invalidation >= reference_price:
         invalidation = None
+    # Use the nearest overhead historical pivot conservatively, not the
+    # most optimistic distant target. A candidate zone is never verified.
+    zone = (research_entry_zone(
+        broker_ask_usd=reference_price,
+        invalidation_reference_usd=invalidation,
+        resistance_reference_usd=resistance[0])
+        if invalidation is not None and resistance else None)
     return {
+        "entry_zone_research": zone,
         "status": "HISTORICAL_REFERENCES_ONLY",
         "entry_reference_usd": reference_price,
         "invalidation_reference_usd": invalidation,
