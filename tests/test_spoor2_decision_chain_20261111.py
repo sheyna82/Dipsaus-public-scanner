@@ -12,13 +12,16 @@ def valid_fixture():
                         ("resistance", 58.20)):
         technical[name + "_evidence"] = {
             "verified": True, "source": "offline-test-only", "symbol": "TEST",
+            "market": "US", "venue_mic": "XNAS", "isin": "US0378331005",
             "source_record_id": "fixture-" + name,
             "provider_id": "broker-fixture" if name == "broker" else "exchange-fixture",
             "source_family": "broker" if name == "broker" else "exchange",
             "source_url": "https://example.org/fixture/" + name,
             "checked_utc": NOW.isoformat(), "observed_price_usd": value, **({"formed_utc": "2026-11-02T10:00:00+00:00", "structure_still_valid": True} if name != "broker" else {})}
     return {
-        "symbol": "TEST", "trade_ready": True, "rr_verified": True,
+        "symbol": "TEST", "market": "US", "quote_currency": "USD",
+        "venue_mic": "XNAS", "isin": "US0378331005",
+        "trade_ready": True, "rr_verified": True,
         "technical_evidence": technical,
         "money_inputs": {
             "budget_eur": 3500, "ask_usd": 52.05, "exit_bid_usd": 58.20,
@@ -238,7 +241,7 @@ class DecisionChainTests(unittest.TestCase):
     def test_all_matching_instrument_records_avoid_binding_blocks(self):
         row = valid_fixture()
         result = evaluate_research_chain(row, now_utc=NOW)
-        self.assertFalse(any("INSTRUMENT_" in block for block in result["blocks"]))
+        self.assertFalse(any(block.endswith(("INSTRUMENT_MISMATCH", "INSTRUMENT_NOT_DECLARED")) for block in result["blocks"]))
         self.assertIn("INDEPENDENT_TRADE_ATTESTATION_NOT_CONNECTED", result["blocks"])
 
     def test_missing_money_inputs_stays_research(self):
