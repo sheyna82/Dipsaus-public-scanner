@@ -11,6 +11,7 @@ def audit_source_independence(evidence):
     if not isinstance(evidence, dict):
         return {"status": "BLOCKED", "blocks": ["INVALID_EVIDENCE"], "trade_ready": False}
     records = {}
+    record_locations = {}
     for role in ("broker", "invalidation", "resistance"):
         record = evidence.get(role + "_evidence")
         if not isinstance(record, dict):
@@ -28,13 +29,16 @@ def audit_source_independence(evidence):
             blocks.append(role.upper() + "_SOURCE_URL_INVALID")
             continue
         records[role] = (provider.strip().lower(), family.strip().lower(), record_id.strip())
+        record_locations[role] = (record_id.strip(), parsed.hostname.lower(), parsed.path.rstrip("/"))
     if len(records) == 3:
         broker, invalidation, resistance = (records[k] for k in ("broker", "invalidation", "resistance"))
         if broker[0] in (invalidation[0], resistance[0]):
             blocks.append("BROKER_TECHNICAL_PROVIDER_NOT_INDEPENDENT")
         if broker[1] in (invalidation[1], resistance[1]):
             blocks.append("BROKER_TECHNICAL_SOURCE_FAMILY_NOT_INDEPENDENT")
-        if len(set(records.values())) != 3:
+        if (len(set(records.values())) != 3
+                or len({item[0] for item in record_locations.values()}) != 3
+                or len({item[1:] for item in record_locations.values()}) != 3):
             blocks.append("SOURCE_RECORD_REUSED")
     return {"status": "PROVENANCE_RECORDED_REQUIRES_EXTERNAL_VERIFICATION" if not blocks else "BLOCKED",
             "blocks": blocks, "trade_ready": False, "order_placement_enabled": False}
