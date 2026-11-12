@@ -32,6 +32,9 @@ def verify_bound_instrument_observation(candidate, signed_record, signature_b64,
         for k in ("symbol", "market", "venue_mic", "isin")
     ):
         return {**base, "blocks": ["BOUND_INSTRUMENT_IDENTITY_MISMATCH"]}
+    if any(len(signed_record[k]) > 256
+           for k in ("symbol", "market", "venue_mic", "isin")):
+        return {**base, "blocks": ["BOUND_INSTRUMENT_RECORD_OVERSIZED"]}
     if any(isinstance(signed_record.get(k), str) and len(signed_record[k]) > 128
            for k in ("observed_utc", "challenge_nonce")):
         return {**base, "blocks": ["BOUND_INSTRUMENT_RECORD_OVERSIZED"]}
@@ -45,8 +48,6 @@ def verify_bound_instrument_observation(candidate, signed_record, signature_b64,
             isinstance(signer_public_key_b64, str) and
             len(signer_public_key_b64) > 44):
         return {**base, "blocks": ["BOUND_INSTRUMENT_CRYPTO_INPUT_OVERSIZED"]}
-    if any(len(signed_record.get(k, "")) > 256 for k in ("symbol", "market", "venue_mic", "isin") if isinstance(signed_record.get(k), str)):
-        return {**base, "blocks": ["BOUND_INSTRUMENT_RECORD_OVERSIZED"]}
     if not isinstance(signature_b64, str) or not isinstance(signer_public_key_b64, str):
         return {**base, "blocks": ["INVALID_BOUND_INSTRUMENT_SIGNATURE_ENCODING"]}
     try:
