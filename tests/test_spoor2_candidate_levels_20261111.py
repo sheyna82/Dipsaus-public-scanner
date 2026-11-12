@@ -106,6 +106,32 @@ class Spoor2ResearchTests(unittest.TestCase):
                         normal["net_reference_rr_after_friction"])
         self.assertFalse(slipped["trade_ready"])
 
+    def test_invalidation_downside_includes_sell_slippage(self):
+        base = dict(budget_eur=3500, ask_usd=52, exit_bid_usd=60,
+                    invalidation_usd=49, eur_per_usd=1,
+                    buy_fee_eur=0, sell_fee_eur=0,
+                    buy_fx_rate=0, sell_fx_rate=0)
+        normal = module.money_scenario(**base)
+        slipped = module.money_scenario(**{**base, "slippage_sell_usd": 0.5})
+        shares = normal["whole_shares"]
+        self.assertEqual(slipped["whole_shares"], shares)
+        self.assertAlmostEqual(
+            slipped["net_downside_eur_at_invalidation"]
+            - normal["net_downside_eur_at_invalidation"], shares * 0.5, places=2)
+        self.assertLess(slipped["net_reference_rr_after_friction"],
+                        normal["net_reference_rr_after_friction"])
+        self.assertFalse(slipped["trade_ready"])
+
+    def test_slippage_exceeding_invalidation_reference_fails_closed(self):
+        row = module.money_scenario(
+            budget_eur=3500, ask_usd=52, exit_bid_usd=60,
+            invalidation_usd=49, eur_per_usd=0.92,
+            buy_fee_eur=2, sell_fee_eur=2,
+            buy_fx_rate=0.0025, sell_fx_rate=0.0025,
+            slippage_sell_usd=49)
+        self.assertEqual(row["status"], "UNKNOWN")
+        self.assertFalse(row["trade_ready"])
+
     def test_bad_inputs_fail_closed(self):
         common = dict(budget_eur=3500, ask_usd=52, exit_bid_usd=60,
                       invalidation_usd=49, eur_per_usd=0.92,
