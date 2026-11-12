@@ -148,6 +148,24 @@ class DecisionChainTests(unittest.TestCase):
                 self.assertTrue(result["instrument_signature_audit"]["blocks"])
                 self.assertFalse(result["offline_notification_route"]["send_enabled"])
 
+    def test_oversized_crypto_payloads_fail_closed(self):
+        for field in ("instrument_signed_evidence", "instrument_bound_observation"):
+            for oversized in ("signature_b64", "signer_public_key_b64"):
+                with self.subTest(field=field, oversized=oversized):
+                    row = valid_fixture()
+                    record = {key: row[key] for key in
+                              ("symbol", "market", "venue_mic", "isin")}
+                    if field == "instrument_bound_observation":
+                        record.update({"observed_utc": "2026-11-11T09:59:00Z",
+                                       "challenge_nonce": "a" * 32})
+                    row[field] = {"signed_record": record,
+                                  "signature_b64": "A" * 100000,
+                                  "signer_public_key_b64": "A" * 100000}
+                    result = evaluate_research_chain(row, now_utc=NOW)
+                    self.assertFalse(result["trade_ready"])
+                    self.assertFalse(result["offline_notification_route"]["send_enabled"])
+                    self.assertTrue(result["blocks"])
+
     def test_even_claimed_verified_stays_research(self):
         result = evaluate_research_chain(valid_fixture(), now_utc=NOW)
         self.assertEqual(result["notification_channel"], "RESEARCH")
