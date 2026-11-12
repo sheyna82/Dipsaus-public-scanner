@@ -11,7 +11,7 @@ def valid_fixture():
     for name, value in (("broker", 52.05), ("invalidation", 49),
                         ("resistance", 58.20)):
         technical[name + "_evidence"] = {
-            "verified": True, "source": "offline-test-only",
+            "verified": True, "source": "offline-test-only", "symbol": "TEST",
             "source_record_id": "fixture-" + name,
             "provider_id": "broker-fixture" if name == "broker" else "exchange-fixture",
             "source_family": "broker" if name == "broker" else "exchange",
@@ -192,6 +192,27 @@ class DecisionChainTests(unittest.TestCase):
         result = evaluate_research_chain(row, now_utc=NOW)
         self.assertIn("QUOTE_CURRENCY_NOT_DECLARED_FOR_USD_CHAIN", result["blocks"])
         self.assertFalse(result["order_placement_enabled"])
+
+    def test_price_evidence_for_another_instrument_is_blocked(self):
+        row = valid_fixture()
+        row["technical_evidence"]["resistance_evidence"]["symbol"] = "OTHER"
+        result = evaluate_research_chain(row, now_utc=NOW)
+        self.assertIn("RESISTANCE_INSTRUMENT_MISMATCH", result["blocks"])
+        self.assertFalse(result["trade_ready"])
+        self.assertFalse(result["offline_notification_route"]["send_enabled"])
+
+    def test_undeclared_instrument_on_price_record_is_blocked(self):
+        row = valid_fixture()
+        row["technical_evidence"]["broker_evidence"].pop("symbol")
+        result = evaluate_research_chain(row, now_utc=NOW)
+        self.assertIn("BROKER_INSTRUMENT_NOT_DECLARED", result["blocks"])
+        self.assertFalse(result["trade_ready"])
+
+    def test_all_matching_instrument_records_avoid_binding_blocks(self):
+        row = valid_fixture()
+        result = evaluate_research_chain(row, now_utc=NOW)
+        self.assertFalse(any("INSTRUMENT_" in block for block in result["blocks"]))
+        self.assertIn("INDEPENDENT_TRADE_ATTESTATION_NOT_CONNECTED", result["blocks"])
 
     def test_missing_money_inputs_stays_research(self):
         row = valid_fixture()
