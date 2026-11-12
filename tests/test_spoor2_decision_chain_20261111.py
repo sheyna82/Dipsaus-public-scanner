@@ -99,6 +99,25 @@ class DecisionChainTests(unittest.TestCase):
         self.assertIn("SCENARIO_RR_BELOW_TWO", result["blocks"])
         self.assertFalse(result["trade_ready"])
 
+    def test_gross_two_r_does_not_override_net_friction_gate(self):
+        row = valid_fixture()
+        row["technical_evidence"]["resistance_usd"] = 58.15
+        row["technical_evidence"]["resistance_evidence"]["observed_price_usd"] = 58.15
+        row["money_inputs"]["exit_bid_usd"] = 58.15
+        result = evaluate_research_chain(row, now_utc=NOW)
+        self.assertAlmostEqual(result["money_scenario"]["reference_rr"], 2)
+        self.assertLess(result["money_scenario"]["net_reference_rr_after_friction"], 2)
+        self.assertIn("NET_SCENARIO_RR_BELOW_TWO", result["blocks"])
+        self.assertEqual(result["notification_channel"], "RESEARCH")
+        self.assertFalse(result["trade_ready"])
+
+    def test_net_gate_is_separate_from_gross_gate(self):
+        row = valid_fixture()
+        result = evaluate_research_chain(row, now_utc=NOW)
+        self.assertNotIn("SCENARIO_RR_BELOW_TWO", result["blocks"])
+        self.assertIn("NET_SCENARIO_RR_BELOW_TWO", result["blocks"])
+        self.assertFalse(result["order_placement_enabled"])
+
     def test_money_prices_cannot_differ_from_audited_levels(self):
         for money_field, replacement, expected in (
             ("ask_usd", 53, "ENTRY_EVIDENCE_MISMATCH"),
