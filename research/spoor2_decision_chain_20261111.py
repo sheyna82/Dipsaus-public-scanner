@@ -44,6 +44,10 @@ def evaluate_research_chain(candidate, *, now_utc):
             resistance_reference_usd=technical.get("resistance_usd"))
         if entry_zone["status"] != "ILLUSTRATIVE_ENTRY_ZONE_ONLY":
             blocks.append("RESEARCH_ENTRY_ZONE_NOT_ESTABLISHED")
+        # A mathematical zone must not be presented as independently
+        # evidenced when freshness, provenance, or source audits block it.
+        if levels.get("status") != "EVIDENCE_PRESENT_REQUIRES_INDEPENDENT_REVIEW" or provenance.get("status") != "PROVENANCE_RECORDED_REQUIRES_EXTERNAL_VERIFICATION":
+            blocks.append("ENTRY_ZONE_EVIDENCE_INCOMPLETE")
     else:
         blocks.append("RESEARCH_ENTRY_ZONE_NOT_ESTABLISHED")
     args = candidate.get("money_inputs")
