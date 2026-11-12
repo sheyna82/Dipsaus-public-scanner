@@ -18,6 +18,8 @@ def audit_instrument_source_attestation(attestation):
     key = attestation.get("signer_public_key_b64")
     if not isinstance(key, str):
         return {**base, "blocks": ["INSTRUMENT_SIGNER_KEY_INVALID"]}
+    if len(key) > 44:
+        return {**base, "blocks": ["INSTRUMENT_SIGNER_KEY_OVERSIZED"]}
     try:
         raw = base64.b64decode(key, validate=True)
     except (ValueError, base64.binascii.Error):
