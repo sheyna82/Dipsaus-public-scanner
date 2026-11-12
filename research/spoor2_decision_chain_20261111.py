@@ -27,9 +27,13 @@ def evaluate_research_chain(candidate, *, now_utc):
     market = candidate.get("market")
     quote_currency = candidate.get("quote_currency")
     market_blocks = []
-    if market is not None and market != "US":
+    if market is None:
+        market_blocks.append("MARKET_NOT_DECLARED_FOR_USD_CHAIN")
+    elif market != "US":
         market_blocks.append("MARKET_NOT_SUPPORTED_BY_USD_CHAIN")
-    if quote_currency is not None and quote_currency != "USD":
+    if quote_currency is None:
+        market_blocks.append("QUOTE_CURRENCY_NOT_DECLARED_FOR_USD_CHAIN")
+    elif quote_currency != "USD":
         market_blocks.append("QUOTE_CURRENCY_NOT_USD")
     levels = audit_levels(candidate.get("technical_evidence"), now_utc=now_utc)
     provenance = audit_source_independence(candidate.get("technical_evidence"))
