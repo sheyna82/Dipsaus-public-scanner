@@ -156,6 +156,28 @@ class SourceIndependenceTests(unittest.TestCase):
         self.assertEqual(result["status"],
                          "PROVENANCE_RECORDED_REQUIRES_EXTERNAL_VERIFICATION")
 
+    def test_malformed_percent_escape_blocks_provenance(self):
+        data = sample()
+        data["broker_evidence"]["source_url"] = "https://example.org/quote%ZZ"
+        result = audit_source_independence(data)
+        self.assertIn("BROKER_SOURCE_URL_INVALID", result["blocks"])
+        self.assertEqual(result["status"], "BLOCKED")
+
+    def test_encoded_control_character_blocks_provenance(self):
+        data = sample()
+        data["resistance_evidence"]["source_url"] = (
+            "https://example.org/quote%0Ahidden")
+        result = audit_source_independence(data)
+        self.assertIn("RESISTANCE_SOURCE_URL_INVALID", result["blocks"])
+        self.assertFalse(result["trade_ready"])
+
+    def test_valid_percent_encoded_unreserved_path_remains_accepted(self):
+        data = sample()
+        data["broker_evidence"]["source_url"] = (
+            "https://example.org/record/%62roker")
+        result = audit_source_independence(data)
+        self.assertNotIn("BROKER_SOURCE_URL_INVALID", result["blocks"])
+
     def test_bogus_input_fails_closed(self):
         self.assertEqual(audit_source_independence(None)["status"], "BLOCKED")
 
