@@ -131,5 +131,34 @@ class SignedInstrumentRecordTests(unittest.TestCase):
         self.assertFalse(tampered["trade_ready"])
         self.assertFalse(tampered["order_placement_enabled"])
 
+    def test_nonstring_identity_fields_fail_closed(self):
+        for field in ("symbol", "market", "venue_mic", "isin"):
+            for value in (None, 123, True, [], {}):
+                with self.subTest(field=field, value=repr(value)):
+                    identity = {**IDENTITY, field: value}
+                    record = identity
+                    r = verify_instrument_signed_record(identity, record, "", "")
+                    self.assertIn("INSTRUMENT_SIGNED_RECORD_BINDING_MISMATCH", r["blocks"])
+                    self.assertFalse(r["signature_verified"])
+                    self.assertFalse(r["source_attested"])
+                    self.assertFalse(r["trade_ready"])
+                    self.assertFalse(r["order_placement_enabled"])
+
+    def test_unverified_isin_mic_claims_never_grant_authority(self):
+        identity = {**IDENTITY, "isin": "INVALID-ISIN", "venue_mic": "ZZZZ"}
+        record = identity
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+        from cryptography.hazmat.primitives import serialization
+        private = Ed25519PrivateKey.generate()
+        payload = json.dumps(record, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+        sig = base64.b64encode(private.sign(payload)).decode("ascii")
+        key = base64.b64encode(private.public_key().public_bytes(encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw)).decode("ascii")
+        r = verify_instrument_signed_record(identity, record, sig, key)
+        self.assertTrue(r["signature_verified"])
+        self.assertFalse(r["source_attested"])
+        self.assertFalse(r["trade_ready"])
+        self.assertFalse(r["order_placement_enabled"])
+        self.assertIn("INSTRUMENT_SIGNER_NOT_INDEPENDENTLY_APPROVED", r["blocks"])
+
 if __name__ == "__main__":
     unittest.main()
