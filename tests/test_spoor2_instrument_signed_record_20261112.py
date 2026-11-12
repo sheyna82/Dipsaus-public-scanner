@@ -86,5 +86,17 @@ class SignedInstrumentRecordTests(unittest.TestCase):
                 self.assertFalse(r["trade_ready"])
                 self.assertFalse(r["order_placement_enabled"])
 
+    def test_isolated_unicode_surrogates_block_before_crypto(self):
+        for surrogate in ("\\ud800", "\\udfff"):
+            for field in ("symbol", "market", "venue_mic", "isin"):
+                with self.subTest(field=field, surrogate=repr(surrogate)):
+                    identity = {**IDENTITY, field: "X" + surrogate}
+                    record = identity
+                    r = verify_instrument_signed_record(identity, record, "", "")
+                    self.assertIn("INSTRUMENT_SIGNED_RECORD_INVALID_UNICODE", r["blocks"])
+                    self.assertFalse(r["signature_verified"])
+                    self.assertFalse(r["trade_ready"])
+                    self.assertFalse(r["order_placement_enabled"])
+
 if __name__ == "__main__":
     unittest.main()
