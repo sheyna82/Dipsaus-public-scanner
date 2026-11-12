@@ -72,5 +72,30 @@ class BoundInstrumentObservationTests(unittest.TestCase):
         self.assertFalse(r["trade_ready"])
         self.assertFalse(r["order_placement_enabled"])
 
+    def test_noncanonical_crypto_base64_blocks(self):
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+        from cryptography.hazmat.primitives import serialization
+        private = Ed25519PrivateKey.generate()
+        record = RECORD
+        payload = json.dumps(record, sort_keys=True, separators=(",", ":"),
+                             ensure_ascii=True).encode("ascii")
+        signature = base64.b64encode(private.sign(payload)).decode("ascii")
+        key = base64.b64encode(private.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw)).decode("ascii")
+        def alternate(encoded):
+            alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+            index = alphabet.index(encoded[-2])
+            return encoded[:-2] + alphabet[index ^ 1] + "="
+        self.assertEqual(base64.b64decode(key), base64.b64decode(alternate(key)))
+        self.assertEqual(base64.b64decode(signature), base64.b64decode(alternate(signature)))
+        for sig, pub in ((alternate(signature), key), (signature, alternate(key))):
+            with self.subTest(noncanonical_key=pub != key):
+                r = verify(IDENTITY, RECORD, sig, pub, verification_utc=NOW)
+                self.assertIn("INVALID_BOUND_INSTRUMENT_SIGNATURE_ENCODING", r["blocks"])
+                self.assertFalse(r["signature_verified"])
+                self.assertFalse(r["trade_ready"])
+                self.assertFalse(r["order_placement_enabled"])
+
 if __name__ == "__main__":
     unittest.main()
