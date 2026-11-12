@@ -229,6 +229,28 @@ class DecisionChainTests(unittest.TestCase):
         self.assertIn("NET_SCENARIO_RR_BELOW_TWO", result["blocks"])
         self.assertFalse(result["order_placement_enabled"])
 
+    def test_net_profit_just_below_150_cannot_round_into_qualification(self):
+        row = valid_fixture()
+        row["market"] = "US"
+        row["quote_currency"] = "USD"
+        from research.spoor2_candidate_levels_20261111 import money_scenario
+        inputs = row["money_inputs"]
+        shares = money_scenario(**inputs)["whole_shares"]
+        buy_total = (shares * inputs["ask_usd"] * inputs["eur_per_usd"]
+                     * (1 + inputs["buy_fx_rate"]) + inputs["buy_fee_eur"])
+        target = ((buy_total + 149.999 + inputs["sell_fee_eur"])
+                  / (shares * inputs["eur_per_usd"]
+                     * (1 - inputs["sell_fx_rate"])))
+        row["technical_evidence"]["resistance_usd"] = target
+        row["technical_evidence"]["resistance_evidence"]["observed_price_usd"] = target
+        row["money_inputs"]["exit_bid_usd"] = target
+        result = evaluate_research_chain(row, now_utc=NOW)
+        scenario = result["money_scenario"]
+        self.assertLess(scenario["net_profit_eur_unrounded"], 150)
+        self.assertEqual(scenario["net_profit_eur"], 150.0)
+        self.assertIn("NET_PROFIT_BELOW_150", result["blocks"])
+        self.assertFalse(result["trade_ready"])
+
     def test_gross_rr_just_below_two_cannot_round_into_qualification(self):
         row = valid_fixture()
         row["market"] = "US"
