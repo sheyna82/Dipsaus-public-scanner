@@ -29,6 +29,33 @@ def valid_fixture():
     }
 
 class DecisionChainTests(unittest.TestCase):
+    def test_integrated_identity_mismatch_is_reported_and_blocked(self):
+        row = valid_fixture()
+        row["venue_mic"] = "XNAS"
+        row["isin"] = "US0378331005"
+        for role in ("broker", "invalidation", "resistance"):
+            row["technical_evidence"][role + "_evidence"].update({
+                "market": "US", "venue_mic": "XNAS", "isin": "US0378331005"})
+        row["technical_evidence"]["resistance_evidence"]["venue_mic"] = "XNYS"
+        result = evaluate_research_chain(row, now_utc=NOW)
+        self.assertIn("RESISTANCE_VENUE_MIC_MISMATCH", result["blocks"])
+        self.assertEqual(result["instrument_identity_audit"]["status"], "BLOCKED")
+        self.assertFalse(result["trade_ready"])
+        self.assertFalse(result["offline_notification_route"]["send_enabled"])
+
+    def test_integrated_consistent_identity_is_still_unattested(self):
+        row = valid_fixture()
+        row["venue_mic"] = "XNAS"
+        row["isin"] = "US0378331005"
+        for role in ("broker", "invalidation", "resistance"):
+            row["technical_evidence"][role + "_evidence"].update({
+                "market": "US", "venue_mic": "XNAS", "isin": "US0378331005"})
+        result = evaluate_research_chain(row, now_utc=NOW)
+        self.assertEqual(result["instrument_identity_audit"]["status"],
+                         "CONSISTENT_CLAIMS_NOT_EXTERNALLY_ATTESTED")
+        self.assertIn("EXTERNAL_INSTRUMENT_ATTESTATION_NOT_CONNECTED", result["blocks"])
+        self.assertFalse(result["trade_ready"])
+
     def test_even_claimed_verified_stays_research(self):
         result = evaluate_research_chain(valid_fixture(), now_utc=NOW)
         self.assertEqual(result["notification_channel"], "RESEARCH")
