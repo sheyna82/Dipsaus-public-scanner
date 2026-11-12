@@ -100,5 +100,17 @@ class BoundInstrumentObservationTests(unittest.TestCase):
                 self.assertFalse(r["trade_ready"])
                 self.assertFalse(r["order_placement_enabled"])
 
+    def test_isolated_unicode_surrogates_block_before_crypto(self):
+        for surrogate in ("\\ud800", "\\udfff"):
+            for field in ("symbol", "market", "venue_mic", "isin"):
+                with self.subTest(field=field, surrogate=repr(surrogate)):
+                    identity = {**IDENTITY, field: "X" + surrogate}
+                    record = {**RECORD, field: identity[field]}
+                    r = verify(identity, record, "", "", verification_utc=NOW)
+                    self.assertIn("BOUND_INSTRUMENT_IDENTITY_INVALID_UNICODE", r["blocks"])
+                    self.assertFalse(r["signature_verified"])
+                    self.assertFalse(r["trade_ready"])
+                    self.assertFalse(r["order_placement_enabled"])
+
 if __name__ == "__main__":
     unittest.main()
