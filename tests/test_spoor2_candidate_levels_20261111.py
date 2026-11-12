@@ -24,6 +24,22 @@ class Spoor2ResearchTests(unittest.TestCase):
         self.assertFalse(result["trade_ready"])
         self.assertFalse(result["resistance_verified"])
 
+    def test_historical_levels_use_nearest_overhead_resistance(self):
+        data={"recent_10d_low_invalidation_reference_usd":49,
+              "historical_overhead_pivot_zones":[{"low_usd":60},{"low_usd":54}]}
+        r=module.research_levels(data,52)
+        self.assertEqual(r["resistance_references_usd"],[54.0,60.0])
+        self.assertEqual(r["entry_zone_research"]["status"],
+                         "REFERENCE_RR_BELOW_MINIMUM")
+        self.assertNotIn("entry_zone_reference_usd",r["entry_zone_research"])
+        self.assertFalse(r["trade_ready"])
+
+    def test_historical_levels_without_invalidation_have_no_entry_zone(self):
+        r=module.research_levels(
+            {"historical_overhead_pivot_zones":[{"low_usd":60}]},52)
+        self.assertIsNone(r["entry_zone_research"])
+        self.assertFalse(r["trade_ready"])
+
     def test_entry_zone_ceiling_is_mathematically_two_r(self):
         r=module.research_entry_zone(
             broker_ask_usd=52, invalidation_reference_usd=49,
