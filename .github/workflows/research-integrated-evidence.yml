@@ -48,6 +48,7 @@ on:
       - 'research/spoor2_mic_evidence_gate_20261113.py'
       - 'research/spoor2_xetra_artifact_retrieval_20261113.py'
       - 'research/spoor2_xetra_structure_inventory_20261113.py'
+      - 'research/spoor2_xetra_market_segment_reference_20261113.py'
       - 'tests/test_spoor2_xetra_artifact_retrieval_20261113.py'
       - 'tests/test_spoor2_mic_evidence_gate_20261113.py'
   pull_request:
@@ -134,12 +135,14 @@ jobs:
           from research.spoor2_xetra_csv_intake_20261113 import inspect_xetra_csv
           from research.spoor2_xetra_zip_intake_20261113 import inspect_xetra_static_zip
           from research.spoor2_xetra_structure_inventory_20261113 import inventory_csv, inventory_zip, inspect_xetra_csv_schema
+          from research.spoor2_xetra_market_segment_reference_20261113 import inspect_market_segment_reference
 
           for kind, inspector in (("csv", inspect_xetra_csv), ("zip", inspect_xetra_static_zip)):
               fetched = retrieve_xetra_artifact(kind)
               inspected = inspector(fetched["bytes"]) if fetched["bytes"] is not None else None
               inventory = (inventory_csv(fetched["bytes"]) if kind == "csv" else inventory_zip(fetched["bytes"])) if fetched["bytes"] is not None else None
               schema = inspect_xetra_csv_schema(fetched["bytes"]) if kind == "csv" and fetched["bytes"] is not None else None
+              segment_reference = inspect_market_segment_reference(fetched["bytes"]) if kind == "zip" and fetched["bytes"] is not None else None
               print(json.dumps({"artifact": kind, "retrieval": public_metadata(fetched),
-                                "inspection": inspected, "inventory": inventory, "schema": schema}, sort_keys=True))
+                                "inspection": inspected, "inventory": inventory, "schema": schema, "segment_reference": segment_reference}, sort_keys=True))
           PY
