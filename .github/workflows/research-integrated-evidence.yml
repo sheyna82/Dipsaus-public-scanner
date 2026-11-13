@@ -50,6 +50,8 @@ on:
       - 'research/spoor2_xetra_structure_inventory_20261113.py'
       - 'research/spoor2_xetra_market_segment_reference_20261113.py'
       - 'research/spoor2_xetra_pilot_evidence_20261113.py'
+      - 'research/spoor2_execution_evidence_gate_20261113.py'
+      - 'tests/test_spoor2_execution_evidence_gate_20261113.py'
       - 'tests/test_spoor2_xetra_pilot_evidence_20261113.py'
       - 'tests/test_spoor2_xetra_artifact_retrieval_20261113.py'
       - 'tests/test_spoor2_mic_evidence_gate_20261113.py'
@@ -139,6 +141,7 @@ jobs:
           from research.spoor2_xetra_structure_inventory_20261113 import inventory_csv, inventory_zip, inspect_xetra_csv_schema
           from research.spoor2_xetra_market_segment_reference_20261113 import inspect_market_segment_reference
           from research.spoor2_xetra_pilot_evidence_20261113 import build_pilot_evidence
+          from research.spoor2_execution_evidence_gate_20261113 import assess_execution_evidence
 
           pilot_bytes = {}
           for kind, inspector in (("csv", inspect_xetra_csv), ("zip", inspect_xetra_static_zip)):
@@ -151,5 +154,7 @@ jobs:
               print(json.dumps({"artifact": kind, "retrieval": public_metadata(fetched),
                                 "inspection": inspected, "inventory": inventory, "schema": schema, "segment_reference": segment_reference}, sort_keys=True))
           if pilot_bytes.get("csv") is not None and pilot_bytes.get("zip") is not None:
-              print(json.dumps({"pilot_evidence": build_pilot_evidence(pilot_bytes["csv"], pilot_bytes["zip"])}, sort_keys=True))
+              pilot = build_pilot_evidence(pilot_bytes["csv"], pilot_bytes["zip"])
+              print(json.dumps({"pilot_evidence": pilot}, sort_keys=True))
+              print(json.dumps({"execution_evidence": assess_execution_evidence(pilot)}, sort_keys=True))
           PY
