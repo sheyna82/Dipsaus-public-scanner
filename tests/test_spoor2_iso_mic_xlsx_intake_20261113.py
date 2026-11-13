@@ -1,6 +1,7 @@
 import io
 import unittest
 import zipfile
+import warnings
 from research.spoor2_iso_mic_xlsx_intake_20261113 import inspect_iso_mic_xlsx
 
 
@@ -12,7 +13,9 @@ def workbook(*, xml=None, duplicate=False, unsafe=False):
         z.writestr("[Content_Types].xml", b"<Types/>")
         z.writestr("xl/workbook.xml", xml)
         if duplicate:
-            z.writestr("xl/workbook.xml", xml)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", message="Duplicate name:", category=UserWarning)
+                z.writestr("xl/workbook.xml", xml)
         if unsafe:
             z.writestr("../unsafe", b"x")
     return buf.getvalue()
@@ -51,3 +54,20 @@ class IsoMicXlsxIntakeTests(unittest.TestCase):
     def test_wrong_xml_root_rejected(self):
         self.assertIn("INVALID_WORKBOOK_ROOT",
                       inspect_iso_mic_xlsx(workbook(xml=b"<notworkbook/>"))["blocks"])
+
+    def test_oversized_dataset_rejected_before_parsing(self):
+        from research.spoor2_iso_mic_xlsx_intake_20261113 import MAX_BYTES
+        self.assertIn("INVALID_OR_OVERSIZED_DATASET",
+                      inspect_iso_mic_xlsx(b"x" * (MAX_BYTES + 1))["blocks"])
+
+    def test_missing_workbook_rejected(self):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            z.writestr("[Content_Types].xml", b"<Types/>")
+        self.assertIn("NOT_AN_XLSX_WORKBOOK",
+                      inspect_iso_mic_xlsx(buf.getvalue())["blocks"])
+
+    def test_same_bytes_same_digest(self):
+        payload = workbook()
+        self.assertEqual(inspect_iso_mic_xlsx(payload)["sha256"],
+                         inspect_iso_mic_xlsx(payload)["sha256"])
