@@ -160,5 +160,17 @@ class SignedInstrumentRecordTests(unittest.TestCase):
         self.assertFalse(r["order_placement_enabled"])
         self.assertIn("INSTRUMENT_SIGNER_NOT_INDEPENDENTLY_APPROVED", r["blocks"])
 
+    def test_candidate_nonstring_cannot_match_valid_signed_identity(self):
+        for field in ("symbol", "market", "venue_mic", "isin"):
+            for value in (None, 123, True, [], {}):
+                with self.subTest(field=field, value=repr(value)):
+                    candidate = {**IDENTITY, field: value}
+                    r = verify_instrument_signed_record(candidate, IDENTITY, "", "")
+                    self.assertIn("INSTRUMENT_SIGNED_RECORD_BINDING_MISMATCH", r["blocks"])
+                    self.assertFalse(r["signature_verified"])
+                    self.assertFalse(r["source_attested"])
+                    self.assertFalse(r["trade_ready"])
+                    self.assertFalse(r["order_placement_enabled"])
+
 if __name__ == "__main__":
     unittest.main()
