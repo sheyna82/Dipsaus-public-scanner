@@ -32,5 +32,10 @@ class TestExecutionEvidenceGate(unittest.TestCase):
         result = assess_execution_evidence({"status": "BLOCKED", "records": records})
         self.assertIn("UNEXPECTED_XETRA_INSTRUMENT_DE0006231004", result["blocks"])
 
+    def test_malformed_record_blocks_without_exception(self):
+        result = assess_execution_evidence({"status": "BLOCKED", "records": [None, RECORDS[1]]})
+        self.assertIn("INVALID_PILOT_ISIN_SET", result["blocks"])
+        self.assertFalse(result["trade_ready"])
+
 if __name__ == "__main__":
     unittest.main()
