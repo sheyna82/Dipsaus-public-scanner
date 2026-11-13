@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0",
+  "observation_date": "2026-11-13",
+  "source_kind": "user_uploaded_iso10383_mic_xlsx",
+  "file_name": "ISO10383_MIC.xlsx",
+  "byte_size": 327501,
+  "sha256": "d195f74da998b6ba62f997bf1740c90f9764734665dd825676107d101a692dc2",
+  "sheet_name": "ISO10383_MIC",
+  "total_rows_including_header": 2894,
+  "records_observed": 2893,
+  "independent_official_byte_provenance_attested": false,
+  "official_release_date_from_file_verified": false,
+  "source_attested": false,
+  "mic_registered": false,
+  "degiro_fee_verified": false,
+  "trade_ready": false,
+  "order_placement_enabled": false,
+  "records": [
+    {
+      "mic": "XAMS",
+      "operating_mic": "XAMS",
+      "oprt_sgmt": "OPRT",
+      "market_name": "EURONEXT - EURONEXT AMSTERDAM",
+      "country": "NL",
+      "status": "ACTIVE",
+      "creation_date": "20050627",
+      "last_update_date": "20150427",
+      "last_validation_date": null,
+      "expiry_date": null
+    },
+    {
+      "mic": "XETR",
+      "operating_mic": "XETR",
+      "oprt_sgmt": "OPRT",
+      "market_name": "XETRA",
+      "country": "DE",
+      "status": "ACTIVE",
+      "creation_date": "20050627",
+      "last_update_date": "20161128",
+      "last_validation_date": null,
+      "expiry_date": null
+    },
+    {
+      "mic": "XHEL",
+      "operating_mic": "XHEL",
+      "oprt_sgmt": "OPRT",
+      "market_name": "NASDAQ HELSINKI LTD",
+      "country": "FI",
+      "status": "ACTIVE",
+      "creation_date": "20110124",
+      "last_update_date": "20230925",
+      "last_validation_date": "20230925",
+      "expiry_date": null
+    }
+  ],
+  "limitations": [
+    "Observed rows from uploaded workbook only; independent download/hash comparison with official authority not yet performed.",
+    "Operating MIC status does not independently prove individual instrument listing or DEGIRO execution venue.",
+    "No source-specific date of publication or changes independently derived from workbook metadata."
+  ]
+}
