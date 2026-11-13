@@ -17,7 +17,10 @@
     "next_publication_date": "2026-12-14",
     "dataset_downloaded_and_parsed": false,
     "individual_mic_records_verified": false,
-    "warning": "November publication does not imply November 23 changes are effective on November 13."
+    "warning": "November publication does not imply November 23 changes are effective on November 13.",
+    "official_csv_dataset_url": "https://www.iso20022.org/sites/default/files/ISO10383_MIC/ISO10383_MIC.csv",
+    "official_download_links_confirmed_on_authority_index": true,
+    "source_access_note": "Official index confirms Excel and CSV download locations; dataset content was not retrieved or parsed in this research environment."
   },
   "degiro_nl": {
     "official_tariff_page": "https://www.degiro.nl/tarieven",
