@@ -31,3 +31,29 @@ class CombinedEvidenceGateTests(unittest.TestCase):
                          "tariff_rule_id":"claim"})
         self.assertFalse(r["order_placement_enabled"])
         self.assertFalse(r["degiro_fee_verified"])
+
+    def test_duplicate_matching_records_never_authorize(self):
+        dossier={**D,"instruments":D["instruments"]*2}
+        r=audit_combined_evidence(C,dossier)
+        self.assertEqual(r["matching_mic_record_count"],2)
+        self.assertIn("MIC_DOSSIER_INSTRUMENT_MISMATCH",r["blocks"])
+        self.assertFalse(r["trade_ready"])
+    def test_untrusted_documentary_url_never_authorizes(self):
+        dossier={**D,"evidence":[{"url":"http://example.org/mic","role":"primary"}]}
+        r=audit_combined_evidence(C,dossier)
+        self.assertIn("INVALID_DOCUMENTARY_SOURCE",r["blocks"])
+        self.assertFalse(r["source_attested"])
+    def test_claimant_supplied_source_authority_never_authorizes(self):
+        dossier={**D,"source_attested":True,"mic_registered":True,
+                 "order_placement_enabled":True,"broker_route_verified":True}
+        r=audit_combined_evidence(C,dossier)
+        self.assertFalse(r["source_attested"])
+        self.assertFalse(r["mic_registered"])
+        self.assertFalse(r["order_placement_enabled"])
+        self.assertFalse(r["broker_route_verified"])
+    def test_missing_candidate_currency_cannot_match(self):
+        candidate={k:v for k,v in C.items() if k!="trading_currency"}
+        r=audit_combined_evidence(candidate,D)
+        self.assertEqual(r["matching_mic_record_count"],0)
+        self.assertIn("MIC_DOSSIER_INSTRUMENT_MISMATCH",r["blocks"])
+        self.assertFalse(r["trade_ready"])
