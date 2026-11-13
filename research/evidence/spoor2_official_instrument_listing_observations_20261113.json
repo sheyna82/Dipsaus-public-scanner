@@ -1,0 +1,123 @@
+{
+  "schema_version": "1.0",
+  "observed_on": "2026-11-13",
+  "purpose": "Research-only primary-source instrument listing evidence. Does not attest ISO workbook provenance, specific segment MIC, DEGIRO execution route or fees.",
+  "source_attested": false,
+  "mic_registered": false,
+  "degiro_fee_verified": false,
+  "broker_route_verified": false,
+  "trade_ready": false,
+  "order_placement_enabled": false,
+  "observations": [
+    {
+      "symbol": "ASML.AS",
+      "isin": "NL0010273215",
+      "venue": "Euronext Amsterdam",
+      "operating_mic_candidate": "XAMS",
+      "currency": "EUR",
+      "evidence": [
+        {
+          "url": "https://live.euronext.com/nl/product/equities/NL0010273215-XAMS/market-information",
+          "supports": [
+            "ISIN",
+            "ordinary share",
+            "Euronext Amsterdam",
+            "EUR",
+            "continuous trading"
+          ]
+        },
+        {
+          "url": "https://live.euronext.com/it/markets/amsterdam/equities/list",
+          "supports": [
+            "ASML HOLDING",
+            "NL0010273215",
+            "ASML",
+            "XAMS",
+            "EUR"
+          ]
+        }
+      ],
+      "limitations": [
+        "Official source listing does not establish broker-specific route or segment MIC."
+      ]
+    },
+    {
+      "symbol": "IFX.DE",
+      "isin": "DE0006231004",
+      "venue": "Xetra",
+      "operating_mic_candidate": "XETR",
+      "currency_candidate": "EUR",
+      "evidence": [
+        {
+          "url": "https://live.deutsche-boerse.com/equity/infineon-technologies-ag",
+          "supports": [
+            "Infineon Technologies AG",
+            "DE0006231004",
+            "IFX",
+            "Xetra price-information context"
+          ]
+        }
+      ],
+      "limitations": [
+        "Currency and exact segment MIC not independently extracted from this source.",
+        "No broker-specific route attested."
+      ]
+    },
+    {
+      "symbol": "NOKIA.HE",
+      "isin": "FI0009000681",
+      "venue": "Nasdaq Helsinki",
+      "operating_mic_candidate": "XHEL",
+      "currency": "EUR",
+      "evidence": [
+        {
+          "url": "https://www.nokia.com/newsroom/nokia-corporation-managers-transactions-hotard-809613/",
+          "supports": [
+            "2026-04-28 transaction",
+            "ISIN",
+            "NASDAQ HELSINKI LTD (XHEL)",
+            "EUR transaction price"
+          ]
+        },
+        {
+          "url": "https://www.nokia.com/about-us/investors/stock-information/voluntary-delisting-from-euronext-paris-faq/",
+          "supports": [
+            "Nasdaq Helsinki listing remains after Paris delisting effective 2025-12-31"
+          ]
+        }
+      ],
+      "limitations": [
+        "Issuer-reported transaction venue is not DEGIRO routing evidence.",
+        "Segment MIC not established."
+      ]
+    },
+    {
+      "symbol": "RHM.DE",
+      "isin": "DE0007030009",
+      "venue": "Xetra",
+      "operating_mic_candidate": "XETR",
+      "currency_candidate": "EUR",
+      "evidence": [
+        {
+          "url": "https://live.deutsche-boerse.com/equity/rheinmetall-ag",
+          "supports": [
+            "Rheinmetall AG",
+            "DE0007030009",
+            "RHM",
+            "Xetra price-information context"
+          ]
+        }
+      ],
+      "limitations": [
+        "Currency and exact segment MIC not independently extracted from this source.",
+        "No broker-specific route attested."
+      ]
+    }
+  ],
+  "global_limitations": [
+    "URLs were consulted as public pages; no immutable page snapshot or cryptographic source attestation was captured.",
+    "Official ISO workbook byte-for-byte comparison remains open.",
+    "General published tariffs are not account-specific DEGIRO quotes.",
+    "No trade readiness or order permission granted."
+  ]
+}
