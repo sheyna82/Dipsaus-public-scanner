@@ -21,5 +21,6 @@ def audit_combined_evidence(candidate, mic_dossier, *, isin_record=None,
     return {"status":"BLOCKED", "identity_documentary":identity,
             "mic_documentary":mic, "matching_mic_record_count":len(matching),
             "source_attested":False, "mic_registered":False,
-            "broker_route_verified":False, "degiro_fee_verified":False,
+            "broker_route_verified":False, "segment_mic_verified":False,
+            "degiro_fee_verified":False,
             "trade_ready":False, "order_placement_enabled":False, "blocks":blocks}
