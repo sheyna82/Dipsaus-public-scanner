@@ -73,5 +73,22 @@ class InstrumentVenueFeeAuditTests(unittest.TestCase):
         self.assertIn("DEGIRO_FEE_PRIMARY_EVIDENCE_UNVERIFIED", r["blocks"])
 
 
+    def test_malformed_documentary_metadata_not_complete(self):
+        for field, value in (
+            ("source_url", "http://example.invalid/claim"),
+            ("source_url", "https://user:secret@example.invalid/claim"),
+            ("source_url", "https://example.invalid/claim#fragment"),
+            ("source_url", "https://example.invalid:bad/claim"),
+            ("retrieved_utc", "yesterday"),
+            ("retrieved_utc", "2026-11-13T08:00:00+01:00"),
+        ):
+            with self.subTest(field=field, value=value):
+                r = audit_instrument_venue_fee(
+                    C, isin_record={**META, "isin": C["isin"], field: value})
+                self.assertFalse(r["isin_evidence_complete"])
+                self.assertIn("ISIN_PRIMARY_EVIDENCE_UNVERIFIED", r["blocks"])
+                self.assertFalse(r["trade_ready"])
+
+
 if __name__ == "__main__":
     unittest.main()
