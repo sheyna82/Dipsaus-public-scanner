@@ -28,6 +28,14 @@
     {
       "url": "https://www.cashmarket.deutsche-boerse.com/resource/blob/4942826/73b31cf8fa62eeb7d9f0421d5ed07ea9/data/T7_Release_14.1_-_Functional_Reference_Version_1.pdf",
       "finding": "Deutsche Boerse T7 Release 14.1 Functional Reference section 9.1.8 distinguishes Xetra on-book XETA (regulated), XETB (Freiverkehr), XETS (Scale), off-book XETU/XETV/XETW and midpoint XEMA/XEMB/XEMI. Venue-level XETR does not identify which segment or execution mode DEGIRO uses. Source is an exchange rulebook, not an instrument-level transaction or broker route confirmation."
+    },
+    {
+      "url": "https://www.cashmarket.deutsche-boerse.com/cash-en/Data-Tech/Initiatives-Releases/release14-1/overview-and-functional-documents",
+      "finding": "Official T7 Release 14.1 documentation index identifies Cash Markets Instrument Reference Data Guide, which specifies instrument-level reference data formats. Reference documentation alone is not a dated, downloaded IFX/RHM instrument snapshot."
+    },
+    {
+      "url": "https://sim-new.cashmarket.deutsche-boerse.com/cash-en/trading/Tradable-Instruments-Xetra/Downloads/xetra-downloads",
+      "finding": "Deutsche Boerse publishes downloadable T7 Xetra All tradable instruments and Static Instrument Reference Data. Next verification requires the original dated reference-data artifact, checksum, parsing by ISIN and instrument venue/segment fields, and independent corroboration; webpage alone does not map IFX/RHM execution segment."
     }
   ],
   "pilot_segment_status": [
@@ -85,6 +93,7 @@
     "AFM handbook is historical; cannot prove present-day exact segment.",
     "Official ISO workbook bytes and effective records not freshly verified.",
     "No broker execution confirmations or account quotes.",
-    "Deutsche Boerse T7 functional-reference segment lists enumerate possible execution modes, not actual IFX/RHM segment assignments or broker order routes."
+    "Deutsche Boerse T7 functional-reference segment lists enumerate possible execution modes, not actual IFX/RHM segment assignments or broker order routes.",
+    "No instrument-level static-reference-data artifact was downloaded or hash-verified in this step; IFX and RHM execution segment remains unknown."
   ]
 }
