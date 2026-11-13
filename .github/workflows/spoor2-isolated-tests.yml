@@ -96,6 +96,8 @@ on:
       - 'tests/test_spoor2_iso_mic_release_gate_20261113.py'
       - 'research/spoor2_iso_mic_xlsx_intake_20261113.py'
       - 'tests/test_spoor2_iso_mic_xlsx_intake_20261113.py'
+      - 'research/spoor2_iso_mic_csv_intake_20261113.py'
+      - 'tests/test_spoor2_iso_mic_csv_intake_20261113.py'
       - '.github/workflows/spoor2-isolated-tests.yml'
   workflow_dispatch:
 permissions:
