@@ -55,6 +55,8 @@ on:
       - 'research/spoor2_iso_xetra_relationship_20261113.py'
       - 'research/spoor2_xetra_reporting_market_audit_20261113.py'
       - 'research/spoor2_instrument_evidence_ledger_20261113.py'
+      - 'research/spoor2_degiro_public_evidence_20261113.py'
+      - 'tests/test_spoor2_degiro_public_evidence_20261113.py'
       - 'tests/test_spoor2_instrument_evidence_ledger_20261113.py'
       - 'tests/test_spoor2_xetra_reporting_market_audit_20261113.py'
       - 'tests/test_spoor2_iso_xetra_relationship_20261113.py'
@@ -154,6 +156,7 @@ jobs:
           from research.spoor2_iso_xetra_relationship_20261113 import audit_xetra_iso_relationship
           from research.spoor2_xetra_reporting_market_audit_20261113 import audit_reporting_market
           from research.spoor2_instrument_evidence_ledger_20261113 import build_instrument_evidence_ledger
+          from research.spoor2_degiro_public_evidence_20261113 import assess_public_degiro_evidence
 
           pilot_bytes = {}
           for kind, inspector in (("csv", inspect_xetra_csv), ("zip", inspect_xetra_static_zip)):
@@ -178,5 +181,7 @@ jobs:
           if pilot_bytes.get("csv") is not None:
               reporting_audit = audit_reporting_market(pilot_bytes["csv"], iso_relationship)
               print(json.dumps({"xetra_reporting_market_audit": reporting_audit}, sort_keys=True))
-              print(json.dumps({"instrument_evidence_ledger": build_instrument_evidence_ledger(reporting_audit, iso_relationship)}, sort_keys=True))
+              ledger = build_instrument_evidence_ledger(reporting_audit, iso_relationship)
+              print(json.dumps({"instrument_evidence_ledger": ledger}, sort_keys=True))
+              print(json.dumps({"degiro_public_evidence": assess_public_degiro_evidence(ledger)}, sort_keys=True))
           PY
