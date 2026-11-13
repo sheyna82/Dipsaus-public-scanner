@@ -93,7 +93,7 @@ def audit_instrument_venue_fee(candidate, isin_record=None, mic_record=None,
             result["degiro_fee_verified"] = True
         else:
             blocks.append("DEGIRO_TARIFF_AUTHORITY_NOT_ESTABLISHED")
-    # No primary source data or broker tariffs are bundled/approved here.
+    # Completeness of supplied records is NOT independent verification.\n    result["isin_evidence_complete"] = result["isin_registered"]\n    result["mic_evidence_complete"] = result["mic_registered"]\n    result["listing_evidence_complete"] = result["listing_verified"]\n    result["degiro_fee_evidence_complete"] = result["degiro_fee_verified"]\n    result["isin_registered"] = False\n    result["mic_registered"] = False\n    result["listing_verified"] = False\n    result["degiro_fee_verified"] = False\n    # No primary source data or broker tariffs are bundled/approved here.
     # Even fully populated claimant-supplied records cannot attest authority.
     blocks.append("INDEPENDENT_SOURCE_AUTHORITY_NOT_ATTESTED")
     blocks.append("DEGIRO_EXECUTION_QUOTE_NOT_VERIFIED")
