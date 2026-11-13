@@ -192,5 +192,5 @@ jobs:
               print(json.dumps({"degiro_public_evidence": assess_public_degiro_evidence(ledger)}, sort_keys=True))
               print(json.dumps({"degiro_xetra_public_tariff": assess_public_xetra_tariff()}, sort_keys=True))
               for record in ledger["instruments"]:
-                  print(json.dumps({"degiro_route_evidence": classify_degiro_route_evidence(record["isin"], public_venue={"venue": "XETRA"})}, sort_keys=True))
+                  print(json.dumps({"degiro_route_evidence": classify_degiro_route_evidence(record["isin"])}, sort_keys=True))
           PY
