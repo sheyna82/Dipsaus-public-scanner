@@ -84,15 +84,22 @@ def inspect_xetra_csv_schema(data):
         if "\x00" in raw:
             raise ValueError("NUL")
         reader = csv.reader(io.StringIO(raw, newline=""), delimiter=";", strict=True)
-        first = next(reader, None)
-        header = next(reader, None)
-        if not first or not header or len(first) != 2 or not (2 <= len(header) <= MAX_COLUMNS):
+        metadata = []
+        header = None
+        for candidate in reader:
+            if len(candidate) == 2 and header is None and len(metadata) < 32:
+                metadata.append(candidate)
+                continue
+            if len(candidate) >= 3 and len(candidate) <= MAX_COLUMNS:
+                header = candidate
+            break
+        if not metadata or not header:
             out["blocks"].append("UNEXPECTED_XETRA_SCHEMA")
             return out
         if any(not h.strip() for h in header) or len(set(header)) != len(header):
             out["blocks"].append("INVALID_XETRA_COLUMN_NAMES")
             return out
-        out["metadata"] = first
+        out["metadata"] = metadata
         out["header_count"] = len(header)
         out["header_fields"] = header
         out["isin_columns"] = [i for i, name in enumerate(header) if "isin" in name.casefold()]
