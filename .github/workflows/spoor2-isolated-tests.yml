@@ -101,6 +101,9 @@ on:
       - 'research/spoor2_iso_mic_candidate_match_20261113.py'
       - 'tests/test_spoor2_iso_mic_candidate_match_20261113.py'
       - '.github/workflows/spoor2-isolated-tests.yml'
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 permissions:
   contents: read
