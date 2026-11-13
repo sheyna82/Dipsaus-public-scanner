@@ -57,3 +57,10 @@ class CombinedEvidenceGateTests(unittest.TestCase):
         self.assertEqual(r["matching_mic_record_count"],0)
         self.assertIn("MIC_DOSSIER_INSTRUMENT_MISMATCH",r["blocks"])
         self.assertFalse(r["trade_ready"])
+    def test_matched_operating_mic_never_verifies_execution_segment(self):
+        r = audit_combined_evidence(C, D)
+        self.assertFalse(r["segment_mic_verified"])
+        self.assertFalse(r["mic_documentary"]["segment_mic_verified"])
+        self.assertIn("SEGMENT_MIC_NOT_VERIFIED", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+        self.assertFalse(r["order_placement_enabled"])
