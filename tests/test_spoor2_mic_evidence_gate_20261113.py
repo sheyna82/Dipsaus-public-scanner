@@ -22,3 +22,20 @@ class MicEvidenceGateTests(unittest.TestCase):
         x={"provider_symbol":"RHM.DE","isin":"DE0007030009","venue_mic_candidate":"XETR","currency":"EUR"}
         r=audit_mic_dossier({"instruments":[x,x]})
         self.assertIn("DUPLICATE_INSTRUMENT",r["instruments"][1]["blocks"])
+    def test_operating_mic_does_not_attest_execution_segment(self):
+        for symbol, isin, operating_mic in (
+            ("IFX.DE", "DE0006231004", "XETR"),
+            ("RHM.DE", "DE0007030009", "XETR"),
+            ("ASML.AS", "NL0010273215", "XAMS"),
+            ("NOKIA.HE", "FI0009000681", "XHEL"),
+        ):
+            with self.subTest(symbol=symbol):
+                item = {"provider_symbol": symbol, "isin": isin,
+                        "venue_mic_candidate": operating_mic, "currency": "EUR"}
+                result = audit_mic_dossier({"instruments": [item]})
+                self.assertFalse(result["segment_mic_verified"])
+                self.assertFalse(result["instruments"][0]["segment_mic_verified"])
+                self.assertIn("SEGMENT_MIC_NOT_VERIFIED", result["blocks"])
+                self.assertIn("SEGMENT_MIC_NOT_VERIFIED",
+                              result["instruments"][0]["blocks"])
+                self.assertFalse(result["trade_ready"])
