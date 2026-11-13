@@ -5,6 +5,24 @@ Identifiers, exchange listings and broker tariffs require separate primary
 source records with independent provenance. Research-only.
 """
 import re
+from datetime import datetime, timezone
+from urllib.parse import urlsplit
+
+
+def _documentary_metadata_valid(record):
+    """Check syntax only; no network, source authority, or signature claims."""
+    try:
+        url = urlsplit(record["source_url"])
+        if (url.scheme != "https" or not url.hostname or url.username is not None
+                or url.password is not None or url.fragment or url.port == 0):
+            return False
+        stamp = record["retrieved_utc"]
+        if not isinstance(stamp, str) or not stamp.endswith("Z"):
+            return False
+        parsed = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+        return parsed.tzinfo is not None and parsed.utcoffset() == timezone.utc.utcoffset(None)
+    except (KeyError, TypeError, ValueError):
+        return False
 
 _ISIN = re.compile(r"^[A-Z]{2}[A-Z0-9]{9}[0-9]$", re.ASCII)
 _MIC = re.compile(r"^[A-Z0-9]{4}$", re.ASCII)
@@ -61,6 +79,7 @@ def audit_instrument_venue_fee(candidate, isin_record=None, mic_record=None,
         if (record.get("independent_verification") is not True
                 or any(not isinstance(record.get(k), str) or not record[k]
                        for k in metadata)
+                or not _documentary_metadata_valid(record)
                 or any(record.get(k) != candidate.get(k) for k in required)):
             blocks.append(kind + "_PRIMARY_EVIDENCE_UNVERIFIED")
             return False
