@@ -51,6 +51,8 @@ on:
       - 'research/spoor2_xetra_market_segment_reference_20261113.py'
       - 'research/spoor2_xetra_pilot_evidence_20261113.py'
       - 'research/spoor2_execution_evidence_gate_20261113.py'
+      - 'research/spoor2_iso10383_registry_inventory_20261113.py'
+      - 'tests/test_spoor2_iso10383_registry_inventory_20261113.py'
       - 'tests/test_spoor2_execution_evidence_gate_20261113.py'
       - 'tests/test_spoor2_xetra_pilot_evidence_20261113.py'
       - 'tests/test_spoor2_xetra_artifact_retrieval_20261113.py'
@@ -142,6 +144,7 @@ jobs:
           from research.spoor2_xetra_market_segment_reference_20261113 import inspect_market_segment_reference
           from research.spoor2_xetra_pilot_evidence_20261113 import build_pilot_evidence
           from research.spoor2_execution_evidence_gate_20261113 import assess_execution_evidence
+          from research.spoor2_iso10383_registry_inventory_20261113 import retrieve_iso_mic_csv, inspect_iso_mic_csv
 
           pilot_bytes = {}
           for kind, inspector in (("csv", inspect_xetra_csv), ("zip", inspect_xetra_static_zip)):
@@ -157,4 +160,8 @@ jobs:
               pilot = build_pilot_evidence(pilot_bytes["csv"], pilot_bytes["zip"])
               print(json.dumps({"pilot_evidence": pilot}, sort_keys=True))
               print(json.dumps({"execution_evidence": assess_execution_evidence(pilot)}, sort_keys=True))
+          iso_fetched = retrieve_iso_mic_csv()
+          iso_bytes = iso_fetched.pop("bytes")
+          iso_inspected = inspect_iso_mic_csv(iso_bytes) if iso_bytes is not None else None
+          print(json.dumps({"iso_retrieval": iso_fetched, "iso_inventory": iso_inspected}, sort_keys=True))
           PY
