@@ -7,6 +7,7 @@ REQUIRED = ("provider_symbol", "isin", "venue_mic_candidate", "currency")
 def audit_mic_dossier(dossier):
     out = dict(status="BLOCKED", source_attested=False, mic_registered=False,
                broker_route_verified=False, broker_execution_quote_verified=False,
+               segment_mic_verified=False,
                trade_ready=False, order_placement_enabled=False,
                instruments=[], blocks=[])
     if not isinstance(dossier, dict) or not isinstance(dossier.get("instruments"), list):
@@ -33,12 +34,15 @@ def audit_mic_dossier(dossier):
             blocks.append("INVALID_MIC_FORMAT")
         if item["currency"] not in ("EUR", "USD", "GBP", "CHF", "DKK", "SEK", "NOK"):
             blocks.append("UNRECOGNIZED_CURRENCY")
-        blocks.extend(("ISO_REGISTER_RECORD_NOT_ATTESTED", "BROKER_ROUTE_NOT_ATTESTED"))
+        blocks.extend(("ISO_REGISTER_RECORD_NOT_ATTESTED", "BROKER_ROUTE_NOT_ATTESTED",
+                       "SEGMENT_MIC_NOT_VERIFIED"))
         out["instruments"].append({**{k:item[k] for k in REQUIRED},
              "status":"BLOCKED", "blocks":blocks, "mic_registered":False,
-             "broker_route_verified":False, "trade_ready":False})
+             "broker_route_verified":False, "segment_mic_verified":False,
+             "trade_ready":False})
     if not dossier["instruments"]:
         out["blocks"].append("EMPTY_INSTRUMENT_LIST")
     out["blocks"].extend(("ISO_REGISTER_RECORD_NOT_ATTESTED",
-                          "BROKER_ROUTE_NOT_ATTESTED", "DEGIRO_EXECUTION_QUOTE_NOT_VERIFIED"))
+                          "BROKER_ROUTE_NOT_ATTESTED", "DEGIRO_EXECUTION_QUOTE_NOT_VERIFIED",
+                          "SEGMENT_MIC_NOT_VERIFIED"))
     return out
