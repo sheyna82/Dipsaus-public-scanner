@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0",
+  "observed_on": "2026-11-13",
+  "purpose": "Research-only segment-versus-operating MIC caveat; avoid assigning an execution segment from an operating MIC.",
+  "source_attested": false,
+  "mic_registered": false,
+  "broker_route_verified": false,
+  "degiro_fee_verified": false,
+  "trade_ready": false,
+  "order_placement_enabled": false,
+  "authorities": [
+    {
+      "url": "https://www.iso20022.org/market-identifier-codes",
+      "finding": "SWIFT ISO10383 official publication 2026-11-09 with modifications effective 2026-11-23; workbook data not freshly parsed."
+    },
+    {
+      "url": "https://www.afm.nl/~/profmedia/files/doelgroepen/beleggingsondernemingen/handbook-transaction-reporting.pdf",
+      "finding": "AFM handbook distinguishes XETR operator from actual market segments, giving XETA and XETB as examples; historical guidance, not a live instrument segment mapping."
+    },
+    {
+      "url": "https://connect2.euronext.com/sites/default/files/2024-03/IF240321CA%20Euronext%20Mid-Point%20Match%20MIC%20code%20identification%2C%20Dark%20indicator%20and%20ESMA%20guidelines%20on%20Transaction%20Reporting.pdf",
+      "finding": "Euronext states segment MICs can sit beneath operating MICs and dark-book MICs must not be treated as ordinary instrument listings."
+    },
+    {
+      "url": "https://live.euronext.com/sites/default/files/documentation/index-rules/Definition%20Developed%20Market%20-%202025-01_1.pdf",
+      "finding": "Euronext eligibility document uses XAMS, XETR, XHEL at broad market classification level, not proof of actual transaction segment."
+    }
+  ],
+  "pilot_segment_status": [
+    {
+      "symbol": "ASML.AS",
+      "operating_mic": "XAMS",
+      "exact_execution_segment_mic": null,
+      "verified": false
+    },
+    {
+      "symbol": "IFX.DE",
+      "operating_mic": "XETR",
+      "possible_segment_mics": [
+        "XETA",
+        "XETB"
+      ],
+      "exact_execution_segment_mic": null,
+      "verified": false
+    },
+    {
+      "symbol": "NOKIA.HE",
+      "operating_mic": "XHEL",
+      "exact_execution_segment_mic": null,
+      "verified": false
+    },
+    {
+      "symbol": "RHM.DE",
+      "operating_mic": "XETR",
+      "possible_segment_mics": [
+        "XETA",
+        "XETB"
+      ],
+      "exact_execution_segment_mic": null,
+      "verified": false
+    }
+  ],
+  "admission_rule": "Do not infer segment MIC from exchange operator MIC, ticker suffix, general market classification, or broker tariff category. Require per-instrument venue/segment evidence and broker route confirmation.",
+  "limitations": [
+    "AFM handbook is historical; cannot prove present-day exact segment.",
+    "Official ISO workbook bytes and effective records not freshly verified.",
+    "No broker execution confirmations or account quotes."
+  ]
+}
