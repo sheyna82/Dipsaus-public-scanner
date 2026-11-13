@@ -56,11 +56,11 @@ def build_pilot_evidence(csv_bytes, zip_bytes):
                     return result
                 segments[identifier] = description
         found = {isin: [] for isin in PILOT_ISINS}
-        for row in csv.DictReader(io.StringIO(raw, newline=""), fieldnames=header, delimiter=";", strict=True):
-            # Skip metadata and header; reject malformed instrument rows.
-            if None in row or row.get(None) is not None:
+        for values in reader:
+            if len(values) != len(header):
                 result["blocks"].append("INCONSISTENT_INSTRUMENT_ROW")
                 return result
+            row = dict(zip(header, values))
             if row["ISIN"] in found:
                 found[row["ISIN"]].append(row)
         for isin in PILOT_ISINS:
