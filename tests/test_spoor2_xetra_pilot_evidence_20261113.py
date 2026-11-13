@@ -49,5 +49,19 @@ class TestPilotEvidence(unittest.TestCase):
         result = build_pilot_evidence(fixture_csv(ROWS), b"bad")
         self.assertIn("INVALID_REFERENCE_ZIP", result["blocks"])
 
+    def test_duplicate_reference_segment_blocks(self):
+        stream = io.BytesIO()
+        with zipfile.ZipFile(stream, "w") as archive:
+            archive.writestr("20261113_marketSegment.csv",
+                "Content type;Identifier;Description\\nMarket Segment;045;Prime Standard\\nMarket Segment;045;Other\\n")
+        result = build_pilot_evidence(fixture_csv(ROWS), stream.getvalue())
+        self.assertIn("AMBIGUOUS_MARKET_SEGMENT_REFERENCE", result["blocks"])
+        self.assertFalse(result["trade_ready"])
+
+    def test_malformed_instrument_row_blocks(self):
+        result = build_pilot_evidence(fixture_csv(ROWS + [["short"]]), fixture_zip())
+        self.assertIn("INCONSISTENT_INSTRUMENT_ROW", result["blocks"])
+        self.assertFalse(result["trade_ready"])
+
 if __name__ == "__main__":
     unittest.main()
