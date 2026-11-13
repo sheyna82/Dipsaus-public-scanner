@@ -53,7 +53,7 @@ class TestPilotEvidence(unittest.TestCase):
         stream = io.BytesIO()
         with zipfile.ZipFile(stream, "w") as archive:
             archive.writestr("20261113_marketSegment.csv",
-                "Content type;Identifier;Description\\nMarket Segment;045;Prime Standard\\nMarket Segment;045;Other\\n")
+                "Content type;Identifier;Description\nMarket Segment;045;Prime Standard\nMarket Segment;045;Other\n")
         result = build_pilot_evidence(fixture_csv(ROWS), stream.getvalue())
         self.assertIn("AMBIGUOUS_MARKET_SEGMENT_REFERENCE", result["blocks"])
         self.assertFalse(result["trade_ready"])
