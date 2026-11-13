@@ -46,11 +46,21 @@ def build_pilot_evidence(csv_bytes, zip_bytes):
                 result["blocks"].append("INVALID_REFERENCE_MEMBER")
                 return result
             reference = list(csv.DictReader(io.StringIO(archive.read(names[0]).decode("utf-8-sig")), delimiter=";", strict=True))
-            segments = {row["Identifier"]: row["Description"] for row in reference
-                        if row.get("Content type") == "Market Segment"}
+            segments = {}
+            for entry in reference:
+                if entry.get("Content type") != "Market Segment":
+                    continue
+                identifier, description = entry["Identifier"], entry["Description"]
+                if not identifier or not description or identifier in segments:
+                    result["blocks"].append("AMBIGUOUS_MARKET_SEGMENT_REFERENCE")
+                    return result
+                segments[identifier] = description
         found = {isin: [] for isin in PILOT_ISINS}
         for row in csv.DictReader(io.StringIO(raw, newline=""), fieldnames=header, delimiter=";", strict=True):
-            # Skip the bounded metadata preamble and table header as complete records.
+            # Skip metadata and header; reject malformed instrument rows.
+            if None in row or row.get(None) is not None:
+                result["blocks"].append("INCONSISTENT_INSTRUMENT_ROW")
+                return result
             if row["ISIN"] in found:
                 found[row["ISIN"]].append(row)
         for isin in PILOT_ISINS:
