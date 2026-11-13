@@ -46,6 +46,8 @@ on:
       - 'research/test_isolated_source_capture_audit.py'
       - '.github/workflows/research-integrated-evidence.yml'
       - 'research/spoor2_mic_evidence_gate_20261113.py'
+      - 'research/spoor2_xetra_artifact_retrieval_20261113.py'
+      - 'tests/test_spoor2_xetra_artifact_retrieval_20261113.py'
       - 'tests/test_spoor2_mic_evidence_gate_20261113.py'
   pull_request:
     branches:
