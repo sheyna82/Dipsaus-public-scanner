@@ -52,6 +52,8 @@ on:
       - 'research/spoor2_xetra_pilot_evidence_20261113.py'
       - 'research/spoor2_execution_evidence_gate_20261113.py'
       - 'research/spoor2_iso10383_registry_inventory_20261113.py'
+      - 'research/spoor2_iso_xetra_relationship_20261113.py'
+      - 'tests/test_spoor2_iso_xetra_relationship_20261113.py'
       - 'tests/test_spoor2_iso10383_registry_inventory_20261113.py'
       - 'tests/test_spoor2_execution_evidence_gate_20261113.py'
       - 'tests/test_spoor2_xetra_pilot_evidence_20261113.py'
@@ -145,6 +147,7 @@ jobs:
           from research.spoor2_xetra_pilot_evidence_20261113 import build_pilot_evidence
           from research.spoor2_execution_evidence_gate_20261113 import assess_execution_evidence
           from research.spoor2_iso10383_registry_inventory_20261113 import retrieve_iso_mic_csv, inspect_iso_mic_csv
+          from research.spoor2_iso_xetra_relationship_20261113 import audit_xetra_iso_relationship
 
           pilot_bytes = {}
           for kind, inspector in (("csv", inspect_xetra_csv), ("zip", inspect_xetra_static_zip)):
@@ -164,4 +167,5 @@ jobs:
           iso_bytes = iso_fetched.pop("bytes")
           iso_inspected = inspect_iso_mic_csv(iso_bytes) if iso_bytes is not None else None
           print(json.dumps({"iso_retrieval": iso_fetched, "iso_inventory": iso_inspected}, sort_keys=True))
+          print(json.dumps({"iso_xetra_relationship": audit_xetra_iso_relationship(iso_inspected)}, sort_keys=True))
           PY
