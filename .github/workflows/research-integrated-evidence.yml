@@ -57,6 +57,8 @@ on:
       - 'research/spoor2_instrument_evidence_ledger_20261113.py'
       - 'research/spoor2_degiro_public_evidence_20261113.py'
       - 'research/spoor2_degiro_xetra_public_tariff_20261113.py'
+      - 'research/spoor2_degiro_route_evidence_20261113.py'
+      - 'tests/test_spoor2_degiro_route_evidence_20261113.py'
       - 'tests/test_spoor2_degiro_xetra_public_tariff_20261113.py'
       - 'tests/test_spoor2_degiro_public_evidence_20261113.py'
       - 'tests/test_spoor2_instrument_evidence_ledger_20261113.py'
@@ -160,6 +162,7 @@ jobs:
           from research.spoor2_instrument_evidence_ledger_20261113 import build_instrument_evidence_ledger
           from research.spoor2_degiro_public_evidence_20261113 import assess_public_degiro_evidence
           from research.spoor2_degiro_xetra_public_tariff_20261113 import assess_public_xetra_tariff
+          from research.spoor2_degiro_route_evidence_20261113 import classify_degiro_route_evidence
 
           pilot_bytes = {}
           for kind, inspector in (("csv", inspect_xetra_csv), ("zip", inspect_xetra_static_zip)):
@@ -188,4 +191,6 @@ jobs:
               print(json.dumps({"instrument_evidence_ledger": ledger}, sort_keys=True))
               print(json.dumps({"degiro_public_evidence": assess_public_degiro_evidence(ledger)}, sort_keys=True))
               print(json.dumps({"degiro_xetra_public_tariff": assess_public_xetra_tariff()}, sort_keys=True))
+              for record in ledger["instruments"]:
+                  print(json.dumps({"degiro_route_evidence": classify_degiro_route_evidence(record["isin"], public_venue={"venue": "XETRA"})}, sort_keys=True))
           PY
