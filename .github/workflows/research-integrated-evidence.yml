@@ -110,3 +110,32 @@ jobs:
         env:
           SCANNER_NOTIFICATIONS_ENABLED: 'false'
         run: python -m unittest discover -s tests -p 'test_spoor2_*.py' -v
+
+  spoor2-xetra-source-capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Capture original Xetra bytes and inspect without attestation
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: |
+          python - <<'PY'
+          import json
+          from research.spoor2_xetra_artifact_retrieval_20261113 import retrieve_xetra_artifact, public_metadata
+          from research.spoor2_xetra_csv_intake_20261113 import inspect_xetra_csv
+          from research.spoor2_xetra_zip_intake_20261113 import inspect_xetra_static_zip
+
+          for kind, inspector in (("csv", inspect_xetra_csv), ("zip", inspect_xetra_static_zip)):
+              fetched = retrieve_xetra_artifact(kind)
+              inspected = inspector(fetched["bytes"]) if fetched["bytes"] is not None else None
+              print(json.dumps({"artifact": kind, "retrieval": public_metadata(fetched),
+                                "inspection": inspected}, sort_keys=True))
+          PY
