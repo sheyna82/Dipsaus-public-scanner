@@ -24,6 +24,10 @@
     {
       "url": "https://live.euronext.com/sites/default/files/documentation/index-rules/Definition%20Developed%20Market%20-%202025-01_1.pdf",
       "finding": "Euronext eligibility document uses XAMS, XETR, XHEL at broad market classification level, not proof of actual transaction segment."
+    },
+    {
+      "url": "https://www.cashmarket.deutsche-boerse.com/resource/blob/4942826/73b31cf8fa62eeb7d9f0421d5ed07ea9/data/T7_Release_14.1_-_Functional_Reference_Version_1.pdf",
+      "finding": "Deutsche Boerse T7 Release 14.1 Functional Reference section 9.1.8 distinguishes Xetra on-book XETA (regulated), XETB (Freiverkehr), XETS (Scale), off-book XETU/XETV/XETW and midpoint XEMA/XEMB/XEMI. Venue-level XETR does not identify which segment or execution mode DEGIRO uses. Source is an exchange rulebook, not an instrument-level transaction or broker route confirmation."
     }
   ],
   "pilot_segment_status": [
@@ -38,10 +42,18 @@
       "operating_mic": "XETR",
       "possible_segment_mics": [
         "XETA",
-        "XETB"
+        "XETB",
+        "XETS",
+        "XETU",
+        "XETV",
+        "XETW",
+        "XEMA",
+        "XEMB",
+        "XEMI"
       ],
       "exact_execution_segment_mic": null,
-      "verified": false
+      "verified": false,
+      "segment_candidates_are_not_instrument_mapping": true
     },
     {
       "symbol": "NOKIA.HE",
@@ -54,16 +66,25 @@
       "operating_mic": "XETR",
       "possible_segment_mics": [
         "XETA",
-        "XETB"
+        "XETB",
+        "XETS",
+        "XETU",
+        "XETV",
+        "XETW",
+        "XEMA",
+        "XEMB",
+        "XEMI"
       ],
       "exact_execution_segment_mic": null,
-      "verified": false
+      "verified": false,
+      "segment_candidates_are_not_instrument_mapping": true
     }
   ],
   "admission_rule": "Do not infer segment MIC from exchange operator MIC, ticker suffix, general market classification, or broker tariff category. Require per-instrument venue/segment evidence and broker route confirmation.",
   "limitations": [
     "AFM handbook is historical; cannot prove present-day exact segment.",
     "Official ISO workbook bytes and effective records not freshly verified.",
-    "No broker execution confirmations or account quotes."
+    "No broker execution confirmations or account quotes.",
+    "Deutsche Boerse T7 functional-reference segment lists enumerate possible execution modes, not actual IFX/RHM segment assignments or broker order routes."
   ]
 }
