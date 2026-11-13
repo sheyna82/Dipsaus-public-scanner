@@ -18,7 +18,7 @@ def assess_execution_evidence(pilot, mic_evidence=None, broker_evidence=None, fe
         out["blocks"].append("INCOMPLETE_PILOT_INSTRUMENTS")
         return out
     expected = {"DE0006231004", "DE0007030009"}
-    if {r.get("isin") for r in records if isinstance(r, dict)} != expected:
+    if any(not isinstance(r, dict) for r in records) or {r.get("isin") for r in records} != expected:
         out["blocks"].append("INVALID_PILOT_ISIN_SET")
         return out
     for record in records:
