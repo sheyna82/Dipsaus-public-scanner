@@ -168,3 +168,15 @@ Both official published URL HEAD probes returned HTTP 302, redirect_equals_publi
 
 This establishes that the observed exact redirect targets are a third variant relative to both known source URL sets, not that the targets are authoritative, safe to retrieve, or stable. The legacy GET probes also returned HTTP 302, with no bytes. All redirect requests remained un-followed; all attestation and trading flags false.
 
+
+## Live official download-link observation (2026-11-14; publication URL only)
+
+Independently opened Deutsche Boerse's official Xetra instruments page:
+https://www.cashmarket.deutsche-boerse.com/cash-en/trading/Tradable-Instruments-Xetra
+
+The page's own "T7 (Xetra) All tradable instruments" download link (link 139 in the observed page response) resolved to this exact CSV URL:
+https://www.cashmarket.deutsche-boerse.com/resource/blob/1528/a4b7965b87cf1ef4621a28b85f145ae9/data/t7-xetr-allTradableInstruments.csv
+
+The retrieval interface returned an unsupported text/csv content-type error. This is a URL-link observation ONLY: no successful byte download, no checksum of file contents, no independently verified CSV schema or publication timestamp, and no comparison against the actual full raw HTTP Location strings. The link token differs from the 2025 migration-document token (b52ea43a2edac92e8283d40645d1c076), the configured legacy token (dc073b6568606b91bfcfe8a7328d6c4f), and the previously observed page-link token (2ecdd46ed6dca90fbfc8575d5a21fb4b). These variations demonstrate that page-published resource URLs may change; they do not establish the exact authority or integrity of any redirect target.
+
+Do NOT automatically add this URL to any allowlist, follow redirects, change SOURCES/PUBLISHED, mark source_attested, or enable trading. A controlled, reviewed exact-target comparison and bounded no-follow byte retrieval remain separate prerequisites.
