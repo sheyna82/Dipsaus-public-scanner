@@ -37,7 +37,8 @@ def reconcile_instrument_evidence(isin, mic, records=()):
                 or not isinstance(record_mic, str)):
             result["blocks"].append("INCOMPLETE_EVIDENCE_PROVENANCE")
             return result
-        if not inspect_instrument_reference(record_isin, record_mic)["identifier_syntax_valid"]:
+        record_validation = inspect_instrument_reference(record_isin, record_mic)
+        if not record_validation["identifier_syntax_valid"]:
             result["blocks"].append("INVALID_EVIDENCE_IDENTIFIER")
             return result
         # Case-only source aliases cannot manufacture independent evidence.
