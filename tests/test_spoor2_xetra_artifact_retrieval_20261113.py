@@ -1,5 +1,7 @@
 import hashlib
 import io
+import socket
+import ssl
 import unittest
 import urllib.error
 
@@ -71,6 +73,39 @@ class XetraArtifactRetrievalTests(unittest.TestCase):
                 raise urllib.error.URLError("offline")
         r = retrieve_xetra_artifact("zip", Broken())
         self.assertIn("XETRA_DOWNLOAD_FAILED", r["blocks"])
+
+
+    def test_http_error_classified_without_error_body(self):
+        class Broken:
+            def open(self, request, timeout):
+                raise urllib.error.HTTPError(SOURCES["csv"], 403, "secret", {}, None)
+        out = retrieve_xetra_artifact("csv", Broken())
+        self.assertEqual(out["failure_category"], "HTTP_ERROR")
+        self.assertEqual(out["http_status"], 403)
+        self.assertNotIn("secret", str(public_metadata(out)))
+
+    def test_dns_error_classified(self):
+        class Broken:
+            def open(self, request, timeout):
+                raise urllib.error.URLError(socket.gaierror(-2, "private hostname"))
+        out = retrieve_xetra_artifact("csv", Broken())
+        self.assertEqual(out["failure_category"], "DNS_ERROR")
+        self.assertNotIn("private hostname", str(public_metadata(out)))
+
+    def test_timeout_classified(self):
+        class Broken:
+            def open(self, request, timeout):
+                raise TimeoutError("private address")
+        out = retrieve_xetra_artifact("csv", Broken())
+        self.assertEqual(out["failure_category"], "TIMEOUT")
+
+    def test_tls_error_classified(self):
+        class Broken:
+            def open(self, request, timeout):
+                raise urllib.error.URLError(ssl.SSLError("private certificate"))
+        out = retrieve_xetra_artifact("csv", Broken())
+        self.assertEqual(out["failure_category"], "TLS_ERROR")
+        self.assertFalse(out["source_attested"])
 
 
 if __name__ == "__main__":
