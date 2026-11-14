@@ -1,6 +1,6 @@
 import unittest
 from research.spoor2_xetra_redirect_policy_20261114 import assess_xetra_redirect as assess
-BASE = "https://www.cashmarket.deutsche-boerse.com/resource/blob/1528/new/data/file.csv"
+BASE = "https://www.cashmarket.deutsche-boerse.com/resource/blob/1528/" + "a"*32 + "/data/t7-xetr-allTradableInstruments.csv"
 class RedirectPolicyTests(unittest.TestCase):
     def test_default_deny(self):
         self.assertFalse(assess("csv", BASE)["eligible_for_manual_second_request"])
@@ -9,6 +9,18 @@ class RedirectPolicyTests(unittest.TestCase):
         self.assertTrue(r["eligible_for_manual_second_request"])
         for k in ("source_attested", "trade_ready", "order_placement_enabled", "broker_route_verified"):
             self.assertFalse(r[k])
+    def test_approved_wrong_filename_still_rejected(self):
+        x = BASE.replace("t7-xetr-allTradableInstruments.csv", "other.csv")
+        self.assertFalse(assess("csv", x, (x,))["eligible_for_manual_second_request"])
+
+    def test_approved_noncanonical_token_still_rejected(self):
+        x = BASE.replace("a"*32, "short")
+        self.assertFalse(assess("csv", x, (x,))["eligible_for_manual_second_request"])
+
+    def test_approved_control_character_still_rejected(self):
+        x = BASE.replace("/data/", "/data/\t")
+        self.assertFalse(assess("csv", x, (x,))["eligible_for_manual_second_request"])
+
     def test_other_host(self):
         self.assertFalse(assess("csv", "https://evil.example/resource/blob/file", (BASE,))["eligible_for_manual_second_request"])
     def test_http(self):
