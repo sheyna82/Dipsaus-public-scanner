@@ -94,3 +94,14 @@ Official Deutsche Boerse documentation reviewed:
 
 These official documents independently support the published CSV/ZIP filenames and the 2025 cashmarket hostname migration. They do NOT establish that the different 32-character blob tokens observed in 2026 HTTP 302 Location headers are independently published or authoritative. No exact redirect targets approved, no second-hop fetch permitted, no bytes attested, no broker-route verification. Keep source_attested=false, trade_ready=false, order_placement_enabled=false. Further code changes are not justified by this documentation alone.
 
+## Additional official live instrument inventory evidence (2026-11-14)
+
+Official Deutsche Boerse Cash Market Xetra instrument inventory:
+https://www.eurexgroup.com/dbcm-en/instruments-statistics/all-tradable-instruments/xetra
+The independently retrieved page reports T7 (XETR) All tradable instruments updated 14 November 2026 01:56 AM and static instrument reference data updated 13 November 2026 11:37 PM, and displays ISIN and XETR market classifications. The inventory is an independent official corroboration channel for *selected* instrument/market assertions, subject to timestamp, instrument-identity and publication consistency checks. The page does NOT disclose or attest the observed HTTP 302 redirect Location blob tokens; it does not prove downloaded CSV/ZIP bytes, a complete inventory snapshot, DEGIRO routing, or trade readiness.
+
+Official migration documentation still publishes the 2025 CSV and ZIP URLs:
+https://www.cashmarket.deutsche-boerse.com/resource/blob/4764952/ea2c7396b8986d88e37144a1020a5b4f/data/Cash%20Market%20Readiness%20Newsflash_25_11_07_Anhang.pdf
+
+Keep all fail-closed gates unchanged. Do not automatically follow redirects or promote inventory-page matches to source_attested=true.
+
