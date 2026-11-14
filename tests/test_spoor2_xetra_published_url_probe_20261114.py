@@ -76,6 +76,7 @@ class PublishedUrlProbeTests(unittest.TestCase):
         r = probe_published_url("csv", FakeOpener(err))
         self.assertTrue(r["canonical_blob_shape_matches"])
         self.assertFalse(r["blob_id_matches_published"])
+        self.assertEqual(r["redirect_target_class"], "OTHER_OR_UNSAFE")
         self.assertTrue(r["blob_token_matches_published"])
         self.assertFalse(r["redirect_equals_published_url"])
         self.assertFalse(r["source_attested"])
