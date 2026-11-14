@@ -85,3 +85,12 @@ CI run https://github.com/sheyna82/Dipsaus-public-scanner/actions/runs/436022578
 
 Published CSV and ZIP HEAD both returned 302. Each redirect had the same official host, canonical blob shape and expected filename, with numeric blob ID unchanged and 32-character blob token changed compared with the published URL. Fingerprints respectively c01ebe5640aecf188585dcee61e0d1fc2e6bfd6553bec970dcfff05fefe23a2c and 18d7f62112f9187bf4f0a529df20f5cd27a97f77b9b0a0326b659aa0d7147cad. Existing CSV/ZIP GET also returned 302. No redirects followed and no bytes retrieved. Exact targets not independently reviewed or approved. All attestation and trade-readiness flags remain false.
 
+## Independent documentary cross-check (2026-11-14)
+
+Official Deutsche Boerse documentation reviewed:
+- https://www.cashmarket.deutsche-boerse.com/resource/blob/4764952/ea2c7396b8986d88e37144a1020a5b4f/data/Cash%20Market%20Readiness%20Newsflash_25_11_07_Anhang.pdf
+- https://www.cashmarket.deutsche-boerse.com/resource/blob/4765620/fbbc32d0a0c499b447e1d57540ff4153/data/20251120_Info%20URL%20new%20Links%20en.pdf
+- https://www.cashmarket.deutsche-boerse.com/resource/blob/4591780/4a5a7f89c8d8b15538a6dc83e3e7c0c5/data/T7_R.14.0_Cash_Markets_Instrument_Reference_Data_Guide_Version_1.pdf
+
+These official documents independently support the published CSV/ZIP filenames and the 2025 cashmarket hostname migration. They do NOT establish that the different 32-character blob tokens observed in 2026 HTTP 302 Location headers are independently published or authoritative. No exact redirect targets approved, no second-hop fetch permitted, no bytes attested, no broker-route verification. Keep source_attested=false, trade_ready=false, order_placement_enabled=false. Further code changes are not justified by this documentation alone.
+
