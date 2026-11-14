@@ -3,6 +3,7 @@
 The allowlist must be populated from independently reviewed exact URLs.
 No automatic redirects, wildcard hosts, query parameters, or broker privileges.
 """
+import re
 from urllib.parse import urlsplit
 from research.spoor2_xetra_artifact_retrieval_20261113 import SOURCES
 
