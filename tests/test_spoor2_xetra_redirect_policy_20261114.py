@@ -18,6 +18,24 @@ class RedirectPolicyTests(unittest.TestCase):
     def test_non_resource_path(self):
         x="https://www.cashmarket.deutsche-boerse.com/login"
         self.assertFalse(assess("csv", x, (x,))["eligible_for_manual_second_request"])
+    def test_path_traversal_rejected_even_if_approved(self):
+        x = "https://www.cashmarket.deutsche-boerse.com/resource/blob/../login"
+        r = assess("csv", x, (x,))
+        self.assertFalse(r["eligible_for_manual_second_request"])
+        self.assertIn("REDIRECT_TARGET_NOT_OFFICIAL_OR_UNSAFE", r["blocks"])
+
+    def test_percent_encoded_path_rejected_even_if_approved(self):
+        x = "https://www.cashmarket.deutsche-boerse.com/resource/blob/%2e%2e/login"
+        r = assess("csv", x, (x,))
+        self.assertFalse(r["eligible_for_manual_second_request"])
+        self.assertFalse(r["source_attested"])
+
+    def test_backslash_path_rejected_even_if_approved(self):
+        x = "https://www.cashmarket.deutsche-boerse.com/resource/blob/\\\\other"
+        r = assess("csv", x, (x,))
+        self.assertFalse(r["eligible_for_manual_second_request"])
+        self.assertFalse(r["trade_ready"])
+
     def test_unknown_kind(self):
         self.assertIn("UNKNOWN_XETRA_ARTIFACT", assess("other", BASE)["blocks"])
     def test_unhashable_kind_fails_closed(self):
