@@ -95,5 +95,76 @@ class SecondRequestTests(unittest.TestCase):
         self.assertFalse(result["trade_ready"])
 
 
+    def test_declared_size_over_limit_blocks_before_read(self):
+        from unittest.mock import patch
+        with patch("research.spoor2_xetra_bounded_second_request_20261114.MAX_BYTES", 3):
+            result = fetch_approved_second_request(
+                "csv", CSV, (CSV,), Opener(Response(data=b"abcd", length="4"))
+            )
+        self.assertEqual(result["blocks"], ["SECOND_REQUEST_SIZE_LIMIT"])
+        self.assertIsNone(result["bytes"])
+
+    def test_streamed_size_over_limit_blocks(self):
+        from unittest.mock import patch
+        with patch("research.spoor2_xetra_bounded_second_request_20261114.MAX_BYTES", 3):
+            result = fetch_approved_second_request(
+                "csv", CSV, (CSV,), Opener(Response(data=b"abcd"))
+            )
+        self.assertEqual(result["blocks"], ["SECOND_REQUEST_SIZE_LIMIT"])
+        self.assertIsNone(result["sha256"])
+
+    def test_exact_size_boundary_allowed_but_unattested(self):
+        from unittest.mock import patch
+        with patch("research.spoor2_xetra_bounded_second_request_20261114.MAX_BYTES", 3):
+            result = fetch_approved_second_request(
+                "csv", CSV, (CSV,), Opener(Response(data=b"abc", length="3"))
+            )
+        self.assertEqual(result["byte_count"], 3)
+        self.assertFalse(result["source_attested"])
+        self.assertFalse(result["trade_ready"])
+
+    def test_http_500_blocks(self):
+        result = fetch_approved_second_request(
+            "csv", CSV, (CSV,), Opener(Response(status=500))
+        )
+        self.assertEqual(result["blocks"], ["SECOND_REQUEST_URL_OR_STATUS_MISMATCH"])
+        self.assertIsNone(result["bytes"])
+
+    def test_http_error_exception_blocks(self):
+        import urllib.error
+
+        class ErrorOpener:
+            def open(self, request, timeout):
+                raise urllib.error.HTTPError(CSV, 503, "Unavailable", {}, None)
+
+        result = fetch_approved_second_request("csv", CSV, (CSV,), ErrorOpener())
+        self.assertEqual(result["blocks"], ["SECOND_REQUEST_HTTP_ERROR"])
+        self.assertEqual(result["http_status"], 503)
+        self.assertFalse(result["order_placement_enabled"])
+
+    def test_network_error_blocks(self):
+        import urllib.error
+
+        class ErrorOpener:
+            def open(self, request, timeout):
+                raise urllib.error.URLError("offline")
+
+        result = fetch_approved_second_request("csv", CSV, (CSV,), ErrorOpener())
+        self.assertEqual(result["blocks"], ["SECOND_REQUEST_TRANSPORT_ERROR"])
+        self.assertIsNone(result["bytes"])
+
+    def test_unknown_kind_never_opens(self):
+        opener = Opener(Response())
+        result = fetch_approved_second_request("unknown", CSV, (CSV,), opener)
+        self.assertEqual(opener.calls, 0)
+        self.assertFalse(result["trade_ready"])
+
+    def test_non_exact_approval_never_opens(self):
+        opener = Opener(Response())
+        result = fetch_approved_second_request("csv", CSV, (CSV + "/",), opener)
+        self.assertEqual(opener.calls, 0)
+        self.assertFalse(result["source_attested"])
+
+
 if __name__ == "__main__":
     unittest.main()
