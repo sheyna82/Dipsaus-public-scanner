@@ -5,6 +5,8 @@ this module never guesses official field names or approves an instrument.
 """
 import csv
 import io
+import hashlib
+import json
 from research.spoor2_xetra_offline_structure_20261114 import inspect_xetra_bytes
 
 
@@ -46,8 +48,11 @@ def compare_xetra_csv_schema(data, expected_header=None, expected_sha256=None):
     except (UnicodeError, csv.Error, ValueError, StopIteration):
         result["blocks"].append("CSV_PARSE_ERROR")
         return result
-    # The reference hash is an explicit provenance marker, not an attestation
-    # of this payload. It is deliberately not used to auto-approve bytes.
+    canonical = json.dumps(expected_header, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    if hashlib.sha256(canonical).hexdigest() != expected_sha256.lower():
+        result["blocks"].append("REVIEWED_REFERENCE_HASH_MISMATCH")
+        return result
+    # Header fingerprint binds the supplied review reference, not the source bytes.
     result["schema_matches_reviewed_reference"] = True
     result["column_count"] = len(header)
     result["row_count"] = rows
