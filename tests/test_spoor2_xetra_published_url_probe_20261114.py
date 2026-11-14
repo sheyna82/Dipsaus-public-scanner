@@ -54,6 +54,13 @@ class PublishedUrlProbeTests(unittest.TestCase):
         self.assertFalse(r["source_attested"])
         self.assertFalse(r["trade_ready"])
 
+    def test_backslash_redirect_classified_unsafe(self):
+        target = PUBLISHED["csv"].replace("/data/", "/data/" + chr(92))
+        err = urllib.error.HTTPError(PUBLISHED["csv"], 302, "Found", {"Location": target}, None)
+        r = probe_published_url("csv", FakeOpener(err))
+        self.assertEqual(r["redirect_target_class"], "OTHER_OR_UNSAFE")
+        self.assertFalse(r["source_attested"])
+
     def test_unhashable_kind_fails_closed(self):
         r = probe_published_url(["csv"])
         self.assertIsNone(r["kind"])
