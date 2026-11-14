@@ -9,7 +9,7 @@ import urllib.error
 import urllib.request
 from urllib.parse import urlsplit
 
-from research.spoor2_xetra_artifact_retrieval_20261113 import NoRedirect
+from research.spoor2_xetra_artifact_retrieval_20261113 import NoRedirect, SOURCES
 
 PUBLISHED = {
     "csv": "https://www.cashmarket.deutsche-boerse.com/resource/blob/1528/b52ea43a2edac92e8283d40645d1c076/data/t7-xetr-allTradableInstruments.csv",
@@ -26,6 +26,7 @@ def probe_published_url(kind, opener=None):
         "redirect_target_class": None, "expected_filename_matches": None,
         "canonical_blob_shape_matches": None, "redirect_equals_published_url": None,
         "blob_id_matches_published": None, "blob_token_matches_published": None,
+        "redirect_equals_legacy_url": None,
         "redirect_not_followed": True, "failure_category": None,
     }
     if not isinstance(kind, str) or kind not in PUBLISHED:
@@ -62,6 +63,7 @@ def probe_published_url(kind, opener=None):
                         re.fullmatch(r"/resource/blob/[0-9]+/[0-9a-fA-F]{32}/data/[^/]+", target.path)
                     ) if safe else False
                     result["redirect_equals_published_url"] = (location == PUBLISHED[kind])
+                    result["redirect_equals_legacy_url"] = (location == SOURCES[kind])
                     if result["canonical_blob_shape_matches"]:
                         target_parts = target.path.split("/")
                         source_parts = source.path.split("/")
