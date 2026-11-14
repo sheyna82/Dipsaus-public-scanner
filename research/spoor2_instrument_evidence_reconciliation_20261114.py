@@ -21,6 +21,7 @@ def reconcile_instrument_evidence(isin, mic, records=()):
         result["blocks"].append("EVIDENCE_RECORDS_REQUIRED")
         return result
     source_pairs = {}
+    source_hashes = {}
     for record in records:
         if not isinstance(record, dict):
             result["blocks"].append("INVALID_EVIDENCE_RECORD")
@@ -29,7 +30,7 @@ def reconcile_instrument_evidence(isin, mic, records=()):
         record_isin = record.get("isin")
         record_mic = record.get("mic")
         evidence_sha = record.get("artifact_sha256")
-        if (not isinstance(source, str) or not source.strip()
+        if (not isinstance(source, str) or not source.strip() or source != source.strip()
                 or not isinstance(evidence_sha, str) or len(evidence_sha) != 64
                 or any(c not in "0123456789abcdefABCDEF" for c in evidence_sha)
                 or not isinstance(record_isin, str)
@@ -44,8 +45,15 @@ def reconcile_instrument_evidence(isin, mic, records=()):
             result["blocks"].append("INTRA_SOURCE_CONFLICT")
             return result
         source_pairs[source] = pair
+        if source in source_hashes and source_hashes[source] != evidence_sha.lower():
+            result["blocks"].append("INTRA_SOURCE_ARTIFACT_CONFLICT")
+            return result
+        source_hashes[source] = evidence_sha.lower()
     if len(source_pairs) < 2:
         result["blocks"].append("TWO_DISTINCT_SOURCES_REQUIRED")
+        return result
+    if len(set(source_hashes.values())) < 2:
+        result["blocks"].append("DISTINCT_ARTIFACT_HASHES_REQUIRED")
         return result
     if set(source_pairs.values()) != {(isin, mic)}:
         result["blocks"].append("CROSS_SOURCE_INSTRUMENT_CONFLICT")
