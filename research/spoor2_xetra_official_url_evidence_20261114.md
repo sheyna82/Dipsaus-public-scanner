@@ -158,3 +158,13 @@ Published CSV and ZIP HEAD both returned HTTP 302. For each: same official hostn
 
 Legacy CSV/ZIP GET both returned 302; no redirects followed and no bytes retrieved. A structurally plausible third variant is NOT independent publication authority or content integrity. Keep exact-target approval and all trading gates blocked.
 
+## Verified third-variant redirect finding (2026-11-14, CI)
+
+CI run: https://github.com/sheyna82/Dipsaus-public-scanner/actions/runs/43615307758
+Code commit: 87c7238a649fa97e3c9e8b9b871a6e11ccae27fb
+Jobs: spoor2-xetra-source-capture, integrity-unit-tests and spoor2-regression-auditable all success; 622/622 regression tests passed.
+
+Both official published URL HEAD probes returned HTTP 302, redirect_equals_published_url=false and redirect_equals_legacy_url=false. For both, blob_id_matches_published=true, blob_token_matches_published=false, expected_filename_matches=true, canonical_blob_shape_matches=true. CSV Location SHA-256: c01ebe5640aecf188585dcee61e0d1fc2e6bfd6553bec970dcfff05fefe23a2c. ZIP Location SHA-256: 18d7f62112f9187bf4f0a529df20f5cd27a97f77b9b0a0326b659aa0d7147cad.
+
+This establishes that the observed exact redirect targets are a third variant relative to both known source URL sets, not that the targets are authoritative, safe to retrieve, or stable. The legacy GET probes also returned HTTP 302, with no bytes. All redirect requests remained un-followed; all attestation and trading flags false.
+
