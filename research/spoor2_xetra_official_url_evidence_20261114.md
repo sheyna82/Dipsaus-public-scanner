@@ -53,3 +53,15 @@ Both independently published URL variants and pre-existing SOURCES return HTTP 3
 
 Equality is equality of raw Location-header bytes within the recorded run; it is not destination authority, redirect safety, successful artifact retrieval, source attestation, or broker eligibility. No redirect followed; no bytes retrieved. Continue to fail closed.
 
+## Follow-up live CI run (2026-11-14)
+
+Verified run: https://github.com/sheyna82/Dipsaus-public-scanner/actions/runs/43601037685
+Commit fa995f7e08a5d9cada6f0f0a038a88856e20a2c4; 616/616 tests, three jobs success.
+
+- Published CSV HEAD: HTTP 302, same-host /resource/blob/ technical classification; still NOT ATTESTED.
+- Published ZIP HEAD: HTTP 503, no redirect header fingerprint.
+- Existing CSV GET: HTTP 503, no artifact bytes.
+- Existing ZIP GET: HTTP 503, no artifact bytes.
+
+The same-run HTTP results differ from the preceding 302/302 run. Do not infer a stable redirect chain or a permanent source migration from a single observation. Do not automatically retry in a way that could stress the official service. No source attestation, trading authorization, or broker route verification.
+
