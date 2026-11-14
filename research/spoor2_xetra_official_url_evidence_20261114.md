@@ -79,3 +79,9 @@ Published ZIP HEAD: 302; canonical_blob_shape_matches=true; expected_filename_ma
 
 The alternating 302/503 observations show unstable availability across requests, not an approved target. Maintain default-deny redirect policy and prohibit automatic orders.
 
+## Follow-up blob component comparison (2026-11-14)
+
+CI run https://github.com/sheyna82/Dipsaus-public-scanner/actions/runs/43602257899 for commit 7a7e233431e7a9322dc951e8584cd9f1d7db8d5c: 621/621 regression tests, all 3 jobs successful.
+
+Published CSV and ZIP HEAD both returned 302. Each redirect had the same official host, canonical blob shape and expected filename, with numeric blob ID unchanged and 32-character blob token changed compared with the published URL. Fingerprints respectively c01ebe5640aecf188585dcee61e0d1fc2e6bfd6553bec970dcfff05fefe23a2c and 18d7f62112f9187bf4f0a529df20f5cd27a97f77b9b0a0326b659aa0d7147cad. Existing CSV/ZIP GET also returned 302. No redirects followed and no bytes retrieved. Exact targets not independently reviewed or approved. All attestation and trade-readiness flags remain false.
+
