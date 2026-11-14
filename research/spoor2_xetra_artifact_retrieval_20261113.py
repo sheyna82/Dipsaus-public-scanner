@@ -29,12 +29,12 @@ def retrieve_xetra_artifact(kind, opener=None):
         "status": "BLOCKED", "source_attested": False,
         "instrument_segment_verified": False, "broker_route_verified": False,
         "trade_ready": False, "order_placement_enabled": False,
-        "url": SOURCES.get(kind), "retrieved_at_utc": None,
+        "url": SOURCES.get(kind) if isinstance(kind, str) else None, "retrieved_at_utc": None,
         "byte_count": None, "sha256": None, "bytes": None,
         "blocks": [], "failure_category": None, "http_status": None,
         "redirect_diagnostic": None,
     }
-    if kind not in SOURCES:
+    if not isinstance(kind, str) or kind not in SOURCES:
         result["blocks"].append("UNKNOWN_XETRA_ARTIFACT")
         return result
     opener = opener or urllib.request.build_opener(NoRedirect())
