@@ -71,6 +71,7 @@ def probe_published_url(kind, opener=None):
                         source_parts = source.path.split("/")
                         result["blob_id_matches_published"] = (target_parts[3] == source_parts[3])
                         result["blob_token_matches_published"] = (target_parts[4] == source_parts[4])
+                    safe = safe and result["blob_id_matches_published"] is True
                     result["redirect_target_class"] = ("SAME_HOST_BLOB_PATH_UNATTESTED" if safe
                                                        else "OTHER_OR_UNSAFE")
                 except ValueError:
