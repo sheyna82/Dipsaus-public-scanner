@@ -26,7 +26,8 @@ class InstrumentEvidenceReconciliationTests(unittest.TestCase):
 
     def test_two_agreeing_records_still_block_trade(self):
         r = reconcile_instrument_evidence(ISIN, MIC, (record("a"), record("b")))
-        self.assertTrue(r["independent_agreement"])
+        self.assertFalse(r["independent_agreement"])
+        self.assertTrue(r["reported_cross_source_agreement"])
         self.assertEqual(r["source_count"], 2)
         for key in ("source_attested", "instrument_segment_verified",
                     "broker_route_verified", "trade_ready", "order_placement_enabled"):
