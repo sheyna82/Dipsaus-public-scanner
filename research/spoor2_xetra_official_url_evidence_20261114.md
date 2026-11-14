@@ -194,3 +194,16 @@ This EXACTLY matches the SHA-256 of the full HTTP 302 Location string recorded i
 CRITICAL SCOPE: The observation does NOT verify CSV response bytes, byte SHA-256, content-type acceptance, schema, publication timestamp, completeness, or instrument identity; opening the CSV link through the independent page reader returned unsupported text/csv. It does not establish ZIP Location authority, DEGIRO routing or tariff, or trade readiness. The GitHub job continued to report HTTP 302 and zero accepted Xetra CSV/ZIP bytes. No redirect was followed in the research capture. Do not silently approve this URL for fetching: bounded no-follow retrieval and explicit review remain separate steps. Keep source_attested=false, instrument_segment_verified=false, broker_route_verified=false, trade_ready=false, order_placement_enabled=false.
 
 Reproduce the URL fingerprint locally: Python hashlib.sha256(url.encode('utf-8')).hexdigest(), where url is the literal complete CSV URL above and contains no trailing newline.
+
+## Exact ZIP redirect-to-official-publication link reconciliation (2026-11-14)
+
+Official publisher page independently opened: https://www.eurexgroup.com/dbcm-en/instruments-statistics/all-tradable-instruments/xetra
+It labels the T7 (XETR) Static Instrument Reference Data download "Update: 13 November 2026 11.37 PM" and exposes this exact literal link URL:
+https://www.cashmarket.deutsche-boerse.com/resource/blob/1542/ccfacc0c34b29a80f860874f6c0b8795/data/RDF_StaticData_xetr.zip
+
+SHA-256 of the UTF-8 bytes of this complete literal URL (no newline):
+18d7f62112f9187bf4f0a529df20f5cd27a97f77b9b0a0326b659aa0d7147cad
+
+This matches the SHA-256 of the full HTTP 302 Location recorded in no-follow published ZIP URL probes (latest verified research CI 43623830133). Together with the CSV reconciliation already documented, BOTH observed 302 Location URL fingerprints now match exact URLs independently found on an official Deutsche Boerse publication page. Earlier statements that the ZIP redirect target had no official published exact match are superseded for this observed URL and timestamp. This is an exact URL-string reconciliation, not a byte-level attestation.
+
+The independent web reader could not open the ZIP because application/zip is unsupported. The research capture still reported HTTP 302, with no accepted ZIP or CSV bytes, no file hash, no schema verification, and no independently verified DEGIRO execution route. Official page timestamps are publisher labels, not proof of retrieved byte timestamps or integrity. Do not auto-allowlist URLs, follow redirects, modify source configuration or activate any trade path. All source_attested, instrument_segment_verified, broker_route_verified, trade_ready and order_placement_enabled gates remain false. Explicit reviewed bounded no-follow byte retrieval and evidence reconciliation are still required.
