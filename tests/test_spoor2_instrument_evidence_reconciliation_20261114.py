@@ -74,6 +74,18 @@ class InstrumentEvidenceReconciliationTests(unittest.TestCase):
         self.assertEqual(r["blocks"], ["INVALID_EVIDENCE_MIC"])
         self.assertFalse(r["trade_ready"])
 
+    def test_reported_agreement_never_attests_source_authority(self):
+        r = reconcile_instrument_evidence(ISIN, MIC, (record("a"), record("b")))
+        self.assertTrue(r["reported_cross_source_agreement"])
+        self.assertFalse(r["independent_source_authority_verified"])
+        self.assertFalse(r["source_attested"])
+        self.assertEqual(r["status"], "BLOCKED")
+
+    def test_conflicting_sources_never_report_agreement(self):
+        r = reconcile_instrument_evidence(ISIN, MIC, (record("a"), record("b", "XETR")))
+        self.assertFalse(r["reported_cross_source_agreement"])
+        self.assertFalse(r["independent_source_authority_verified"])
+
     def test_malformed_record_blocks(self):
         r = reconcile_instrument_evidence(ISIN, MIC, (None, record("b")))
         self.assertEqual(r["blocks"], ["INVALID_EVIDENCE_RECORD"])
