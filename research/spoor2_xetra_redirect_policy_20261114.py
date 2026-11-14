@@ -32,7 +32,10 @@ def assess_xetra_redirect(kind, location, approved_exact_urls=()):
             or target_port is not None or target.query or target.fragment
             or not target.path.startswith("/resource/blob/")
             or any(segment in (".", "..") for segment in target.path.split("/"))
-            or "%" in target.path or "\\" in target.path):
+            or "%" in target.path or "\\" in target.path
+            or any(ord(ch) < 33 or ord(ch) == 127 for ch in location)
+            or not re.fullmatch(r"/resource/blob/[0-9]+/[0-9a-fA-F]{32}/data/[^/]+", target.path)
+            or target.path.rsplit("/", 1)[-1] != source.path.rsplit("/", 1)[-1]):
         result["blocks"].append("REDIRECT_TARGET_NOT_OFFICIAL_OR_UNSAFE")
         return result
     if location not in approved_exact_urls or location == SOURCES[kind]:
