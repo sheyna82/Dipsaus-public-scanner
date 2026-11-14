@@ -108,5 +108,36 @@ class XetraArtifactRetrievalTests(unittest.TestCase):
         self.assertFalse(out["source_attested"])
 
 
+    def test_same_host_https_redirect_only_diagnosed(self):
+        class Broken:
+            def open(self, request, timeout):
+                raise urllib.error.HTTPError(SOURCES["csv"], 302, "redirect",
+                                             {"Location": "https://www.cashmarket.deutsche-boerse.com/new/private?token=secret"}, None)
+        out = retrieve_xetra_artifact("csv", Broken())
+        self.assertEqual(out["redirect_diagnostic"], {
+            "location_present": True, "absolute_https": True,
+            "same_hostname": True, "target_not_followed": True})
+        self.assertNotIn("secret", str(public_metadata(out)))
+        self.assertIsNone(out["bytes"])
+
+    def test_external_redirect_not_followed(self):
+        class Broken:
+            def open(self, request, timeout):
+                raise urllib.error.HTTPError(SOURCES["csv"], 302, "redirect",
+                                             {"Location": "https://untrusted.example/secret"}, None)
+        out = retrieve_xetra_artifact("csv", Broken())
+        self.assertFalse(out["redirect_diagnostic"]["same_hostname"])
+        self.assertFalse(out["trade_ready"])
+
+    def test_relative_redirect_not_assumed_safe(self):
+        class Broken:
+            def open(self, request, timeout):
+                raise urllib.error.HTTPError(SOURCES["csv"], 302, "redirect",
+                                             {"Location": "/different-path"}, None)
+        out = retrieve_xetra_artifact("csv", Broken())
+        self.assertFalse(out["redirect_diagnostic"]["absolute_https"])
+        self.assertTrue(out["redirect_diagnostic"]["target_not_followed"])
+
+
 if __name__ == "__main__":
     unittest.main()
