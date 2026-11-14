@@ -1,0 +1,99 @@
+{
+  "schema_version": "1.0",
+  "observed_on": "2026-11-13",
+  "purpose": "Research-only segment-versus-operating MIC caveat; avoid assigning an execution segment from an operating MIC.",
+  "source_attested": false,
+  "mic_registered": false,
+  "broker_route_verified": false,
+  "degiro_fee_verified": false,
+  "trade_ready": false,
+  "order_placement_enabled": false,
+  "authorities": [
+    {
+      "url": "https://www.iso20022.org/market-identifier-codes",
+      "finding": "SWIFT ISO10383 official publication 2026-11-09 with modifications effective 2026-11-23; workbook data not freshly parsed."
+    },
+    {
+      "url": "https://www.afm.nl/~/profmedia/files/doelgroepen/beleggingsondernemingen/handbook-transaction-reporting.pdf",
+      "finding": "AFM handbook distinguishes XETR operator from actual market segments, giving XETA and XETB as examples; historical guidance, not a live instrument segment mapping."
+    },
+    {
+      "url": "https://connect2.euronext.com/sites/default/files/2024-03/IF240321CA%20Euronext%20Mid-Point%20Match%20MIC%20code%20identification%2C%20Dark%20indicator%20and%20ESMA%20guidelines%20on%20Transaction%20Reporting.pdf",
+      "finding": "Euronext states segment MICs can sit beneath operating MICs and dark-book MICs must not be treated as ordinary instrument listings."
+    },
+    {
+      "url": "https://live.euronext.com/sites/default/files/documentation/index-rules/Definition%20Developed%20Market%20-%202025-01_1.pdf",
+      "finding": "Euronext eligibility document uses XAMS, XETR, XHEL at broad market classification level, not proof of actual transaction segment."
+    },
+    {
+      "url": "https://www.cashmarket.deutsche-boerse.com/resource/blob/4942826/73b31cf8fa62eeb7d9f0421d5ed07ea9/data/T7_Release_14.1_-_Functional_Reference_Version_1.pdf",
+      "finding": "Deutsche Boerse T7 Release 14.1 Functional Reference section 9.1.8 distinguishes Xetra on-book XETA (regulated), XETB (Freiverkehr), XETS (Scale), off-book XETU/XETV/XETW and midpoint XEMA/XEMB/XEMI. Venue-level XETR does not identify which segment or execution mode DEGIRO uses. Source is an exchange rulebook, not an instrument-level transaction or broker route confirmation."
+    },
+    {
+      "url": "https://www.cashmarket.deutsche-boerse.com/cash-en/Data-Tech/Initiatives-Releases/release14-1/overview-and-functional-documents",
+      "finding": "Official T7 Release 14.1 documentation index identifies Cash Markets Instrument Reference Data Guide, which specifies instrument-level reference data formats. Reference documentation alone is not a dated, downloaded IFX/RHM instrument snapshot."
+    },
+    {
+      "url": "https://sim-new.cashmarket.deutsche-boerse.com/cash-en/trading/Tradable-Instruments-Xetra/Downloads/xetra-downloads",
+      "finding": "Deutsche Boerse publishes downloadable T7 Xetra All tradable instruments and Static Instrument Reference Data. Next verification requires the original dated reference-data artifact, checksum, parsing by ISIN and instrument venue/segment fields, and independent corroboration; webpage alone does not map IFX/RHM execution segment."
+    }
+  ],
+  "pilot_segment_status": [
+    {
+      "symbol": "ASML.AS",
+      "operating_mic": "XAMS",
+      "exact_execution_segment_mic": null,
+      "verified": false
+    },
+    {
+      "symbol": "IFX.DE",
+      "operating_mic": "XETR",
+      "possible_segment_mics": [
+        "XETA",
+        "XETB",
+        "XETS",
+        "XETU",
+        "XETV",
+        "XETW",
+        "XEMA",
+        "XEMB",
+        "XEMI"
+      ],
+      "exact_execution_segment_mic": null,
+      "verified": false,
+      "segment_candidates_are_not_instrument_mapping": true
+    },
+    {
+      "symbol": "NOKIA.HE",
+      "operating_mic": "XHEL",
+      "exact_execution_segment_mic": null,
+      "verified": false
+    },
+    {
+      "symbol": "RHM.DE",
+      "operating_mic": "XETR",
+      "possible_segment_mics": [
+        "XETA",
+        "XETB",
+        "XETS",
+        "XETU",
+        "XETV",
+        "XETW",
+        "XEMA",
+        "XEMB",
+        "XEMI"
+      ],
+      "exact_execution_segment_mic": null,
+      "verified": false,
+      "segment_candidates_are_not_instrument_mapping": true
+    }
+  ],
+  "admission_rule": "Do not infer segment MIC from exchange operator MIC, ticker suffix, general market classification, or broker tariff category. Require per-instrument venue/segment evidence and broker route confirmation.",
+  "limitations": [
+    "AFM handbook is historical; cannot prove present-day exact segment.",
+    "Official ISO workbook bytes and effective records not freshly verified.",
+    "No broker execution confirmations or account quotes.",
+    "Deutsche Boerse T7 functional-reference segment lists enumerate possible execution modes, not actual IFX/RHM segment assignments or broker order routes.",
+    "No instrument-level static-reference-data artifact was downloaded or hash-verified in this step; IFX and RHM execution segment remains unknown."
+  ]
+}

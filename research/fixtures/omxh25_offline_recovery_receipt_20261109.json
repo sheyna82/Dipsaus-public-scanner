@@ -1,0 +1,16 @@
+{
+  "benchmark_identity_verified": false,
+  "derived_zip_sha256": "f47b5c34b167963466eaca5feaec103a43e994d592ea6600b824633b4c7ba115",
+  "independently_audited": false,
+  "research_only": true,
+  "schema": "dipsaus-omxh25-offline-recovery-v1",
+  "source": "retained_local_original_capture_zip",
+  "source_sha256": "6849ebe332ce2be42e51cd9c8537b12e755e739bc4fc4a25ec5bccfcb70fc277",
+  "trade_ready": false,
+  "verification": {
+    "files": 2,
+    "research_only": true,
+    "status": "verified_original_bytes",
+    "trade_ready": false
+  }
+}

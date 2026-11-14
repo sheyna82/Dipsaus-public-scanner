@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0",
+  "observed_on": "2026-11-13",
+  "purpose": "Authoritative T7 segment MIC classification; not per-instrument segment assignment or broker execution verification.",
+  "source_attested": false,
+  "mic_registered": false,
+  "broker_route_verified": false,
+  "degiro_fee_verified": false,
+  "trade_ready": false,
+  "order_placement_enabled": false,
+  "authority": {
+    "publisher": "Deutsche Boerse Group",
+    "document": "T7 Release 14.1 Functional Reference Version 1",
+    "url": "https://www.cashmarket.deutsche-boerse.com/resource/blob/4942826/73b31cf8fa62eeb7d9f0421d5ed07ea9/data/T7_Release_14.1_-_Functional_Reference_Version_1.pdf",
+    "section": "9.1.8 Segment MIC",
+    "observation": "Explicitly distinguishes Xetra on-book, off-book LIS, and midpoint segment MICs."
+  },
+  "xetra_segment_codes": {
+    "on_book": {
+      "XETA": "Regulierter Markt",
+      "XETB": "Freiverkehr",
+      "XETS": "Scale"
+    },
+    "on_exchange_lis_off_book": {
+      "XETU": "Regulierter Markt",
+      "XETV": "Freiverkehr",
+      "XETW": "Scale"
+    },
+    "midpoint": {
+      "XEMA": "Regulated Market",
+      "XEMB": "Open Market",
+      "XEMI": "Scale"
+    },
+    "off_exchange_otc": "XOFF"
+  },
+  "pilot_assignments": [
+    {
+      "symbol": "IFX.DE",
+      "isin": "DE0006231004",
+      "operating_mic": "XETR",
+      "exact_segment_mic": null,
+      "verified": false
+    },
+    {
+      "symbol": "RHM.DE",
+      "isin": "DE0007030009",
+      "operating_mic": "XETR",
+      "exact_segment_mic": null,
+      "verified": false
+    }
+  ],
+  "independent_instrument_reference_source": "https://www.cashmarket.deutsche-boerse.com/cash-en/trading/Tradable-Instruments-Xetra/xetra",
+  "next_evidence_requirement": "Obtain exchange instrument-level reference data identifying the relevant segment and trade type, then independently verify DEGIRO execution route; no automatic inference from issuer or ticker.",
+  "limitations": [
+    "T7 reference classifies segments but does not identify which segment a particular ISIN was executed on.",
+    "Official instrument download has not been captured or hashed.",
+    "ISO workbook has not been freshly authenticated.",
+    "No DEGIRO account-specific execution quote."
+  ]
+}

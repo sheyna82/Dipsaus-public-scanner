@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "observed_on": "2026-11-13",
+  "purpose": "Research-only original Deutsche Boerse Xetra artifact acquisition inventory; no claims of bytes, instrument-level segment or broker routing.",
+  "official_index": "https://www.cashmarket.deutsche-boerse.com/cash-en/trading/Tradable-Instruments-Xetra/Downloads/xetra-downloads",
+  "artifacts": [
+    {
+      "label": "T7 (Xetra) All tradable instruments",
+      "url": "https://www.cashmarket.deutsche-boerse.com/resource/blob/1528/dc073b6568606b91bfcfe8a7328d6c4f/data/t7-xetr-allTradableInstruments.csv",
+      "published_page_timestamp": "2026-11-12 23:27",
+      "expected_format": "csv",
+      "download_succeeded": false,
+      "sha256": null
+    },
+    {
+      "label": "T7 (Xetra) Static Instrument Reference Data",
+      "url": "https://www.cashmarket.deutsche-boerse.com/resource/blob/1542/6c68544124aceb09a250f8cc8411c58c/data/RDF_StaticData_xetr.zip",
+      "published_page_timestamp": "2026-11-12 23:24",
+      "expected_format": "zip",
+      "download_succeeded": false,
+      "sha256": null
+    }
+  ],
+  "pilot_instruments": [
+    {
+      "symbol": "IFX.DE",
+      "isin": "DE0006231004",
+      "segment_mic_verified": false
+    },
+    {
+      "symbol": "RHM.DE",
+      "isin": "DE0007030009",
+      "segment_mic_verified": false
+    }
+  ],
+  "download_observation": "Official index linked directly to both artifacts; web retrieval reported unsupported binary/CSV content type; container HTTPS request failed DNS resolution.",
+  "required_next_steps": [
+    "Download original artifact bytes in an authorized network environment.",
+    "Record SHA-256, HTTP source URL, UTC retrieval timestamp, response metadata and file size.",
+    "Inspect CSV schema and ZIP member names safely before parsing.",
+    "Find exact pilot ISIN records and distinguish market segment from execution MIC.",
+    "Verify broker-specific route and actual DEGIRO fee separately."
+  ],
+  "source_attested": false,
+  "segment_mic_verified": false,
+  "broker_route_verified": false,
+  "degiro_fee_verified": false,
+  "trade_ready": false,
+  "order_placement_enabled": false
+}

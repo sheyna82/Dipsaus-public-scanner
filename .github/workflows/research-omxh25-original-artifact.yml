@@ -1,0 +1,122 @@
+name: OMXH25 original Nasdaq artifact offline verification
+on:
+  pull_request:
+    paths:
+      - 'research_verify_omxh25_portable_backup.py'
+      - 'research/fixtures/omxh25_offline_recovery_receipt_20261109.json'
+      - 'research_recover_omxh25_offline.py'
+      - 'research_rebuild_omxh25_archive.py'
+      - 'research_verify_omxh25_archive.py'
+      - '.github/workflows/research-omxh25-original-artifact.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify-original-artifact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Retrieve immutable source-capture artifact (research only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p research-omxh25
+          curl --fail --location --silent --show-error \
+            --retry 2 \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/13680073011/zip" \
+            --output research-omxh25/captured.zip
+          echo "6849ebe332ce2be42e51cd9c8537b12e755e739bc4fc4a25ec5bccfcb70fc277  research-omxh25/captured.zip" | sha256sum --check
+      - name: Reconstruct and independently verify captured official PDF bytes
+        run: |
+          python research_rebuild_omxh25_archive.py \
+            research-omxh25/captured.zip \
+            research-omxh25/derived-verified.zip \
+            --expected-artifact-sha256 6849ebe332ce2be42e51cd9c8537b12e755e739bc4fc4a25ec5bccfcb70fc277 \
+            | tee research-omxh25/verification.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result=json.loads(Path("research-omxh25/verification.json").read_text())
+          assert result["verification"] == {"status":"verified_original_bytes","research_only":True,"trade_ready":False,"files":2}
+          print("Verified original bytes; no index-identity or trading approval.")
+          PY
+      - name: Exercise exact offline recovery entrypoint using retained local source bytes
+        run: |
+          python research_recover_omxh25_offline.py \
+            research-omxh25/captured.zip \
+            research-omxh25/offline-recovered.zip \
+            research-omxh25/offline-recovery-receipt.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_verify_omxh25_archive import verify
+          receipt = json.loads(Path("research-omxh25/offline-recovery-receipt.json").read_text())
+          assert receipt["schema"] == "dipsaus-omxh25-offline-recovery-v1"
+          assert receipt["source_sha256"] == "6849ebe332ce2be42e51cd9c8537b12e755e739bc4fc4a25ec5bccfcb70fc277"
+          assert receipt["verification"] == verify("research-omxh25/offline-recovered.zip")
+          assert receipt["benchmark_identity_verified"] is False
+          assert receipt["independently_audited"] is False
+          assert receipt["research_only"] is True and receipt["trade_ready"] is False
+          print("Offline recovery from retained local ZIP: verified_original_bytes; research only.")
+          PY
+      - name: Verify and restore portable backup from real original capture (positive test)
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import zipfile
+          from pathlib import Path
+          source = Path("research-omxh25/captured.zip").read_bytes()
+          receipt = Path("research/fixtures/omxh25_offline_recovery_receipt_20261109.json").read_bytes()
+          digest = lambda b: hashlib.sha256(b).hexdigest()
+          assert digest(source) == "6849ebe332ce2be42e51cd9c8537b12e755e739bc4fc4a25ec5bccfcb70fc277"
+          assert digest(receipt) == "d41200941994ab29caeae7fa387fd41207121caaffbf9b1c8e222af5a7b5c67b"
+          manifest = {
+              "schema": "dipsaus-omxh25-portable-backup-v1",
+              "research_only": True, "trade_ready": False, "benchmark_identity_verified": False,
+              "original_artifact_id": 13680073011,
+              "original_artifact_sha256": digest(source),
+              "files": {"original-capture.zip": digest(source),
+                        "offline-recovery-receipt.json": digest(receipt)}
+          }
+          with zipfile.ZipFile("research-omxh25/portable-backup.zip", "w", zipfile.ZIP_DEFLATED) as archive:
+              archive.writestr("original-capture.zip", source)
+              archive.writestr("offline-recovery-receipt.json", receipt)
+              archive.writestr("manifest.json", json.dumps(manifest))
+          PY
+          python research_verify_omxh25_portable_backup.py \
+            research-omxh25/portable-backup.zip \
+            --extract-original research-omxh25/portable-original.zip \
+            --derived-zip research-omxh25/portable-derived.zip \
+            --receipt-json research-omxh25/portable-positive-recovery-receipt.json \
+            | tee research-omxh25/portable-positive-verification.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path("research-omxh25/portable-positive-verification.json").read_text())
+          assert data["portable"]["status"] == "verified_portable_original_capture"
+          assert data["recovery"]["verification"]["status"] == "verified_original_bytes"
+          assert data["portable"]["trade_ready"] is False
+          print("Portable backup positive recovery: success; original PDF bytes verified.")
+          PY
+      - name: Publish verification receipt (not the source PDFs)
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: omxh25-official-bytes-research-receipt
+          path: |
+            research-omxh25/verification.json
+            research-omxh25/offline-recovery-receipt.json
+            research-omxh25/portable-positive-verification.json
+            research-omxh25/portable-positive-recovery-receipt.json
+          if-no-files-found: error
+          retention-days: 14
