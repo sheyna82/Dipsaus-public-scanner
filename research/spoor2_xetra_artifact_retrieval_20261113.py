@@ -6,6 +6,7 @@ import hashlib
 import json
 import socket
 import ssl
+from urllib.parse import urlsplit
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -31,6 +32,7 @@ def retrieve_xetra_artifact(kind, opener=None):
         "url": SOURCES.get(kind), "retrieved_at_utc": None,
         "byte_count": None, "sha256": None, "bytes": None,
         "blocks": [], "failure_category": None, "http_status": None,
+        "redirect_diagnostic": None,
     }
     if kind not in SOURCES:
         result["blocks"].append("UNKNOWN_XETRA_ARTIFACT")
@@ -68,6 +70,22 @@ def retrieve_xetra_artifact(kind, opener=None):
     except urllib.error.HTTPError as exc:
         result["blocks"].append("XETRA_DOWNLOAD_FAILED")
         result["failure_category"] = "HTTP_ERROR"
+        if exc.code in (301, 302, 303, 307, 308):
+            target = exc.headers.get("Location") if exc.headers is not None else None
+            if target:
+                parts = urlsplit(target)
+                source = urlsplit(SOURCES[kind])
+                result["redirect_diagnostic"] = {
+                    "location_present": True,
+                    "absolute_https": parts.scheme == "https",
+                    "same_hostname": parts.hostname == source.hostname,
+                    "target_not_followed": True,
+                }
+            else:
+                result["redirect_diagnostic"] = {
+                    "location_present": False, "absolute_https": False,
+                    "same_hostname": False, "target_not_followed": True,
+                }
         result["http_status"] = exc.code if isinstance(exc.code, int) and 100 <= exc.code <= 599 else None
         return result
     except (TimeoutError, socket.timeout):
