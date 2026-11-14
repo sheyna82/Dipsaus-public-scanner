@@ -8,7 +8,7 @@ HASH = "a" * 64
 
 
 def record(source, mic=MIC, isin=ISIN, digest=HASH):
-    return {"source_id": source, "isin": isin, "mic": mic, "artifact_sha256": digest}
+    return {"source_id": source, "isin": isin, "mic": mic, "artifact_sha256": ("b" * 64 if source == "b" and digest == HASH else digest)}
 
 
 class InstrumentEvidenceReconciliationTests(unittest.TestCase):
@@ -43,6 +43,14 @@ class InstrumentEvidenceReconciliationTests(unittest.TestCase):
     def test_missing_hash_blocks(self):
         r = reconcile_instrument_evidence(ISIN, MIC, (record("a", digest=""), record("b")))
         self.assertEqual(r["blocks"], ["INCOMPLETE_EVIDENCE_PROVENANCE"])
+
+    def test_duplicate_artifact_hashes_do_not_prove_independence(self):
+        r = reconcile_instrument_evidence(ISIN, MIC, (record("a"), record("b", digest=HASH)))
+        self.assertEqual(r["blocks"], ["DISTINCT_ARTIFACT_HASHES_REQUIRED"])
+
+    def test_same_source_conflicting_artifact_hash_blocks(self):
+        r = reconcile_instrument_evidence(ISIN, MIC, (record("a"), record("a", digest="c" * 64), record("b")))
+        self.assertEqual(r["blocks"], ["INTRA_SOURCE_ARTIFACT_CONFLICT"])
 
     def test_bad_isin_blocks(self):
         r = reconcile_instrument_evidence("US0378331006", MIC, (record("a"), record("b")))
