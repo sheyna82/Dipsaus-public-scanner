@@ -125,6 +125,19 @@ class XetraArtifactRetrievalTests(unittest.TestCase):
         self.assertNotIn("secret", str(public_metadata(out)))
         self.assertIsNone(out["bytes"])
 
+    def test_malformed_redirect_header_fails_closed(self):
+        class Broken:
+            def open(self, request, timeout):
+                raise urllib.error.HTTPError(SOURCES["csv"], 302, "redirect",
+                                             {"Location": "https://[malformed"}, None)
+        out = retrieve_xetra_artifact("csv", Broken())
+        self.assertEqual(out["http_status"], 302)
+        self.assertTrue(out["redirect_diagnostic"]["malformed_location"])
+        self.assertTrue(out["redirect_diagnostic"]["target_not_followed"])
+        self.assertFalse(out["source_attested"])
+        self.assertFalse(out["trade_ready"])
+        self.assertFalse(out["order_placement_enabled"])
+
     def test_external_redirect_not_followed(self):
         class Broken:
             def open(self, request, timeout):
