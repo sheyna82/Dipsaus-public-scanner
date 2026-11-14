@@ -57,11 +57,13 @@ def probe_published_url(kind, opener=None):
                             and target.port is None and not target.query and not target.fragment
                             and target.path.startswith("/resource/blob/")
                             and "%" not in target.path and chr(92) not in target.path
-                            and not any(part in (".", "..") for part in target.path.split("/")))
+                            and not any(part in (".", "..") for part in target.path.split("/"))
+                            and not any(ord(char) < 33 or ord(char) == 127 for char in location))
                     result["expected_filename_matches"] = (target.path.rsplit("/", 1)[-1] == source.path.rsplit("/", 1)[-1])
                     result["canonical_blob_shape_matches"] = bool(
                         re.fullmatch(r"/resource/blob/[0-9]+/[0-9a-fA-F]{32}/data/[^/]+", target.path)
                     ) if safe else False
+                    safe = safe and result["canonical_blob_shape_matches"] and result["expected_filename_matches"]
                     result["redirect_equals_published_url"] = (location == PUBLISHED[kind])
                     result["redirect_equals_legacy_url"] = (location == SOURCES[kind])
                     if result["canonical_blob_shape_matches"]:
