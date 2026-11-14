@@ -51,6 +51,15 @@ class PublishedUrlProbeTests(unittest.TestCase):
         err = urllib.error.HTTPError(PUBLISHED["csv"], 302, "Found", {"Location": target}, None)
         r = probe_published_url("csv", FakeOpener(err))
         self.assertEqual(r["redirect_target_class"], "SAME_HOST_BLOB_PATH_UNATTESTED")
+        self.assertFalse(r["expected_filename_matches"])
+        self.assertFalse(r["source_attested"])
+        self.assertFalse(r["trade_ready"])
+
+    def test_matching_filename_still_unattested(self):
+        target = PUBLISHED["csv"].replace("/1528/", "/9999/")
+        err = urllib.error.HTTPError(PUBLISHED["csv"], 302, "Found", {"Location": target}, None)
+        r = probe_published_url("csv", FakeOpener(err))
+        self.assertTrue(r["expected_filename_matches"])
         self.assertFalse(r["source_attested"])
         self.assertFalse(r["trade_ready"])
 
