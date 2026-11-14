@@ -4,6 +4,8 @@ No trading permissions, broker connectivity or automatic source attestation.
 """
 import hashlib
 import json
+import socket
+import ssl
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -28,7 +30,7 @@ def retrieve_xetra_artifact(kind, opener=None):
         "trade_ready": False, "order_placement_enabled": False,
         "url": SOURCES.get(kind), "retrieved_at_utc": None,
         "byte_count": None, "sha256": None, "bytes": None,
-        "blocks": [],
+        "blocks": [], "failure_category": None, "http_status": None,
     }
     if kind not in SOURCES:
         result["blocks"].append("UNKNOWN_XETRA_ARTIFACT")
@@ -63,8 +65,34 @@ def retrieve_xetra_artifact(kind, opener=None):
             result.update(bytes=data, byte_count=len(data),
                           sha256=hashlib.sha256(data).hexdigest(),
                           retrieved_at_utc=datetime.now(timezone.utc).isoformat())
-    except (urllib.error.URLError, OSError, TimeoutError, ValueError) as exc:
+    except urllib.error.HTTPError as exc:
         result["blocks"].append("XETRA_DOWNLOAD_FAILED")
+        result["failure_category"] = "HTTP_ERROR"
+        result["http_status"] = exc.code if isinstance(exc.code, int) and 100 <= exc.code <= 599 else None
+        return result
+    except (TimeoutError, socket.timeout):
+        result["blocks"].append("XETRA_DOWNLOAD_FAILED")
+        result["failure_category"] = "TIMEOUT"
+        return result
+    except ssl.SSLError:
+        result["blocks"].append("XETRA_DOWNLOAD_FAILED")
+        result["failure_category"] = "TLS_ERROR"
+        return result
+    except urllib.error.URLError as exc:
+        result["blocks"].append("XETRA_DOWNLOAD_FAILED")
+        reason = exc.reason
+        if isinstance(reason, (TimeoutError, socket.timeout)):
+            result["failure_category"] = "TIMEOUT"
+        elif isinstance(reason, ssl.SSLError):
+            result["failure_category"] = "TLS_ERROR"
+        elif isinstance(reason, socket.gaierror):
+            result["failure_category"] = "DNS_ERROR"
+        else:
+            result["failure_category"] = "NETWORK_ERROR"
+        return result
+    except (OSError, ValueError):
+        result["blocks"].append("XETRA_DOWNLOAD_FAILED")
+        result["failure_category"] = "TRANSPORT_ERROR"
         return result
     result["blocks"].append("ORIGINAL_SOURCE_NOT_INDEPENDENTLY_ATTESTED")
     return result
