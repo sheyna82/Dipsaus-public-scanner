@@ -68,7 +68,18 @@ class PublishedUrlProbeTests(unittest.TestCase):
         err = urllib.error.HTTPError(PUBLISHED["csv"], 302, "Found", {"Location": target}, None)
         r = probe_published_url("csv", FakeOpener(err))
         self.assertTrue(r["canonical_blob_shape_matches"])
+        self.assertFalse(r["blob_id_matches_published"])
+        self.assertTrue(r["blob_token_matches_published"])
         self.assertFalse(r["redirect_equals_published_url"])
+        self.assertFalse(r["source_attested"])
+
+    def test_changed_blob_token_is_reported_without_disclosure(self):
+        target = PUBLISHED["zip"].replace("6ddad5f38f99a491ee1ebe750759e833", "a" * 32)
+        err = urllib.error.HTTPError(PUBLISHED["zip"], 302, "Found", {"Location": target}, None)
+        r = probe_published_url("zip", FakeOpener(err))
+        self.assertTrue(r["blob_id_matches_published"])
+        self.assertFalse(r["blob_token_matches_published"])
+        self.assertNotIn("a" * 32, str(r))
         self.assertFalse(r["source_attested"])
 
     def test_noncanonical_blob_shape_remains_blocked(self):
