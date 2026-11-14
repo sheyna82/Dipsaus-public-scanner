@@ -66,8 +66,8 @@ def reconcile_instrument_evidence(isin, mic, records=()):
     if set(source_pairs.values()) != {(isin, mic)}:
         result["blocks"].append("CROSS_SOURCE_INSTRUMENT_CONFLICT")
         return result
-    result["independent_agreement"] = True  # Legacy: agreement of supplied labels, not proven independence.
     result["reported_cross_source_agreement"] = True
+    # Legacy field stays False: untrusted source labels cannot prove independence.
     result["source_count"] = len(source_pairs)
     result["blocks"].append("REPORTED_AGREEMENT_NOT_INDEPENDENTLY_ATTESTED")
     return result
