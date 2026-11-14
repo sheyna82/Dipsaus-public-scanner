@@ -180,3 +180,17 @@ https://www.cashmarket.deutsche-boerse.com/resource/blob/1528/a4b7965b87cf1ef462
 The retrieval interface returned an unsupported text/csv content-type error. This is a URL-link observation ONLY: no successful byte download, no checksum of file contents, no independently verified CSV schema or publication timestamp, and no comparison against the actual full raw HTTP Location strings. The link token differs from the 2025 migration-document token (b52ea43a2edac92e8283d40645d1c076), the configured legacy token (dc073b6568606b91bfcfe8a7328d6c4f), and the previously observed page-link token (2ecdd46ed6dca90fbfc8575d5a21fb4b). These variations demonstrate that page-published resource URLs may change; they do not establish the exact authority or integrity of any redirect target.
 
 Do NOT automatically add this URL to any allowlist, follow redirects, change SOURCES/PUBLISHED, mark source_attested, or enable trading. A controlled, reviewed exact-target comparison and bounded no-follow byte retrieval remain separate prerequisites.
+
+## Exact SHA-256 reconciliation: official page CSV link versus observed HTTP Location (2026-11-14)
+
+Independent source: https://www.cashmarket.deutsche-boerse.com/cash-en/trading/Tradable-Instruments-Xetra (the official page's link labelled "T7 (Xetra) All tradable instruments"). The observed literal link destination is:
+https://www.cashmarket.deutsche-boerse.com/resource/blob/1528/a4b7965b87cf1ef4621a28b85f145ae9/data/t7-xetr-allTradableInstruments.csv
+
+Computed SHA-256 of the UTF-8 bytes of the COMPLETE literal URL string, without newline:
+c01ebe5640aecf188585dcee61e0d1fc2e6bfd6553bec970dcfff05fefe23a2c
+
+This EXACTLY matches the SHA-256 of the full HTTP 302 Location string recorded independently by the no-follow published-URL HEAD probe in GitHub Actions run 43623830133. The matching fingerprint establishes a reproducible exact-string linkage between that recorded Location and the official page's observed CSV download URL (subject to the usual cryptographic SHA-256 collision assumption). This supersedes the earlier statement that the CSV Location could not be matched to an official publication link. The link still differs from the 2025 migration PDF and the legacy configured source URL.
+
+CRITICAL SCOPE: The observation does NOT verify CSV response bytes, byte SHA-256, content-type acceptance, schema, publication timestamp, completeness, or instrument identity; opening the CSV link through the independent page reader returned unsupported text/csv. It does not establish ZIP Location authority, DEGIRO routing or tariff, or trade readiness. The GitHub job continued to report HTTP 302 and zero accepted Xetra CSV/ZIP bytes. No redirect was followed in the research capture. Do not silently approve this URL for fetching: bounded no-follow retrieval and explicit review remain separate steps. Keep source_attested=false, instrument_segment_verified=false, broker_route_verified=false, trade_ready=false, order_placement_enabled=false.
+
+Reproduce the URL fingerprint locally: Python hashlib.sha256(url.encode('utf-8')).hexdigest(), where url is the literal complete CSV URL above and contains no trailing newline.
