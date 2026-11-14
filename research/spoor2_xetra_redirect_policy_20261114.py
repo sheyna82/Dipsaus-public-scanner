@@ -29,7 +29,9 @@ def assess_xetra_redirect(kind, location, approved_exact_urls=()):
     if (target.scheme != "https" or target.netloc != source.netloc
             or target.username is not None or target.password is not None
             or target_port is not None or target.query or target.fragment
-            or not target.path.startswith("/resource/blob/")):
+            or not target.path.startswith("/resource/blob/")
+            or any(segment in (".", "..") for segment in target.path.split("/"))
+            or "%" in target.path or "\\" in target.path):
         result["blocks"].append("REDIRECT_TARGET_NOT_OFFICIAL_OR_UNSAFE")
         return result
     if location not in approved_exact_urls or location == SOURCES[kind]:
