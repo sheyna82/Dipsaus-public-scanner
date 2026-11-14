@@ -116,7 +116,12 @@ class XetraArtifactRetrievalTests(unittest.TestCase):
         out = retrieve_xetra_artifact("csv", Broken())
         self.assertEqual(out["redirect_diagnostic"], {
             "location_present": True, "absolute_https": True,
-            "same_hostname": True, "target_not_followed": True})
+            "same_hostname": True,
+            "location_sha256": hashlib.sha256(
+                b"https://www.cashmarket.deutsche-boerse.com/new/private?token=secret"
+            ).hexdigest(),
+            "has_query": True, "has_fragment": False,
+            "target_not_followed": True})
         self.assertNotIn("secret", str(public_metadata(out)))
         self.assertIsNone(out["bytes"])
 
