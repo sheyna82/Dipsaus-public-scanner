@@ -138,3 +138,15 @@ Before any full ISIN/MIC join is accepted:
 
 This is a documented acceptance plan, not a claim that the complete join, file download, or broker verification has been executed.
 
+## Explicit configuration audit and release-blocking decision (2026-11-14)
+
+Cross-checked current research/spoor2_xetra_artifact_retrieval_20261113.py SOURCES against research/spoor2_xetra_published_url_probe_20261114.py PUBLISHED and the official 2025 Deutsche Boerse migration PDF:
+https://www.cashmarket.deutsche-boerse.com/resource/blob/4764952/ea2c7396b8986d88e37144a1020a5b4f/data/Cash%20Market%20Readiness%20Newsflash_25_11_07_Anhang.pdf
+
+CSV: research SOURCES token dc073b6568606b91bfcfe8a7328d6c4f versus officially published token b52ea43a2edac92e8283d40645d1c076.
+ZIP: research SOURCES token 6c68544124aceb09a250f8cc8411c58c versus officially published token 6ddad5f38f99a491ee1ebe750759e833.
+
+These are distinct exact URLs, even though host, blob ID and filename agree. The observed redirect target token differs from the published one, and exact destination authority remains unverified. Therefore: do not auto-promote legacy SOURCES, published PUBLISHED, or redirect destinations to approved bytes; do not replace SOURCES automatically or follow redirects; no live configuration or broker changes. Require independent publication of exact current targets, reviewed evidence chain and bounded retrieval before approving a source update.
+
+This audit is documentary, not a new CI validation. Last verified regression run remains 621/621 in 43602257899.
+
