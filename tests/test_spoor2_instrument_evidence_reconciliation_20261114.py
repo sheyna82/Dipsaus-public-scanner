@@ -52,6 +52,15 @@ class InstrumentEvidenceReconciliationTests(unittest.TestCase):
         r = reconcile_instrument_evidence(ISIN, MIC, (record("a"), record("a", digest="c" * 64), record("b")))
         self.assertEqual(r["blocks"], ["INTRA_SOURCE_ARTIFACT_CONFLICT"])
 
+    def test_case_only_source_alias_not_independent(self):
+        r = reconcile_instrument_evidence(ISIN, MIC, (record("Publisher"), record("publisher")))
+        self.assertEqual(r["blocks"], ["INTRA_SOURCE_ARTIFACT_CONFLICT"])
+        self.assertFalse(r["independent_agreement"])
+
+    def test_case_only_alias_same_hash_not_independent(self):
+        r = reconcile_instrument_evidence(ISIN, MIC, (record("Publisher"), record("publisher", digest=HASH)))
+        self.assertEqual(r["blocks"], ["TWO_DISTINCT_SOURCES_REQUIRED"])
+
     def test_bad_isin_blocks(self):
         r = reconcile_instrument_evidence("US0378331006", MIC, (record("a"), record("b")))
         self.assertEqual(r["blocks"], ["INVALID_ISIN"])
