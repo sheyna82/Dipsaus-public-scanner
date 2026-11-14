@@ -105,3 +105,18 @@ https://www.cashmarket.deutsche-boerse.com/resource/blob/4764952/ea2c7396b8986d8
 
 Keep all fail-closed gates unchanged. Do not automatically follow redirects or promote inventory-page matches to source_attested=true.
 
+## Reproducible official inventory spot-check (2026-11-14)
+
+Source A (English, current page): https://www.eurexgroup.com/dbcm-en/instruments-statistics/all-tradable-instruments/xetra
+Source B (official cash market instrument table): https://www.cashmarket.deutsche-boerse.com/cash-en/trading/Tradable-Instruments-Xetra
+Source C (German page; indexed snapshot may be stale): https://www.eurexgroup.com/dbcm-de/instrumente-statistiken/alle-handelbaren-instrumente
+
+Observed in A: 5,574 displayed results; CSV update 2026-11-14 01:56; static RDF update 2026-11-13 23:37.
+Observed in B: 5,574 displayed results, including:
+- DE000A2LQ2D0 — 029 GROUP SE INH O.N. — XETR (source A) — shares, EUR (source B).
+- DE0005545503 — 1+1 AG INH O.N. — XETR (source A) — shares, EUR (source B).
+- US88025U1097 — 10X GENOMICS DL -,00001 — XETR (source A) — shares, EUR (source B).
+Source C indexed an older 5,568-result snapshot dated 2026-11-12. Do NOT treat a differing indexed snapshot as a data conflict without comparing the same publication timestamps and filters.
+
+These three manually observed records are a spot-check of official public web listings, NOT a complete, reproducibly downloaded CSV/ZIP inventory. This cannot independently prove ISIN/MIC mappings for the scanner universe, DEGIRO trading route or tariff, the 302 blob tokens, or source byte integrity. The instrument page and downloaded CSV may share an upstream publication process and are not necessarily independent evidence of data accuracy. Keep all trade gates blocked until a timestamp-matched full evidence join is independently reproduced and reviewed.
+
