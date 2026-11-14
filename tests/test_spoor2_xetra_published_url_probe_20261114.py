@@ -44,6 +44,15 @@ class PublishedUrlProbeTests(unittest.TestCase):
         self.assertEqual(len(r["location_sha256"]), 64)
         self.assertNotIn("secret", str(r))
         self.assertTrue(r["redirect_not_followed"])
+        self.assertEqual(r["redirect_target_class"], "OTHER_OR_UNSAFE")
+
+    def test_same_host_blob_redirect_still_unattested(self):
+        target = "https://www.cashmarket.deutsche-boerse.com/resource/blob/99/abc/data/file.csv"
+        err = urllib.error.HTTPError(PUBLISHED["csv"], 302, "Found", {"Location": target}, None)
+        r = probe_published_url("csv", FakeOpener(err))
+        self.assertEqual(r["redirect_target_class"], "SAME_HOST_BLOB_PATH_UNATTESTED")
+        self.assertFalse(r["source_attested"])
+        self.assertFalse(r["trade_ready"])
 
     def test_unhashable_kind_fails_closed(self):
         r = probe_published_url(["csv"])
