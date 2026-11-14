@@ -150,3 +150,11 @@ These are distinct exact URLs, even though host, blob ID and filename agree. The
 
 This audit is documentary, not a new CI validation. Last verified regression run remains 621/621 in 43602257899.
 
+## Third-variant redirect evidence (2026-11-14)
+
+Verified GitHub Actions run https://github.com/sheyna82/Dipsaus-public-scanner/actions/runs/43615307758 for commit 87c7238a649fa97e3c9e8b9b871a6e11ccae27fb: 622/622 regressions and all three jobs success.
+
+Published CSV and ZIP HEAD both returned HTTP 302. For each: same official hostname, canonical blob path, expected filename, same numeric blob ID as published, changed blob token; redirect_equals_published_url=false AND redirect_equals_legacy_url=false. Their observed Location values are therefore a third exact URL variant, not either of the two documented candidates. Fingerprints remain c01ebe5640aecf188585dcee61e0d1fc2e6bfd6553bec970dcfff05fefe23a2c (CSV) and 18d7f62112f9187bf4f0a529df20f5cd27a97f77b9b0a0326b659aa0d7147cad (ZIP).
+
+Legacy CSV/ZIP GET both returned 302; no redirects followed and no bytes retrieved. A structurally plausible third variant is NOT independent publication authority or content integrity. Keep exact-target approval and all trading gates blocked.
+
