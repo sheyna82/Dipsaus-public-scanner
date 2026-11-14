@@ -22,5 +22,16 @@ class RedirectPolicyTests(unittest.TestCase):
         self.assertIn("UNKNOWN_XETRA_ARTIFACT", assess("other", BASE)["blocks"])
     def test_invalid_policy_type(self):
         self.assertIn("INVALID_REDIRECT_POLICY_INPUT", assess("csv", BASE, [BASE])["blocks"])
+    def test_malformed_port_fails_closed(self):
+        x = "https://www.cashmarket.deutsche-boerse.com:bad/resource/blob/1528/new/data/file.csv"
+        r = assess("csv", x, (x,))
+        self.assertFalse(r["eligible_for_manual_second_request"])
+        self.assertIn("MALFORMED_REDIRECT_TARGET", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+    def test_out_of_range_port_fails_closed(self):
+        x = "https://www.cashmarket.deutsche-boerse.com:99999/resource/blob/1528/new/data/file.csv"
+        r = assess("csv", x, (x,))
+        self.assertFalse(r["eligible_for_manual_second_request"])
+        self.assertIn("MALFORMED_REDIRECT_TARGET", r["blocks"])
 if __name__ == "__main__":
     unittest.main()
