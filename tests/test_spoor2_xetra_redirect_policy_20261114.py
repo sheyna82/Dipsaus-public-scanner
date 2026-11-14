@@ -9,6 +9,13 @@ class RedirectPolicyTests(unittest.TestCase):
         self.assertTrue(r["eligible_for_manual_second_request"])
         for k in ("source_attested", "trade_ready", "order_placement_enabled", "broker_route_verified"):
             self.assertFalse(r[k])
+    def test_approved_wrong_blob_id_still_rejected(self):
+        x = BASE.replace("/blob/1528/", "/blob/9999/")
+        result = assess("csv", x, (x,))
+        self.assertFalse(result["eligible_for_manual_second_request"])
+        self.assertIn("REDIRECT_TARGET_NOT_OFFICIAL_OR_UNSAFE", result["blocks"])
+        self.assertFalse(result["source_attested"])
+
     def test_approved_wrong_filename_still_rejected(self):
         x = BASE.replace("t7-xetr-allTradableInstruments.csv", "other.csv")
         self.assertFalse(assess("csv", x, (x,))["eligible_for_manual_second_request"])
