@@ -19,11 +19,16 @@ def assess_xetra_redirect(kind, location, approved_exact_urls=()):
     if not isinstance(location, str) or not isinstance(approved_exact_urls, (tuple, frozenset)):
         result["blocks"].append("INVALID_REDIRECT_POLICY_INPUT")
         return result
-    source = urlsplit(SOURCES[kind])
-    target = urlsplit(location)
+    try:
+        source = urlsplit(SOURCES[kind])
+        target = urlsplit(location)
+        target_port = target.port
+    except ValueError:
+        result["blocks"].append("MALFORMED_REDIRECT_TARGET")
+        return result
     if (target.scheme != "https" or target.netloc != source.netloc
             or target.username is not None or target.password is not None
-            or target.port is not None or target.query or target.fragment
+            or target_port is not None or target.query or target.fragment
             or not target.path.startswith("/resource/blob/")):
         result["blocks"].append("REDIRECT_TARGET_NOT_OFFICIAL_OR_UNSAFE")
         return result
