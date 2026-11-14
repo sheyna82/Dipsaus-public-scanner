@@ -201,4 +201,11 @@ jobs:
                   print(json.dumps({"degiro_route_evidence": classify_degiro_route_evidence(record["isin"])}, sort_keys=True))
                   print(json.dumps({"degiro_execution_confirmation_requirements": assess_execution_confirmation_requirements(record["isin"])}, sort_keys=True))
                   print(json.dumps({"degiro_private_provenance_checklist": assess_provenance_checklist(record["isin"])}, sort_keys=True))
+          else:
+              print(json.dumps({"xetra_reporting_market_audit": {"status": "SKIPPED", "reason": "XETRA_CSV_UNAVAILABLE", "trade_ready": False, "order_placement_enabled": False}}, sort_keys=True))
+              print(json.dumps({"instrument_evidence_ledger": {"status": "SKIPPED", "reason": "XETRA_CSV_UNAVAILABLE", "trade_ready": False, "order_placement_enabled": False}}, sort_keys=True))
+              for isin in ("DE0006231004", "DE0007030009"):
+                  print(json.dumps({"degiro_route_evidence": {"isin": isin, "status": "SKIPPED", "reason": "XETRA_CSV_UNAVAILABLE", "trade_ready": False}}, sort_keys=True))
+                  print(json.dumps({"degiro_execution_confirmation_requirements": assess_execution_confirmation_requirements(isin)}, sort_keys=True))
+                  print(json.dumps({"degiro_private_provenance_checklist": assess_provenance_checklist(isin)}, sort_keys=True))
           PY
