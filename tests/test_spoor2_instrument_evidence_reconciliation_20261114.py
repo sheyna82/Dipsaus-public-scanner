@@ -45,7 +45,7 @@ class InstrumentEvidenceReconciliationTests(unittest.TestCase):
         self.assertEqual(r["blocks"], ["INCOMPLETE_EVIDENCE_PROVENANCE"])
 
     def test_duplicate_artifact_hashes_do_not_prove_independence(self):
-        r = reconcile_instrument_evidence(ISIN, MIC, (record("a"), record("b", digest=HASH)))
+        r = reconcile_instrument_evidence(ISIN, MIC, (record("a", digest="b" * 64), record("b")))
         self.assertEqual(r["blocks"], ["DISTINCT_ARTIFACT_HASHES_REQUIRED"])
 
     def test_same_source_conflicting_artifact_hash_blocks(self):
