@@ -75,10 +75,15 @@ def retrieve_xetra_artifact(kind, opener=None):
             if target:
                 parts = urlsplit(target)
                 source = urlsplit(SOURCES[kind])
+                # Hash the exact header for later comparison without leaking
+                # credentials, query strings, fragments or arbitrary paths.
                 result["redirect_diagnostic"] = {
                     "location_present": True,
                     "absolute_https": parts.scheme == "https",
                     "same_hostname": parts.hostname == source.hostname,
+                    "location_sha256": hashlib.sha256(target.encode("utf-8")).hexdigest(),
+                    "has_query": bool(parts.query),
+                    "has_fragment": bool(parts.fragment),
                     "target_not_followed": True,
                 }
             else:
