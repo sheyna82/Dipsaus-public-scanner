@@ -71,3 +71,11 @@ Verified run https://github.com/sheyna82/Dipsaus-public-scanner/actions/runs/436
 
 Published CSV HEAD returned 302 with SAME_HOST_BLOB_PATH_UNATTESTED and expected_filename_matches=true; fingerprint c01ebe5640aecf188585dcee61e0d1fc2e6bfd6553bec970dcfff05fefe23a2c. Published ZIP HEAD and legacy CSV/ZIP GET returned 503. Filename equality is a technical observation, NOT evidence of artifact bytes, provenance, or broker routing. All fail-closed gates remain blocked.
 
+## Follow-up canonical blob shape (2026-11-14)
+
+CI run https://github.com/sheyna82/Dipsaus-public-scanner/actions/runs/43601359339 for commit a9612a3e1b6c039ac89bce02280bed1afc0b2c13: 620/620 tests and all three jobs successful.
+
+Published ZIP HEAD: 302; canonical_blob_shape_matches=true; expected_filename_matches=true; redirect_equals_published_url=false; fingerprint 18d7f62112f9187bf4f0a529df20f5cd27a97f77b9b0a0326b659aa0d7147cad. Published CSV HEAD: 503. Legacy CSV and ZIP GET: 302 with no redirects followed. No bytes, provenance attestation, or trading readiness established.
+
+The alternating 302/503 observations show unstable availability across requests, not an approved target. Maintain default-deny redirect policy and prohibit automatic orders.
+
