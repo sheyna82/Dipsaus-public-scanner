@@ -53,7 +53,7 @@ class InstrumentEvidenceReconciliationTests(unittest.TestCase):
         self.assertEqual(r["blocks"], ["INTRA_SOURCE_ARTIFACT_CONFLICT"])
 
     def test_case_only_source_alias_not_independent(self):
-        r = reconcile_instrument_evidence(ISIN, MIC, (record("Publisher"), record("publisher")))
+        r = reconcile_instrument_evidence(ISIN, MIC, (record("Publisher", digest="c" * 64), record("publisher", digest="d" * 64)))
         self.assertEqual(r["blocks"], ["INTRA_SOURCE_ARTIFACT_CONFLICT"])
         self.assertFalse(r["independent_agreement"])
 
