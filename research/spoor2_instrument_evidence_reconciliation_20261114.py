@@ -9,6 +9,8 @@ from research.spoor2_instrument_reference_gate_20261114 import inspect_instrumen
 def reconcile_instrument_evidence(isin, mic, records=()):
     result = {
         "status": "BLOCKED", "independent_agreement": False,
+        "reported_cross_source_agreement": False,
+        "independent_source_authority_verified": False,
         "source_attested": False, "instrument_segment_verified": False,
         "broker_route_verified": False, "trade_ready": False,
         "order_placement_enabled": False, "blocks": [],
@@ -64,7 +66,8 @@ def reconcile_instrument_evidence(isin, mic, records=()):
     if set(source_pairs.values()) != {(isin, mic)}:
         result["blocks"].append("CROSS_SOURCE_INSTRUMENT_CONFLICT")
         return result
-    result["independent_agreement"] = True
+    result["independent_agreement"] = True  # Legacy: agreement of supplied labels, not proven independence.
+    result["reported_cross_source_agreement"] = True
     result["source_count"] = len(source_pairs)
     result["blocks"].append("REPORTED_AGREEMENT_NOT_INDEPENDENTLY_ATTESTED")
     return result
