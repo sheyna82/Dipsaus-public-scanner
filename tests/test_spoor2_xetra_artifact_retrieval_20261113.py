@@ -41,6 +41,12 @@ class XetraArtifactRetrievalTests(unittest.TestCase):
     def test_unknown_kind_fails_closed(self):
         self.assertIn("UNKNOWN_XETRA_ARTIFACT", retrieve_xetra_artifact("other")["blocks"])
 
+    def test_unhashable_kind_fails_closed(self):
+        r = retrieve_xetra_artifact(["csv"])
+        self.assertIn("UNKNOWN_XETRA_ARTIFACT", r["blocks"])
+        self.assertFalse(r["source_attested"])
+        self.assertFalse(r["order_placement_enabled"])
+
     def test_success_is_still_not_attested(self):
         payload = b"ISIN\nDE0006231004\n"
         r = retrieve_xetra_artifact("csv", Opener(Response(payload, SOURCES["csv"])))
