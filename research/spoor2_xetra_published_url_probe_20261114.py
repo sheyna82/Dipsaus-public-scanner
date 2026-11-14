@@ -52,7 +52,7 @@ def probe_published_url(kind, opener=None):
                             and target.username is None and target.password is None
                             and target.port is None and not target.query and not target.fragment
                             and target.path.startswith("/resource/blob/")
-                            and "%" not in target.path
+                            and "%" not in target.path and chr(92) not in target.path
                             and not any(part in (".", "..") for part in target.path.split("/")))
                     result["redirect_target_class"] = ("SAME_HOST_BLOB_PATH_UNATTESTED" if safe
                                                        else "OTHER_OR_UNSAFE")
