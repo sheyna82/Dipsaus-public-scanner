@@ -34,7 +34,7 @@ def inspect_instrument_evidence_bundle(isin, mic, records=()):
                          ("source_id", "isin", "mic", "artifact_sha256")})
     result["byte_integrity_checked"] = True
     reconciliation = reconcile_instrument_evidence(isin, mic, tuple(metadata))
-    if not reconciliation["independent_agreement"]:
+    if not reconciliation["reported_cross_source_agreement"]:
         result["blocks"].extend(reconciliation["blocks"])
         return result
     result["reported_cross_source_agreement"] = True
