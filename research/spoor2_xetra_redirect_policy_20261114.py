@@ -8,7 +8,7 @@ from research.spoor2_xetra_artifact_retrieval_20261113 import SOURCES
 
 def assess_xetra_redirect(kind, location, approved_exact_urls=()):
     result = {
-        "status": "BLOCKED", "kind": kind, "eligible_for_manual_second_request": False,
+        "status": "BLOCKED", "kind": kind if isinstance(kind, str) else None, "eligible_for_manual_second_request": False,
         "source_attested": False, "instrument_segment_verified": False,
         "broker_route_verified": False, "trade_ready": False,
         "order_placement_enabled": False, "blocks": [],
