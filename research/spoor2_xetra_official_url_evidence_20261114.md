@@ -65,3 +65,9 @@ Commit fa995f7e08a5d9cada6f0f0a038a88856e20a2c4; 616/616 tests, three jobs succe
 
 The same-run HTTP results differ from the preceding 302/302 run. Do not infer a stable redirect chain or a permanent source migration from a single observation. Do not automatically retry in a way that could stress the official service. No source attestation, trading authorization, or broker route verification.
 
+## Follow-up filename and redirect diagnostics (2026-11-14)
+
+Verified run https://github.com/sheyna82/Dipsaus-public-scanner/actions/runs/43601237602 for commit 173cbcdf6cad2575871204624b39047ce0c9acda: 618/618 regression tests, all 3 jobs successful.
+
+Published CSV HEAD returned 302 with SAME_HOST_BLOB_PATH_UNATTESTED and expected_filename_matches=true; fingerprint c01ebe5640aecf188585dcee61e0d1fc2e6bfd6553bec970dcfff05fefe23a2c. Published ZIP HEAD and legacy CSV/ZIP GET returned 503. Filename equality is a technical observation, NOT evidence of artifact bytes, provenance, or broker routing. All fail-closed gates remain blocked.
+
