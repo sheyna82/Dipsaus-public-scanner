@@ -73,14 +73,24 @@ def retrieve_xetra_artifact(kind, opener=None):
         if exc.code in (301, 302, 303, 307, 308):
             target = exc.headers.get("Location") if exc.headers is not None else None
             if target:
-                parts = urlsplit(target)
-                source = urlsplit(SOURCES[kind])
+                try:
+                    parts = urlsplit(target)
+                    source = urlsplit(SOURCES[kind])
+                    target_hostname = parts.hostname
+                except ValueError:
+                    result["redirect_diagnostic"] = {
+                        "location_present": True,
+                        "malformed_location": True,
+                        "target_not_followed": True,
+                    }
+                    result["http_status"] = exc.code
+                    return result
                 # Hash the exact header for later comparison without leaking
                 # credentials, query strings, fragments or arbitrary paths.
                 result["redirect_diagnostic"] = {
                     "location_present": True,
                     "absolute_https": parts.scheme == "https",
-                    "same_hostname": parts.hostname == source.hostname,
+                    "same_hostname": target_hostname == source.hostname,
                     "location_sha256": hashlib.sha256(target.encode("utf-8")).hexdigest(),
                     "has_query": bool(parts.query),
                     "has_fragment": bool(parts.fragment),
