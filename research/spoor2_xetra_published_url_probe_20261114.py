@@ -22,6 +22,7 @@ def probe_published_url(kind, opener=None):
         "status": "BLOCKED", "source_attested": False,
         "trade_ready": False, "order_placement_enabled": False,
         "http_status": None, "location_sha256": None,
+        "redirect_target_class": None,
         "redirect_not_followed": True, "failure_category": None,
     }
     if not isinstance(kind, str) or kind not in PUBLISHED:
@@ -44,6 +45,19 @@ def probe_published_url(kind, opener=None):
             location = exc.headers.get("Location") if exc.headers else None
             if location:
                 result["location_sha256"] = hashlib.sha256(location.encode("utf-8")).hexdigest()
+                try:
+                    target = urlsplit(location)
+                    source = urlsplit(PUBLISHED[kind])
+                    safe = (target.scheme == "https" and target.netloc == source.netloc
+                            and target.username is None and target.password is None
+                            and target.port is None and not target.query and not target.fragment
+                            and target.path.startswith("/resource/blob/")
+                            and "%" not in target.path
+                            and not any(part in (".", "..") for part in target.path.split("/")))
+                    result["redirect_target_class"] = ("SAME_HOST_BLOB_PATH_UNATTESTED" if safe
+                                                       else "OTHER_OR_UNSAFE")
+                except ValueError:
+                    result["redirect_target_class"] = "MALFORMED"
         result["failure_category"] = "HTTP_ERROR"
     except (OSError, ValueError):
         result["failure_category"] = "TRANSPORT_ERROR"
