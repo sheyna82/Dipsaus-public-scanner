@@ -22,7 +22,7 @@ def probe_published_url(kind, opener=None):
         "status": "BLOCKED", "source_attested": False,
         "trade_ready": False, "order_placement_enabled": False,
         "http_status": None, "location_sha256": None,
-        "redirect_target_class": None,
+        "redirect_target_class": None, "expected_filename_matches": None,
         "redirect_not_followed": True, "failure_category": None,
     }
     if not isinstance(kind, str) or kind not in PUBLISHED:
@@ -54,6 +54,7 @@ def probe_published_url(kind, opener=None):
                             and target.path.startswith("/resource/blob/")
                             and "%" not in target.path and chr(92) not in target.path
                             and not any(part in (".", "..") for part in target.path.split("/")))
+                    result["expected_filename_matches"] = (target.path.rsplit("/", 1)[-1] == source.path.rsplit("/", 1)[-1])
                     result["redirect_target_class"] = ("SAME_HOST_BLOB_PATH_UNATTESTED" if safe
                                                        else "OTHER_OR_UNSAFE")
                 except ValueError:
