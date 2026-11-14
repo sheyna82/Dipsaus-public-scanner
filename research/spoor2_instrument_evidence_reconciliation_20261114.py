@@ -40,6 +40,8 @@ def reconcile_instrument_evidence(isin, mic, records=()):
         if not inspect_instrument_reference(record_isin, record_mic)["identifier_syntax_valid"]:
             result["blocks"].append("INVALID_EVIDENCE_IDENTIFIER")
             return result
+        # Case-only source aliases cannot manufacture independent evidence.
+        source = source.casefold()
         pair = (record_isin, record_mic)
         if source in source_pairs and source_pairs[source] != pair:
             result["blocks"].append("INTRA_SOURCE_CONFLICT")
