@@ -120,3 +120,21 @@ Source C indexed an older 5,568-result snapshot dated 2026-11-12. Do NOT treat a
 
 These three manually observed records are a spot-check of official public web listings, NOT a complete, reproducibly downloaded CSV/ZIP inventory. This cannot independently prove ISIN/MIC mappings for the scanner universe, DEGIRO trading route or tariff, the 302 blob tokens, or source byte integrity. The instrument page and downloaded CSV may share an upstream publication process and are not necessarily independent evidence of data accuracy. Keep all trade gates blocked until a timestamp-matched full evidence join is independently reproduced and reviewed.
 
+## Source-to-scanner reconciliation acceptance criteria (2026-11-14)
+
+Official source documentation:
+- https://www.cashmarket.deutsche-boerse.com/resource/blob/4764952/ea2c7396b8986d88e37144a1020a5b4f/data/Cash%20Market%20Readiness%20Newsflash_25_11_07_Anhang.pdf (official November 2025 migration URLs).
+- https://www.cashmarket.deutsche-boerse.com/resource/blob/4591780/4a5a7f89c8d8b15538a6dc83e3e7c0c5/data/T7_R.14.0_Cash_Markets_Instrument_Reference_Data_Guide_Version_1.pdf (instrument-reference semantics and publication).
+- https://www.cashmarket.deutsche-boerse.com/resource/blob/2609724/9849de7dec92b70a65093dd3817feda6/data/Cash_Markets_Instrument_Reference_Data_Guide_v.1.0.pdf (historical CSV file format: semicolon-delimited; line 1 Market: XETR; line 2 Date Last Update; line 3 headers; records from line 4).
+- https://www.cashmarket.deutsche-boerse.com/dynamic/action/cash-en/trading/Tradable-Instruments-Xetra/xetra/4085954/search (official listing; web search snapshots can be stale).
+
+Before any full ISIN/MIC join is accepted:
+1. Independently review the exact 302 Location target against official publication; no hash, same-host, basename or blob-shape match alone qualifies. No redirect follow until separately approved.
+2. Retrieve only approved, exact, HTTPS URLs with redirect disabled, byte-size/time bounds, deterministic SHA-256 and retained publication timestamp; reject HTTP 503/302 and partial/HTML responses.
+3. Parse CSV according to the release-specific official guide; verify XETR market header, update date, schema/column count, instrument status, ISIN syntax and uniqueness rules. Do not assume the historical guide matches the current schema without review.
+4. Compare a timestamp-matched complete instrument snapshot to the scanner's explicit ISIN+MIC+currency+segment universe; distinguish absent, ambiguous, inactive and duplicated entries. Public website spot-checks are not a complete snapshot and may share an upstream source.
+5. Independently verify DEGIRO product identifier, actual executable exchange/route and applicable fee schedule for each instrument; XETR listing alone cannot establish DEGIRO routing or tariff.
+6. Preserve provenance, source version, tests, audit evidence and explicit human sign-off. Until all gates pass, source_attested=false, broker_route_verified=false, trade_ready=false, order_placement_enabled=false.
+
+This is a documented acceptance plan, not a claim that the complete join, file download, or broker verification has been executed.
+
