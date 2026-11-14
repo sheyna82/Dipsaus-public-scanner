@@ -20,6 +20,11 @@ class RedirectPolicyTests(unittest.TestCase):
         self.assertFalse(assess("csv", x, (x,))["eligible_for_manual_second_request"])
     def test_unknown_kind(self):
         self.assertIn("UNKNOWN_XETRA_ARTIFACT", assess("other", BASE)["blocks"])
+    def test_unhashable_kind_fails_closed(self):
+        r = assess(["csv"], BASE)
+        self.assertIn("UNKNOWN_XETRA_ARTIFACT", r["blocks"])
+        self.assertFalse(r["eligible_for_manual_second_request"])
+        self.assertFalse(r["trade_ready"])
     def test_invalid_policy_type(self):
         self.assertIn("INVALID_REDIRECT_POLICY_INPUT", assess("csv", BASE, [BASE])["blocks"])
     def test_malformed_port_fails_closed(self):
