@@ -40,3 +40,16 @@ This note records documentary evidence only. It is NOT a source-attestation or b
 
 The official November 2025 Deutsche Börse PDF was accessible through a web document reader. A request for the published CSV URL returned a tool error indicating unsupported text/csv content type, rather than readable CSV bytes. This does not establish the response status, checksum, completeness, authenticity of downloaded bytes, or any current redirect target. ZIP retrieval was not established by this check. No URL allowlist or research SOURCES entries were changed.
 
+## GitHub Actions comparison (2026-11-14)
+
+Verified CI run: https://github.com/sheyna82/Dipsaus-public-scanner/actions/runs/43600907650
+Commit: ebd6605cd8a7092990ee716849533b06198e13eb
+Regression: 615/615; three jobs success.
+
+Both independently published URL variants and pre-existing SOURCES return HTTP 302 with identical per-kind Location-header SHA-256 fingerprints in this run:
+
+- CSV: c01ebe5640aecf188585dcee61e0d1fc2e6bfd6553bec970dcfff05fefe23a2c
+- ZIP: 18d7f62112f9187bf4f0a529df20f5cd27a97f77b9b0a0326b659aa0d7147cad
+
+Equality is equality of raw Location-header bytes within the recorded run; it is not destination authority, redirect safety, successful artifact retrieval, source attestation, or broker eligibility. No redirect followed; no bytes retrieved. Continue to fail closed.
+
