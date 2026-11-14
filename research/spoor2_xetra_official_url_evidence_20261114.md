@@ -35,3 +35,8 @@ The current URLs return HTTP 302 in GitHub Actions. The original Location values
 5. Keep source_attested=false, trade_ready=false, order_placement_enabled=false until all required independent gates pass.
 
 This note records documentary evidence only. It is NOT a source-attestation or broker-route authorization.
+
+## Web retrieval check (2026-11-14)
+
+The official November 2025 Deutsche Börse PDF was accessible through a web document reader. A request for the published CSV URL returned a tool error indicating unsupported text/csv content type, rather than readable CSV bytes. This does not establish the response status, checksum, completeness, authenticity of downloaded bytes, or any current redirect target. ZIP retrieval was not established by this check. No URL allowlist or research SOURCES entries were changed.
+
