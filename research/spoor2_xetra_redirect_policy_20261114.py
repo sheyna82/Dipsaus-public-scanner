@@ -13,7 +13,7 @@ def assess_xetra_redirect(kind, location, approved_exact_urls=()):
         "broker_route_verified": False, "trade_ready": False,
         "order_placement_enabled": False, "blocks": [],
     }
-    if kind not in SOURCES:
+    if not isinstance(kind, str) or kind not in SOURCES:
         result["blocks"].append("UNKNOWN_XETRA_ARTIFACT")
         return result
     if not isinstance(location, str) or not isinstance(approved_exact_urls, (tuple, frozenset)):
