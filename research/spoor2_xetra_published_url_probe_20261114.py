@@ -4,6 +4,7 @@ Never attests source bytes or authorizes trades. Does not follow redirects.
 """
 import hashlib
 import json
+import re
 import urllib.error
 import urllib.request
 from urllib.parse import urlsplit
@@ -23,6 +24,7 @@ def probe_published_url(kind, opener=None):
         "trade_ready": False, "order_placement_enabled": False,
         "http_status": None, "location_sha256": None,
         "redirect_target_class": None, "expected_filename_matches": None,
+        "canonical_blob_shape_matches": None, "redirect_equals_published_url": None,
         "redirect_not_followed": True, "failure_category": None,
     }
     if not isinstance(kind, str) or kind not in PUBLISHED:
@@ -55,6 +57,10 @@ def probe_published_url(kind, opener=None):
                             and "%" not in target.path and chr(92) not in target.path
                             and not any(part in (".", "..") for part in target.path.split("/")))
                     result["expected_filename_matches"] = (target.path.rsplit("/", 1)[-1] == source.path.rsplit("/", 1)[-1])
+                    result["canonical_blob_shape_matches"] = bool(
+                        re.fullmatch(r"/resource/blob/[0-9]+/[0-9a-fA-F]{32}/data/[^/]+", target.path)
+                    ) if safe else False
+                    result["redirect_equals_published_url"] = (location == PUBLISHED[kind])
                     result["redirect_target_class"] = ("SAME_HOST_BLOB_PATH_UNATTESTED" if safe
                                                        else "OTHER_OR_UNSAFE")
                 except ValueError:
