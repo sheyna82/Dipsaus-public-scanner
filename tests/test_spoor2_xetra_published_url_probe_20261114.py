@@ -63,6 +63,21 @@ class PublishedUrlProbeTests(unittest.TestCase):
         self.assertFalse(r["source_attested"])
         self.assertFalse(r["trade_ready"])
 
+    def test_canonical_blob_shape_without_attestation(self):
+        target = PUBLISHED["csv"].replace("/1528/", "/9999/")
+        err = urllib.error.HTTPError(PUBLISHED["csv"], 302, "Found", {"Location": target}, None)
+        r = probe_published_url("csv", FakeOpener(err))
+        self.assertTrue(r["canonical_blob_shape_matches"])
+        self.assertFalse(r["redirect_equals_published_url"])
+        self.assertFalse(r["source_attested"])
+
+    def test_noncanonical_blob_shape_remains_blocked(self):
+        target = "https://www.cashmarket.deutsche-boerse.com/resource/blob/abc/data/t7-xetr-allTradableInstruments.csv"
+        err = urllib.error.HTTPError(PUBLISHED["csv"], 302, "Found", {"Location": target}, None)
+        r = probe_published_url("csv", FakeOpener(err))
+        self.assertFalse(r["canonical_blob_shape_matches"])
+        self.assertFalse(r["trade_ready"])
+
     def test_backslash_redirect_classified_unsafe(self):
         target = PUBLISHED["csv"].replace("/data/", "/data/" + chr(92))
         err = urllib.error.HTTPError(PUBLISHED["csv"], 302, "Found", {"Location": target}, None)
