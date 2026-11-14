@@ -50,10 +50,17 @@ class PublishedUrlProbeTests(unittest.TestCase):
         target = "https://www.cashmarket.deutsche-boerse.com/resource/blob/99/abc/data/file.csv"
         err = urllib.error.HTTPError(PUBLISHED["csv"], 302, "Found", {"Location": target}, None)
         r = probe_published_url("csv", FakeOpener(err))
-        self.assertEqual(r["redirect_target_class"], "SAME_HOST_BLOB_PATH_UNATTESTED")
+        self.assertEqual(r["redirect_target_class"], "OTHER_OR_UNSAFE")
         self.assertFalse(r["expected_filename_matches"])
         self.assertFalse(r["source_attested"])
         self.assertFalse(r["trade_ready"])
+
+    def test_control_character_in_redirect_is_unsafe(self):
+        target = PUBLISHED["csv"].replace("/data/", "/data/\t")
+        err = urllib.error.HTTPError(PUBLISHED["csv"], 302, "Found", {"Location": target}, None)
+        r = probe_published_url("csv", FakeOpener(err))
+        self.assertEqual(r["redirect_target_class"], "OTHER_OR_UNSAFE")
+        self.assertFalse(r["source_attested"])
 
     def test_matching_filename_still_unattested(self):
         target = PUBLISHED["csv"].replace("/1528/", "/9999/")
