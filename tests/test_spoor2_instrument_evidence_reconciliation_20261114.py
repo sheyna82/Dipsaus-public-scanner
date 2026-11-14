@@ -69,6 +69,11 @@ class InstrumentEvidenceReconciliationTests(unittest.TestCase):
         r = reconcile_instrument_evidence(ISIN, MIC, (record("a", isin="US0378331006"), record("b")))
         self.assertEqual(r["blocks"], ["INVALID_EVIDENCE_IDENTIFIER"])
 
+    def test_malformed_evidence_mic_blocks_explicitly(self):
+        r = reconcile_instrument_evidence(ISIN, MIC, (record("a", mic="xnas"), record("b")))
+        self.assertEqual(r["blocks"], ["INVALID_EVIDENCE_MIC"])
+        self.assertFalse(r["trade_ready"])
+
     def test_malformed_record_blocks(self):
         r = reconcile_instrument_evidence(ISIN, MIC, (None, record("b")))
         self.assertEqual(r["blocks"], ["INVALID_EVIDENCE_RECORD"])
