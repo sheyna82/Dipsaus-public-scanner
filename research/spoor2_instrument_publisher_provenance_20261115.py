@@ -54,6 +54,15 @@ def inspect_publisher_provenance(record):
     else:
         result["blocks"].append("IP_LITERAL_PUBLISHER_HOST_NOT_ALLOWED")
         return result
+    # A single-label host or a reserved local name cannot identify a public publisher.
+    host_labels = parts.hostname.lower().split(".")
+    if (len(host_labels) < 2 or any(not label or len(label) > 63
+            or label[0] == "-" or label[-1] == "-"
+            or any(not (c.isascii() and (c.isalnum() or c == "-")) for c in label)
+            for label in host_labels)
+            or host_labels[-1] in ("local", "localhost", "internal", "test", "invalid")):
+        result["blocks"].append("NONPUBLIC_OR_INVALID_PUBLISHER_HOST")
+        return result
     if not isinstance(captured, str):
         result["blocks"].append("INVALID_RETRIEVAL_TIMESTAMP")
         return result
