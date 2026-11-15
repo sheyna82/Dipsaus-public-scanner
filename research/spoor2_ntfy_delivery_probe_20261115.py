@@ -13,7 +13,7 @@ TEST_BODY = ("TEST - GEEN HANDELSSIGNAAL\n"
 def prepare_probe(topic, *, enabled=False):
     if enabled is not True:
         raise ValueError("EXPLICIT_TEST_OPT_IN_REQUIRED")
-    if not isinstance(topic, str) or not re.fullmatch(r"[A-Za-z0-9_-]{20,100}", topic):
+    if not isinstance(topic, str) or not re.fullmatch(r"[A-Za-z0-9_-]{16,100}", topic):
         raise ValueError("INVALID_PRIVATE_TEST_TOPIC")
     if topic.lower().startswith(("dipsaus", "trade", "signal", "prod", "live")):
         raise ValueError("POSSIBLE_PRODUCTION_TOPIC")
