@@ -150,6 +150,18 @@ class EvidenceBundleTests(unittest.TestCase):
                     "trade_ready", "order_placement_enabled"):
             self.assertFalse(injected[key])
 
+    def test_case_only_publisher_aliases_cannot_manufacture_two_sources(self):
+        records = (record("Publisher", data=b"artifact-one"),
+                   record("publisher", data=b"artifact-two"))
+        result = inspect_instrument_evidence_bundle(ISIN, MIC, records)
+        self.assertEqual(result["blocks"], ["INTRA_SOURCE_ARTIFACT_CONFLICT"])
+        self.assertFalse(result["reported_cross_source_agreement"])
+        self.assertFalse(result["manifest_complete"])
+        self.assertIsNone(result["manifest_sha256"])
+        self.assertIsNone(result["instrument_evidence_sha256"])
+        self.assertFalse(result["independent_source_authority_verified"])
+        self.assertFalse(result["trade_ready"])
+
     def test_same_bytes_with_distinct_source_labels_never_count_as_independent(self):
         shared = b"same-payload"
         records = (record("publisher-one", data=shared),
