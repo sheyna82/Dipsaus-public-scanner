@@ -47,6 +47,12 @@ class PublisherProvenanceTests(unittest.TestCase):
                 self.assertFalse(result["publisher_metadata_well_formed"])
                 self.assertFalse(result["source_attested"])
 
+    def test_single_backslash_authority_is_rejected(self):
+        url = "https://example.org" + chr(92) + "@evil.org/reference.csv"
+        r = inspect_publisher_provenance(record(retrieval_url=url))
+        self.assertEqual(r["blocks"], ["INVALID_RETRIEVAL_URL"])
+        self.assertFalse(r["source_attested"])
+
     def test_missing_or_non_utc_timestamp_blocks(self):
         for value in (None, "", "2026-11-15T12:00:00", "2026-11-15T13:00:00+01:00"):
             with self.subTest(value=value):
