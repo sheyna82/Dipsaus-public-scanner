@@ -3,6 +3,8 @@
 Inputs are explicit evidence records, not a network fetch or official authority
 claim. Conflicts and missing independent sources remain BLOCKED.
 """
+import unicodedata
+
 from research.spoor2_instrument_reference_gate_20261114 import inspect_instrument_reference
 
 
@@ -34,7 +36,7 @@ def reconcile_instrument_evidence(isin, mic, records=()):
         evidence_sha = record.get("artifact_sha256")
         if (not isinstance(source, str) or not source.strip() or source != source.strip()
                 or len(source) > 128
-                or any(ord(ch) < 32 or ord(ch) == 127 for ch in source)
+                or any(unicodedata.category(ch) in ("Cc", "Cf") for ch in source)
                 or not isinstance(evidence_sha, str) or len(evidence_sha) != 64
                 or any(c not in "0123456789abcdefABCDEF" for c in evidence_sha)
                 or not isinstance(record_isin, str)
