@@ -30,11 +30,13 @@ def inspect_publisher_provenance(record):
         result["blocks"].append("INVALID_RETRIEVAL_URL")
         return result
     # Reject ambiguous authority encodings before URL parsing.
-    if "\\\\" in url or "@" in url or "%" in url.split("/", 3)[2]:
+    if "\\\\" in url or "@" in url:
         result["blocks"].append("INVALID_RETRIEVAL_URL")
         return result
     try:
         parts = urlsplit(url)
+        if "%" in parts.netloc:
+            raise ValueError("encoded authority")
         if (parts.scheme != "https" or not parts.hostname or parts.username is not None
                 or parts.password is not None or parts.fragment or parts.port not in (None, 443)
                 or not parts.netloc.isascii() or not parts.hostname.isascii()
