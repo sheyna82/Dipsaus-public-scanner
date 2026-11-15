@@ -150,6 +150,18 @@ class EvidenceBundleTests(unittest.TestCase):
                     "trade_ready", "order_placement_enabled"):
             self.assertFalse(injected[key])
 
+    def test_non_nfc_source_alias_cannot_manufacture_independence(self):
+        composed = "caf" + chr(0xe9)
+        decomposed = "cafe" + chr(0x301)
+        result = inspect_instrument_evidence_bundle(
+            ISIN, MIC, (record(composed), record(decomposed)))
+        self.assertEqual(result["blocks"], ["INCOMPLETE_EVIDENCE_PROVENANCE"])
+        self.assertFalse(result["reported_cross_source_agreement"])
+        self.assertFalse(result["manifest_complete"])
+        self.assertIsNone(result["manifest_sha256"])
+        self.assertIsNone(result["instrument_evidence_sha256"])
+        self.assertFalse(result["trade_ready"])
+
     def test_case_only_publisher_aliases_cannot_manufacture_two_sources(self):
         records = (record("Publisher", data=b"artifact-one"),
                    record("publisher", data=b"artifact-two"))
