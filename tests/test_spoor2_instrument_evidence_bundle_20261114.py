@@ -150,6 +150,20 @@ class EvidenceBundleTests(unittest.TestCase):
                     "trade_ready", "order_placement_enabled"):
             self.assertFalse(injected[key])
 
+    def test_nfc_unicode_source_labels_remain_usable_without_attestation(self):
+        source = "caf" + chr(0xe9)
+        records = (record(source, data=b"canonical-one"),
+                   record("independent-label", data=b"canonical-two"))
+        result = inspect_instrument_evidence_bundle(ISIN, MIC, records)
+        self.assertTrue(result["manifest_complete"])
+        self.assertTrue(result["reported_cross_source_agreement"])
+        self.assertEqual(len(result["manifest_sha256"]), 64)
+        self.assertEqual(len(result["instrument_evidence_sha256"]), 64)
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertFalse(result["independent_source_authority_verified"])
+        self.assertFalse(result["trade_ready"])
+        self.assertFalse(result["order_placement_enabled"])
+
     def test_non_nfc_source_alias_cannot_manufacture_independence(self):
         composed = "caf" + chr(0xe9)
         decomposed = "cafe" + chr(0x301)
