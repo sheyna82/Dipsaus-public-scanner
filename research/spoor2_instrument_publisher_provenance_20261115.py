@@ -27,6 +27,7 @@ def inspect_publisher_provenance(record):
     captured = record.get("retrieved_at_utc")
     if (not isinstance(publisher, str) or not publisher.strip()
             or publisher != publisher.strip() or len(publisher) > 128
+            or unicodedata.normalize("NFC", publisher) != publisher
             or any(unicodedata.category(ch) in ("Cc", "Cf") for ch in publisher)):
         result["blocks"].append("INVALID_PUBLISHER_ID")
         return result
