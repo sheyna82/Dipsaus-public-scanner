@@ -79,6 +79,16 @@ class PublisherProvenanceTests(unittest.TestCase):
                     inspect_publisher_provenance(record(retrieved_at_utc=value))["blocks"],
                     ["INVALID_RETRIEVAL_TIMESTAMP"])
 
+    def test_embedded_control_characters_in_publisher_id_block(self):
+        for character in ("\\n", "\\r", "\\t", chr(0), chr(31), chr(127)):
+            with self.subTest(character=repr(character)):
+                result = inspect_publisher_provenance(record(
+                    publisher_id="official" + character + "publisher"))
+                self.assertEqual(result["blocks"], ["INVALID_PUBLISHER_ID"])
+                self.assertFalse(result["publisher_metadata_well_formed"])
+                self.assertFalse(result["source_attested"])
+                self.assertFalse(result["trade_ready"])
+
     def test_invalid_publisher_label_blocks(self):
         for value in ("", " publisher ", None, "x" * 129):
             with self.subTest(value=value):
