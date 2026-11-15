@@ -31,6 +31,23 @@ class EvidenceBundleTests(unittest.TestCase):
                      "broker_route_verified", "trade_ready", "order_placement_enabled"):
             self.assertFalse(r[flag])
 
+    def test_reconciled_bundle_includes_deterministic_manifest(self):
+        a, b = record("a"), record("b")
+        forward = inspect_instrument_evidence_bundle(ISIN, MIC, (a, b))
+        reverse = inspect_instrument_evidence_bundle(ISIN, MIC, (b, a))
+        self.assertTrue(forward["manifest_complete"])
+        self.assertEqual(len(forward["manifest_sha256"]), 64)
+        self.assertEqual(forward["manifest_sha256"], reverse["manifest_sha256"])
+        self.assertTrue(forward["reported_cross_source_agreement"])
+        self.assertFalse(forward["trade_ready"])
+
+    def test_conflicting_bundle_does_not_claim_manifest_complete(self):
+        r = inspect_instrument_evidence_bundle(
+            ISIN, MIC, (record("a"), record("b", mic="XETR")))
+        self.assertFalse(r["manifest_complete"])
+        self.assertIsNone(r["manifest_sha256"])
+        self.assertFalse(r["reported_cross_source_agreement"])
+
     def test_tampered_artifact_blocks_before_reconciliation(self):
         b = record("b")
         b["artifact_bytes"] += b"tampered"
