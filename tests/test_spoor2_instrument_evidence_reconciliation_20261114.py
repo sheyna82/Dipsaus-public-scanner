@@ -41,6 +41,17 @@ class InstrumentEvidenceReconciliationTests(unittest.TestCase):
         r = reconcile_instrument_evidence(ISIN, MIC, (record("a"), record("a", "XETR")))
         self.assertEqual(r["blocks"], ["INTRA_SOURCE_CONFLICT"])
 
+    def test_control_characters_and_oversized_source_ids_block(self):
+        for source in ("publisher\\nother", "publisher\\tother",
+                       "publisher" + chr(0) + "other",
+                       "publisher" + chr(127) + "other", "x" * 129):
+            with self.subTest(source=repr(source)):
+                r = reconcile_instrument_evidence(
+                    ISIN, MIC, (record(source), record("b")))
+                self.assertEqual(r["blocks"], ["INCOMPLETE_EVIDENCE_PROVENANCE"])
+                self.assertFalse(r["reported_cross_source_agreement"])
+                self.assertFalse(r["trade_ready"])
+
     def test_missing_hash_blocks(self):
         r = reconcile_instrument_evidence(ISIN, MIC, (record("a", digest=""), record("b")))
         self.assertEqual(r["blocks"], ["INCOMPLETE_EVIDENCE_PROVENANCE"])
