@@ -6,6 +6,7 @@ No requests, redirects, DNS, broker calls, or execution.
 """
 from datetime import datetime, timezone
 import ipaddress
+import unicodedata
 from urllib.parse import urlsplit
 
 
@@ -26,7 +27,7 @@ def inspect_publisher_provenance(record):
     captured = record.get("retrieved_at_utc")
     if (not isinstance(publisher, str) or not publisher.strip()
             or publisher != publisher.strip() or len(publisher) > 128
-            or any(ord(ch) < 32 or ord(ch) == 127 for ch in publisher)):
+            or any(unicodedata.category(ch) in ("Cc", "Cf") for ch in publisher)):
         result["blocks"].append("INVALID_PUBLISHER_ID")
         return result
     if not isinstance(url, str) or len(url) > 2048 or any(ord(c) < 33 or ord(c) == 127 for c in url):
