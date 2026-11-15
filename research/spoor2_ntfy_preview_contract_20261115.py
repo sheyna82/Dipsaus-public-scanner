@@ -61,5 +61,4 @@ def build_offline_ntfy_preview(symbol, phase, *, entry_low=None, entry_high=None
         "OFFLINE PREVIEW - NIET VERZONDEN",
     ]
     return {**base, "title": notification_subject(symbol, classification),
-            "body": "
-".join(lines), "reason": "RESEARCH_PREVIEW_NOT_ATTESTED"}
+            "body": "\n".join(lines), "reason": "RESEARCH_PREVIEW_NOT_ATTESTED"}
