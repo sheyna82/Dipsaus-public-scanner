@@ -38,6 +38,9 @@ class EvidenceBundleTests(unittest.TestCase):
         self.assertTrue(forward["manifest_complete"])
         self.assertEqual(len(forward["manifest_sha256"]), 64)
         self.assertEqual(forward["manifest_sha256"], reverse["manifest_sha256"])
+        self.assertEqual(len(forward["instrument_evidence_sha256"]), 64)
+        self.assertEqual(forward["instrument_evidence_sha256"], reverse["instrument_evidence_sha256"])
+        self.assertNotEqual(forward["instrument_evidence_sha256"], forward["manifest_sha256"])
         self.assertTrue(forward["reported_cross_source_agreement"])
         self.assertFalse(forward["trade_ready"])
 
@@ -46,6 +49,7 @@ class EvidenceBundleTests(unittest.TestCase):
             ISIN, MIC, (record("a"), record("b", mic="XETR")))
         self.assertFalse(r["manifest_complete"])
         self.assertIsNone(r["manifest_sha256"])
+        self.assertIsNone(r["instrument_evidence_sha256"])
         self.assertFalse(r["reported_cross_source_agreement"])
 
     def test_tampered_artifact_blocks_before_reconciliation(self):
