@@ -89,6 +89,16 @@ class PublisherProvenanceTests(unittest.TestCase):
                 self.assertFalse(result["source_attested"])
                 self.assertFalse(result["trade_ready"])
 
+    def test_invisible_unicode_publisher_labels_block(self):
+        for label in ("official\\u200bpublisher", "\\u200b",
+                      "official\\u2060publisher", "official\\ufeffpublisher"):
+            with self.subTest(label=repr(label)):
+                result = inspect_publisher_provenance(record(publisher_id=label))
+                self.assertEqual(result["blocks"], ["INVALID_PUBLISHER_ID"])
+                self.assertFalse(result["publisher_metadata_well_formed"])
+                self.assertFalse(result["publisher_identity_verified"])
+                self.assertFalse(result["trade_ready"])
+
     def test_invalid_publisher_label_blocks(self):
         for value in ("", " publisher ", None, "x" * 129):
             with self.subTest(value=value):
