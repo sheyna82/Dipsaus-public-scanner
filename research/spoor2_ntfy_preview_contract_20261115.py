@@ -42,7 +42,14 @@ def build_offline_ntfy_preview(symbol, phase, *, entry_low=None, entry_high=None
             and buy_fee >= 0 and sell_fee >= 0):
         return {**base, "title": notification_subject(symbol, classification),
                 "body": None, "reason": "INVALID_RESEARCH_SCENARIO"}
-    # Recompute the conservative R/R at the upper entry bound; never trust a\n    # caller-provided ratio that could make an unsafe setup appear qualified.\n    calculated_rr = (target_p - high) / (high - invalid)\n    if calculated_rr < 2 or abs(calculated_rr - ratio) > Decimal("0.005"):\n        return {**base, "title": notification_subject(symbol, classification),\n                "body": None, "reason": "RR_NOT_CONSISTENT_WITH_ENTRY_ZONE"}\n    lines = [\n        "TEST / ONDERZOEK - GEEN KOOP OF INSTAPSIGNAAL",
+    # Recompute the conservative R/R at the upper entry bound; never trust a
+    # caller-provided ratio that could make an unsafe setup appear qualified.
+    calculated_rr = (target_p - high) / (high - invalid)
+    if calculated_rr < 2 or abs(calculated_rr - ratio) > Decimal("0.005"):
+        return {**base, "title": notification_subject(symbol, classification),
+                "body": None, "reason": "RR_NOT_CONSISTENT_WITH_ENTRY_ZONE"}
+    lines = [
+        "TEST / ONDERZOEK - GEEN KOOP OF INSTAPSIGNAAL",
         "Instrument: " + symbol.strip(),
         "Instapzone (hypothese): " + values[0] + " - " + values[1],
         "Invalidatie (hypothese): " + values[2],
@@ -54,4 +61,5 @@ def build_offline_ntfy_preview(symbol, phase, *, entry_low=None, entry_high=None
         "OFFLINE PREVIEW - NIET VERZONDEN",
     ]
     return {**base, "title": notification_subject(symbol, classification),
-            "body": "\n".join(lines), "reason": "RESEARCH_PREVIEW_NOT_ATTESTED"}
+            "body": "
+".join(lines), "reason": "RESEARCH_PREVIEW_NOT_ATTESTED"}
