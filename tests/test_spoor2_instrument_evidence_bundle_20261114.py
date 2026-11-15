@@ -110,6 +110,20 @@ class EvidenceBundleTests(unittest.TestCase):
         self.assertFalse(a["independent_source_authority_verified"])
         self.assertFalse(b["independent_source_authority_verified"])
 
+    def test_invisible_unicode_source_never_produces_bundle_fingerprint(self):
+        for source in ("publisher" + chr(0x200b) + "a",
+                       "publisher" + chr(0x2060) + "a",
+                       "publisher" + chr(0xfeff) + "a"):
+            with self.subTest(source=repr(source)):
+                result = inspect_instrument_evidence_bundle(
+                    ISIN, MIC, (record(source), record("b")))
+                self.assertEqual(result["blocks"], ["INCOMPLETE_EVIDENCE_PROVENANCE"])
+                self.assertFalse(result["manifest_complete"])
+                self.assertIsNone(result["manifest_sha256"])
+                self.assertIsNone(result["instrument_evidence_sha256"])
+                self.assertFalse(result["reported_cross_source_agreement"])
+                self.assertFalse(result["trade_ready"])
+
     def test_same_bytes_with_distinct_source_labels_never_count_as_independent(self):
         shared = b"same-payload"
         records = (record("publisher-one", data=shared),
