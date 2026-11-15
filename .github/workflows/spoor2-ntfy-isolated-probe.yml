@@ -25,6 +25,7 @@ jobs:
           python-version: '3.12'
       - name: Publish one synthetic test to isolated ntfy topic
         env:
+          PYTHONPATH: .
           DIPSAUS_NTFY_TEST_TOPIC: ${{ secrets.DIPSAUS_NTFY_TEST_TOPIC }}
           DIPSAUS_NTFY_TEST_SEND: ${{ inputs.confirm_test_only }}
           DIPSAUS_NTFY_FINANCIAL_TEST: YES_SYNTHETIC_FINANCIAL_TEST
