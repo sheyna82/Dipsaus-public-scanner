@@ -42,8 +42,7 @@ def build_offline_ntfy_preview(symbol, phase, *, entry_low=None, entry_high=None
             and buy_fee >= 0 and sell_fee >= 0):
         return {**base, "title": notification_subject(symbol, classification),
                 "body": None, "reason": "INVALID_RESEARCH_SCENARIO"}
-    lines = [
-        "TEST / ONDERZOEK - GEEN KOOP OF INSTAPSIGNAAL",
+    # Recompute the conservative R/R at the upper entry bound; never trust a\n    # caller-provided ratio that could make an unsafe setup appear qualified.\n    calculated_rr = (target_p - high) / (high - invalid)\n    if calculated_rr < 2 or abs(calculated_rr - ratio) > Decimal("0.005"):\n        return {**base, "title": notification_subject(symbol, classification),\n                "body": None, "reason": "RR_NOT_CONSISTENT_WITH_ENTRY_ZONE"}\n    lines = [\n        "TEST / ONDERZOEK - GEEN KOOP OF INSTAPSIGNAAL",
         "Instrument: " + symbol.strip(),
         "Instapzone (hypothese): " + values[0] + " - " + values[1],
         "Invalidatie (hypothese): " + values[2],
