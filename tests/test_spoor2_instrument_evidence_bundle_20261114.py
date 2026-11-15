@@ -70,6 +70,28 @@ class EvidenceBundleTests(unittest.TestCase):
                             other["instrument_evidence_sha256"])
         self.assertFalse(other["trade_ready"])
 
+    def test_modified_artifact_changes_both_fingerprints(self):
+        first = (record("a"), record("b"))
+        changed = (record("a", data=b"modified"), record("b"))
+        original = inspect_instrument_evidence_bundle(ISIN, MIC, first)
+        modified = inspect_instrument_evidence_bundle(ISIN, MIC, changed)
+        self.assertTrue(original["manifest_complete"])
+        self.assertTrue(modified["manifest_complete"])
+        self.assertNotEqual(original["manifest_sha256"], modified["manifest_sha256"])
+        self.assertNotEqual(original["instrument_evidence_sha256"],
+                            modified["instrument_evidence_sha256"])
+        self.assertFalse(modified["source_attested"])
+        self.assertFalse(modified["trade_ready"])
+
+    def test_modified_bytes_with_stale_digest_fail_before_fingerprint(self):
+        a, b = record("a"), record("b")
+        a["artifact_bytes"] = b"modified"
+        result = inspect_instrument_evidence_bundle(ISIN, MIC, (a, b))
+        self.assertFalse(result["manifest_complete"])
+        self.assertIsNone(result["manifest_sha256"])
+        self.assertIsNone(result["instrument_evidence_sha256"])
+        self.assertFalse(result["trade_ready"])
+
     def test_relabeling_isin_claim_without_changing_records_blocks(self):
         r = inspect_instrument_evidence_bundle(
             "US5949181045", MIC, (record("a"), record("b")))
