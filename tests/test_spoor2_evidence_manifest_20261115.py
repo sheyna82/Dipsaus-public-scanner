@@ -64,6 +64,39 @@ class EvidenceManifestTests(unittest.TestCase):
                 self.assertEqual(r["blocks"], ["INVALID_SOURCE_ID"])
                 self.assertFalse(r["manifest_complete"])
 
+    def test_bad_digest_declaration_never_completes_manifest(self):
+        for digest in ("", "0" * 63, "z" * 64, "0" * 65, None):
+            with self.subTest(digest=digest):
+                item = record("alpha", b"payload")
+                item["artifact_sha256"] = digest
+                r = build_evidence_manifest((item,))
+                self.assertFalse(r["manifest_complete"])
+                self.assertIsNone(r["manifest_sha256"])
+                self.assertFalse(r["trade_ready"])
+
+    def test_wrong_byte_size_never_completes_manifest(self):
+        item = record("alpha", b"payload")
+        item["artifact_size"] += 1
+        r = build_evidence_manifest((item,))
+        self.assertFalse(r["manifest_complete"])
+        self.assertIsNone(r["manifest_sha256"])
+        self.assertFalse(r["byte_integrity_checked"])
+
+    def test_identical_repeated_record_is_not_independent_source(self):
+        item = record("alpha", b"payload")
+        r = build_evidence_manifest((item, item))
+        self.assertTrue(r["manifest_complete"])
+        self.assertEqual(r["duplicate_source_ids"], ["alpha"])
+        self.assertIn("DUPLICATE_SOURCE_IDENTIFIERS", r["blocks"])
+        self.assertFalse(r["independent_source_authority_verified"])
+
+    def test_source_alias_normalization_keeps_fingerprint_stable(self):
+        lower = build_evidence_manifest((record("alpha", b"one"),))
+        upper = build_evidence_manifest((record("ALPHA", b"one"),))
+        self.assertEqual(lower["manifest_sha256"], upper["manifest_sha256"])
+        self.assertFalse(lower["source_attested"])
+        self.assertFalse(upper["source_attested"])
+
     def test_empty_and_invalid_records_block(self):
         self.assertEqual(build_evidence_manifest()["blocks"], ["EVIDENCE_RECORDS_REQUIRED"])
         self.assertEqual(build_evidence_manifest((None,))["blocks"], ["INVALID_EVIDENCE_RECORD"])
