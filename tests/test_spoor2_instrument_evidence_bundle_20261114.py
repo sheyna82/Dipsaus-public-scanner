@@ -124,6 +124,32 @@ class EvidenceBundleTests(unittest.TestCase):
                 self.assertFalse(result["reported_cross_source_agreement"])
                 self.assertFalse(result["trade_ready"])
 
+    def test_conflicting_publisher_claims_cannot_upgrade_bundle(self):
+        records = (record("a"), record("b"))
+        enriched = tuple({
+            **item,
+            "publisher_provenance": {
+                "publisher_id": "unrelated-publisher",
+                "retrieval_url": "https://example.org/claimed.csv",
+                "retrieved_at_utc": "2099-01-01T00:00:00+00:00",
+                "artifact_sha256": "0" * 64,
+                "artifact_size": 1,
+                "publisher_identity_verified": True,
+                "source_attested": True,
+            },
+        } for item in records)
+        baseline = inspect_instrument_evidence_bundle(ISIN, MIC, records)
+        injected = inspect_instrument_evidence_bundle(ISIN, MIC, enriched)
+        self.assertEqual(baseline["manifest_sha256"], injected["manifest_sha256"])
+        self.assertEqual(baseline["instrument_evidence_sha256"],
+                         injected["instrument_evidence_sha256"])
+        self.assertTrue(injected["reported_cross_source_agreement"])
+        self.assertEqual(injected["status"], "BLOCKED")
+        for key in ("independent_source_authority_verified", "source_attested",
+                    "instrument_segment_verified", "broker_route_verified",
+                    "trade_ready", "order_placement_enabled"):
+            self.assertFalse(injected[key])
+
     def test_same_bytes_with_distinct_source_labels_never_count_as_independent(self):
         shared = b"same-payload"
         records = (record("publisher-one", data=shared),
