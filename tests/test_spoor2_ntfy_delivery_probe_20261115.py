@@ -1,6 +1,6 @@
 """Network-free verification of explicit ntfy delivery guardrails."""
 import unittest
-from research.spoor2_ntfy_delivery_probe_20261115 import prepare_probe, TEST_BODY, TEST_TITLE
+from research.spoor2_ntfy_delivery_probe_20261115 import prepare_probe, financial_test_message, TEST_BODY, TEST_TITLE
 
 
 class NtfyDeliveryProbeTests(unittest.TestCase):
@@ -26,6 +26,17 @@ class NtfyDeliveryProbeTests(unittest.TestCase):
             with self.subTest(topic=topic):
                 with self.assertRaisesRegex(ValueError, "POSSIBLE_PRODUCTION_TOPIC"):
                     prepare_probe(topic, enabled=True)
+
+    def test_calculated_financial_preview_is_synthetic_and_fail_closed(self):
+        title, body = financial_test_message()
+        self.assertIn("TEST BEREKEND", title)
+        for expected in ("Instapzone", "Invalidatie", "Koersdoel", "R/R",
+                         "Nettowinst", "69", "3454.90", "335.20",
+                         "GEEN HANDELSSIGNAAL", "RESEARCH_ONLY"):
+            self.assertIn(expected, body)
+        request = prepare_probe(self.TOPIC, enabled=True, financial=True)
+        self.assertIn("335.20", request.data.decode("utf-8"))
+        self.assertEqual(request.get_method(), "POST")
 
     def test_constructs_only_synthetic_message(self):
         request = prepare_probe(self.TOPIC, enabled=True)
