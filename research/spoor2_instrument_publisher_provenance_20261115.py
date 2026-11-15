@@ -13,6 +13,7 @@ def inspect_publisher_provenance(record):
     result = {
         "status": "BLOCKED", "publisher_metadata_well_formed": False,
         "publisher_identity_verified": False,
+        "retrieval_freshness_verified": False,
         "independent_source_authority_verified": False,
         "source_attested": False, "trade_ready": False,
         "order_placement_enabled": False, "blocks": [],
