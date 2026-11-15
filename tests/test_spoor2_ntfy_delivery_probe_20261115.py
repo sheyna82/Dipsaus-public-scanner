@@ -16,6 +16,10 @@ class NtfyDeliveryProbeTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     prepare_probe(topic, enabled=True)
 
+    def test_eighteen_character_test_topic_is_allowed(self):
+        request = prepare_probe("00099446688gopevhy", enabled=True)
+        self.assertEqual(request.get_method(), "POST")
+
     def test_blocks_obvious_production_topics(self):
         for topic in ("dipsaus_0123456789abcdefghij", "trade_0123456789abcdefghij",
                       "live_0123456789abcdefghij"):
