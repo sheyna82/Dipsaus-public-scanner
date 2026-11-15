@@ -17,7 +17,7 @@ jobs:
       - name: Checkout pinned research commit (never production)
         uses: actions/checkout@v4
         with:
-          ref: af74b36f98769fb4b98bc1cdccbb8b0a37191440
+          ref: 0803ba02f058e7a877520d494beca2df29d849aa
           persist-credentials: false
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -27,4 +27,5 @@ jobs:
         env:
           DIPSAUS_NTFY_TEST_TOPIC: ${{ secrets.DIPSAUS_NTFY_TEST_TOPIC }}
           DIPSAUS_NTFY_TEST_SEND: ${{ inputs.confirm_test_only }}
+          DIPSAUS_NTFY_FINANCIAL_TEST: YES_SYNTHETIC_FINANCIAL_TEST
         run: python research/spoor2_ntfy_delivery_probe_20261115.py
