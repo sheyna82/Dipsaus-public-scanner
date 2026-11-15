@@ -90,8 +90,9 @@ class PublisherProvenanceTests(unittest.TestCase):
                 self.assertFalse(result["trade_ready"])
 
     def test_invisible_unicode_publisher_labels_block(self):
-        for label in ("official\\u200bpublisher", "\\u200b",
-                      "official\\u2060publisher", "official\\ufeffpublisher"):
+        for label in ("official" + chr(0x200b) + "publisher", chr(0x200b),
+                      "official" + chr(0x2060) + "publisher",
+                      "official" + chr(0xfeff) + "publisher"):
             with self.subTest(label=repr(label)):
                 result = inspect_publisher_provenance(record(publisher_id=label))
                 self.assertEqual(result["blocks"], ["INVALID_PUBLISHER_ID"])
