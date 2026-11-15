@@ -42,7 +42,8 @@ class InstrumentEvidenceReconciliationTests(unittest.TestCase):
         self.assertEqual(r["blocks"], ["INTRA_SOURCE_CONFLICT"])
 
     def test_control_characters_and_oversized_source_ids_block(self):
-        for source in ("publisher\\nother", "publisher\\tother",
+        for source in ("publisher" + chr(10) + "other",
+                       "publisher" + chr(9) + "other",
                        "publisher" + chr(0) + "other",
                        "publisher" + chr(127) + "other", "x" * 129):
             with self.subTest(source=repr(source)):
