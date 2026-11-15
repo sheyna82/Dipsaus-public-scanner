@@ -3,6 +3,9 @@
 Supplied source labels, bytes and digests are caller assertions; this never
 authenticates a publisher, verifies exchange listing, or enables orders.
 """
+import hashlib
+import json
+
 from research.spoor2_instrument_artifact_byte_integrity_20261114 import verify_evidence_artifact_bytes
 from research.spoor2_instrument_evidence_reconciliation_20261114 import reconcile_instrument_evidence
 from research.spoor2_evidence_manifest_20261115 import build_evidence_manifest
@@ -13,6 +16,7 @@ def inspect_instrument_evidence_bundle(isin, mic, records=()):
         "status": "BLOCKED", "byte_integrity_checked": False,
         "reported_cross_source_agreement": False,
         "manifest_complete": False, "manifest_sha256": None,
+        "instrument_evidence_sha256": None,
         "independent_source_authority_verified": False,
         "source_attested": False, "instrument_segment_verified": False,
         "broker_route_verified": False, "trade_ready": False,
@@ -49,6 +53,11 @@ def inspect_instrument_evidence_bundle(isin, mic, records=()):
         return result
     result["manifest_complete"] = True
     result["manifest_sha256"] = manifest["manifest_sha256"]
+    # Bind the inventory to the asserted instrument without claiming authority.
+    payload = json.dumps({"isin": isin, "mic": mic,
+                          "manifest_sha256": manifest["manifest_sha256"]},
+                         sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    result["instrument_evidence_sha256"] = hashlib.sha256(payload.encode("ascii")).hexdigest()
     result["reported_cross_source_agreement"] = True
     result["blocks"].append("MATCHING_BYTES_AND_REPORTED_SOURCES_NOT_AUTHORITY")
     return result
