@@ -5,6 +5,7 @@ HTTPS and host agreement cannot prove that bytes came from an official publisher
 No requests, redirects, DNS, broker calls, or execution.
 """
 from datetime import datetime, timezone
+import ipaddress
 from urllib.parse import urlsplit
 
 
@@ -28,15 +29,27 @@ def inspect_publisher_provenance(record):
     if not isinstance(url, str) or len(url) > 2048 or any(ord(c) < 33 or ord(c) == 127 for c in url):
         result["blocks"].append("INVALID_RETRIEVAL_URL")
         return result
+    # Reject ambiguous authority encodings before URL parsing.
+    if "\\\\" in url or "@" in url or "%" in url.split("/", 3)[2]:
+        result["blocks"].append("INVALID_RETRIEVAL_URL")
+        return result
     try:
         parts = urlsplit(url)
         if (parts.scheme != "https" or not parts.hostname or parts.username is not None
                 or parts.password is not None or parts.fragment or parts.port not in (None, 443)
-                or not parts.netloc.isascii() or parts.hostname.endswith(".")
+                or not parts.netloc.isascii() or not parts.hostname.isascii()
+                or parts.hostname.endswith(".")
                 or parts.hostname.startswith(".") or ".." in parts.hostname):
             raise ValueError("invalid URL")
     except ValueError:
         result["blocks"].append("INVALID_RETRIEVAL_URL")
+        return result
+    try:
+        ipaddress.ip_address(parts.hostname)
+    except ValueError:
+        pass
+    else:
+        result["blocks"].append("IP_LITERAL_PUBLISHER_HOST_NOT_ALLOWED")
         return result
     if not isinstance(captured, str):
         result["blocks"].append("INVALID_RETRIEVAL_TIMESTAMP")
