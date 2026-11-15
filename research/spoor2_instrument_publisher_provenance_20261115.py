@@ -30,7 +30,7 @@ def inspect_publisher_provenance(record):
         result["blocks"].append("INVALID_RETRIEVAL_URL")
         return result
     # Reject ambiguous authority encodings before URL parsing.
-    if "\\\\" in url or "@" in url:
+    if chr(92) in url or "@" in url:
         result["blocks"].append("INVALID_RETRIEVAL_URL")
         return result
     try:
