@@ -100,6 +100,22 @@ class PublisherProvenanceTests(unittest.TestCase):
                 self.assertFalse(result["publisher_identity_verified"])
                 self.assertFalse(result["trade_ready"])
 
+    def test_non_nfc_publisher_label_blocks(self):
+        decomposed = "cafe" + chr(0x301)
+        result = inspect_publisher_provenance(record(publisher_id=decomposed))
+        self.assertEqual(result["blocks"], ["INVALID_PUBLISHER_ID"])
+        self.assertFalse(result["publisher_metadata_well_formed"])
+        self.assertFalse(result["publisher_identity_verified"])
+        self.assertFalse(result["source_attested"])
+
+    def test_canonical_nfc_publisher_label_is_well_formed_not_attested(self):
+        composed = "caf" + chr(0xe9)
+        result = inspect_publisher_provenance(record(publisher_id=composed))
+        self.assertTrue(result["publisher_metadata_well_formed"])
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertFalse(result["publisher_identity_verified"])
+        self.assertFalse(result["source_attested"])
+
     def test_invalid_publisher_label_blocks(self):
         for value in ("", " publisher ", None, "x" * 129):
             with self.subTest(value=value):
