@@ -1,0 +1,27 @@
+name: Spoor 2 isolated ntfy delivery probe
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_test_only:
+        description: 'Type YES_I_APPROVE_TEST to send one synthetic test notification'
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  isolated-ntfy-test:
+    if: github.ref == 'refs/heads/research/integrated-evidence-20261106' && inputs.confirm_test_only == 'YES_I_APPROVE_TEST'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Send one synthetic notification to isolated test topic
+        env:
+          DIPSAUS_NTFY_TEST_TOPIC: ${{ secrets.DIPSAUS_NTFY_TEST_TOPIC }}
+          DIPSAUS_NTFY_TEST_SEND: ${{ inputs.confirm_test_only }}
+        run: python research/spoor2_ntfy_delivery_probe_20261115.py
