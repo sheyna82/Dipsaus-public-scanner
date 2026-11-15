@@ -64,6 +64,16 @@ class EvidenceManifestTests(unittest.TestCase):
                 self.assertEqual(r["blocks"], ["INVALID_SOURCE_ID"])
                 self.assertFalse(r["manifest_complete"])
 
+    def test_invisible_unicode_source_labels_rejected(self):
+        for source in ("official" + chr(0x200b) + "publisher", chr(0x200b),
+                       "official" + chr(0x2060) + "publisher",
+                       "official" + chr(0xfeff) + "publisher"):
+            with self.subTest(source=repr(source)):
+                result = build_evidence_manifest((record(source, b"data"),))
+                self.assertEqual(result["blocks"], ["INVALID_SOURCE_ID"])
+                self.assertFalse(result["manifest_complete"])
+                self.assertFalse(result["trade_ready"])
+
     def test_bad_digest_declaration_never_completes_manifest(self):
         for digest in ("", "0" * 63, "z" * 64, "0" * 65, None):
             with self.subTest(digest=digest):
