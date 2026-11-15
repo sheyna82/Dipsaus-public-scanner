@@ -44,6 +44,25 @@ class EvidenceBundleTests(unittest.TestCase):
         self.assertTrue(forward["reported_cross_source_agreement"])
         self.assertFalse(forward["trade_ready"])
 
+    def test_instrument_bound_fingerprint_changes_with_valid_instrument(self):
+        first = (record("a"), record("b"))
+        base = inspect_instrument_evidence_bundle(ISIN, MIC, first)
+        changed = tuple({**item, "mic": "XETR"} for item in first)
+        other = inspect_instrument_evidence_bundle(ISIN, "XETR", changed)
+        self.assertTrue(base["manifest_complete"])
+        self.assertTrue(other["manifest_complete"])
+        self.assertEqual(base["manifest_sha256"], other["manifest_sha256"])
+        self.assertNotEqual(base["instrument_evidence_sha256"],
+                            other["instrument_evidence_sha256"])
+        self.assertFalse(other["trade_ready"])
+
+    def test_relabeling_claim_without_changing_records_blocks(self):
+        first = (record("a"), record("b"))
+        r = inspect_instrument_evidence_bundle(ISIN, "XETR", first)
+        self.assertEqual(r["blocks"], ["CROSS_SOURCE_INSTRUMENT_CONFLICT"])
+        self.assertIsNone(r["instrument_evidence_sha256"])
+        self.assertFalse(r["reported_cross_source_agreement"])
+
     def test_conflicting_bundle_does_not_claim_manifest_complete(self):
         r = inspect_instrument_evidence_bundle(
             ISIN, MIC, (record("a"), record("b", mic="XETR")))
