@@ -5,12 +5,14 @@ authenticates a publisher, verifies exchange listing, or enables orders.
 """
 from research.spoor2_instrument_artifact_byte_integrity_20261114 import verify_evidence_artifact_bytes
 from research.spoor2_instrument_evidence_reconciliation_20261114 import reconcile_instrument_evidence
+from research.spoor2_evidence_manifest_20261115 import build_evidence_manifest
 
 
 def inspect_instrument_evidence_bundle(isin, mic, records=()):
     result = {
         "status": "BLOCKED", "byte_integrity_checked": False,
         "reported_cross_source_agreement": False,
+        "manifest_complete": False, "manifest_sha256": None,
         "independent_source_authority_verified": False,
         "source_attested": False, "instrument_segment_verified": False,
         "broker_route_verified": False, "trade_ready": False,
@@ -38,6 +40,15 @@ def inspect_instrument_evidence_bundle(isin, mic, records=()):
     if not reconciliation["reported_cross_source_agreement"]:
         result["blocks"].extend(reconciliation["blocks"])
         return result
+    manifest = build_evidence_manifest(records)
+    if not manifest["manifest_complete"]:
+        result["blocks"].extend(manifest["blocks"])
+        return result
+    if manifest["duplicate_source_ids"] or manifest["shared_artifact_hashes"]:
+        result["blocks"].extend(manifest["blocks"])
+        return result
+    result["manifest_complete"] = True
+    result["manifest_sha256"] = manifest["manifest_sha256"]
     result["reported_cross_source_agreement"] = True
     result["blocks"].append("MATCHING_BYTES_AND_REPORTED_SOURCES_NOT_AUTHORITY")
     return result
