@@ -70,6 +70,43 @@ class EvidenceBundleTests(unittest.TestCase):
                             other["instrument_evidence_sha256"])
         self.assertFalse(other["trade_ready"])
 
+    def test_claimed_publisher_metadata_cannot_upgrade_bundle_authority(self):
+        records = (record("a"), record("b"))
+        enriched = tuple({
+            **item,
+            "publisher_provenance": {
+                "publisher_id": item["source_id"],
+                "retrieval_url": "https://example.com/evidence.csv",
+                "retrieved_at_utc": "2026-11-15T12:00:00+00:00",
+                "artifact_sha256": item["artifact_sha256"],
+                "artifact_size": item["artifact_size"],
+            },
+            "publisher_identity_verified": True,
+            "independent_source_authority_verified": True,
+            "trade_ready": True,
+            "order_placement_enabled": True,
+        } for item in records)
+        original = inspect_instrument_evidence_bundle(ISIN, MIC, records)
+        injected = inspect_instrument_evidence_bundle(ISIN, MIC, enriched)
+        self.assertEqual(original["manifest_sha256"], injected["manifest_sha256"])
+        self.assertEqual(original["instrument_evidence_sha256"],
+                         injected["instrument_evidence_sha256"])
+        self.assertTrue(injected["reported_cross_source_agreement"])
+        for key in ("independent_source_authority_verified", "source_attested",
+                    "instrument_segment_verified", "broker_route_verified",
+                    "trade_ready", "order_placement_enabled"):
+            self.assertFalse(injected[key])
+
+    def test_same_bytes_with_distinct_source_labels_never_count_as_independent(self):
+        shared = b"same-payload"
+        records = (record("publisher-one", data=shared),
+                   record("publisher-two", data=shared))
+        r = inspect_instrument_evidence_bundle(ISIN, MIC, records)
+        self.assertEqual(r["blocks"], ["DISTINCT_ARTIFACT_HASHES_REQUIRED"])
+        self.assertFalse(r["manifest_complete"])
+        self.assertFalse(r["reported_cross_source_agreement"])
+        self.assertFalse(r["independent_source_authority_verified"])
+
     def test_modified_artifact_changes_both_fingerprints(self):
         first = (record("a"), record("b"))
         changed = (record("a", data=b"modified"), record("b"))
