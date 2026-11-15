@@ -88,6 +88,30 @@ class BoundPublisherEvidenceTests(unittest.TestCase):
         self.assertEqual(r["blocks"], ["PUBLISHER_SOURCE_BINDING_MISMATCH"])
         self.assertFalse(r["metadata_bound_to_artifact"])
 
+    def test_invisible_unicode_publisher_identity_blocks_binding(self):
+        for character in (0x200b, 0x2060, 0xfeff):
+            with self.subTest(codepoint=hex(character)):
+                v = record()
+                disguised = "synthetic" + chr(character) + "-publisher"
+                v["source_id"] = disguised
+                v["publisher_provenance"]["publisher_id"] = disguised
+                result = inspect_bound_publisher_evidence(v)
+                self.assertEqual(result["blocks"], ["INVALID_PUBLISHER_ID"])
+                self.assertFalse(result["publisher_metadata_well_formed"])
+                self.assertFalse(result["metadata_bound_to_artifact"])
+                self.assertFalse(result["trade_ready"])
+
+    def test_source_id_must_exactly_match_publisher_id(self):
+        for source in ("SYNTHETIC-PUBLISHER", "synthetic-publisher ",
+                       "synthetic" + chr(0x200b) + "-publisher"):
+            with self.subTest(source=repr(source)):
+                v = record()
+                v["source_id"] = source
+                result = inspect_bound_publisher_evidence(v)
+                self.assertEqual(result["blocks"], ["PUBLISHER_SOURCE_BINDING_MISMATCH"])
+                self.assertFalse(result["metadata_bound_to_artifact"])
+                self.assertFalse(result["source_attested"])
+
     def test_digest_mismatch_blocks(self):
         v = record()
         v["publisher_provenance"]["artifact_sha256"] = "0" * 64
