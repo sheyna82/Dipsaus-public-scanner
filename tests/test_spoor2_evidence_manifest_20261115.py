@@ -74,6 +74,14 @@ class EvidenceManifestTests(unittest.TestCase):
                 self.assertFalse(result["manifest_complete"])
                 self.assertFalse(result["trade_ready"])
 
+    def test_non_nfc_source_rejected_without_manifest_digest(self):
+        source = "cafe" + chr(0x301)
+        result = build_evidence_manifest((record(source, b"one"),))
+        self.assertEqual(result["blocks"], ["INVALID_SOURCE_ID"])
+        self.assertFalse(result["manifest_complete"])
+        self.assertIsNone(result["manifest_sha256"])
+        self.assertFalse(result["source_attested"])
+
     def test_bad_digest_declaration_never_completes_manifest(self):
         for digest in ("", "0" * 63, "z" * 64, "0" * 65, None):
             with self.subTest(digest=digest):
