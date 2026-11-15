@@ -53,6 +53,17 @@ class InstrumentEvidenceReconciliationTests(unittest.TestCase):
                 self.assertFalse(r["reported_cross_source_agreement"])
                 self.assertFalse(r["trade_ready"])
 
+    def test_invisible_unicode_source_labels_rejected(self):
+        for source in ("official" + chr(0x200b) + "publisher", chr(0x200b),
+                       "official" + chr(0x2060) + "publisher",
+                       "official" + chr(0xfeff) + "publisher"):
+            with self.subTest(source=repr(source)):
+                result = reconcile_instrument_evidence(
+                    ISIN, MIC, (record(source), record("b")))
+                self.assertEqual(result["blocks"], ["INCOMPLETE_EVIDENCE_PROVENANCE"])
+                self.assertFalse(result["reported_cross_source_agreement"])
+                self.assertFalse(result["trade_ready"])
+
     def test_missing_hash_blocks(self):
         r = reconcile_instrument_evidence(ISIN, MIC, (record("a", digest=""), record("b")))
         self.assertEqual(r["blocks"], ["INCOMPLETE_EVIDENCE_PROVENANCE"])
