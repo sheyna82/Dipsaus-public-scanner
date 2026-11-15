@@ -38,6 +38,15 @@ class PublisherProvenanceTests(unittest.TestCase):
                 self.assertEqual(result["blocks"], ["INVALID_RETRIEVAL_URL"])
                 self.assertFalse(result["source_attested"])
 
+    def test_ambiguous_authority_and_ip_literals_block(self):
+        for url in ("https://example.org\\\\@evil.org/a",
+                    "https://%65xample.org/a", "https://127.0.0.1/a",
+                    "https://[::1]/a", "https://exämple.org/a"):
+            with self.subTest(url=url):
+                result = inspect_publisher_provenance(record(retrieval_url=url))
+                self.assertFalse(result["publisher_metadata_well_formed"])
+                self.assertFalse(result["source_attested"])
+
     def test_missing_or_non_utc_timestamp_blocks(self):
         for value in (None, "", "2026-11-15T12:00:00", "2026-11-15T13:00:00+01:00"):
             with self.subTest(value=value):
