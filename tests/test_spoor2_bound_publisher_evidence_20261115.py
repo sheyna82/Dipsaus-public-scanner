@@ -37,6 +37,26 @@ class BoundPublisherEvidenceTests(unittest.TestCase):
                     "trade_ready", "order_placement_enabled"):
             self.assertFalse(r[key])
 
+    def test_caller_cannot_override_safety_flags(self):
+        v = record()
+        v.update({
+            "source_attested": True,
+            "trade_ready": True,
+            "order_placement_enabled": True,
+        })
+        v["publisher_provenance"].update({
+            "publisher_identity_verified": True,
+            "retrieval_freshness_verified": True,
+            "independent_source_authority_verified": True,
+        })
+        r = inspect_bound_publisher_evidence(v)
+        self.assertTrue(r["metadata_bound_to_artifact"])
+        for key in ("publisher_identity_verified", "retrieval_freshness_verified",
+                    "independent_source_authority_verified", "source_attested",
+                    "instrument_segment_verified", "broker_route_verified",
+                    "trade_ready", "order_placement_enabled"):
+            self.assertFalse(r[key])
+
     def test_source_mismatch_blocks(self):
         v = record()
         v["publisher_provenance"]["publisher_id"] = "other"
