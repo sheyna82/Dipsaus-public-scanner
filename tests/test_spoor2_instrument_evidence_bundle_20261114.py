@@ -97,6 +97,19 @@ class EvidenceBundleTests(unittest.TestCase):
                     "trade_ready", "order_placement_enabled"):
             self.assertFalse(injected[key])
 
+    def test_provenance_url_change_does_not_change_byte_manifest(self):
+        records = (record("a"), record("b"))
+        first = tuple({**item, "publisher_provenance": {
+            "retrieval_url": "https://example.org/first.csv"}} for item in records)
+        second = tuple({**item, "publisher_provenance": {
+            "retrieval_url": "https://example.net/second.csv"}} for item in records)
+        a = inspect_instrument_evidence_bundle(ISIN, MIC, first)
+        b = inspect_instrument_evidence_bundle(ISIN, MIC, second)
+        self.assertEqual(a["manifest_sha256"], b["manifest_sha256"])
+        self.assertEqual(a["instrument_evidence_sha256"], b["instrument_evidence_sha256"])
+        self.assertFalse(a["independent_source_authority_verified"])
+        self.assertFalse(b["independent_source_authority_verified"])
+
     def test_same_bytes_with_distinct_source_labels_never_count_as_independent(self):
         shared = b"same-payload"
         records = (record("publisher-one", data=shared),
