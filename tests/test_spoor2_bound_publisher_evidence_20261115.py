@@ -57,6 +57,30 @@ class BoundPublisherEvidenceTests(unittest.TestCase):
                     "trade_ready", "order_placement_enabled"):
             self.assertFalse(r[key])
 
+    def test_changed_publisher_url_is_only_caller_metadata(self):
+        first = record()
+        second = record()
+        second["publisher_provenance"]["retrieval_url"] = "https://example.net/other.csv"
+        a = inspect_bound_publisher_evidence(first)
+        b = inspect_bound_publisher_evidence(second)
+        for result in (a, b):
+            self.assertTrue(result["metadata_bound_to_artifact"])
+            self.assertEqual(result["blocks"],
+                             ["CALLER_SUPPLIED_BINDING_NOT_OFFICIAL_PUBLISHER_ATTESTATION"])
+            self.assertFalse(result["publisher_identity_verified"])
+            self.assertFalse(result["retrieval_freshness_verified"])
+            self.assertFalse(result["trade_ready"])
+
+    def test_relabelled_publisher_and_source_is_not_attestation(self):
+        item = record()
+        item["source_id"] = "another-publisher"
+        item["publisher_provenance"]["publisher_id"] = "another-publisher"
+        result = inspect_bound_publisher_evidence(item)
+        self.assertTrue(result["metadata_bound_to_artifact"])
+        self.assertFalse(result["publisher_identity_verified"])
+        self.assertFalse(result["independent_source_authority_verified"])
+        self.assertFalse(result["order_placement_enabled"])
+
     def test_source_mismatch_blocks(self):
         v = record()
         v["publisher_provenance"]["publisher_id"] = "other"
