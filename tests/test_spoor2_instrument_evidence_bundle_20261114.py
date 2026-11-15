@@ -25,6 +25,7 @@ class EvidenceBundleTests(unittest.TestCase):
         r = inspect_instrument_evidence_bundle(ISIN, MIC, (record("a"), record("b")))
         self.assertTrue(r["byte_integrity_checked"])
         self.assertTrue(r["reported_cross_source_agreement"])
+        self.assertFalse(r["independent_source_authority_verified"])
         self.assertEqual(r["status"], "BLOCKED")
         for flag in ("source_attested", "instrument_segment_verified",
                      "broker_route_verified", "trade_ready", "order_placement_enabled"):
@@ -46,6 +47,7 @@ class EvidenceBundleTests(unittest.TestCase):
     def test_conflicting_mic_blocks(self):
         r = inspect_instrument_evidence_bundle(ISIN, MIC, (record("a"), record("b", mic="XETR")))
         self.assertEqual(r["blocks"], ["CROSS_SOURCE_INSTRUMENT_CONFLICT"])
+        self.assertFalse(r["independent_source_authority_verified"])
 
     def test_source_alias_blocks(self):
         r = inspect_instrument_evidence_bundle(ISIN, MIC, (record("Publisher"), record("publisher")))
