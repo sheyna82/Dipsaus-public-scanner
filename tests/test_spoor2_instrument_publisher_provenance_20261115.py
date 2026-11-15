@@ -19,11 +19,19 @@ class PublisherProvenanceTests(unittest.TestCase):
         result = inspect_publisher_provenance(record(
             publisher_identity_verified=True, source_attested=True, trade_ready=True))
         self.assertTrue(result["publisher_metadata_well_formed"])
+        self.assertFalse(result["retrieval_freshness_verified"])
         self.assertEqual(result["status"], "BLOCKED")
         self.assertEqual(result["blocks"], ["PUBLISHER_IDENTITY_NOT_INDEPENDENTLY_VERIFIED"])
         for flag in ("publisher_identity_verified", "independent_source_authority_verified",
                      "source_attested", "trade_ready", "order_placement_enabled"):
             self.assertFalse(result[flag])
+
+    def test_future_timestamp_does_not_claim_freshness(self):
+        result = inspect_publisher_provenance(record(
+            retrieved_at_utc="2099-01-01T00:00:00+00:00"))
+        self.assertTrue(result["publisher_metadata_well_formed"])
+        self.assertFalse(result["retrieval_freshness_verified"])
+        self.assertFalse(result["source_attested"])
 
     def test_missing_record_blocks(self):
         self.assertEqual(inspect_publisher_provenance(None)["blocks"],
