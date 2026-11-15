@@ -36,6 +36,7 @@ def reconcile_instrument_evidence(isin, mic, records=()):
         evidence_sha = record.get("artifact_sha256")
         if (not isinstance(source, str) or not source.strip() or source != source.strip()
                 or len(source) > 128
+                or unicodedata.normalize("NFC", source) != source
                 or any(unicodedata.category(ch) in ("Cc", "Cf") for ch in source)
                 or not isinstance(evidence_sha, str) or len(evidence_sha) != 64
                 or any(c not in "0123456789abcdefABCDEF" for c in evidence_sha)
