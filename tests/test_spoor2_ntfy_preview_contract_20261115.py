@@ -33,7 +33,17 @@ class NtfyPreviewContractTests(unittest.TestCase):
             with self.subTest(change=change):
                 self.assertIsNone(self.example(**change)["body"])
 
-    def test_forged_rr_cannot_promote_inconsistent_levels(self):\n        result = self.example(rr="4")\n        self.assertIsNone(result["body"])\n        self.assertEqual(result["reason"], "RR_NOT_CONSISTENT_WITH_ENTRY_ZONE")\n\n    def test_upper_entry_boundary_must_still_meet_two_r(self):\n        result = self.example(entry_high="51", rr="2")\n        self.assertIsNone(result["body"])\n        self.assertEqual(result["reason"], "RR_NOT_CONSISTENT_WITH_ENTRY_ZONE")\n\n    def test_unknown_phase_does_not_produce_body(self):
+    def test_forged_rr_cannot_promote_inconsistent_levels(self):
+        result = self.example(rr="4")
+        self.assertIsNone(result["body"])
+        self.assertEqual(result["reason"], "RR_NOT_CONSISTENT_WITH_ENTRY_ZONE")
+
+    def test_upper_entry_boundary_must_still_meet_two_r(self):
+        result = self.example(entry_high="51", rr="2")
+        self.assertIsNone(result["body"])
+        self.assertEqual(result["reason"], "RR_NOT_CONSISTENT_WITH_ENTRY_ZONE")
+
+    def test_unknown_phase_does_not_produce_body(self):
         result = build_offline_ntfy_preview("DEMO", "TRADE", entry_low="50")
         self.assertEqual(result["route"], "NONE")
         self.assertIsNone(result["body"])
