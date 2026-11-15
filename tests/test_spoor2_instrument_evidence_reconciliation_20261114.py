@@ -64,6 +64,15 @@ class InstrumentEvidenceReconciliationTests(unittest.TestCase):
                 self.assertFalse(result["reported_cross_source_agreement"])
                 self.assertFalse(result["trade_ready"])
 
+    def test_non_nfc_source_rejected_before_agreement(self):
+        source = "cafe" + chr(0x301)
+        result = reconcile_instrument_evidence(
+            ISIN, MIC, (record(source), record("b")))
+        self.assertEqual(result["blocks"], ["INCOMPLETE_EVIDENCE_PROVENANCE"])
+        self.assertFalse(result["reported_cross_source_agreement"])
+        self.assertFalse(result["independent_agreement"])
+        self.assertFalse(result["trade_ready"])
+
     def test_missing_hash_blocks(self):
         r = reconcile_instrument_evidence(ISIN, MIC, (record("a", digest=""), record("b")))
         self.assertEqual(r["blocks"], ["INCOMPLETE_EVIDENCE_PROVENANCE"])
