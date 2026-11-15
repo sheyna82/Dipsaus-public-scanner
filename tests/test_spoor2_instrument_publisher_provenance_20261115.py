@@ -61,6 +61,17 @@ class PublisherProvenanceTests(unittest.TestCase):
         self.assertEqual(r["blocks"], ["INVALID_RETRIEVAL_URL"])
         self.assertFalse(r["source_attested"])
 
+    def test_nonpublic_or_invalid_publisher_hosts_block(self):
+        for host in ("localhost", "exchange.local", "exchange.internal",
+                     "exchange.test", "exchange.invalid", "bad-.org",
+                     "-bad.org", "a..org"):
+            with self.subTest(host=host):
+                r = inspect_publisher_provenance(record(
+                    retrieval_url="https://" + host + "/reference.csv"))
+                self.assertEqual(r["blocks"], ["NONPUBLIC_OR_INVALID_PUBLISHER_HOST"]
+                                 if host != "a..org" else ["INVALID_RETRIEVAL_URL"])
+                self.assertFalse(r["source_attested"])
+
     def test_missing_or_non_utc_timestamp_blocks(self):
         for value in (None, "", "2026-11-15T12:00:00", "2026-11-15T13:00:00+01:00"):
             with self.subTest(value=value):
