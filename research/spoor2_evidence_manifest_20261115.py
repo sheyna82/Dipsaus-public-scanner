@@ -31,6 +31,7 @@ def build_evidence_manifest(records=()):
         source = record.get("source_id")
         if (not isinstance(source, str) or not source.strip()
                 or source != source.strip() or len(source) > 128
+                or unicodedata.normalize("NFC", source) != source
                 or any(unicodedata.category(ch) in ("Cc", "Cf") for ch in source)):
             result["blocks"].append("INVALID_SOURCE_ID")
             return result
