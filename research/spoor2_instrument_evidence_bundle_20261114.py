@@ -11,6 +11,7 @@ def inspect_instrument_evidence_bundle(isin, mic, records=()):
     result = {
         "status": "BLOCKED", "byte_integrity_checked": False,
         "reported_cross_source_agreement": False,
+        "independent_source_authority_verified": False,
         "source_attested": False, "instrument_segment_verified": False,
         "broker_route_verified": False, "trade_ready": False,
         "order_placement_enabled": False, "blocks": [],
