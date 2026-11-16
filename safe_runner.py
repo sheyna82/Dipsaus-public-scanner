@@ -183,17 +183,24 @@ def main():
     args = parser.parse_args()
     if args.read_only and (args.live or args.mode != 'prealert'):
         raise RuntimeError('READ_ONLY_MODE_INVALID')
+    print('SAFE_STAGE: hydrate', flush=True)
     hydrate()
+    print('SAFE_STAGE: private_state', flush=True)
     store = PrivateStore(args.mode); state = store.load()
     if args.mode in ('prealert', 'us') and type(store).__module__ == 'private_runtime':
+        print('SAFE_STAGE: notification_gate', flush=True)
         sync_private_notification_gate(store)
     if args.mode == 'prealert' and args.live:
+        print('SAFE_STAGE: canonical_positions', flush=True)
         sync_canonical_positions(store, Path('config/profit_exit_watch.json'))
 
     if args.live:
         if args.mode != 'prealert' or os.environ.get('SCANNER_NOTIFICATIONS_ENABLED') != 'true':
             raise RuntimeError('LIVE_NOTIFICATIONS_NOT_ENABLED')
+        print('SAFE_STAGE: exclusive_sender', flush=True)
         store.require_exclusive_sender()
+    if args.mode == 'prealert':
+        print('SAFE_STAGE: us_routes_state', flush=True)
     routes = PrivateStore('us').load().get('us_routes') if args.mode == 'prealert' else state.get('us_routes')
     if routes is not None:
         Path('config/us_live_trigger_routes.json').write_text(json.dumps(routes))
@@ -216,6 +223,7 @@ def main():
                 if symbol in holdings
             }
             portfolio_path.write_text(json.dumps(portfolio_cfg))
+        print('SAFE_STAGE: watch_scripts', flush=True)
         run('manual_recovery_trigger_watch.py'); run('profit_exit_watch.py')
         # Retain the existing recheck while avoiding a public summary or artifacts.
         run('manual_recovery_trigger_watch.py')
