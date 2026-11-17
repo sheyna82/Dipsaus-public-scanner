@@ -60,5 +60,34 @@ class RouteQuoteEvidenceTests(unittest.TestCase):
         route["generated_utc"] = (NOW-timedelta(seconds=5)).isoformat()
         self.assertIn("QUOTE_PREDATES_ROUTE", self.check(route,quote)["blocks"])
 
+
+    def test_missing_source_bar_date_blocks_real_route_shape(self):
+        route, quote = sample()
+        route.pop("last_bar_date")
+        result = self.check(route, quote)
+        self.assertIn("ROUTE_BAR_DATE_UNRESOLVED", result["blocks"])
+        self.assertFalse(result["route_quote_temporally_consistent"])
+
+    def test_quote_age_exact_boundary(self):
+        route, quote = sample()
+        quote["provider_quote_utc"] = (NOW-timedelta(seconds=120)).isoformat()
+        result = self.check(route, quote)
+        self.assertNotIn("QUOTE_STALE_OR_FUTURE", result["blocks"])
+
+    def test_future_quote_beyond_tolerance(self):
+        route, quote = sample()
+        quote["provider_quote_utc"] = (NOW+timedelta(seconds=31)).isoformat()
+        self.assertIn("QUOTE_STALE_OR_FUTURE", self.check(route, quote)["blocks"])
+
+    def test_nonfinite_quote_blocks(self):
+        route, quote = sample()
+        quote["provider_quote"] = float("nan")
+        self.assertIn("QUOTE_PRICE_INVALID", self.check(route, quote)["blocks"])
+
+    def test_unverified_structure_blocks(self):
+        route, quote = sample()
+        quote["intraday_hold_confirmed"] = False
+        self.assertIn("INTRADAY_STRUCTURE_NOT_CONFIRMED", self.check(route, quote)["blocks"])
+
 if __name__ == "__main__":
     unittest.main()
