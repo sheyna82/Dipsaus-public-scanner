@@ -19,6 +19,8 @@ def estimate_net_trade(broker, levels, fx, costs, tranche_eur=3500, now=None):
     keys = ("buy_fee_eur", "sell_fee_eur", "fx_cost_eur", "slippage_eur")
     if any(not isinstance(costs.get(k), (int, float)) or isinstance(costs.get(k), bool) or not math.isfinite(costs[k]) or costs[k] < 0 for k in keys):
         return {"status": "UNKNOWN", "blocks": ["COST_INPUT_INVALID"], "trade_ready": False}
+    if not positive(tranche_eur):
+        return {"status": "BLOCK", "blocks": ["INVALID_TRANCHE"], "trade_ready": False}
     entry = broker["ask"]
     target, stop = levels["target"], levels["invalidation"]
     if not stop < entry < target:
