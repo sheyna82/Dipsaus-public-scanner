@@ -23,7 +23,9 @@ def review_source_identity(record):
     if "MISSING_RETRIEVAL_URL" not in blocks:
         try:
             url = urlsplit(record["retrieval_url"])
-            if url.scheme != "https" or not url.hostname or url.username or url.password or url.fragment:
+            if (url.scheme != "https" or not url.hostname or url.username is not None or
+                    url.password is not None or url.fragment or
+                    any(ch.isspace() for ch in record["retrieval_url"])):
                 blocks.append("RETRIEVAL_URL_NOT_ACCEPTED")
         except ValueError:
             blocks.append("RETRIEVAL_URL_NOT_ACCEPTED")
