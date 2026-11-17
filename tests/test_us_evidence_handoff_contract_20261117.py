@@ -29,5 +29,27 @@ class EvidenceHandoffContractTests(unittest.TestCase):
         self.assertIn("DISCOVERY_OBSERVED_UTC_SOURCE_INVALID",carry_evidence(d,{"symbol":"TEST"},symbol="TEST")["blocks"])
     def test_invalid_input(self):
         self.assertIn("INPUT_INVALID",carry_evidence(None,{},symbol="TEST")["blocks"])
+
+    def test_daily_after_discovery_rejected(self):
+        d=dict(D);d["source_daily_last_bar_utc"]="2026-11-17T15:01:00+00:00"
+        self.assertIn("DAILY_BAR_AFTER_DISCOVERY",carry_evidence(d,{"symbol":"TEST"},symbol="TEST")["blocks"])
+    def test_intraday_after_discovery_rejected(self):
+        d=dict(D);d["source_intraday_last_bar_utc"]="2026-11-17T15:01:00+00:00"
+        self.assertIn("INTRADAY_BAR_AFTER_DISCOVERY",carry_evidence(d,{"symbol":"TEST"},symbol="TEST")["blocks"])
+    def test_wrong_exchange_session_rejected(self):
+        d=dict(D);d["exchange_session_date"]="2026-11-16"
+        self.assertIn("INTRADAY_SESSION_MISMATCH",carry_evidence(d,{"symbol":"TEST"},symbol="TEST")["blocks"])
+    def test_future_pivot_rejected(self):
+        d=dict(D);d["pivot_origin_session_date"]="2026-11-18"
+        self.assertIn("PIVOT_FROM_FUTURE_SESSION",carry_evidence(d,{"symbol":"TEST"},symbol="TEST")["blocks"])
+    def test_historic_pivot_allowed_but_not_trade_ready(self):
+        d=dict(D);d["pivot_origin_session_date"]="2025-10-20"
+        result=carry_evidence(d,{"symbol":"TEST"},symbol="TEST")
+        self.assertTrue(result["provenance_fields_complete"])
+        self.assertFalse(result["trade_ready"])
+    def test_invalid_session_date_rejected(self):
+        d=dict(D);d["exchange_session_date"]="2026-02-30"
+        self.assertIn("EXCHANGE_SESSION_DATE_INVALID",carry_evidence(d,{"symbol":"TEST"},symbol="TEST")["blocks"])
+
 if __name__=="__main__":
     unittest.main()
