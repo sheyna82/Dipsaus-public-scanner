@@ -54,6 +54,32 @@ class ShadowDecisionTests(unittest.TestCase):
         self.assertNotIn("INSTRUMENT_JOIN_IDENTITY_MISSING", r["blocks"])
         self.assertFalse(r["trade_ready"])
 
+    def test_missing_source_metadata_blocks(self):
+        r = assess_shadow_with_market_evidence({}, {})
+        self.assertIn("SOURCE_RECORD_MISSING", r["blocks"])
+        self.assertIn("SOURCE_METADATA_INCOMPLETE", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+
+    def test_source_mic_mismatch_blocks(self):
+        r = assess_shadow_with_market_evidence(
+            {"symbol": "AAPL"}, {"ticker": "AAPL", "mic": "XNAS"},
+            source_identity={"mic": "XNYS"})
+        self.assertIn("SOURCE_MARKET_MIC_MISMATCH", r["blocks"])
+        self.assertFalse(r["notify"])
+
+    def test_complete_synthetic_metadata_not_trusted(self):
+        source = {"provider_id": "synthetic", "dataset_id": "bars",
+                  "instrument_id": "AAPL", "mic": "XNAS",
+                  "retrieval_url": "https://example.org/data",
+                  "retrieval_reference": "offline", "license_reference": "offline",
+                  "content_sha256": "a" * 64}
+        r = assess_shadow_with_market_evidence(
+            {"symbol": "AAPL"}, {"ticker": "AAPL", "mic": "XNAS"},
+            source_identity=source)
+        self.assertEqual(r["source_identity"]["status"], "METADATA_COMPLETE_UNVERIFIED")
+        self.assertIn("SOURCE_INDEPENDENCE_UNVERIFIED", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+
     def test_bad_market_payload_fails_closed(self):
         r = assess_shadow_with_market_evidence({}, {"payload": None})
         self.assertIn("MARKET_EVIDENCE_INVALID", r["blocks"])
