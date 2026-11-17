@@ -105,3 +105,22 @@ Inspected `us_live_trigger_routes.py` directly, without modifying production cod
 - **Input robustness gap:** the route builder assumes well-formed `rows`, `symbol`, numeric fields and zones. Malformed private/source input could raise or yield invalid levels; this must be fail-closed in a new read-only adapter rather than changing the existing production route during isolation.
 
 **Next:** trace PRE-ALERT downstream consumption of `us_routes` and its provider freshness checks, distinguish phone notification vs broker-verification attention vs trade authorization, then implement synthetic adapter tests on the isolated branch only. No alteration of `safe_runner.py`, `us_live_trigger_routes.py`, `main`, production, or PR #65.
+
+## PRE-ALERT downstream source audit — 2026-11-17
+
+Directly inspected `manual_recovery_trigger_watch.py` and `private_notifications.py` on the isolated branch.
+
+**Positive controls already present:**
+- The automatic US watch reads `config/us_live_trigger_routes.json` but fetches a **new** `yfinance.Ticker(symbol).history(period="1d",interval="1m",prepost=False)` snapshot for each route. It uses one snapshot for both price and intraday structure, avoiding a mismatched second request.
+- It computes provider quote age **at retrieval** and requires `-30 <= age_seconds <= 120` for `provider_freshness_pass`. Empty or failed intraday fetches yield `DATA-BLOCKED`.
+- The ordinary automatic US trigger requires `fresh and phone_notification_eligible and intraday_hold_confirmed`; the latter requires at least 12 valid 1m rows, a higher low, median-price reclaim, >=0.35% rebound from day low, and breakout/hold relative to the route.
+- `private_notifications.notify` requires provider freshness, phone eligibility, structure and intraday confirmation for the normal US discovery trigger; notifications are research/DEGIRO-check messages, not buy authorizations. `safe_runner.py` only invokes notifications in the separately gated PRE-ALERT `--live` path, not the US sweep.
+
+**Remaining gaps and nuanced risks:**
+- **Freshness is not end-to-end.** A freshly fetched 1m quote does not independently revalidate the original route's historical pivot, underlying `last_bar_date`, initial 1m discovery observation, listing identity, corporate actions, license, or exchange calendar. Old route levels may be evaluated against fresh prices. No independent route-age gate was found in this examined US path.
+- **Early heads-up is deliberately looser.** In `private_notifications.notify`, an `AUTO-US-DISCOVERY` row with status `EARLY-RECOVERY-WATCH`, fresh provider, phone eligibility, `early_turn_observed` and `structure_available` may generate a research-only early message **without `intraday_hold_confirmed`**. It is limited to 3 early US alerts per UTC day, deduplicated by symbol/day. This is not a validated entry and must not be described as such.
+- **Independent provider/broker evidence is absent.** Both discovery and trigger use Yahoo-derived prices; no executable DEGIRO bid/ask, independent 1m verification, final risk/reward or net EUR profit clearance occurs in these modules.
+- **Malformed/partial data:** The automatic watch uses `z[0]`/`z[1]` and `level` directly, so malformed route zones may trigger a per-symbol error or whole-route exception; this is generally caught and blocked, but source-level safety does not imply complete operational resilience.
+- **Message wording:** Existing messages explicitly state research-only and request broker confirmation. Early alert copy refers to a **gross** EUR >=150 check; user's actual decision policy requires **net** >=150 after fees. A future revised approval gate must use net, not silently treat gross as sufficient.
+
+**Priority:** implement an isolated, offline **route-to-quote evidence join** that refuses missing/stale route origin, mismatched symbol/session, unverified corporate actions and broker inputs; never connect it to the current notification sender without separate reviewed approval. Keep live notification behavior untouched.
