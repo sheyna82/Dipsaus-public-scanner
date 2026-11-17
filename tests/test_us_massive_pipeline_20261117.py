@@ -30,6 +30,29 @@ class MassivePipelineTests(unittest.TestCase):
         self.assertFalse(r["trade_ready"])
         self.assertFalse(r["provider_independently_verified"])
         self.assertFalse(r["exchange_calendar_verified"])
+    def test_missing_adjustment_blocks_pipeline(self):
+        p = dict(self.payload)
+        p.pop("adjusted")
+        r = self.check(p)
+        self.assertIn("NORMALIZATION_ADJUSTMENT_METADATA_MISSING", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+
+    def test_conflicting_adjustment_blocks_pipeline(self):
+        p = {**self.payload, "adjusted": True}
+        r = self.check(p)
+        self.assertIn("NORMALIZATION_ADJUSTMENT_MISMATCH", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+
+    def test_unknown_timeframe_blocks_pipeline(self):
+        r = self.check(timeframe="minute")
+        self.assertIn("INTEGRITY_TIMEFRAME_UNSUPPORTED", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+
+    def test_missing_results_blocks_pipeline(self):
+        r = self.check({"ticker": "SYNTH", "adjusted": False})
+        self.assertIn("NORMALIZATION_RESULTS_MISSING", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+
     def test_digest_mismatch_blocks(self):
         self.assertIn("INTEGRITY_SHA256_MISMATCH", self.check(expected_sha256="0"*64)["blocks"])
     def test_stale_fetch_blocks(self):
