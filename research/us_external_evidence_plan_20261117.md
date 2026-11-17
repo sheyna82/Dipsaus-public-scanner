@@ -90,3 +90,18 @@ Directly inspected `safe_runner.py`, `us_recovery_pilot.py`, `us_momentum_recove
 **Integration gap:** The new isolated `research/us_*_20261117.py` evidence modules are offline and do not receive the existing Yahoo-produced discovery data. The Massive adapter is a separate synthetic research experiment, not the live source of the current US scanner. Do not label the current production feed as Massive.
 
 **Next audit:** inspect `us_live_trigger_routes.py` for freshness, signal thresholds and downstream handoff semantics, then design a read-only evidence adapter that can consume a *redacted, explicitly authorized private report* without logging raw provider data publicly. No production changes or live data export.
+
+## Live US route audit — 2026-11-17
+
+Inspected `us_live_trigger_routes.py` directly, without modifying production code:
+
+- Reads `reports/us_auto_prealert_candidates.json` and private-hydrated `config/notification_quality_gate.json`; only `auto_promoted` candidates enter the route report.
+- Explicit watchlist symbols, automatically qualified deep recoveries and automatically qualified fast recoveries can become `phone_notification_eligible`, unless included in `auto_us_silent_follow`. A hard-coded `GEHC` watchlist addition exists and deserves a separate user-policy review; no change has been made.
+- Deep-recovery automatic quality: at least four bottom signals, weekly structure support, `identity_status == NAME_CONSISTENT_UNVERIFIED` and at least 3% historical space to first overhead reference. This identity label explicitly remains **unverified**.
+- Fast-recovery quality: FAST-MOMENTUM-RECOVERY lane, intraday `structure_quality_pass` and `early_recovery_observed`, historical drawdown <= -8% and day change >= 1%. This is a screening threshold, not an independently confirmed entry.
+- Fast route levels use a reference-price +/- 0.5% hold zone; deep route levels use historical overhead pivot zones. Neither is a verified executable entry/stop/target or a final RR calculation.
+- `phone_notification_eligible` means **eligible for downstream PRE-ALERT evaluation**, not a sent notification or trade-ready verdict. `route_is_execution_signal=False` on all rows; the `requires` list explicitly retains broker spread, 1-minute quote/structure, news, portfolio, dynamic sizing and R/R gates.
+- **Freshness gap:** the route builder stamps `generated_utc` at output time but does not independently verify age of input `last_bar_date`, momentum observation, underlying Yahoo data or exchange session. A newly generated route file can therefore wrap stale historical references; downstream freshness checks must be audited separately before any escalation.
+- **Input robustness gap:** the route builder assumes well-formed `rows`, `symbol`, numeric fields and zones. Malformed private/source input could raise or yield invalid levels; this must be fail-closed in a new read-only adapter rather than changing the existing production route during isolation.
+
+**Next:** trace PRE-ALERT downstream consumption of `us_routes` and its provider freshness checks, distinguish phone notification vs broker-verification attention vs trade authorization, then implement synthetic adapter tests on the isolated branch only. No alteration of `safe_runner.py`, `us_live_trigger_routes.py`, `main`, production, or PR #65.
