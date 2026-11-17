@@ -106,6 +106,20 @@ class ShadowDecisionTests(unittest.TestCase):
         self.assertIn("EXCHANGE_CALENDAR_UNVERIFIED", r["blocks"])
         self.assertFalse(r["trade_ready"])
 
+    def test_declared_closed_session_blocks(self):
+        r = assess_shadow_with_market_evidence(
+            {"symbol": "AAPL"}, {"ticker": "AAPL", "mic": "XNAS"},
+            calendar_evidence={"session_kind": "closed"}, session_date="2026-11-17")
+        self.assertIn("CALENDAR_SESSION_CLOSED", r["blocks"])
+        self.assertFalse(r["notify"])
+
+    def test_declared_early_close_blocks(self):
+        r = assess_shadow_with_market_evidence(
+            {"symbol": "AAPL"}, {"ticker": "AAPL", "mic": "XNAS"},
+            calendar_evidence={"session_kind": "early_close"}, session_date="2026-11-17")
+        self.assertIn("CALENDAR_EARLY_CLOSE_UNRESOLVED", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+
     def test_bad_market_payload_fails_closed(self):
         r = assess_shadow_with_market_evidence({}, {"payload": None})
         self.assertIn("MARKET_EVIDENCE_INVALID", r["blocks"])
