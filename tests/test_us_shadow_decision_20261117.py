@@ -120,6 +120,28 @@ class ShadowDecisionTests(unittest.TestCase):
         self.assertIn("CALENDAR_EARLY_CLOSE_UNRESOLVED", r["blocks"])
         self.assertFalse(r["trade_ready"])
 
+    def test_source_instrument_identity_missing_blocks(self):
+        r = assess_shadow_with_market_evidence(
+            {"symbol": "AAPL"}, {"ticker": "AAPL"},
+            source_identity={"instrument_id": ""})
+        self.assertIn("SOURCE_INSTRUMENT_IDENTITY_MISSING", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+
+    def test_source_instrument_identity_unresolved_blocks(self):
+        r = assess_shadow_with_market_evidence(
+            {"symbol": "AAPL"}, {"ticker": "AAPL"},
+            source_identity={"instrument_id": "US0378331005"})
+        self.assertIn("SOURCE_INSTRUMENT_IDENTITY_UNRESOLVED", r["blocks"])
+        self.assertFalse(r["notify"])
+
+    def test_source_instrument_matching_symbol_not_verified(self):
+        r = assess_shadow_with_market_evidence(
+            {"symbol": "AAPL"}, {"ticker": "AAPL"},
+            source_identity={"instrument_id": "aapl"})
+        self.assertNotIn("SOURCE_INSTRUMENT_IDENTITY_UNRESOLVED", r["blocks"])
+        self.assertIn("SOURCE_INDEPENDENCE_UNVERIFIED", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+
     def test_bad_market_payload_fails_closed(self):
         r = assess_shadow_with_market_evidence({}, {"payload": None})
         self.assertIn("MARKET_EVIDENCE_INVALID", r["blocks"])
