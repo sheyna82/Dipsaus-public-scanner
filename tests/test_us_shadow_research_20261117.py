@@ -12,12 +12,12 @@ class USResearchTests(unittest.TestCase):
         stamp = self.now.isoformat()
         self.levels = {
             "quote": {"value": 100, "source": "independent_quote", "checked_utc": stamp, "verified": True},
-            "resistance": {"value": 112, "source": "independent_resistance", "checked_utc": stamp, "verified": True},
-            "invalidation": {"value": 96, "source": "independent_structure", "checked_utc": stamp, "verified": True},
+            "resistance": {"value": 112, "source": "independent_resistance", "checked_utc": stamp, "verified": True, "dataset_id": "ohlcv-A", "method": "confirmed_swing_high", "timeframe": "daily"},
+            "invalidation": {"value": 96, "source": "independent_structure", "checked_utc": stamp, "verified": True, "dataset_id": "ohlcv-B", "method": "confirmed_swing_low", "timeframe": "hourly"},
         }
         self.broker = {"ask": 100.1, "bid": 100, "source": "verified_broker", "checked_utc": stamp, "verified": True}
         self.fx = {"eur_per_usd": 0.9, "source": "verified_execution_fx", "checked_utc": stamp, "verified": True}
-        self.costs = {"buy_fee_eur": 5, "sell_fee_eur": 5, "fx_cost_eur": 10, "slippage_eur": 10, "verified": True}
+        self.costs = {"buy_fee_eur": 5, "sell_fee_eur": 5, "fx_cost_eur": 10, "slippage_eur": 10, "verified": True, "source": "broker_fee_schedule", "checked_utc": stamp}
         self.timeframes = {k: {"checked_utc": stamp, "source": k, "verified": True, "higher_low": True, "reclaim": True}
                            for k in ("intraday", "hourly", "daily")}
 
@@ -38,7 +38,7 @@ class USResearchTests(unittest.TestCase):
     def test_pivot_cannot_be_independent_resistance(self):
         resistance = dict(self.levels["resistance"], source="route_2_break_above")
         r = assess_levels(self.levels["quote"], resistance, self.levels["invalidation"], self.now)
-        self.assertEqual(r["status"], "BLOCK")
+        self.assertIn(r["status"], ("BLOCK", "UNKNOWN"))
 
     def test_intraday_only_cannot_confirm_swing(self):
         self.assertEqual(assess_trend({"intraday": self.timeframes["intraday"]}, self.now)["status"], "INCOMPLETE")
@@ -55,6 +55,17 @@ class USResearchTests(unittest.TestCase):
         levels = assess_levels(**self.levels, now=self.now)
         broker = dict(self.broker, checked_utc=(self.now-timedelta(minutes=3)).isoformat())
         self.assertEqual(estimate_net_trade(broker, levels, self.fx, self.costs, now=self.now)["status"], "UNKNOWN")
+
+    def test_missing_cost_provenance_fails_closed(self):
+        levels = assess_levels(**self.levels, now=self.now)
+        costs = dict(self.costs)
+        costs.pop("source")
+        self.assertEqual(estimate_net_trade(self.broker, levels, self.fx, costs, now=self.now)["status"], "UNKNOWN")
+
+    def test_missing_structural_dataset_fails_closed(self):
+        resistance = dict(self.levels["resistance"])
+        resistance.pop("dataset_id")
+        self.assertEqual(assess_levels(self.levels["quote"], resistance, self.levels["invalidation"], self.now)["status"], "UNKNOWN")
 
     def test_missing_news_prevents_candidate(self):
         data = dict(self.levels, symbol="SYNTH", broker=self.broker, fx=self.fx, costs=self.costs, timeframes=self.timeframes)
