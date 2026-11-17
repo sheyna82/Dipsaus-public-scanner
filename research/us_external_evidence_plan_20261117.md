@@ -38,3 +38,18 @@ D. Broker route and EUR net calculation audit with actual account-specific evide
 E. End-to-end dry-run report containing exact missing evidence and blocking reasons; only then discuss a separate manual alert-approval process.
 
 Status as of this dossier: **all A–E are pending**. Offline CI success does not close these items.
+
+## Provider terms review — primary-source desk research, 2026-11-17
+
+Sources reviewed:
+- Massive Market Data Terms, updated 2026-11-03: https://massive.com/legal/market-data-terms-of-service
+- Massive redistribution guidance: https://massive.com/knowledge-base/article/how-can-i-redistribute-massives-market-data
+- Massive stock API overview: https://www.massive.com/stocks
+
+Findings from provider-published material (not account-specific attestation):
+- Individual access is for the subscriber's own personal, non-business research/investment activity, subject to provider and exchange conditions; this does not automatically authorize data sharing, public repository artifacts, third-party display or a commercial product.
+- Publishing raw prices/charts or making data accessible to others generally requires explicit commercial redistribution rights. Even derived signals can require an entitlement assessment depending on the information revealed.
+- Massive describes stock-data feeds and historical/real-time tiers, but **no account plan, API key, entitlement, exchange classification or live access has been verified here**.
+- A GitHub Actions secret, if one exists, is not evidence of licensing, source independence or permitted publication. Never print a secret or place raw licensed market data in a public CI log or artifact.
+
+Required decision before implementing a network client: establish the actual account's access tier and whether personal automated research and any intended notification content are covered; choose a private execution/storage boundary for licensed data. No public-repo live feed integration is approved by this dossier.
