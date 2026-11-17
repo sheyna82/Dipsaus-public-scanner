@@ -64,3 +64,15 @@ The public repository already contains provider-oriented code; adding a second u
 - GitHub code search on the default branch found references to `FINNHUB_API_KEY`; no account secret values were inspected or exposed. Search results do not prove the absence of other providers.
 
 **Next safe research task:** trace the current US scanner's existing provider selection, private report boundary, and exact freshness/fallback semantics from source and recent successful *non-sensitive* job metadata. Determine whether an existing authorized private research path can be reused before proposing Massive credentials. Never trigger a live probe that logs raw licensed data into public CI.
+
+## US workflow boundary audit — 2026-11-17
+
+Inspected current branch copies of `.github/workflows/shadow-us.yml`, `.github/workflows/research-finnhub-manual-observation.yml`, `us_news_fallback.py` and `migration/workflows/us.yml`.
+
+- **Scheduled US workflow**: `shadow-us.yml` runs `safe_runner.py us` on a public repository with secrets for Finnhub, EODHD, private state and notifications, but explicitly sets `SCANNER_NOTIFICATIONS_ENABLED: 'false'`. It specifies no public artifacts or report summaries. This is source-level configuration, not proof that the run accessed valid licensed data or delivered a signal.
+- **Finnhub use**: `us_news_fallback.py` accesses company-news and earnings-calendar with a token in the `X-Finnhub-Token` request header, timeout 15 seconds, and returns incomplete research context. This is **not a live OHLCV quote source**.
+- **Separate manual Finnhub observation**: `research-finnhub-manual-observation.yml` explicitly uploads a source-response JSON file as a public GitHub Actions artifact retained seven days. The comment describing the response as 'public market data' is **not legal authorization to redistribute it**. Its exact content and entitlement need independent review; do not trigger or copy this workflow into the new US research path.
+- **Observed recent US run metadata**: GitHub Actions run `44098411475`, created 2026-11-17 14:00:17 UTC on `main`, concluded `success`. This establishes a successful workflow execution only; no claim about data freshness, symbol coverage, broker verification or signals.
+- **Safety consequence**: keep the new US research workflow entirely offline, without provider secrets, uploads, notifications or production calls. Any live integration must have a private data boundary and separate entitlement approval.
+
+**Open questions**: Which provider supplies current US OHLCV inside `safe_runner.py us`? Are its historical and real-time entitlements sufficient? Does the private state contain provider provenance and expiry? These require a focused call-graph audit, not inference from a green Actions badge.
