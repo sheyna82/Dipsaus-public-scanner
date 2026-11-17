@@ -32,6 +32,28 @@ class ShadowDecisionTests(unittest.TestCase):
         self.assertFalse(r["trade_ready"])
         self.assertFalse(r["automatic_orders"])
 
+    def test_symbol_mismatch_blocks_join(self):
+        r = assess_shadow_with_market_evidence(
+            {"symbol": "AAPL"}, {"ticker": "MSFT"})
+        self.assertIn("INSTRUMENT_JOIN_SYMBOL_MISMATCH", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+        self.assertFalse(r["notify"])
+
+    def test_missing_candidate_symbol_blocks_join(self):
+        r = assess_shadow_with_market_evidence({}, {"ticker": "AAPL"})
+        self.assertIn("INSTRUMENT_JOIN_IDENTITY_MISSING", r["blocks"])
+
+    def test_missing_market_symbol_blocks_join(self):
+        r = assess_shadow_with_market_evidence({"symbol": "AAPL"}, {})
+        self.assertIn("INSTRUMENT_JOIN_IDENTITY_MISSING", r["blocks"])
+
+    def test_case_insensitive_symbol_join(self):
+        r = assess_shadow_with_market_evidence(
+            {"symbol": " aapl "}, {"ticker": "AAPL"})
+        self.assertNotIn("INSTRUMENT_JOIN_SYMBOL_MISMATCH", r["blocks"])
+        self.assertNotIn("INSTRUMENT_JOIN_IDENTITY_MISSING", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+
     def test_bad_market_payload_fails_closed(self):
         r = assess_shadow_with_market_evidence({}, {"payload": None})
         self.assertIn("MARKET_EVIDENCE_INVALID", r["blocks"])
