@@ -64,6 +64,13 @@ def assess_shadow_with_market_evidence(candidate, market_kwargs, *, now=None, so
     except (TypeError, ValueError, AttributeError, OverflowError):
         calendar_result = None
         blocks.append("CALENDAR_EVIDENCE_INVALID")
+    # A declared closed or shortened session cannot be treated as a regular
+    # session by the offline pipeline, even if the clock-only screen passes.
+    if isinstance(calendar_evidence, dict):
+        if calendar_evidence.get("session_kind") == "closed":
+            blocks.append("CALENDAR_SESSION_CLOSED")
+        elif calendar_evidence.get("session_kind") == "early_close":
+            blocks.append("CALENDAR_EARLY_CLOSE_UNRESOLVED")
     if (isinstance(calendar_evidence, dict) and
             isinstance(market_kwargs, dict) and
             isinstance(calendar_evidence.get("exchange"), str) and
