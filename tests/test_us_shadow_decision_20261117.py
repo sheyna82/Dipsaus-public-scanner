@@ -164,6 +164,37 @@ class ShadowDecisionTests(unittest.TestCase):
         self.assertIn("SOURCE_INDEPENDENCE_UNVERIFIED", r["blocks"])
         self.assertFalse(r["trade_ready"])
 
+    def test_hourly_bars_on_wrong_calendar_day_block(self):
+        from datetime import datetime, timezone
+        stamp = int(datetime(2026, 11, 16, 15, tzinfo=timezone.utc).timestamp() * 1000)
+        r = assess_shadow_with_market_evidence(
+            {"symbol": "AAPL"},
+            {"ticker": "AAPL", "timeframe": "hourly",
+             "payload": {"results": [{"t": stamp}]}},
+            session_date="2026-11-17")
+        self.assertIn("CALENDAR_BAR_DATE_MISMATCH", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+
+    def test_hourly_bars_on_matching_calendar_day_do_not_mismatch(self):
+        from datetime import datetime, timezone
+        stamp = int(datetime(2026, 11, 17, 15, tzinfo=timezone.utc).timestamp() * 1000)
+        r = assess_shadow_with_market_evidence(
+            {"symbol": "AAPL"},
+            {"ticker": "AAPL", "timeframe": "hourly",
+             "payload": {"results": [{"t": stamp}]}},
+            session_date="2026-11-17")
+        self.assertNotIn("CALENDAR_BAR_DATE_MISMATCH", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+
+    def test_malformed_hourly_bar_date_blocks(self):
+        r = assess_shadow_with_market_evidence(
+            {"symbol": "AAPL"},
+            {"ticker": "AAPL", "timeframe": "hourly",
+             "payload": {"results": [{"t": "invalid"}]}},
+            session_date="2026-11-17")
+        self.assertIn("CALENDAR_BAR_DATE_UNRESOLVED", r["blocks"])
+        self.assertFalse(r["notify"])
+
     def test_bad_market_payload_fails_closed(self):
         r = assess_shadow_with_market_evidence({}, {"payload": None})
         self.assertIn("MARKET_EVIDENCE_INVALID", r["blocks"])
