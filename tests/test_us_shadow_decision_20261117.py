@@ -20,6 +20,18 @@ class ShadowDecisionTests(unittest.TestCase):
         self.assertIn("SOURCE_INDEPENDENCE_UNVERIFIED", r["blocks"])
         self.assertIn("DATA_LICENSE_UNVERIFIED", r["blocks"])
         self.assertIn("EXCHANGE_CALENDAR_UNVERIFIED", r["blocks"])
+    def test_invalid_candidate_quote_type_fails_closed(self):
+        r = assess_shadow_with_market_evidence({"quote": ["malformed"]}, None)
+        self.assertEqual(r["status"], "SHADOW_BLOCKED")
+        self.assertIn("CANDIDATE_EVIDENCE_INVALID", r["blocks"])
+        self.assertFalse(r["notify"])
+
+    def test_invalid_candidate_timeframes_type_fails_closed(self):
+        r = assess_shadow_with_market_evidence({"timeframes": 42}, None)
+        self.assertEqual(r["status"], "SHADOW_BLOCKED")
+        self.assertFalse(r["trade_ready"])
+        self.assertFalse(r["automatic_orders"])
+
     def test_bad_market_payload_fails_closed(self):
         r = assess_shadow_with_market_evidence({}, {"payload": None})
         self.assertIn("MARKET_EVIDENCE_INVALID", r["blocks"])
