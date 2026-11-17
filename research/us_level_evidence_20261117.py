@@ -26,6 +26,13 @@ def assess_levels(quote, resistance, invalidation, now=None):
             missing.append(name + "_UNVERIFIED")
     if missing:
         return {"status": "UNKNOWN", "blocks": sorted(set(missing)), "trade_ready": False}
+    for name, item in (("resistance", resistance), ("invalidation", invalidation)):
+        if not item.get("dataset_id") or not item.get("method") or not item.get("timeframe"):
+            missing.append(name + "_STRUCTURAL_EVIDENCE_MISSING")
+        if item.get("source") in ("route_2_break_above", "route_2_hold_zone", quote.get("source")):
+            missing.append(name + "_NOT_INDEPENDENT")
+    if missing:
+        return {"status": "UNKNOWN", "blocks": sorted(set(missing)), "trade_ready": False}
     entry, target, stop = quote["value"], resistance["value"], invalidation["value"]
     if not stop < entry < target:
         return {"status": "BLOCK", "blocks": ["INVALID_LEVEL_ORDER"], "trade_ready": False}
