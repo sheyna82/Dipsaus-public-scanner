@@ -16,6 +16,14 @@ class SessionClockTests(unittest.TestCase):
         self.assertIn("OUTSIDE_REGULAR_SESSION", self.check(["2026-11-17T14:29:00Z"])["blocks"])
     def test_summer_after_close(self):
         self.assertIn("OUTSIDE_REGULAR_SESSION", self.check(["2026-07-15T20:00:00Z"])["blocks"])
+    def test_hourly_bar_crosses_close(self):
+        self.assertIn("OUTSIDE_REGULAR_SESSION",
+                      self.check(["2026-11-17T20:30:00Z"])["blocks"])
+
+    def test_hourly_bar_ending_at_close(self):
+        self.assertEqual(self.check(["2026-11-17T20:00:00Z"])["status"],
+                         "CLOCK_SCREENED_UNVERIFIED")
+
     def test_weekend(self):
         self.assertIn("WEEKEND_BAR", self.check(["2026-11-14T15:00:00Z"])["blocks"])
     def test_naive_timestamp(self):
