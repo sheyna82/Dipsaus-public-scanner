@@ -6,6 +6,8 @@ from research.us_candidate_assessment_20261117 import assess_candidate
 from research.us_massive_pipeline_20261117 import assess_massive_fixture
 from research.us_source_identity_20261117 import review_source_identity
 from research.us_exchange_calendar_evidence_20261117 import review_exchange_calendar
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 def assess_shadow_with_market_evidence(candidate, market_kwargs, *, now=None, source_identity=None,
                                        calendar_evidence=None, session_date=None):
@@ -74,6 +76,26 @@ def assess_shadow_with_market_evidence(candidate, market_kwargs, *, now=None, so
     except (TypeError, ValueError, AttributeError, OverflowError):
         calendar_result = None
         blocks.append("CALENDAR_EVIDENCE_INVALID")
+    # Bind hourly fixture bars to the declared NY calendar date. Daily
+    # aggregate timestamps may denote session labels, not local clock times.
+    if (isinstance(market_kwargs, dict) and
+            market_kwargs.get("timeframe") == "hourly" and
+            isinstance(session_date, str)):
+        payload = market_kwargs.get("payload")
+        raw_bars = payload.get("results") if isinstance(payload, dict) else None
+        if not isinstance(raw_bars, list) or not raw_bars:
+            blocks.append("CALENDAR_BAR_DATE_UNRESOLVED")
+        else:
+            try:
+                dates = {
+                    datetime.fromtimestamp(bar["t"] / 1000, tz=timezone.utc)
+                    .astimezone(ZoneInfo("America/New_York")).date().isoformat()
+                    for bar in raw_bars
+                }
+                if dates != {session_date}:
+                    blocks.append("CALENDAR_BAR_DATE_MISMATCH")
+            except (TypeError, ValueError, KeyError, OverflowError, OSError, AttributeError):
+                blocks.append("CALENDAR_BAR_DATE_UNRESOLVED")
     # A declared closed or shortened session cannot be treated as a regular
     # session by the offline pipeline, even if the clock-only screen passes.
     if isinstance(calendar_evidence, dict):
