@@ -9,6 +9,9 @@ from urllib.parse import urlsplit
 def review_exchange_calendar(record, *, session_date, now=None, max_age_days=14):
     blocks = []
     now = now or datetime.now(timezone.utc)
+    if not isinstance(now, datetime) or now.tzinfo is None:
+        raise ValueError("now must be a timezone-aware datetime")
+    now = now.astimezone(timezone.utc)
     if not isinstance(record, dict):
         return {"status": "UNKNOWN", "blocks": ["CALENDAR_EVIDENCE_MISSING"],
                 "exchange_calendar_verified": False, "trade_ready": False}
@@ -17,6 +20,8 @@ def review_exchange_calendar(record, *, session_date, now=None, max_age_days=14)
     else:
         try:
             day = date.fromisoformat(session_date)
+            if day.isoformat() != session_date:
+                blocks.append("SESSION_DATE_INVALID")
         except ValueError:
             blocks.append("SESSION_DATE_INVALID")
             day = None
