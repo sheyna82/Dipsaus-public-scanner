@@ -14,7 +14,7 @@ def estimate_net_trade(broker, levels, fx, costs, tranche_eur=3500, now=None):
         return {"status": "UNKNOWN", "blocks": ["LEVELS_NOT_VERIFIED"], "trade_ready": False}
     if not isinstance(fx, dict) or not positive(fx.get("eur_per_usd")) or not fx.get("source") or fx.get("verified") is not True or not fresh(fx.get("checked_utc"), now, 120):
         return {"status": "UNKNOWN", "blocks": ["EXECUTABLE_FX_NOT_VERIFIED"], "trade_ready": False}
-    if not isinstance(costs, dict) or costs.get("verified") is not True:
+    if not isinstance(costs, dict) or costs.get("verified") is not True or not costs.get("source") or not fresh(costs.get("checked_utc"), now, 86400):
         return {"status": "UNKNOWN", "blocks": ["COSTS_NOT_VERIFIED"], "trade_ready": False}
     keys = ("buy_fee_eur", "sell_fee_eur", "fx_cost_eur", "slippage_eur")
     if any(not isinstance(costs.get(k), (int, float)) or isinstance(costs.get(k), bool) or not math.isfinite(costs[k]) or costs[k] < 0 for k in keys):
