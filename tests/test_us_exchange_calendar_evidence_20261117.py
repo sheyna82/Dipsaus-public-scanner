@@ -60,5 +60,18 @@ class CalendarEvidenceTests(unittest.TestCase):
         self.assertFalse(r["exchange_calendar_verified"])
         self.assertFalse(r["trade_ready"])
 
+
+    def test_noncanonical_session_date_rejected(self):
+        record={**self.record,"session_date":"20261117"}
+        r=self.check(record,session_date="20261117")
+        self.assertIn("SESSION_DATE_INVALID",r["blocks"])
+    def test_naive_audit_clock_rejected(self):
+        with self.assertRaises(ValueError):
+            review_exchange_calendar(self.record,session_date="2026-11-17",
+                                     now=datetime(2026,11,17,12))
+    def test_invalid_calendar_clock_type_rejected(self):
+        with self.assertRaises(ValueError):
+            review_exchange_calendar(self.record,session_date="2026-11-17",now="today")
+
 if __name__ == "__main__":
     unittest.main()
