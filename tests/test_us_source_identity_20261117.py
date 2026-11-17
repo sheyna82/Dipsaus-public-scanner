@@ -38,6 +38,14 @@ class SourceIdentityTests(unittest.TestCase):
         record = dict(self.record, retrieval_url="https://user:pass@example.org/data")
         self.assertIn("RETRIEVAL_URL_NOT_ACCEPTED", review_source_identity(record)["blocks"])
 
+    def test_empty_username_blocks(self):
+        record = dict(self.record, retrieval_url="https://@example.org/data")
+        self.assertIn("RETRIEVAL_URL_NOT_ACCEPTED", review_source_identity(record)["blocks"])
+
+    def test_whitespace_in_url_blocks(self):
+        record = dict(self.record, retrieval_url="https://example.org/a b")
+        self.assertIn("RETRIEVAL_URL_NOT_ACCEPTED", review_source_identity(record)["blocks"])
+
     def test_bad_digest_format_blocks(self):
         record = dict(self.record, content_sha256="a" * 63)
         self.assertIn("INVALID_SHA256_FORMAT", review_source_identity(record)["blocks"])
