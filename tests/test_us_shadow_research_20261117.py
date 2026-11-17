@@ -67,6 +67,11 @@ class USResearchTests(unittest.TestCase):
         resistance.pop("dataset_id")
         self.assertEqual(assess_levels(self.levels["quote"], resistance, self.levels["invalidation"], self.now)["status"], "UNKNOWN")
 
+    def test_invalid_tranche_blocks(self):
+        levels = assess_levels(**self.levels, now=self.now)
+        result = estimate_net_trade(self.broker, levels, self.fx, self.costs, tranche_eur=float("nan"), now=self.now)
+        self.assertEqual(result["status"], "BLOCK")
+
     def test_missing_news_prevents_candidate(self):
         data = dict(self.levels, symbol="SYNTH", broker=self.broker, fx=self.fx, costs=self.costs, timeframes=self.timeframes)
         self.assertEqual(assess_candidate(data, self.now)["status"], "INCOMPLETE_OR_BLOCKED")
