@@ -80,6 +80,32 @@ class ShadowDecisionTests(unittest.TestCase):
         self.assertIn("SOURCE_INDEPENDENCE_UNVERIFIED", r["blocks"])
         self.assertFalse(r["trade_ready"])
 
+    def test_missing_calendar_evidence_blocks(self):
+        r = assess_shadow_with_market_evidence({}, {}, session_date="2026-11-17")
+        self.assertIn("CALENDAR_CALENDAR_EVIDENCE_MISSING", r["blocks"])
+        self.assertIn("CALENDAR_METADATA_INCOMPLETE", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+
+    def test_calendar_mic_mismatch_blocks(self):
+        r = assess_shadow_with_market_evidence(
+            {"symbol": "AAPL"}, {"ticker": "AAPL", "mic": "XNAS"},
+            calendar_evidence={"exchange": "XNYS"}, session_date="2026-11-17")
+        self.assertIn("CALENDAR_MARKET_MIC_MISMATCH", r["blocks"])
+        self.assertFalse(r["notify"])
+
+    def test_complete_calendar_metadata_never_self_attests(self):
+        from datetime import datetime, timezone
+        now = datetime(2026, 11, 17, 13, tzinfo=timezone.utc)
+        calendar = {"session_date": "2026-11-17", "session_kind": "regular",
+                    "exchange": "XNAS", "source_url": "https://example.org/calendar",
+                    "retrieval_reference": "offline", "retrieved_utc": now.isoformat()}
+        r = assess_shadow_with_market_evidence(
+            {"symbol": "AAPL"}, {"ticker": "AAPL", "mic": "XNAS"},
+            calendar_evidence=calendar, session_date="2026-11-17", now=now)
+        self.assertEqual(r["calendar"]["status"], "METADATA_COMPLETE_UNVERIFIED")
+        self.assertIn("EXCHANGE_CALENDAR_UNVERIFIED", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+
     def test_bad_market_payload_fails_closed(self):
         r = assess_shadow_with_market_evidence({}, {"payload": None})
         self.assertIn("MARKET_EVIDENCE_INVALID", r["blocks"])
