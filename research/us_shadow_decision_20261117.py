@@ -54,6 +54,16 @@ def assess_shadow_with_market_evidence(candidate, market_kwargs, *, now=None, so
             isinstance(source_identity.get("mic"), str) and
             market_kwargs["mic"] != source_identity["mic"]):
         blocks.append("SOURCE_MARKET_MIC_MISMATCH")
+    # The source record must refer to the exact market payload digest.
+    # Matching self-declared hashes are consistency evidence, not authenticity.
+    if isinstance(source_identity, dict) and isinstance(market_kwargs, dict):
+        source_hash = source_identity.get("content_sha256")
+        market_hash = market_kwargs.get("expected_sha256")
+        if (not isinstance(source_hash, str) or not isinstance(market_hash, str)
+                or not source_hash.strip() or not market_hash.strip()):
+            blocks.append("SOURCE_MARKET_DIGEST_MISSING")
+        elif source_hash.lower() != market_hash.lower():
+            blocks.append("SOURCE_MARKET_DIGEST_MISMATCH")
     # Calendar metadata is reviewed separately; never grant official-session trust.
     try:
         calendar_result = review_exchange_calendar(
