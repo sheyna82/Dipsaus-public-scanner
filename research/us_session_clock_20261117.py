@@ -3,7 +3,7 @@
 Uses zoneinfo America/New_York for DST. Does not assert exchange holidays,
 early closes, halts or instrument-specific trading calendars.
 """
-from datetime import datetime, time, timezone
+from datetime import datetime, time, timezone, timedelta
 from zoneinfo import ZoneInfo
 
 NY = ZoneInfo("America/New_York")
@@ -33,7 +33,9 @@ def classify_regular_session(bars, *, timeframe):
             blocks.append("WEEKEND_BAR")
         if timeframe == "hourly":
             # Bar timestamps interpreted as start-of-interval, not end.
-            if not (time(9, 30) <= local.time() < time(16, 0)):
+            if not (time(9, 30) <= local.time() and
+                    (local + timedelta(hours=1)).date() == local.date() and
+                    (local + timedelta(hours=1)).time() <= time(16, 0)):
                 blocks.append("OUTSIDE_REGULAR_SESSION")
     # This checks only coarse weekday/clock bounds. Holidays and early
     # closes need an independently verified exchange calendar.
