@@ -23,7 +23,7 @@ class ShadowDecisionTests(unittest.TestCase):
     def test_invalid_candidate_quote_type_fails_closed(self):
         r = assess_shadow_with_market_evidence({"quote": ["malformed"]}, None)
         self.assertEqual(r["status"], "SHADOW_BLOCKED")
-        self.assertIn("CANDIDATE_EVIDENCE_INVALID", r["blocks"])
+        self.assertIn("CANDIDATE_quote_VALUE", r["blocks"])
         self.assertFalse(r["notify"])
 
     def test_invalid_candidate_timeframes_type_fails_closed(self):
