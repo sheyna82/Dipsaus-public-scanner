@@ -77,6 +77,15 @@ def assess_shadow_with_market_evidence(candidate, market_kwargs, *, now=None, so
             isinstance(market_kwargs.get("mic"), str) and
             calendar_evidence["exchange"] != market_kwargs["mic"]):
         blocks.append("CALENDAR_MARKET_MIC_MISMATCH")
+    # A matching ticker and MIC still do not prove that source metadata refers
+    # to the same instrument. Reject contradictory instrument identifiers.
+    if (isinstance(source_identity, dict) and
+            isinstance(candidate_symbol, str) and candidate_symbol.strip()):
+        source_instrument = source_identity.get("instrument_id")
+        if not isinstance(source_instrument, str) or not source_instrument.strip():
+            blocks.append("SOURCE_INSTRUMENT_IDENTITY_MISSING")
+        elif source_instrument.strip().upper() != candidate_symbol.strip().upper():
+            blocks.append("SOURCE_INSTRUMENT_IDENTITY_UNRESOLVED")
     # Successful offline screening is not source independence, exchange-calendar
     # attestation, license clearance or live broker execution evidence.
     blocks.extend(("SOURCE_INDEPENDENCE_UNVERIFIED", "EXCHANGE_CALENDAR_UNVERIFIED",
