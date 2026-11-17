@@ -76,3 +76,17 @@ Inspected current branch copies of `.github/workflows/shadow-us.yml`, `.github/w
 - **Safety consequence**: keep the new US research workflow entirely offline, without provider secrets, uploads, notifications or production calls. Any live integration must have a private data boundary and separate entitlement approval.
 
 **Open questions**: Which provider supplies current US OHLCV inside `safe_runner.py us`? Are its historical and real-time entitlements sufficient? Does the private state contain provider provenance and expiry? These require a focused call-graph audit, not inference from a green Actions badge.
+
+## Actual US data call graph — source-level audit, 2026-11-17
+
+Directly inspected `safe_runner.py`, `us_recovery_pilot.py`, `us_momentum_recovery_discovery.py`, `us_auto_prealert_handoff.py` on the isolated branch:
+
+1. `safe_runner.py us` invokes `us_momentum_recovery_discovery.py`, then seven consecutive `us_recovery_pilot.py` batches per completed sweep (`US_BATCH`), from a total of 21 rotating batches. It then invokes `us_auto_prealert_handoff.py` and `us_live_trigger_routes.py`, saves batch reports and routes privately. Three successful seven-batch sweeps can cover all 21 batches; a single sweep is not full-universe coverage.
+2. `us_recovery_pilot.py` reads Nasdaq Trader official listed/other-listed symbol directories and Yahoo chart endpoint `/v8/finance/chart/<symbol>?range=6mo&interval=1d`. It screens at most 240 symbols per batch with a six-worker pool. Its historical daily price, pivots and early-turn conditions are explicitly research-only. `last_bar_date` is derived from the provider timestamps and no independent official exchange-session attestation was found in this path.
+3. `us_momentum_recovery_discovery.py` reads Nasdaq Trader symbol lists and enriches metadata with Yahoo most-actives/gainers/losers screeners, then uses Yahoo daily chart (3mo/1d) and intraday chart (1d/1m) to classify bottom/higher-low/reclaim structure. Yahoo quote metadata and intraday bars are not independent broker executable bid/ask evidence.
+4. `us_auto_prealert_handoff.py` merges deep-recovery queue with broad momentum candidates, deduplicates by symbol, and labels execution blocks such as `BROKER-BID-ASK-NOT-VERIFIED`, `DYNAMIC-SIZING-MONEY-GATE-NOT-VERIFIED`, event/portfolio and R/R checks. It writes a local handoff JSON later consumed by the route builder; `execution_ready=False` remains explicit.
+5. `safe_runner.py` suppresses subprocess stdout/stderr for the US route, saves reports in private state and prints a fixed generic completion line. This limits public disclosure, but a green workflow run alone cannot establish coverage, market-data freshness, provider terms, or independently verified broker quotes.
+
+**Integration gap:** The new isolated `research/us_*_20261117.py` evidence modules are offline and do not receive the existing Yahoo-produced discovery data. The Massive adapter is a separate synthetic research experiment, not the live source of the current US scanner. Do not label the current production feed as Massive.
+
+**Next audit:** inspect `us_live_trigger_routes.py` for freshness, signal thresholds and downstream handoff semantics, then design a read-only evidence adapter that can consume a *redacted, explicitly authorized private report* without logging raw provider data publicly. No production changes or live data export.
