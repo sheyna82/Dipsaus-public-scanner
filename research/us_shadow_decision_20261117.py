@@ -11,10 +11,14 @@ def assess_shadow_with_market_evidence(candidate, market_kwargs, *, now=None):
         blocks.append("CANDIDATE_INPUT_MISSING")
         candidate_result = None
     else:
-        candidate_result = assess_candidate(candidate, now=now)
-        blocks.extend("CANDIDATE_" + b for b in candidate_result["blocks"])
-        if candidate_result["status"] != "RESEARCH_CANDIDATE":
-            blocks.append("CANDIDATE_NOT_CONFIRMED")
+        try:
+            candidate_result = assess_candidate(candidate, now=now)
+            blocks.extend("CANDIDATE_" + b for b in candidate_result["blocks"])
+            if candidate_result["status"] != "RESEARCH_CANDIDATE":
+                blocks.append("CANDIDATE_NOT_CONFIRMED")
+        except (TypeError, ValueError, KeyError, AttributeError, OverflowError, ZeroDivisionError):
+            candidate_result = None
+            blocks.append("CANDIDATE_EVIDENCE_INVALID")
     if not isinstance(market_kwargs, dict):
         blocks.append("MARKET_EVIDENCE_MISSING")
         market_result = None
