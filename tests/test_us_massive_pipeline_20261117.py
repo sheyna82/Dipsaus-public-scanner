@@ -39,7 +39,7 @@ class MassivePipelineTests(unittest.TestCase):
         self.assertIn("NORMALIZATION_TICKER_MISMATCH", self.check(ticker="OTHER")["blocks"])
     def test_outside_session_blocks(self):
         p = {"ticker": "SYNTH", "results": [dict(x) for x in self.payload["results"]]}
-        p["results"][0]["t"] -= 3600000
+        p["results"][0]["t"] -= 7200000
         bars = normalize_massive_aggregates(p, ticker="SYNTH", mic="XNAS",
                                              adjustment_policy="unadjusted")["bars"]
         digest = hashlib.sha256(canonical_payload(bars)).hexdigest()
