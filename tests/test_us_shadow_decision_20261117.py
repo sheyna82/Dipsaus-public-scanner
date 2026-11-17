@@ -142,6 +142,28 @@ class ShadowDecisionTests(unittest.TestCase):
         self.assertIn("SOURCE_INDEPENDENCE_UNVERIFIED", r["blocks"])
         self.assertFalse(r["trade_ready"])
 
+    def test_source_market_digest_mismatch_blocks(self):
+        r = assess_shadow_with_market_evidence(
+            {"symbol": "AAPL"}, {"ticker": "AAPL", "expected_sha256": "a" * 64},
+            source_identity={"content_sha256": "b" * 64})
+        self.assertIn("SOURCE_MARKET_DIGEST_MISMATCH", r["blocks"])
+        self.assertFalse(r["notify"])
+
+    def test_source_market_digest_missing_blocks(self):
+        r = assess_shadow_with_market_evidence(
+            {"symbol": "AAPL"}, {"ticker": "AAPL"},
+            source_identity={"content_sha256": "a" * 64})
+        self.assertIn("SOURCE_MARKET_DIGEST_MISSING", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+
+    def test_matching_digest_does_not_grant_source_trust(self):
+        r = assess_shadow_with_market_evidence(
+            {"symbol": "AAPL"}, {"ticker": "AAPL", "expected_sha256": "A" * 64},
+            source_identity={"content_sha256": "a" * 64})
+        self.assertNotIn("SOURCE_MARKET_DIGEST_MISMATCH", r["blocks"])
+        self.assertIn("SOURCE_INDEPENDENCE_UNVERIFIED", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+
     def test_bad_market_payload_fails_closed(self):
         r = assess_shadow_with_market_evidence({}, {"payload": None})
         self.assertIn("MARKET_EVIDENCE_INVALID", r["blocks"])
