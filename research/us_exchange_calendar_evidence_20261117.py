@@ -4,6 +4,7 @@ Clock screening is not proof of a trading session. Only explicitly supplied,
 independently verified calendar evidence may pass the calendar gate.
 """
 from datetime import date, datetime, timezone
+from urllib.parse import urlsplit
 
 def review_exchange_calendar(record, *, session_date, now=None, max_age_days=14):
     blocks = []
@@ -25,8 +26,18 @@ def review_exchange_calendar(record, *, session_date, now=None, max_age_days=14)
         blocks.append("SESSION_KIND_UNSUPPORTED")
     if record.get("exchange") not in ("XNAS", "XNYS"):
         blocks.append("EXCHANGE_UNSUPPORTED")
-    if not isinstance(record.get("source_url"), str) or not record["source_url"].startswith("https://"):
+    source_url = record.get("source_url")
+    if not isinstance(source_url, str):
         blocks.append("SOURCE_URL_INVALID")
+    else:
+        try:
+            parsed = urlsplit(source_url)
+            if (parsed.scheme != "https" or not parsed.hostname or
+                    parsed.username is not None or parsed.password is not None or
+                    parsed.fragment or any(ch.isspace() for ch in source_url)):
+                blocks.append("SOURCE_URL_INVALID")
+        except ValueError:
+            blocks.append("SOURCE_URL_INVALID")
     if not isinstance(record.get("retrieval_reference"), str) or not record["retrieval_reference"].strip():
         blocks.append("RETRIEVAL_REFERENCE_MISSING")
     try:
