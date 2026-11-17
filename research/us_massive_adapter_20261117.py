@@ -12,6 +12,14 @@ def normalize_massive_aggregates(payload, *, ticker, mic, adjustment_policy):
         blocks.append("ADJUSTMENT_POLICY_UNKNOWN")
     if isinstance(payload, dict) and payload.get("ticker") != ticker:
         blocks.append("TICKER_MISMATCH")
+    # The requested adjustment mode must agree with the response metadata
+    # when supplied. Missing metadata remains unknown, not silently trusted.
+    if isinstance(payload, dict):
+        adjusted = payload.get("adjusted")
+        if type(adjusted) is not bool:
+            blocks.append("ADJUSTMENT_METADATA_MISSING")
+        elif adjustment_policy in ("split_adjusted", "unadjusted") and adjusted != (adjustment_policy == "split_adjusted"):
+            blocks.append("ADJUSTMENT_MISMATCH")
     bars = []
     if not blocks:
         previous = None
