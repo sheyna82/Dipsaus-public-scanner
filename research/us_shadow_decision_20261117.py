@@ -4,8 +4,9 @@ This is a diagnostic gate, not a notification, order or production pathway.
 """
 from research.us_candidate_assessment_20261117 import assess_candidate
 from research.us_massive_pipeline_20261117 import assess_massive_fixture
+from research.us_source_identity_20261117 import review_source_identity
 
-def assess_shadow_with_market_evidence(candidate, market_kwargs, *, now=None):
+def assess_shadow_with_market_evidence(candidate, market_kwargs, *, now=None, source_identity=None):
     blocks = []
     if not isinstance(candidate, dict):
         blocks.append("CANDIDATE_INPUT_MISSING")
@@ -40,10 +41,22 @@ def assess_shadow_with_market_evidence(candidate, market_kwargs, *, now=None):
         blocks.append("INSTRUMENT_JOIN_IDENTITY_MISSING")
     elif candidate_symbol.strip().upper() != market_symbol.strip().upper():
         blocks.append("INSTRUMENT_JOIN_SYMBOL_MISMATCH")
+    # Source identity metadata is independently inspected, but never self-attests.
+    source_result = review_source_identity(source_identity)
+    blocks.extend("SOURCE_" + b for b in source_result["blocks"])
+    if source_result["status"] != "METADATA_COMPLETE_UNVERIFIED":
+        blocks.append("SOURCE_METADATA_INCOMPLETE")
+    if (isinstance(market_kwargs, dict) and
+            isinstance(source_identity, dict) and
+            isinstance(market_kwargs.get("mic"), str) and
+            isinstance(source_identity.get("mic"), str) and
+            market_kwargs["mic"] != source_identity["mic"]):
+        blocks.append("SOURCE_MARKET_MIC_MISMATCH")
     # Successful offline screening is not source independence, exchange-calendar
     # attestation, license clearance or live broker execution evidence.
     blocks.extend(("SOURCE_INDEPENDENCE_UNVERIFIED", "EXCHANGE_CALENDAR_UNVERIFIED",
                    "DATA_LICENSE_UNVERIFIED"))
     return {"status": "SHADOW_BLOCKED", "blocks": sorted(set(blocks)),
             "candidate": candidate_result, "market": market_result,
+            "source_identity": source_result,
             "trade_ready": False, "notify": False, "automatic_orders": False}
