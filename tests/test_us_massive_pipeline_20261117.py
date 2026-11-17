@@ -72,6 +72,28 @@ class MassivePipelineTests(unittest.TestCase):
         self.assertIn("NORMALIZATION_INSTRUMENT_METADATA_INVALID", r["blocks"])
         self.assertFalse(r["trade_ready"])
 
+    def test_weekend_with_valid_digest_still_blocks(self):
+        p = {**self.payload, "results": [dict(x) for x in self.payload["results"]]}
+        # Saturday 7 November replaces Friday 6 November, preserving order.
+        p["results"][4]["t"] += 86400000
+        bars = normalize_massive_aggregates(p, ticker="SYNTH", mic="XNAS",
+                                             adjustment_policy="unadjusted")["bars"]
+        digest = hashlib.sha256(canonical_payload(bars)).hexdigest()
+        r = self.check(p, expected_sha256=digest)
+        self.assertIn("SESSION_WEEKEND_BAR", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+
+    def test_close_crossing_with_valid_digest_still_blocks(self):
+        p = {**self.payload, "results": [dict(x) for x in self.payload["results"]]}
+        # 15:30 New York on Nov 2, one-hour bar extends beyond 16:00.
+        p["results"][0]["t"] += 5 * 3600000
+        bars = normalize_massive_aggregates(p, ticker="SYNTH", mic="XNAS",
+                                             adjustment_policy="unadjusted")["bars"]
+        digest = hashlib.sha256(canonical_payload(bars)).hexdigest()
+        r = self.check(p, expected_sha256=digest)
+        self.assertIn("SESSION_OUTSIDE_REGULAR_SESSION", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+
     def test_digest_mismatch_blocks(self):
         self.assertIn("INTEGRITY_SHA256_MISMATCH", self.check(expected_sha256="0"*64)["blocks"])
     def test_stale_fetch_blocks(self):
