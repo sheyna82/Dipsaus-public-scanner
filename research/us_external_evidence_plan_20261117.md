@@ -53,3 +53,14 @@ Findings from provider-published material (not account-specific attestation):
 - A GitHub Actions secret, if one exists, is not evidence of licensing, source independence or permitted publication. Never print a secret or place raw licensed market data in a public CI log or artifact.
 
 Required decision before implementing a network client: establish the actual account's access tier and whether personal automated research and any intended notification content are covered; choose a private execution/storage boundary for licensed data. No public-repo live feed integration is approved by this dossier.
+
+## Existing repository provider inventory — source audit, 2026-11-17
+
+The public repository already contains provider-oriented code; adding a second unrelated credential workflow would duplicate risk:
+
+- `us_company_profile.py` reads `FINNHUB_API_KEY` from the environment and fetches Finnhub issuer profiles. Its own result is `PROFILE_RESEARCH_AVAILABLE` / `UNVERIFIED`, **not independently verified OHLCV or broker pricing**.
+- `source_audit.py` probes Nasdaq Trader symbol-directory text files, Stooq daily CSV and Yahoo chart history. It explicitly declares `SOURCE_TEST_ONLY`, `actual_symbols_screened=0`, `full_us_scan_executed=False`, `trade_ready=False`. Reachability is not entitlement, live-feed correctness or permission to republish.
+- `migration/ACTIVATION.md` is **historical and explicitly not a live status report**. It lists provider secret names `FINNHUB_API_KEY` and `EODHD_API_TOKEN`, private state storage and notification safeguards; it does not prove those secrets are currently installed, valid or entitled.
+- GitHub code search on the default branch found references to `FINNHUB_API_KEY`; no account secret values were inspected or exposed. Search results do not prove the absence of other providers.
+
+**Next safe research task:** trace the current US scanner's existing provider selection, private report boundary, and exact freshness/fallback semantics from source and recent successful *non-sensitive* job metadata. Determine whether an existing authorized private research path can be reused before proposing Massive credentials. Never trigger a live probe that logs raw licensed data into public CI.
