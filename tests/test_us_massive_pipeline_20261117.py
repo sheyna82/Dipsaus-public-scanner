@@ -10,7 +10,7 @@ class MassivePipelineTests(unittest.TestCase):
     def setUp(self):
         self.now = datetime(2026, 11, 17, 12, tzinfo=timezone.utc)
         # Synthetic weekday dates at 10:30 NY local, Nov 2-10 2026.
-        self.payload = {"ticker": "SYNTH", "results": [
+        self.payload = {"ticker": "SYNTH", "adjusted": False, "results": [
             {"t": int(datetime(2026, 11, d, 15, 30, tzinfo=timezone.utc).timestamp()*1000),
              "o": 10, "h": 12, "l": 9, "c": 11, "v": 100}
             for d in (2, 3, 4, 5, 6, 9, 10)]}
@@ -38,14 +38,14 @@ class MassivePipelineTests(unittest.TestCase):
     def test_bad_ticker_blocks(self):
         self.assertIn("NORMALIZATION_TICKER_MISMATCH", self.check(ticker="OTHER")["blocks"])
     def test_outside_session_blocks(self):
-        p = {"ticker": "SYNTH", "results": [dict(x) for x in self.payload["results"]]}
+        p = {"ticker": "SYNTH", "adjusted": False, "results": [dict(x) for x in self.payload["results"]]}
         p["results"][0]["t"] -= 7200000
         bars = normalize_massive_aggregates(p, ticker="SYNTH", mic="XNAS",
                                              adjustment_policy="unadjusted")["bars"]
         digest = hashlib.sha256(canonical_payload(bars)).hexdigest()
         self.assertIn("SESSION_OUTSIDE_REGULAR_SESSION", self.check(p, expected_sha256=digest)["blocks"])
     def test_weekend_blocks(self):
-        p = {"ticker": "SYNTH", "results": [dict(x) for x in self.payload["results"]]}
+        p = {"ticker": "SYNTH", "adjusted": False, "results": [dict(x) for x in self.payload["results"]]}
         p["results"][4]["t"] += 86400000
         bars = normalize_massive_aggregates(p, ticker="SYNTH", mic="XNAS",
                                              adjustment_policy="unadjusted")["bars"]
