@@ -29,6 +29,14 @@ class CalendarEvidenceTests(unittest.TestCase):
         self.assertIn("EXCHANGE_UNSUPPORTED", self.check({**self.record, "exchange": "XXXX"})["blocks"])
     def test_http_source(self):
         self.assertIn("SOURCE_URL_INVALID", self.check({**self.record, "source_url": "http://example.org"})["blocks"])
+    def test_url_missing_host(self):
+        self.assertIn("SOURCE_URL_INVALID", self.check({**self.record, "source_url": "https://"})["blocks"])
+    def test_url_embedded_credentials(self):
+        self.assertIn("SOURCE_URL_INVALID", self.check({**self.record, "source_url": "https://user:pass@example.org/calendar"})["blocks"])
+    def test_url_fragment(self):
+        self.assertIn("SOURCE_URL_INVALID", self.check({**self.record, "source_url": "https://example.org/calendar#fake"})["blocks"])
+    def test_url_malformed_ipv6(self):
+        self.assertIn("SOURCE_URL_INVALID", self.check({**self.record, "source_url": "https://[broken/calendar"})["blocks"])
     def test_stale_retrieval(self):
         self.assertIn("RETRIEVAL_STALE_OR_INVALID", self.check({**self.record, "retrieved_utc": (self.now-timedelta(days=30)).isoformat()})["blocks"])
     def test_missing_reference(self):
