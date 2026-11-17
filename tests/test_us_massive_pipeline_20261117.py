@@ -53,6 +53,25 @@ class MassivePipelineTests(unittest.TestCase):
         self.assertIn("NORMALIZATION_RESULTS_MISSING", r["blocks"])
         self.assertFalse(r["trade_ready"])
 
+    def test_corrupt_ohlc_blocks_pipeline(self):
+        p = {**self.payload, "results": [dict(x) for x in self.payload["results"]]}
+        p["results"][2]["h"] = 8
+        r = self.check(p)
+        self.assertIn("NORMALIZATION_BAR_OHLC_INVALID", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+
+    def test_duplicate_bar_blocks_pipeline(self):
+        p = {**self.payload, "results": [dict(x) for x in self.payload["results"]]}
+        p["results"][3]["t"] = p["results"][2]["t"]
+        r = self.check(p)
+        self.assertIn("NORMALIZATION_TIMESTAMP_INVALID_OR_UNSORTED", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+
+    def test_bad_mic_blocks_pipeline(self):
+        r = self.check(mic="")
+        self.assertIn("NORMALIZATION_INSTRUMENT_METADATA_INVALID", r["blocks"])
+        self.assertFalse(r["trade_ready"])
+
     def test_digest_mismatch_blocks(self):
         self.assertIn("INTEGRITY_SHA256_MISMATCH", self.check(expected_sha256="0"*64)["blocks"])
     def test_stale_fetch_blocks(self):
