@@ -42,5 +42,23 @@ class CalendarEvidenceTests(unittest.TestCase):
     def test_missing_reference(self):
         self.assertIn("RETRIEVAL_REFERENCE_MISSING", self.check({**self.record, "retrieval_reference": ""})["blocks"])
 
+
+    def test_claimed_verified_flag_cannot_authorize(self):
+        r = self.check({**self.record, "officially_verified": True,
+                        "exchange_calendar_verified": True, "trade_ready": True})
+        self.assertFalse(r["exchange_calendar_verified"])
+        self.assertFalse(r["trade_ready"])
+    def test_future_retrieval_beyond_clock_tolerance(self):
+        r = self.check({**self.record,
+                        "retrieved_utc": (self.now+timedelta(minutes=2)).isoformat()})
+        self.assertIn("RETRIEVAL_STALE_OR_INVALID", r["blocks"])
+    def test_unparseable_retrieval(self):
+        r = self.check({**self.record, "retrieved_utc": "not-a-timestamp"})
+        self.assertIn("RETRIEVAL_STALE_OR_INVALID", r["blocks"])
+    def test_closed_session_metadata_not_a_trading_authorization(self):
+        r = self.check({**self.record, "session_kind": "closed"})
+        self.assertFalse(r["exchange_calendar_verified"])
+        self.assertFalse(r["trade_ready"])
+
 if __name__ == "__main__":
     unittest.main()
