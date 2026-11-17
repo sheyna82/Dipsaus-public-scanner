@@ -31,6 +31,15 @@ def assess_shadow_with_market_evidence(candidate, market_kwargs, *, now=None):
         except (TypeError, ValueError, KeyError):
             market_result = None
             blocks.append("MARKET_EVIDENCE_INVALID")
+    # A market fixture must never be joined to a different candidate symbol.
+    # Absence of either identifier is also a block, not a wildcard match.
+    candidate_symbol = candidate.get("symbol") if isinstance(candidate, dict) else None
+    market_symbol = market_kwargs.get("ticker") if isinstance(market_kwargs, dict) else None
+    if (not isinstance(candidate_symbol, str) or not candidate_symbol.strip()
+            or not isinstance(market_symbol, str) or not market_symbol.strip()):
+        blocks.append("INSTRUMENT_JOIN_IDENTITY_MISSING")
+    elif candidate_symbol.strip().upper() != market_symbol.strip().upper():
+        blocks.append("INSTRUMENT_JOIN_SYMBOL_MISMATCH")
     # Successful offline screening is not source independence, exchange-calendar
     # attestation, license clearance or live broker execution evidence.
     blocks.extend(("SOURCE_INDEPENDENCE_UNVERIFIED", "EXCHANGE_CALENDAR_UNVERIFIED",
