@@ -107,6 +107,8 @@ on:
       - 'research/spoor2_pilot_gap_report_20261118.py'
       - 'tests/test_spoor2_pilot_gap_report_20261118.py'
       - 'tests/test_spoor2_xetra_authorization_expiry_20261118.py'
+      - 'tests/test_spoor2_xetra_cli_authorization_20261118.py'
+      - 'research/spoor2_xetra_artifact_retrieval_20261113.py'
       - '.github/workflows/spoor2-xetra-approved-once-20261118.yml'
       - '.github/workflows/spoor2-isolated-tests.yml'
   pull_request:
