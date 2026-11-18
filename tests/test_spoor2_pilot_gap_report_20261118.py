@@ -4,7 +4,16 @@ from research.spoor2_pilot_gap_report_20261118 import build_pilot_gap_report
 class PilotGapReportTests(unittest.TestCase):
     def test_pilot_identifiers(self):
         r=build_pilot_gap_report()
-        self.assertEqual([x["isin"] for x in r["rows"]],["DE0006231004","DE0007030009"])
+        self.assertEqual([x["isin"] for x in r["rows"]],["NL0010273215","DE0006231004","FI0009000681","DE0007030009"])
+    def test_four_pilot_markets_are_preserved_as_unverified_claims(self):
+        r=build_pilot_gap_report()
+        self.assertEqual(
+            [(x["symbol"],x["operating_mic"]) for x in r["rows"]],
+            [("ASML.AS","XAMS"),("IFX.DE","XETR"),
+             ("NOKIA.HE","XHEL"),("RHM.DE","XETR")]
+        )
+        self.assertEqual(r["integration_status"],"RESEARCH_ONLY_UNATTESTED")
+
     def test_every_audit_is_blocked(self):
         r=build_pilot_gap_report()
         for row in r["rows"]:
