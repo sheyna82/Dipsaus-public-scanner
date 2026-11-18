@@ -1,48 +1,15 @@
-name: Spoor 2 approved Xetra one-time research fetch
+name: Spoor 2 expired Xetra authorization guard
 on:
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  approved-once:
+  authorization-expired:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 1
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
-        with:
-          python-version: '3.12'
-      - name: Fetch only two explicitly approved exact URLs with no redirects
-        env:
-          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+      - name: Reject replay of exhausted one-time authorization
         run: |
-          python - <<'PY'
-          import json
-          from research.spoor2_xetra_bounded_second_request_20261114 import fetch_approved_second_request
-          from research.spoor2_xetra_csv_intake_20261113 import inspect_xetra_csv
-          from research.spoor2_xetra_zip_intake_20261113 import inspect_xetra_static_zip
-
-          approved = {
-              "csv": "https://www.cashmarket.deutsche-boerse.com/resource/blob/1528/a4b7965b87cf1ef4621a28b85f145ae9/data/t7-xetr-allTradableInstruments.csv",
-              "zip": "https://www.cashmarket.deutsche-boerse.com/resource/blob/1542/ccfacc0c34b29a80f860874f6c0b8795/data/RDF_StaticData_xetr.zip",
-          }
-          for kind, url in approved.items():
-              fetched = fetch_approved_second_request(kind, url, (url,))
-              inspection = None
-              if fetched["bytes"] is not None:
-                  inspection = (inspect_xetra_csv if kind == "csv" else inspect_xetra_static_zip)(fetched["bytes"])
-              print(json.dumps({
-                  "kind": kind,
-                  "status": fetched["status"],
-                  "http_status": fetched["http_status"],
-                  "byte_count": fetched["byte_count"],
-                  "sha256": fetched["sha256"],
-                  "blocks": fetched["blocks"],
-                  "inspection": inspection,
-                  "source_attested": False,
-                  "trade_ready": False,
-                  "order_placement_enabled": False,
-              }, sort_keys=True, default=str))
-          PY
+          echo "Xetra one-time authorization dated 2026-11-18 has been exhausted."
+          echo "No external requests are permitted by this workflow."
+          exit 1
