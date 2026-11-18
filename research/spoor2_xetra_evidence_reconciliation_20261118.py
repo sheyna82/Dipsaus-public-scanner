@@ -28,7 +28,10 @@ def build_xetra_reconciled_evidence_report():
     rows = []
     for isin in sorted(old):
         prior, current = old[isin], new[isin]
-        if prior["symbol_claim"] != current["mnemonic"]:
+        # Historical notices use broker-style IFX.DE/RHM.DE; Xetra CSV uses IFX/RHM.
+        # Only the explicitly expected .DE suffix may be normalized here.
+        historical_symbol = prior["symbol_claim"]
+        if not isinstance(historical_symbol, str) or not historical_symbol.endswith(".DE") or historical_symbol[:-3] != current["mnemonic"]:
             raise ValueError("XETRA_EVIDENCE_SYMBOL_MISMATCH")
         rows.append({
             "isin": isin,
