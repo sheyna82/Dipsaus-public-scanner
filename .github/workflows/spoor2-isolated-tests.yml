@@ -108,6 +108,8 @@ on:
       - 'tests/test_spoor2_pilot_gap_report_20261118.py'
       - 'research/spoor2_eu_pilot_primary_source_dossier_20261118.py'
       - 'tests/test_spoor2_eu_pilot_primary_source_dossier_20261118.py'
+      - 'research/spoor2_eu_mic_publication_context_20261118.py'
+      - 'tests/test_spoor2_eu_mic_publication_context_20261118.py'
       - 'tests/test_spoor2_xetra_authorization_expiry_20261118.py'
       - 'tests/test_spoor2_xetra_cli_authorization_20261118.py'
       - 'research/spoor2_xetra_artifact_retrieval_20261113.py'
