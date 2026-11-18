@@ -145,6 +145,38 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.12'
+      - name: Inspect current approved Xetra URL redirect fingerprints without following
+        env:
+          SCANNER_NOTIFICATIONS_ENABLED: 'false'
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import urllib.error
+          import urllib.request
+          from research.spoor2_xetra_artifact_retrieval_20261113 import NoRedirect
+          urls = {
+              "csv": "https://www.cashmarket.deutsche-boerse.com/resource/blob/1528/a4b7965b87cf1ef4621a28b85f145ae9/data/t7-xetr-allTradableInstruments.csv",
+              "zip": "https://www.cashmarket.deutsche-boerse.com/resource/blob/1542/ccfacc0c34b29a80f860874f6c0b8795/data/RDF_StaticData_xetr.zip",
+          }
+          opener = urllib.request.build_opener(NoRedirect())
+          for kind, url in urls.items():
+              record = {"kind": kind, "http_status": None, "location_sha256": None,
+                        "redirect_to_same_approved_url": None, "redirect_not_followed": True,
+                        "source_attested": False, "trade_ready": False}
+              try:
+                  with opener.open(urllib.request.Request(url, method="HEAD"), timeout=15) as response:
+                      record["http_status"] = response.status
+              except urllib.error.HTTPError as exc:
+                  record["http_status"] = exc.code
+                  loc = exc.headers.get("Location") if exc.headers else None
+                  if loc:
+                      record["location_sha256"] = hashlib.sha256(loc.encode("utf-8")).hexdigest()
+                      record["redirect_to_same_approved_url"] = (loc == url)
+              except (OSError, ValueError) as exc:
+                  record["failure_category"] = type(exc).__name__
+              print(json.dumps(record, sort_keys=True))
+          PY
       - name: One-time exact-approved Xetra no-redirect fetch
         env:
           SCANNER_NOTIFICATIONS_ENABLED: 'false'
