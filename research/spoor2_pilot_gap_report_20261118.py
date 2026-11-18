@@ -5,7 +5,9 @@ Do not infer that source files were freshly downloaded or authenticated.
 from research.spoor2_gap_report_bridge_20261118 import build_spoor2_gap_report
 
 PILOT=(
+    {"symbol":"ASML.AS","isin":"NL0010273215","operating_mic":"XAMS"},
     {"symbol":"IFX.DE","isin":"DE0006231004","operating_mic":"XETR"},
+    {"symbol":"NOKIA.HE","isin":"FI0009000681","operating_mic":"XHEL"},
     {"symbol":"RHM.DE","isin":"DE0007030009","operating_mic":"XETR"},
 )
 
