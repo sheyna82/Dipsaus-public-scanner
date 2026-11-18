@@ -100,6 +100,10 @@ on:
       - 'tests/test_spoor2_iso_mic_csv_intake_20261113.py'
       - 'research/spoor2_iso_mic_candidate_match_20261113.py'
       - 'tests/test_spoor2_iso_mic_candidate_match_20261113.py'
+      - 'research/spoor2_evidence_gap_overview_20261118.py'
+      - 'research/spoor2_gap_report_bridge_20261118.py'
+      - 'tests/test_spoor2_evidence_gap_overview_20261118.py'
+      - 'tests/test_spoor2_gap_report_bridge_20261118.py'
       - '.github/workflows/spoor2-isolated-tests.yml'
   pull_request:
     branches:
