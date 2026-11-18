@@ -5,7 +5,9 @@ on:
       - research/us-shadow-isolated-20261117
     paths:
       - 'research/us_*_20261117.py'
+      - 'research/us_*_20261118.py'
       - 'tests/test_us_*_20261117.py'
+      - 'tests/test_us_*_20261118.py'
       - '.github/workflows/us-shadow-research-isolated.yml'
   workflow_dispatch:
 permissions:
@@ -20,4 +22,6 @@ jobs:
         with:
           python-version: '3.11'
       - name: Offline fail-closed unit tests
-        run: python -m unittest discover -s tests -p 'test_us_*_20261117.py' -v
+        run: |
+          python -m unittest discover -s tests -p 'test_us_*_20261117.py' -v
+          python -m unittest discover -s tests -p 'test_us_*_20261118.py' -v
