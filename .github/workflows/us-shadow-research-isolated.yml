@@ -7,9 +7,11 @@ on:
       - 'research/us_*_20261117.py'
       - 'research/us_*_20261118.py'
       - 'research/eu_selection_gate_attribution_20261118.py'
+      - 'research/eu_selection_money_sensitivity_20261118.py'
       - 'tests/test_us_*_20261117.py'
       - 'tests/test_us_*_20261118.py'
       - 'tests/test_eu_selection_gate_attribution_20261118.py'
+      - 'tests/test_eu_selection_money_sensitivity_20261118.py'
       - '.github/workflows/us-shadow-research-isolated.yml'
   workflow_dispatch:
 permissions:
@@ -28,3 +30,4 @@ jobs:
           python -m unittest discover -s tests -p 'test_us_*_20261117.py' -v
           python -m unittest discover -s tests -p 'test_us_*_20261118.py' -v
           python -m unittest discover -s tests -p 'test_eu_selection_gate_attribution_20261118.py' -v
+          python -m unittest discover -s tests -p 'test_eu_selection_money_sensitivity_20261118.py' -v
