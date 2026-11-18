@@ -27,6 +27,15 @@ class XetraReconciliationTests(unittest.TestCase):
                     "notify", "automatic_orders", "external_download_performed"):
             self.assertFalse(report[key])
 
+    def test_unexpected_historical_suffix_fails_closed(self):
+        from research.spoor2_xetra_historical_segment_notices_20261118 import NOTICES
+        from copy import deepcopy
+        fake = deepcopy(NOTICES)
+        fake["DE0006231004"]["symbol_claim"] = "IFX.US"
+        with patch("research.spoor2_xetra_current_evidence_gap_report_20261118.NOTICES", fake):
+            with self.assertRaisesRegex(ValueError, "SYMBOL_MISMATCH"):
+                build_xetra_reconciled_evidence_report()
+
     def test_mismatched_instruments_fail_closed(self):
         fake = {"rows": [{"isin": "INVALID"}], **{
             key: False for key in ("source_attested", "instrument_segment_verified",
