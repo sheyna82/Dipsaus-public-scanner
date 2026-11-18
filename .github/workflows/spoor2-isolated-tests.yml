@@ -122,6 +122,8 @@ on:
       - 'tests/test_spoor2_xetra_uploaded_artifact_evidence_20261118.py'
       - 'research/spoor2_xetra_uploaded_artifact_parser_20261118.py'
       - 'tests/test_spoor2_xetra_uploaded_artifact_parser_20261118.py'
+      - 'research/spoor2_xetra_evidence_reconciliation_20261118.py'
+      - 'tests/test_spoor2_xetra_evidence_reconciliation_20261118.py'
       - 'tests/test_spoor2_xetra_authorization_expiry_20261118.py'
       - 'tests/test_spoor2_xetra_cli_authorization_20261118.py'
       - 'research/spoor2_xetra_artifact_retrieval_20261113.py'
