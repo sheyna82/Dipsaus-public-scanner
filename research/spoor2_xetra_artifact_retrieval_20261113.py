@@ -137,6 +137,4 @@ def public_metadata(result):
 
 
 if __name__ == "__main__":
-    for name in SOURCES:
-        result = retrieve_xetra_artifact(name)
-        print(json.dumps({"artifact": name, **public_metadata(result)}, sort_keys=True))
+    raise SystemExit("Xetra direct network retrieval disabled: explicit fresh authorization required.")
