@@ -114,6 +114,8 @@ on:
       - 'tests/test_spoor2_xetra_segment_taxonomy_20261118.py'
       - 'research/spoor2_xetra_historical_segment_notices_20261118.py'
       - 'tests/test_spoor2_xetra_historical_segment_notices_20261118.py'
+      - 'research/spoor2_xetra_instrument_record_comparison_20261118.py'
+      - 'tests/test_spoor2_xetra_instrument_record_comparison_20261118.py'
       - 'tests/test_spoor2_xetra_authorization_expiry_20261118.py'
       - 'tests/test_spoor2_xetra_cli_authorization_20261118.py'
       - 'research/spoor2_xetra_artifact_retrieval_20261113.py'
