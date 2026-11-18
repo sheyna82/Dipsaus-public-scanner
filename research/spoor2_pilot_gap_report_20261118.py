@@ -23,6 +23,12 @@ def build_pilot_gap_report():
             "manifest":{"status":"BLOCKED","blocks":["INDEPENDENT_PUBLISHER_ATTESTATION_MISSING"]},
         }
     result=build_spoor2_gap_report(list(PILOT),audits)
+    identity_by_isin={item["isin"]:item for item in PILOT}
+    for row in result["rows"]:
+        claim=identity_by_isin[row["isin"]]
+        row["symbol_claim"]=claim["symbol"]
+        row["operating_mic_claim"]=claim["operating_mic"]
+        row["identity_source_status"]="UNATTESTED_RESEARCH_CLAIM"
     result["source_scope"]="PREVIOUSLY_RECORDED_RESEARCH_OBSERVATIONS_ONLY"
     result["fresh_external_capture"]=False
     result["iso_effective_date_warning"]="2026-11-23 changes must not be treated as effective on 2026-11-18"
