@@ -14,6 +14,12 @@ class PilotGapReportTests(unittest.TestCase):
              ("NOKIA.HE","XHEL"),("RHM.DE","XETR")]
         )
         self.assertEqual(r["integration_status"],"RESEARCH_ONLY_UNATTESTED")
+        self.assertEqual(
+            {(x["symbol_claim"],x["operating_mic_claim"]) for x in r["rows"]},
+            {("ASML.AS","XAMS"),("IFX.DE","XETR"),
+             ("NOKIA.HE","XHEL"),("RHM.DE","XETR")}
+        )
+        self.assertTrue(all(x["identity_source_status"]=="UNATTESTED_RESEARCH_CLAIM" for x in r["rows"]))
 
     def test_every_audit_is_blocked(self):
         r=build_pilot_gap_report()
