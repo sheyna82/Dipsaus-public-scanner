@@ -46,5 +46,29 @@ class NetScenarioTests(unittest.TestCase):
         self.assertEqual(r["status"], "INVALID_OR_MISSING_INPUT")
 
 
+    def test_fx_friction_reduces_share_count(self):
+        base = calc(ask=698, bid=697.8, invalidation=672, target=750,
+                    budget_eur=3500, buy_fee_eur=4.9, sell_fee_eur=4.9)
+        fx = calc(ask=698, bid=697.8, invalidation=672, target=750,
+                  budget_eur=3500, buy_fee_eur=4.9, sell_fee_eur=4.9,
+                  fx_buy_fee_rate=.0025, fx_sell_fee_rate=.0025)
+        self.assertEqual(base["shares"], 5)
+        self.assertEqual(fx["shares"], 4)
+        self.assertLess(fx["net_profit_eur"], base["net_profit_eur"])
+
+    def test_negative_fx_fee_rejected(self):
+        r = calc(ask=65, bid=64.99, invalidation=64, target=70,
+                 budget_eur=3500, buy_fee_eur=4.9, sell_fee_eur=4.9,
+                 fx_buy_fee_rate=-.01)
+        self.assertEqual(r["status"], "INVALID_OR_MISSING_INPUT")
+
+    def test_fx_friction_can_turn_profit_negative(self):
+        r = calc(ask=65, bid=64.99, invalidation=64, target=65.5,
+                 budget_eur=3500, buy_fee_eur=4.9, sell_fee_eur=4.9,
+                 fx_buy_fee_rate=.01, fx_sell_fee_rate=.01)
+        self.assertLess(r["net_profit_eur"], 0)
+        self.assertFalse(r["checks"]["net_profit_at_least_150_eur"])
+
+
 if __name__ == "__main__":
     unittest.main()
