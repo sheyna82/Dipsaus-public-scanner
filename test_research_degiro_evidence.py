@@ -42,5 +42,12 @@ class DegiroEvidenceTests(unittest.TestCase):
         del e["fee_source"]
         self.assertEqual(inspect_degiro_evidence(e, now=NOW)["reason"], "MISSING_FIELDS")
 
+    def test_naive_quote_timestamp_blocked(self):
+        self.assertEqual(self.check(quote_observed_utc="2026-11-19T14:14:30")["reason"], "INVALID_QUOTE_TIMESTAMP")
+    def test_invalid_isin_checksum_blocked(self):
+        self.assertEqual(self.check(isin="DE0006231005", route_instrument_isin="DE0006231005")["reason"], "INVALID_IDENTITY")
+    def test_invalid_mic_characters_blocked(self):
+        self.assertEqual(self.check(operating_mic="XE!R", route_operating_mic="XE!R")["reason"], "INVALID_IDENTITY")
+
 if __name__ == "__main__":
     unittest.main()
