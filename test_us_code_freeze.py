@@ -48,11 +48,11 @@ class CodeFreezeTests(unittest.TestCase):
         # The same pure predicate is used by the fail-closed CLI.
         self.assertTrue(code_freeze_active(self.at_ny(2026, 11, 19, 9, 25)))
 
-    def test_dst_end_winter_netherlands(self):
+    def test_dst_end_transition_gap_netherlands(self):
         # Europe returns to winter time before US: 09:25 NY = 14:25 NL.
         ny = self.at_ny(2027, 11, 1, 9, 25)
         nl = ny.astimezone(ZoneInfo("Europe/Amsterdam"))
-        self.assertEqual((nl.hour, nl.minute), (15, 25))
+        self.assertEqual((nl.hour, nl.minute), (14, 25))
         self.assertTrue(code_freeze_active(ny))
 
 
