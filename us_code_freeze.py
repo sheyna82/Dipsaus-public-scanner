@@ -25,6 +25,7 @@ if __name__ == "__main__":
     if output:
         with open(output, "a", encoding="utf-8") as f:
             f.write(f"frozen={'true' if frozen else 'false'}\n")
-    # Exit nonzero in enforcement mode, e.g. before workflow write steps.
-    if frozen and os.environ.get("DIPSAUS_ENFORCE_CODE_FREEZE") == "1":
+    # CLI is fail-closed by default: invoke immediately before any write step.
+    # Importing code_freeze_active() remains side-effect free for research scans.
+    if frozen:
         raise SystemExit("US market-hours code freeze active; abort write workflow")
