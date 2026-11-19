@@ -19,4 +19,4 @@ jobs:
         with:
           python-version: '3.11'
       - name: Run isolated offline net scenario tests
-        run: python -m unittest -v test_research_net_scenario test_us_code_freeze test_research_net_bridge test_research_net_attestation test_research_source_policy test_research_evidence_manifest test_research_instrument_gate test_research_instrument_corroboration test_research_iso_mic_parser
+        run: python -m unittest -v test_research_net_scenario test_us_code_freeze test_research_net_bridge test_research_net_attestation test_research_source_policy test_research_evidence_manifest test_research_instrument_gate test_research_instrument_corroboration test_research_iso_mic_parser test_research_mic_crosswalk
