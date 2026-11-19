@@ -1,5 +1,6 @@
 """Research-only DEGIRO evidence to EUR net scenario, with no trusted-source upgrade."""
 from research_degiro_evidence import inspect_degiro_evidence
+from research_degiro_metadata import inspect_broker_metadata_freshness
 from research_net_scenario import evaluate_net_scenario
 
 BLOCKED = {"trade_ready": False, "order_placement_enabled": False,
@@ -13,6 +14,10 @@ def evaluate_degiro_research_scenario(broker_evidence, technical, *, now,
     if gate["status"] != "DEGIRO_CLAIMS_STRUCTURALLY_CONSISTENT":
         return {**BLOCKED, "status": "BROKER_EVIDENCE_BLOCKED",
                 "reason": gate.get("reason")}
+    metadata = inspect_broker_metadata_freshness(broker_evidence, now=now)
+    if metadata["status"] != "BROKER_METADATA_CLAIMS_FRESH":
+        return {**BLOCKED, "status": "BROKER_METADATA_BLOCKED",
+                "reason": metadata.get("reason"), "group": metadata.get("group")}
     if not isinstance(technical, dict) or any(
             key not in technical for key in ("invalidation", "target",
                                               "buy_slippage_per_share",
