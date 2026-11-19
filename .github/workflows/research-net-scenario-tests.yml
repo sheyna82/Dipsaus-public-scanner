@@ -19,4 +19,4 @@ jobs:
         with:
           python-version: '3.11'
       - name: Run isolated offline net scenario tests
-        run: python -m unittest -v test_research_net_scenario
+        run: python -m unittest -v test_research_net_scenario test_us_code_freeze
