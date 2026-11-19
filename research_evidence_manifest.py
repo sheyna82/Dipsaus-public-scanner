@@ -6,6 +6,7 @@ Never store broker screenshots, account details, tokens or raw quotes here.
 """
 import hashlib
 import json
+import re
 from datetime import datetime, timezone
 
 BLOCKED = {"trade_ready": False, "order_placement_enabled": False}
@@ -34,7 +35,7 @@ def build_manifest(attestations, *, instrument_id, market, now=None):
     if market not in ("EU", "US") or not isinstance(instrument_id, str):
         return {**BLOCKED, "status": "MANIFEST_BLOCKED", "reason": "INVALID_INSTRUMENT"}
     # Restrict to public ISIN syntax; not a broker account identifier.
-    if len(instrument_id) != 12 or not instrument_id[:2].isalpha() or not instrument_id[:2].isupper() or not instrument_id[2:].isalnum() or not instrument_id[2:].isupper():
+    if re.fullmatch(r"[A-Z]{2}[A-Z0-9]{10}", instrument_id) is None:
         return {**BLOCKED, "status": "MANIFEST_BLOCKED", "reason": "INVALID_INSTRUMENT"}
     if not isinstance(attestations, dict) or set(attestations) != set(GROUPS):
         return {**BLOCKED, "status": "MANIFEST_BLOCKED", "reason": "INVALID_GROUPS"}
