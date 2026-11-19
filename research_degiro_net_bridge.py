@@ -38,6 +38,8 @@ def evaluate_degiro_research_scenario(broker_evidence, technical, *, now,
         sell_slippage_per_share=technical["sell_slippage_per_share"],
         evidence_verified=False)
     return {**result, **BLOCKED, "status": "UNAUTHENTICATED_RESEARCH_SCENARIO"
-            if "net_profit_eur" in result else result["status"],
+            if result.get("status") == "RESEARCH_ONLY_BLOCKED" else
+            "UNAUTHENTICATED_RESEARCH_SCENARIO"
+            if result.get("status") == "HUMAN_REVIEW_REQUIRED" else result["status"],
             "broker_claims_structurally_consistent": True,
             "source_note": "EUR-only hypothetical calculation; actual DEGIRO identity, route and fees unverified."}
