@@ -54,6 +54,8 @@ def inspect_official_mic_csv(raw, *, expected_sha256, publication_date,
                 return {**blocked, "reason": "MISSING_MIC", "mic": mic}
             op = row["OPERATING MIC"]
             parent = rows.get(op)
+            if parent is None or parent["OPRT/SGMT"] != "OPRT":
+                return {**blocked, "reason": "INACTIVE_OR_INVALID_PARENT", "mic": mic}
             try:
                 created = registry_date(row["CREATION DATE"])
                 updated = registry_date(row["LAST UPDATE DATE"])
