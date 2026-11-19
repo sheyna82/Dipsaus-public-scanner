@@ -1,0 +1,34 @@
+"""Research-only DEGIRO evidence to EUR net scenario, with no trusted-source upgrade."""
+from research_degiro_evidence import inspect_degiro_evidence
+from research_net_scenario import evaluate_net_scenario
+
+BLOCKED = {"trade_ready": False, "order_placement_enabled": False,
+           "source_authenticity_independently_verified": False,
+           "broker_route_verified": False, "degiro_fee_verified": False}
+
+def evaluate_degiro_research_scenario(broker_evidence, technical, *, now,
+                                     budget_eur=3500):
+    """Never pass unverified broker assertions as evidence_verified=True."""
+    gate = inspect_degiro_evidence(broker_evidence, now=now)
+    if gate["status"] != "DEGIRO_CLAIMS_STRUCTURALLY_CONSISTENT":
+        return {**BLOCKED, "status": "BROKER_EVIDENCE_BLOCKED",
+                "reason": gate.get("reason")}
+    if not isinstance(technical, dict) or any(
+            key not in technical for key in ("invalidation", "target",
+                                              "buy_slippage_per_share",
+                                              "sell_slippage_per_share")):
+        return {**BLOCKED, "status": "TECHNICAL_EVIDENCE_BLOCKED"}
+    result = evaluate_net_scenario(
+        ask=broker_evidence["quote_ask"], bid=broker_evidence["quote_bid"],
+        invalidation=technical["invalidation"], target=technical["target"],
+        budget_eur=budget_eur,
+        buy_fee_eur=broker_evidence["fee_buy_eur"],
+        sell_fee_eur=broker_evidence["fee_sell_eur"],
+        fx_eur_per_unit=1, fx_buy_fee_rate=0, fx_sell_fee_rate=0,
+        buy_slippage_per_share=technical["buy_slippage_per_share"],
+        sell_slippage_per_share=technical["sell_slippage_per_share"],
+        evidence_verified=False)
+    return {**result, **BLOCKED, "status": "UNAUTHENTICATED_RESEARCH_SCENARIO"
+            if "net_profit_eur" in result else result["status"],
+            "broker_claims_structurally_consistent": True,
+            "source_note": "EUR-only hypothetical calculation; actual DEGIRO identity, route and fees unverified."}
