@@ -70,5 +70,40 @@ class NetScenarioTests(unittest.TestCase):
         self.assertFalse(r["checks"]["net_profit_at_least_150_eur"])
 
 
+    def test_gle_snapshot_net_threshold_not_met(self):
+        # Illustrative 19 Nov broker snapshot; invalidation/target not verified.
+        r = calc(ask=64.95, bid=64.94, invalidation=64.52, target=67.61,
+                 budget_eur=3500, buy_fee_eur=4.9, sell_fee_eur=4.9)
+        self.assertEqual(r["shares"], 53)
+        self.assertFalse(r["checks"]["net_profit_at_least_150_eur"])
+        self.assertFalse(r["trade_ready"])
+
+    def test_asml_snapshot_target_is_hypothetical(self):
+        r = calc(ask=1311.60, bid=1311.40, invalidation=1293.60,
+                 target=1400, budget_eur=3500,
+                 buy_fee_eur=4.9, sell_fee_eur=4.9)
+        self.assertEqual(r["shares"], 2)
+        self.assertGreater(r["net_profit_eur"], 150)
+        self.assertEqual(r["status"], "RESEARCH_ONLY_BLOCKED")
+
+    def test_nokia_snapshot_rr_below_two(self):
+        # Snapshot is delayed; no verified entry signal.
+        r = calc(ask=7.116, bid=7.112, invalidation=6.85, target=7.50,
+                 budget_eur=3500, buy_fee_eur=4.9, sell_fee_eur=4.9)
+        self.assertFalse(r["checks"]["net_rr_at_least_2"])
+        self.assertFalse(r["trade_ready"])
+
+    def test_fx_zero_is_valid_for_eur_instrument(self):
+        r = calc(ask=65, bid=64.99, invalidation=64, target=70,
+                 budget_eur=3500, buy_fee_eur=4.9, sell_fee_eur=4.9,
+                 fx_buy_fee_rate=0, fx_sell_fee_rate=0)
+        self.assertEqual(r["shares"], 53)
+
+    def test_budget_exhausted_by_fee(self):
+        r = calc(ask=65, bid=64.99, invalidation=64, target=70,
+                 budget_eur=3500, buy_fee_eur=3500, sell_fee_eur=4.9)
+        self.assertEqual(r["status"], "BUDGET_BLOCKED")
+
+
 if __name__ == "__main__":
     unittest.main()
