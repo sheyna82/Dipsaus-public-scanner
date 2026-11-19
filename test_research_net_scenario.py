@@ -7,7 +7,7 @@ class NetScenarioTests(unittest.TestCase):
     def test_asm_gross_rr_two_fails_net(self):
         r = calc(ask=698, bid=697.8, invalidation=672, target=750,
                  budget_eur=3500, buy_fee_eur=4.9, sell_fee_eur=4.9)
-        self.assertEqual(r["shares"], 4)  # fees must fit the tranche
+        self.assertEqual(r["shares"], 5)  # 5*698 + 4.90 = 3494.90
         self.assertFalse(r["checks"]["net_rr_at_least_2"])
         self.assertFalse(r["trade_ready"])
 
