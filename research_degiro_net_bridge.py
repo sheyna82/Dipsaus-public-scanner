@@ -18,6 +18,10 @@ def evaluate_degiro_research_scenario(broker_evidence, technical, *, now,
     if metadata["status"] != "BROKER_METADATA_CLAIMS_FRESH":
         return {**BLOCKED, "status": "BROKER_METADATA_BLOCKED",
                 "reason": metadata.get("reason"), "group": metadata.get("group")}
+    if (broker_evidence.get("instrument_currency") != "EUR"
+            or broker_evidence.get("fee_currency") != "EUR"):
+        return {**BLOCKED, "status": "CURRENCY_BLOCKED",
+                "reason": "EUR_ONLY_RESEARCH_BRIDGE"}
     if not isinstance(technical, dict) or any(
             key not in technical for key in ("invalidation", "target",
                                               "buy_slippage_per_share",
