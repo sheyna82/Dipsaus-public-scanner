@@ -4,6 +4,8 @@ All fields are untrusted assertions until independently verified. This module
 cannot enable orders, attest a broker connection or validate actual execution.
 """
 from datetime import datetime, timezone
+from research_instrument_gate import isin_checksum_valid
+import re
 
 BLOCKED = {"trade_ready": False, "order_placement_enabled": False,
            "broker_route_verified": False, "degiro_fee_verified": False,
@@ -26,11 +28,13 @@ def inspect_degiro_evidence(evidence, *, now):
     if (evidence["route_instrument_isin"] != evidence["isin"]
             or evidence["route_operating_mic"] != evidence["operating_mic"]):
         return {**base, "reason": "ROUTE_IDENTITY_MISMATCH"}
-    if (not isinstance(evidence["isin"], str) or not isinstance(evidence["operating_mic"], str)
-            or len(evidence["operating_mic"]) != 4):
+    if (not isin_checksum_valid(evidence["isin"]) or not isinstance(evidence["operating_mic"], str)
+            or re.fullmatch(r"[A-Z0-9]{4}", evidence["operating_mic"]) is None):
         return {**base, "reason": "INVALID_IDENTITY"}
     try:
         timestamp = datetime.fromisoformat(evidence["quote_observed_utc"].replace("Z", "+00:00"))
+        if timestamp.utcoffset() is None:
+            return {**base, "reason": "INVALID_QUOTE_TIMESTAMP"}
         age = (now.astimezone(timezone.utc) - timestamp.astimezone(timezone.utc)).total_seconds()
     except (AttributeError, ValueError, TypeError):
         return {**base, "reason": "INVALID_QUOTE_TIMESTAMP"}
