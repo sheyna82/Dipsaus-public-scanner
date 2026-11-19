@@ -40,7 +40,7 @@ class DegiroNetBridgeTests(unittest.TestCase):
     def test_unprofitable_scenario_still_blocked(self):
         r = evaluate(BROKER, {**TECH, "target": 65.5}, now=NOW)
         self.assertFalse(r["trade_ready"])
-        self.assertNotEqual(r["status"], "HUMAN_REVIEW_REQUIRED")
+        self.assertEqual(r["status"], "RESEARCH_ONLY_BLOCKED")
 
     def test_missing_fee_timestamp_blocks_before_math(self):
         e = dict(BROKER)
