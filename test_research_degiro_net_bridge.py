@@ -7,6 +7,8 @@ NOW = datetime(2026, 11, 19, 14, 15, tzinfo=timezone.utc)
 BROKER = dict(isin="DE0006231004", operating_mic="XETR",
               quote_source="DEGIRO", fee_source="DEGIRO", route_source="DEGIRO",
               quote_observed_utc="2026-11-19T14:14:30Z",
+              fee_observed_utc="2026-11-19T14:00:00Z",
+              route_observed_utc="2026-11-19T14:00:00Z",
               quote_bid=64.99, quote_ask=65,
               fee_buy_eur=4.9, fee_sell_eur=4.9,
               route_instrument_isin="DE0006231004", route_operating_mic="XETR")
@@ -38,6 +40,23 @@ class DegiroNetBridgeTests(unittest.TestCase):
         r = evaluate(BROKER, {**TECH, "target": 65.5}, now=NOW)
         self.assertFalse(r["trade_ready"])
         self.assertNotEqual(r["status"], "HUMAN_REVIEW_REQUIRED")
+
+    def test_missing_fee_timestamp_blocks_before_math(self):
+        e = dict(BROKER)
+        del e["fee_observed_utc"]
+        r = evaluate(e, TECH, now=NOW)
+        self.assertEqual(r["status"], "BROKER_METADATA_BLOCKED")
+        self.assertEqual(r["group"], "fees")
+    def test_stale_route_timestamp_blocks_before_math(self):
+        r = evaluate({**BROKER, "route_observed_utc": "2026-11-17T14:00:00Z"}, TECH, now=NOW)
+        self.assertEqual(r["status"], "BROKER_METADATA_BLOCKED")
+        self.assertEqual(r["group"], "route")
+    def test_future_fee_timestamp_blocks_before_math(self):
+        r = evaluate({**BROKER, "fee_observed_utc": "2026-11-19T14:16:00Z"}, TECH, now=NOW)
+        self.assertEqual(r["status"], "BROKER_METADATA_BLOCKED")
+    def test_naive_route_timestamp_blocks_before_math(self):
+        r = evaluate({**BROKER, "route_observed_utc": "2026-11-19T14:00:00"}, TECH, now=NOW)
+        self.assertEqual(r["status"], "BROKER_METADATA_BLOCKED")
 
 if __name__ == "__main__":
     unittest.main()
