@@ -14,7 +14,7 @@ class CrossSourceTests(unittest.TestCase):
              "segment": "official-segment-claim", "active": True,
              "observed_utc": NOW.isoformat(), "verified": True},
             {"source_class": "OFFICIAL_MIC_REGISTER", "source_id": "iso-mic",
-             "isin": "NL0010273215", "operating_mic": "XAMS",
+             "operating_mic": "XAMS",
              "active": True, "observed_utc": NOW.isoformat(), "verified": True},
             {"source_class": "BROKER", "source_id": "broker-route",
              "isin": "NL0010273215", "operating_mic": "XAMS",
@@ -35,6 +35,14 @@ class CrossSourceTests(unittest.TestCase):
         self.assertEqual(self.check()["reason"], "IDENTITY_CONFLICT")
 
     def test_conflicting_isin(self):
+        self.rows[2]["isin"] = "DE0006231004"
+        self.assertEqual(self.check()["reason"], "IDENTITY_CONFLICT")
+
+    def test_iso_registry_cannot_assert_instrument_isin(self):
+        self.rows[1]["isin"] = "NL0010273215"
+        self.assertEqual(self.check()["reason"], "REGISTRY_MUST_NOT_ASSERT_ISIN")
+
+    def test_exchange_and_broker_isin_mismatch(self):
         self.rows[2]["isin"] = "DE0006231004"
         self.assertEqual(self.check()["reason"], "IDENTITY_CONFLICT")
 
