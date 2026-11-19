@@ -1,0 +1,69 @@
+name: European recovery research capture
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'research_capture_europe_history.py'
+      - 'research_capture_official_index_document.py'
+      - '.github/workflows/research-nasdaq-document-capture.yml'
+      - '.github/workflows/research-europe-history-isolated.yml'
+permissions:
+  contents: read
+jobs:
+  europe-capture:
+    if: github.repository == 'sheyna82/Dipsaus-public-scanner'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Syntax check (offline)
+        run: python -m py_compile research_capture_europe_history.py
+      - name: Capture EU daily OHLCV (research only, partial current session possible)
+        run: |
+          mkdir -p research-observation
+          python research_capture_europe_history.py research-observation/europe-history.json
+      - name: Upload immutable research capture
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: dipsaus-europe-history-research
+          path: research-observation/europe-history.json
+          if-no-files-found: error
+          retention-days: 14
+
+  nasdaq-document-observation:
+    if: github.repository == 'sheyna82/Dipsaus-public-scanner'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Capture official Nasdaq PDF as unverified research evidence
+        run: |
+          mkdir -p research-observation
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from research_capture_official_index_document import capture_official_document
+          for name,url in (("index-versions","https://indexes.nasdaqomx.com/docs/Index_Versions_OMXH25.pdf"),("methodology","https://indexes.nasdaqomx.com/docs/methodology_OMXH25.pdf")):
+              receipt=capture_official_document(url)
+              Path("research-observation/nasdaq-"+name+".json").write_text(json.dumps(receipt,sort_keys=True,indent=2))
+              print(name,"official sha256:",receipt["official_document_sha256"],"identity approved:",receipt["independently_audited"])
+          PY
+      - name: Upload unverified Nasdaq observation if capture succeeded
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: nasdaq-official-document-unverified-observation
+          path: research-observation/nasdaq-*.json
+          if-no-files-found: error
+          retention-days: 14

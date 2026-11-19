@@ -1,0 +1,29 @@
+name: OMXH25 isolated official HistoryData POST candidate
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  issuer-history-post-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Single bounded issuer POST (research only, no trading)
+        continue-on-error: true
+        run: |
+          mkdir -p research-observation
+          python research_capture_omxh25_history_post.py research-observation/omxh25-history-post-raw-unverified.json '2026-11-05T00:00:00.000' '2026-11-09T00:00:00.000' EOD 2>&1 | tee research-observation/omxh25-history-post-attempt-log.txt
+      - name: Upload immutable candidate or failure log
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: omxh25-history-post-unverified-candidate
+          path: research-observation/
+          if-no-files-found: warn
+          retention-days: 14

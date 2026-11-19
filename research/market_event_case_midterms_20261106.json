@@ -1,0 +1,64 @@
+{
+  "schema": "dipsaus.research_market_event_case.v1",
+  "case_id": "us-midterms-ai-selloff-2026-11",
+  "research_only": true,
+  "trade_ready": false,
+  "live_scanner_changed": false,
+  "as_of": "2026-11-06",
+  "event_window": [
+    "2026-11-03",
+    "2026-11-06"
+  ],
+  "market_observations": [
+    {
+      "date": "2026-11-03",
+      "sp500_pct": 0.4,
+      "nasdaq_composite_pct": 0.8,
+      "dow_pct": -0.4,
+      "source": "https://www.fidelity.com/news/article/us-markets/202611031654MIDNIGHTUSEQUITY_A3743548"
+    },
+    {
+      "date": "2026-11-04",
+      "sp500_pct": 1.6,
+      "nasdaq_composite_pct": 1.4,
+      "dow_pct": 3,
+      "source": "https://apnews.com/article/c0be7ca45b5875abe758e0570cb9a265"
+    },
+    {
+      "date": "2026-11-05",
+      "sp500_pct": -4.36,
+      "nasdaq_composite_pct": -5.52,
+      "dow_pct": -3.44,
+      "source": "https://apnews.com/article/afe254c608c3d1fe2ea792812ba9765a"
+    }
+  ],
+  "hypotheses_not_facts": [
+    "Election-driven concern over future AI data-center regulation",
+    "Reassessment of AI infrastructure capital spending returns",
+    "Company-specific earnings deterioration",
+    "Broad de-risking and correlated sector selling"
+  ],
+  "candidate_research_unranked": [
+    "NVDA",
+    "AMD",
+    "DELL",
+    "QCOM"
+  ],
+  "candidate_signals_registered": 0,
+  "prospective_registration_status": "NOT_STARTED_NO_VERIFIED_POINT_IN_TIME_QUOTE_OR_FEATURE_SNAPSHOT",
+  "required_before_registration": [
+    "Immutable timestamp and observed-at timestamp",
+    "Verified point-in-time OHLCV and source provenance",
+    "Predefined recovery features and rejection criteria from frozen protocol v1.1",
+    "Both selected and rejected candidate records",
+    "Portfolio holdings and cash snapshot",
+    "No retroactive selection after outcomes"
+  ],
+  "safety": {
+    "automatic_orders": false,
+    "stoploss_or_stoplimit": false,
+    "merge_to_main": false,
+    "trade_ready": false
+  },
+  "note": "Event research only; index percentages rounded; no causality or trade edge established."
+}

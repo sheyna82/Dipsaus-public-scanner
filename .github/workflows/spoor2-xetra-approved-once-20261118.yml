@@ -1,0 +1,15 @@
+name: Spoor 2 expired Xetra authorization guard
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  authorization-expired:
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Reject replay of exhausted one-time authorization
+        run: |
+          echo "Xetra one-time authorization dated 2026-11-18 has been exhausted."
+          echo "No external requests are permitted by this workflow."
+          exit 1

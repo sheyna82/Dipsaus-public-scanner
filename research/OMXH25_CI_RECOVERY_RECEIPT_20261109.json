@@ -1,0 +1,42 @@
+{
+  "schema": "dipsaus-omxh25-ci-recovery-evidence-v1",
+  "recorded_date": "2026-11-09",
+  "source": {
+    "artifact_id": 13680073011,
+    "run_id": 42630114290,
+    "sha256": "6849ebe332ce2be42e51cd9c8537b12e755e739bc4fc4a25ec5bccfcb70fc277",
+    "expires_on": "2026-11-23",
+    "retained_source_location_verified": false
+  },
+  "documents": [
+    {
+      "filename": "nasdaq-index-versions.pdf",
+      "sha256": "52f35d3e0d4500e01d116c135628c3e145de0b3929e3532c37f3a59d79f550ef",
+      "size_bytes": 109623
+    },
+    {
+      "filename": "nasdaq-methodology.pdf",
+      "sha256": "41c43c502b6862606aef255a55cef41ccc8ff606b21f8b32975edb48fe6b12a2",
+      "size_bytes": 193988
+    }
+  ],
+  "ci": {
+    "commit": "3804df0780c3afa8c1905387d393f5d9fe73352a",
+    "run_id": 42635684945,
+    "job_id": 129223087803,
+    "conclusion": "success",
+    "receipt_artifact_id": 13681509961,
+    "receipt_artifact_sha256": "d61cfd7a3b15e6a10bdb124ff70723c707cbcbe821e3dd34c737b3c87f30a543",
+    "derived_zip_sha256": "750cc1442774d075539897f351619ab98003fd0be4bbdf2cddd9e9091cd51ff5",
+    "verification_status": "verified_original_bytes"
+  },
+  "benchmark_identity_verified": false,
+  "independently_audited": false,
+  "research_only": true,
+  "trade_ready": false,
+  "limitations": [
+    "Permanent metadata receipt only; original PDF bytes are not stored in this repository.",
+    "Fixed-ID GitHub Actions source artifact expires; this receipt alone cannot reproduce the PDF bytes.",
+    "No independent Yahoo ^OMXH25 mapping approval."
+  ]
+}

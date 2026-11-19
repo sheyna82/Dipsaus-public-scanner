@@ -1,0 +1,279 @@
+"""Synthetic tests for byte-checked evidence bundle orchestration."""
+import hashlib
+import unittest
+from research.spoor2_instrument_evidence_bundle_20261114 import inspect_instrument_evidence_bundle
+
+ISIN = "US0378331005"
+MIC = "XNAS"
+
+
+def record(source, mic=MIC, data=None):
+    data = data if data is not None else ("synthetic:" + source).encode()
+    return {
+        "source_id": source, "isin": ISIN, "mic": mic,
+        "artifact_bytes": data, "artifact_sha256": hashlib.sha256(data).hexdigest(),
+        "artifact_size": len(data),
+    }
+
+
+class EvidenceBundleTests(unittest.TestCase):
+    def test_empty_bundle_blocks(self):
+        self.assertEqual(inspect_instrument_evidence_bundle(ISIN, MIC)["blocks"],
+                         ["EVIDENCE_RECORDS_REQUIRED"])
+
+    def test_two_byte_checked_sources_still_block_trade(self):
+        r = inspect_instrument_evidence_bundle(ISIN, MIC, (record("a"), record("b")))
+        self.assertTrue(r["byte_integrity_checked"])
+        self.assertTrue(r["reported_cross_source_agreement"])
+        self.assertFalse(r["independent_source_authority_verified"])
+        self.assertEqual(r["status"], "BLOCKED")
+        for flag in ("source_attested", "instrument_segment_verified",
+                     "broker_route_verified", "trade_ready", "order_placement_enabled"):
+            self.assertFalse(r[flag])
+
+    def test_reconciled_bundle_includes_deterministic_manifest(self):
+        a, b = record("a"), record("b")
+        forward = inspect_instrument_evidence_bundle(ISIN, MIC, (a, b))
+        reverse = inspect_instrument_evidence_bundle(ISIN, MIC, (b, a))
+        self.assertTrue(forward["manifest_complete"])
+        self.assertEqual(len(forward["manifest_sha256"]), 64)
+        self.assertEqual(forward["manifest_sha256"], reverse["manifest_sha256"])
+        self.assertEqual(len(forward["instrument_evidence_sha256"]), 64)
+        self.assertEqual(forward["instrument_evidence_sha256"], reverse["instrument_evidence_sha256"])
+        self.assertNotEqual(forward["instrument_evidence_sha256"], forward["manifest_sha256"])
+        self.assertTrue(forward["reported_cross_source_agreement"])
+        self.assertFalse(forward["trade_ready"])
+
+    def test_instrument_bound_fingerprint_changes_with_valid_instrument(self):
+        first = (record("a"), record("b"))
+        base = inspect_instrument_evidence_bundle(ISIN, MIC, first)
+        changed = tuple({**item, "mic": "XETR"} for item in first)
+        other = inspect_instrument_evidence_bundle(ISIN, "XETR", changed)
+        self.assertTrue(base["manifest_complete"])
+        self.assertTrue(other["manifest_complete"])
+        self.assertEqual(base["manifest_sha256"], other["manifest_sha256"])
+        self.assertNotEqual(base["instrument_evidence_sha256"],
+                            other["instrument_evidence_sha256"])
+        self.assertFalse(other["trade_ready"])
+
+    def test_instrument_bound_fingerprint_changes_with_valid_isin(self):
+        # Synthetic valid ISINs; no claim about real exchange listings.
+        other_isin = "US5949181045"
+        first = (record("a"), record("b"))
+        base = inspect_instrument_evidence_bundle(ISIN, MIC, first)
+        changed = tuple({**item, "isin": other_isin} for item in first)
+        other = inspect_instrument_evidence_bundle(other_isin, MIC, changed)
+        self.assertTrue(base["manifest_complete"])
+        self.assertTrue(other["manifest_complete"])
+        self.assertEqual(base["manifest_sha256"], other["manifest_sha256"])
+        self.assertNotEqual(base["instrument_evidence_sha256"],
+                            other["instrument_evidence_sha256"])
+        self.assertFalse(other["trade_ready"])
+
+    def test_claimed_publisher_metadata_cannot_upgrade_bundle_authority(self):
+        records = (record("a"), record("b"))
+        enriched = tuple({
+            **item,
+            "publisher_provenance": {
+                "publisher_id": item["source_id"],
+                "retrieval_url": "https://example.com/evidence.csv",
+                "retrieved_at_utc": "2026-11-15T12:00:00+00:00",
+                "artifact_sha256": item["artifact_sha256"],
+                "artifact_size": item["artifact_size"],
+            },
+            "publisher_identity_verified": True,
+            "independent_source_authority_verified": True,
+            "trade_ready": True,
+            "order_placement_enabled": True,
+        } for item in records)
+        original = inspect_instrument_evidence_bundle(ISIN, MIC, records)
+        injected = inspect_instrument_evidence_bundle(ISIN, MIC, enriched)
+        self.assertEqual(original["manifest_sha256"], injected["manifest_sha256"])
+        self.assertEqual(original["instrument_evidence_sha256"],
+                         injected["instrument_evidence_sha256"])
+        self.assertTrue(injected["reported_cross_source_agreement"])
+        for key in ("independent_source_authority_verified", "source_attested",
+                    "instrument_segment_verified", "broker_route_verified",
+                    "trade_ready", "order_placement_enabled"):
+            self.assertFalse(injected[key])
+
+    def test_provenance_url_change_does_not_change_byte_manifest(self):
+        records = (record("a"), record("b"))
+        first = tuple({**item, "publisher_provenance": {
+            "retrieval_url": "https://example.org/first.csv"}} for item in records)
+        second = tuple({**item, "publisher_provenance": {
+            "retrieval_url": "https://example.net/second.csv"}} for item in records)
+        a = inspect_instrument_evidence_bundle(ISIN, MIC, first)
+        b = inspect_instrument_evidence_bundle(ISIN, MIC, second)
+        self.assertEqual(a["manifest_sha256"], b["manifest_sha256"])
+        self.assertEqual(a["instrument_evidence_sha256"], b["instrument_evidence_sha256"])
+        self.assertFalse(a["independent_source_authority_verified"])
+        self.assertFalse(b["independent_source_authority_verified"])
+
+    def test_invisible_unicode_source_never_produces_bundle_fingerprint(self):
+        for source in ("publisher" + chr(0x200b) + "a",
+                       "publisher" + chr(0x2060) + "a",
+                       "publisher" + chr(0xfeff) + "a"):
+            with self.subTest(source=repr(source)):
+                result = inspect_instrument_evidence_bundle(
+                    ISIN, MIC, (record(source), record("b")))
+                self.assertEqual(result["blocks"], ["INCOMPLETE_EVIDENCE_PROVENANCE"])
+                self.assertFalse(result["manifest_complete"])
+                self.assertIsNone(result["manifest_sha256"])
+                self.assertIsNone(result["instrument_evidence_sha256"])
+                self.assertFalse(result["reported_cross_source_agreement"])
+                self.assertFalse(result["trade_ready"])
+
+    def test_conflicting_publisher_claims_cannot_upgrade_bundle(self):
+        records = (record("a"), record("b"))
+        enriched = tuple({
+            **item,
+            "publisher_provenance": {
+                "publisher_id": "unrelated-publisher",
+                "retrieval_url": "https://example.org/claimed.csv",
+                "retrieved_at_utc": "2099-01-01T00:00:00+00:00",
+                "artifact_sha256": "0" * 64,
+                "artifact_size": 1,
+                "publisher_identity_verified": True,
+                "source_attested": True,
+            },
+        } for item in records)
+        baseline = inspect_instrument_evidence_bundle(ISIN, MIC, records)
+        injected = inspect_instrument_evidence_bundle(ISIN, MIC, enriched)
+        self.assertEqual(baseline["manifest_sha256"], injected["manifest_sha256"])
+        self.assertEqual(baseline["instrument_evidence_sha256"],
+                         injected["instrument_evidence_sha256"])
+        self.assertTrue(injected["reported_cross_source_agreement"])
+        self.assertEqual(injected["status"], "BLOCKED")
+        for key in ("independent_source_authority_verified", "source_attested",
+                    "instrument_segment_verified", "broker_route_verified",
+                    "trade_ready", "order_placement_enabled"):
+            self.assertFalse(injected[key])
+
+    def test_nfc_unicode_source_labels_remain_usable_without_attestation(self):
+        source = "caf" + chr(0xe9)
+        records = (record(source, data=b"canonical-one"),
+                   record("independent-label", data=b"canonical-two"))
+        result = inspect_instrument_evidence_bundle(ISIN, MIC, records)
+        self.assertTrue(result["manifest_complete"])
+        self.assertTrue(result["reported_cross_source_agreement"])
+        self.assertEqual(len(result["manifest_sha256"]), 64)
+        self.assertEqual(len(result["instrument_evidence_sha256"]), 64)
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertFalse(result["independent_source_authority_verified"])
+        self.assertFalse(result["trade_ready"])
+        self.assertFalse(result["order_placement_enabled"])
+
+    def test_non_nfc_source_alias_cannot_manufacture_independence(self):
+        composed = "caf" + chr(0xe9)
+        decomposed = "cafe" + chr(0x301)
+        result = inspect_instrument_evidence_bundle(
+            ISIN, MIC, (record(composed), record(decomposed)))
+        self.assertEqual(result["blocks"], ["INCOMPLETE_EVIDENCE_PROVENANCE"])
+        self.assertFalse(result["reported_cross_source_agreement"])
+        self.assertFalse(result["manifest_complete"])
+        self.assertIsNone(result["manifest_sha256"])
+        self.assertIsNone(result["instrument_evidence_sha256"])
+        self.assertFalse(result["trade_ready"])
+
+    def test_case_only_publisher_aliases_cannot_manufacture_two_sources(self):
+        records = (record("Publisher", data=b"artifact-one"),
+                   record("publisher", data=b"artifact-two"))
+        result = inspect_instrument_evidence_bundle(ISIN, MIC, records)
+        self.assertEqual(result["blocks"], ["INTRA_SOURCE_ARTIFACT_CONFLICT"])
+        self.assertFalse(result["reported_cross_source_agreement"])
+        self.assertFalse(result["manifest_complete"])
+        self.assertIsNone(result["manifest_sha256"])
+        self.assertIsNone(result["instrument_evidence_sha256"])
+        self.assertFalse(result["independent_source_authority_verified"])
+        self.assertFalse(result["trade_ready"])
+
+    def test_same_bytes_with_distinct_source_labels_never_count_as_independent(self):
+        shared = b"same-payload"
+        records = (record("publisher-one", data=shared),
+                   record("publisher-two", data=shared))
+        r = inspect_instrument_evidence_bundle(ISIN, MIC, records)
+        self.assertEqual(r["blocks"], ["DISTINCT_ARTIFACT_HASHES_REQUIRED"])
+        self.assertFalse(r["manifest_complete"])
+        self.assertFalse(r["reported_cross_source_agreement"])
+        self.assertFalse(r["independent_source_authority_verified"])
+
+    def test_modified_artifact_changes_both_fingerprints(self):
+        first = (record("a"), record("b"))
+        changed = (record("a", data=b"modified"), record("b"))
+        original = inspect_instrument_evidence_bundle(ISIN, MIC, first)
+        modified = inspect_instrument_evidence_bundle(ISIN, MIC, changed)
+        self.assertTrue(original["manifest_complete"])
+        self.assertTrue(modified["manifest_complete"])
+        self.assertNotEqual(original["manifest_sha256"], modified["manifest_sha256"])
+        self.assertNotEqual(original["instrument_evidence_sha256"],
+                            modified["instrument_evidence_sha256"])
+        self.assertFalse(modified["source_attested"])
+        self.assertFalse(modified["trade_ready"])
+
+    def test_modified_bytes_with_stale_digest_fail_before_fingerprint(self):
+        a, b = record("a"), record("b")
+        a["artifact_bytes"] = b"modified"
+        result = inspect_instrument_evidence_bundle(ISIN, MIC, (a, b))
+        self.assertFalse(result["manifest_complete"])
+        self.assertIsNone(result["manifest_sha256"])
+        self.assertIsNone(result["instrument_evidence_sha256"])
+        self.assertFalse(result["trade_ready"])
+
+    def test_relabeling_isin_claim_without_changing_records_blocks(self):
+        r = inspect_instrument_evidence_bundle(
+            "US5949181045", MIC, (record("a"), record("b")))
+        self.assertEqual(r["blocks"], ["CROSS_SOURCE_INSTRUMENT_CONFLICT"])
+        self.assertIsNone(r["instrument_evidence_sha256"])
+        self.assertFalse(r["reported_cross_source_agreement"])
+
+    def test_relabeling_claim_without_changing_records_blocks(self):
+        first = (record("a"), record("b"))
+        r = inspect_instrument_evidence_bundle(ISIN, "XETR", first)
+        self.assertEqual(r["blocks"], ["CROSS_SOURCE_INSTRUMENT_CONFLICT"])
+        self.assertIsNone(r["instrument_evidence_sha256"])
+        self.assertFalse(r["reported_cross_source_agreement"])
+
+    def test_conflicting_bundle_does_not_claim_manifest_complete(self):
+        r = inspect_instrument_evidence_bundle(
+            ISIN, MIC, (record("a"), record("b", mic="XETR")))
+        self.assertFalse(r["manifest_complete"])
+        self.assertIsNone(r["manifest_sha256"])
+        self.assertIsNone(r["instrument_evidence_sha256"])
+        self.assertFalse(r["reported_cross_source_agreement"])
+
+    def test_tampered_artifact_blocks_before_reconciliation(self):
+        b = record("b")
+        b["artifact_bytes"] += b"tampered"
+        r = inspect_instrument_evidence_bundle(ISIN, MIC, (record("a"), b))
+        self.assertEqual(r["blocks"], ["ARTIFACT_BYTE_COUNT_MISMATCH"])
+        self.assertFalse(r["byte_integrity_checked"])
+
+    def test_two_labels_one_artifact_blocks(self):
+        data = b"same"
+        r = inspect_instrument_evidence_bundle(ISIN, MIC,
+                                               (record("a", data=data), record("b", data=data)))
+        self.assertEqual(r["blocks"], ["DISTINCT_ARTIFACT_HASHES_REQUIRED"])
+
+    def test_conflicting_mic_blocks(self):
+        r = inspect_instrument_evidence_bundle(ISIN, MIC, (record("a"), record("b", mic="XETR")))
+        self.assertEqual(r["blocks"], ["CROSS_SOURCE_INSTRUMENT_CONFLICT"])
+        self.assertFalse(r["independent_source_authority_verified"])
+
+    def test_source_alias_blocks(self):
+        r = inspect_instrument_evidence_bundle(ISIN, MIC, (record("Publisher"), record("publisher")))
+        self.assertEqual(r["blocks"], ["INTRA_SOURCE_ARTIFACT_CONFLICT"])
+
+    def test_non_dict_record_blocks(self):
+        r = inspect_instrument_evidence_bundle(ISIN, MIC, (record("a"), None))
+        self.assertEqual(r["blocks"], ["INVALID_EVIDENCE_RECORD"])
+
+    def test_missing_bytes_blocks(self):
+        a = record("a")
+        del a["artifact_bytes"]
+        r = inspect_instrument_evidence_bundle(ISIN, MIC, (a, record("b")))
+        self.assertEqual(r["blocks"], ["NONEMPTY_ARTIFACT_BYTES_REQUIRED"])
+
+
+if __name__ == "__main__":
+    unittest.main()

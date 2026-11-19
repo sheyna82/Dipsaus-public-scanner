@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0",
+  "observation_date": "2026-11-13",
+  "purpose": "Research-only official ISO release and published DEGIRO tariff observations; not account-specific or executable trade authorization.",
+  "source_attested": false,
+  "mic_registered": false,
+  "degiro_fee_verified": false,
+  "broker_route_verified": false,
+  "trade_ready": false,
+  "order_placement_enabled": false,
+  "iso_release": {
+    "authority_url": "https://www.iso20022.org/market-identifier-codes",
+    "publication_date": "2026-11-09",
+    "modifications_effective_date": "2026-11-23",
+    "next_publication_date": "2026-12-14",
+    "official_xlsx_url": "https://www.iso20022.org/sites/default/files/ISO10383_MIC/ISO10383_MIC.xlsx",
+    "official_download_bytes_compared": false,
+    "reason": "Official workbook fetch failed with DNS resolution error in research environment; prior user-uploaded workbook not available for fresh byte inspection.",
+    "effective_date_rule": "Do not treat changes effective 2026-11-23 as active on 2026-11-13."
+  },
+  "degiro_published": {
+    "sources": [
+      {
+        "url": "https://www.degiro.nl/tarieven",
+        "observation": "Euronext Amsterdam shares: EUR 2 commission + EUR 1 handling per transaction; page links tariff PDF dated 2025-10-01."
+      },
+      {
+        "url": "https://www.degiro.nl/zelf-beleggen/aandelen-kopen",
+        "observation": "European shares advertised: EUR 3.90 commission + EUR 1 handling per transaction; category-wide only."
+      },
+      {
+        "url": "https://www.degiro.nl/",
+        "observation": "EUR 0.25% FX conversion mentioned; Amsterdam EUR 3 illustration and comparison dated 2026-08-31."
+      }
+    ],
+    "published_cost_scenarios": [
+      {
+        "venue": "Euronext Amsterdam",
+        "commission_eur": 2,
+        "handling_eur": 1,
+        "total_per_side_eur": 3,
+        "round_trip_eur": 6
+      },
+      {
+        "venue": "Xetra",
+        "commission_eur_candidate": 3.9,
+        "handling_eur_candidate": 1,
+        "total_per_side_eur_candidate": 4.9,
+        "round_trip_eur_candidate": 9.8
+      },
+      {
+        "venue": "Nasdaq Helsinki",
+        "commission_eur_candidate": 3.9,
+        "handling_eur_candidate": 1,
+        "total_per_side_eur_candidate": 4.9,
+        "round_trip_eur_candidate": 9.8
+      }
+    ],
+    "limitations": [
+      "European generic rate not yet instrument-specific Xetra or Helsinki broker quote.",
+      "Published pricing not verified against user's account or order preview.",
+      "Spread, slippage, connectivity, FX, taxes and account-specific terms are not comprehensively incorporated.",
+      "No broker route or trade authorization inferred."
+    ]
+  }
+}

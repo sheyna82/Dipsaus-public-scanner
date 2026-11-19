@@ -1,0 +1,109 @@
+name: EU relative strength offline gate tests
+on:
+  pull_request:
+    paths:
+      - 'research_europe_relative_strength.py'
+      - 'test_research_europe_relative_strength.py'
+      - 'research/OMXH25_PRIMARY_SOURCE_CAPTURE_20261109.md'
+      - 'research_compare_omxh25_actual_issuer_yahoo.py'
+      - 'test_research_compare_omxh25_actual_issuer_yahoo.py'
+      - 'research_verify_omxh25_real_history_artifact.py'
+      - 'test_research_verify_omxh25_real_history_artifact.py'
+      - 'research_validate_omxh25_real_history_post.py'
+      - 'test_research_validate_omxh25_real_history_post.py'
+      - 'research_capture_omxh25_history_post.py'
+      - 'test_research_capture_omxh25_history_post.py'
+      - 'research_inspect_omxh25_history_js.py'
+      - 'research_capture_omxh25_issuer_raw.py'
+      - 'test_research_capture_omxh25_issuer_raw.py'
+      - 'test_research_capture_omxh25_history_post.py'
+      - 'research_review_omxh25_official_eod.py'
+      - 'test_research_review_omxh25_official_eod.py'
+      - 'research_compare_omxh25_official_close.py'
+      - 'test_research_compare_omxh25_official_close.py'
+      - 'research_verify_europe_benchmark_raw.py'
+      - 'test_research_verify_europe_benchmark_raw.py'
+      - 'research_capture_europe_benchmarks.py'
+      - 'test_research_capture_europe_benchmarks.py'
+      - 'research_europe_recovery_confirmation.py'
+      - 'test_research_europe_recovery_confirmation.py'
+      - 'research_europe_next_session_ledger.py'
+      - 'test_research_europe_next_session_ledger.py'
+      - 'research_europe_prospective_protocol.py'
+      - 'test_research_europe_prospective_protocol.py'
+      - 'research_europe_candidate_registry_bridge.py'
+      - 'test_research_europe_candidate_registry_bridge.py'
+      - 'research_europe_registry_receipt_demo.py'
+      - 'test_research_europe_registry_receipt_demo.py'
+      - 'research_europe_benchmark_identity_receipt.py'
+      - 'test_research_europe_benchmark_identity_receipt.py'
+      - 'research_verify_omxh25_portable_backup.py'
+      - 'test_research_verify_omxh25_portable_backup.py'
+      - 'research_recover_omxh25_offline.py'
+      - 'test_research_recover_omxh25_offline.py'
+      - 'research_rebuild_omxh25_archive.py'
+      - 'test_research_rebuild_omxh25_archive.py'
+      - 'research_verify_omxh25_archive.py'
+      - 'test_research_verify_omxh25_archive.py'
+      - '.github/workflows/research-europe-relative-strength-tests.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - run: python -m unittest -v test_research_europe_relative_strength.py test_research_capture_europe_benchmarks.py test_research_europe_recovery_confirmation.py test_research_europe_next_session_ledger.py test_research_europe_prospective_protocol.py test_research_europe_candidate_registry_bridge.py test_research_europe_registry_receipt_demo.py test_research_europe_benchmark_identity_receipt.py test_research_verify_omxh25_archive.py test_research_rebuild_omxh25_archive.py test_research_recover_omxh25_offline.py test_research_verify_omxh25_portable_backup.py test_research_verify_europe_benchmark_raw.py test_research_compare_omxh25_official_close.py test_research_review_omxh25_official_eod.py test_research_capture_omxh25_issuer_raw.py test_research_capture_omxh25_history_post.py test_research_validate_omxh25_real_history_post.py test_research_verify_omxh25_real_history_artifact.py test_research_compare_omxh25_actual_issuer_yahoo.py
+      - name: Demonstrate deterministic synthetic registry receipt
+        run: python research_europe_registry_receipt_demo.py
+  benchmark-observation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Capture benchmark provider observations (not approved index identity)
+        run: |
+          mkdir -p research-observation
+          python research_capture_europe_benchmarks.py research-observation/europe-benchmarks.json
+          python research_verify_europe_benchmark_raw.py research-observation/europe-benchmarks.json | tee research-observation/raw-integrity-receipt.json
+          python -c 'import json,sys; from research_compare_omxh25_official_close import compare_omxh25_capture; doc=json.load(open(sys.argv[1])); print(json.dumps(compare_omxh25_capture(doc),sort_keys=True))' research-observation/europe-benchmarks.json | tee research-observation/omxh25-official-close-crosscheck.json
+      - name: Capture public Nasdaq OMXH25 history candidate (unverified source bytes)
+        continue-on-error: true
+        run: |
+          python research_capture_omxh25_issuer_raw.py https://beta.indexes.nasdaqomx.com/Index/History/OMXH25 research-observation/omxh25-issuer-history-candidate.json
+      - name: Capture Nasdaq History.js candidate and inspect script literals (unverified)
+        continue-on-error: true
+        run: |
+          python research_capture_omxh25_issuer_raw.py 'https://beta.indexes.nasdaqomx.com/Scripts/History.js?v=2.0.0.0' research-observation/omxh25-history-script-candidate.json
+          python research_inspect_omxh25_history_js.py research-observation/omxh25-history-script-candidate.json research-observation/omxh25-history-script-inspection.json
+      - name: Capture Nasdaq Site.js date serializer candidate (unverified)
+        continue-on-error: true
+        run: |
+          python research_capture_omxh25_issuer_raw.py 'https://beta.indexes.nasdaqomx.com/Scripts/Site.js?v=1.0.0' research-observation/omxh25-site-script-candidate.json
+      - name: Upload observations
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: eu-benchmark-unverified-observations
+          path: |
+            research-observation/europe-benchmarks.json
+            research-observation/raw-integrity-receipt.json
+            research-observation/omxh25-official-close-crosscheck.json
+            research-observation/omxh25-issuer-history-candidate.json
+            research-observation/omxh25-history-script-candidate.json
+            research-observation/omxh25-history-script-inspection.json
+            research-observation/omxh25-site-script-candidate.json
+          if-no-files-found: error
+          retention-days: 14

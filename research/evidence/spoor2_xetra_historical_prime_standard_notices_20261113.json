@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0",
+  "observed_on": "2026-11-13",
+  "purpose": "Historical primary-source Prime Standard admission evidence for two Xetra pilots; not current instrument segment or broker execution attestation.",
+  "source_attested": false,
+  "mic_registered": false,
+  "broker_route_verified": false,
+  "degiro_fee_verified": false,
+  "trade_ready": false,
+  "order_placement_enabled": false,
+  "records": [
+    {
+      "symbol": "IFX.DE",
+      "isin": "DE0006231004",
+      "issuer": "Infineon Technologies AG",
+      "historical_market_classification": "Regulierter Markt - Prime Standard",
+      "authority": "Frankfurter Wertpapierboerse Geschaeftsfuehrung",
+      "notice_date": "2019-06-21",
+      "source_url": "https://www.cashmarket.deutsche-boerse.com/resource/blob/1572142/64b58196e1224a196d3d262cceff6bb1/data/Introduction_notice.pdf",
+      "notice_scope": "2019-06-24 introduction of newly issued ordinary registered shares into existing pricing; NOT current segment MIC assignment."
+    },
+    {
+      "symbol": "RHM.DE",
+      "isin": "DE0007030009",
+      "issuer": "Rheinmetall Aktiengesellschaft",
+      "historical_market_classification": "Regulierter Markt - Prime Standard",
+      "authority": "Frankfurter Wertpapierboerse Geschaeftsfuehrung",
+      "notice_date": "2023-05-05",
+      "source_url": "https://www.cashmarket.deutsche-boerse.com/resource/blob/3526200/ba24ef5ea206d37a4d752199f6260212/data/Introduction_RM.pdf",
+      "notice_scope": "2023-05-08 introduction of newly issued ordinary bearer shares into existing pricing; NOT current segment MIC assignment."
+    }
+  ],
+  "interpretation": "Historical Prime Standard classification is consistent with the regulated-market segment taxonomy but cannot establish a present-day instrument's XETA segment or transaction route.",
+  "limitations": [
+    "No current-day instrument reference row verified.",
+    "Historical exchange notices do not establish actual trade segment or broker routing.",
+    "Do not infer segment MIC XETA without current instrument-specific evidence.",
+    "Official Xetra CSV/ZIP bytes not fetched or hashed."
+  ]
+}
