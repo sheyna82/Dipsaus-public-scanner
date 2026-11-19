@@ -52,9 +52,14 @@ def compare_instrument_records(records, *, now=None):
         stamp = _stamp(row.get("observed_utc"))
         if stamp is None or not -30 <= (now.astimezone(timezone.utc)-stamp).total_seconds() <= 86400:
             return {**blocked, "reason": "STALE_RECORD"}
-        isin, mic = row.get("isin"), row.get("operating_mic")
-        if not isin_checksum_valid(isin) or not isinstance(mic, str) or re.fullmatch(r"[A-Z0-9]{4}", mic) is None:
+        mic = row.get("operating_mic")
+        if not isinstance(mic, str) or re.fullmatch(r"[A-Z0-9]{4}", mic) is None:
             return {**blocked, "reason": "INVALID_IDENTITY"}
+        # ISO 10383 registers venues/MICs, not per-instrument ISIN listings.
+        if cls != "OFFICIAL_MIC_REGISTER" and not isin_checksum_valid(row.get("isin")):
+            return {**blocked, "reason": "INVALID_IDENTITY"}
+        if cls == "OFFICIAL_MIC_REGISTER" and "isin" in row:
+            return {**blocked, "reason": "REGISTRY_MUST_NOT_ASSERT_ISIN"}
         if row.get("active") is not True:
             return {**blocked, "reason": "INACTIVE_OR_UNVERIFIED"}
         if cls == "EXCHANGE" and (not isinstance(row.get("segment"), str) or not row["segment"].strip()):
@@ -64,11 +69,10 @@ def compare_instrument_records(records, *, now=None):
         groups[cls] = row
     if set(groups) != ALLOWED:
         return {**blocked, "reason": "MISSING_SOURCE_CLASS"}
-    identities = {(row["isin"], row["operating_mic"]) for row in records}
-    if len(identities) != 1:
+    if len({row["operating_mic"] for row in records}) != 1 or groups["EXCHANGE"]["isin"] != groups["BROKER"]["isin"]:
         return {**blocked, "reason": "IDENTITY_CONFLICT"}
     return {**BLOCKED, "status": "CROSS_SOURCE_CLAIMS_CONSISTENT",
-            "isin": records[0]["isin"], "operating_mic": records[0]["operating_mic"],
+            "isin": groups["EXCHANGE"]["isin"], "operating_mic": groups["EXCHANGE"]["operating_mic"],
             "segment_claim": groups["EXCHANGE"]["segment"],
             "source_authenticity_independently_verified": False,
             "warning": "Metadata-only corroboration; no direct official registry or broker API authentication."}
