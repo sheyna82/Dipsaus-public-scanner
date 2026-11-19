@@ -37,7 +37,7 @@ def evaluate_degiro_research_scenario(broker_evidence, technical, *, now,
         buy_slippage_per_share=technical["buy_slippage_per_share"],
         sell_slippage_per_share=technical["sell_slippage_per_share"],
         evidence_verified=False)
-    return {**result, **BLOCKED, "status": "UNAUTHENTICATED_RESEARCH_SCENARIO"
+    return {**result, **BLOCKED, "status": "RESEARCH_ONLY_BLOCKED"
             if result.get("status") == "RESEARCH_ONLY_BLOCKED" else
             "UNAUTHENTICATED_RESEARCH_SCENARIO"
             if result.get("status") == "HUMAN_REVIEW_REQUIRED" else result["status"],
