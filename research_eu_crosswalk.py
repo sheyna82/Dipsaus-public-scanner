@@ -37,7 +37,7 @@ def correlate(xetra, iso, *, as_of):
             return {**base, "reason": "VENUE_MIC_NOT_CORROBORATED", "isin": isin}
         if not instrument.get("research_active"):
             return {**base, "reason": "INACTIVE_INSTRUMENT", "isin": isin}
-        if not isinstance(instrument.get("segment"), str) or not instrument["segment_description"]:
+        if not isinstance(instrument.get("segment"), str) or not isinstance(instrument.get("segment_description"), str) or not instrument.get("segment_description"):
             return {**base, "reason": "UNVERIFIED_XETRA_SEGMENT", "isin": isin}
         joined[isin] = {"venue_mic": mic, "xetra_segment_code": instrument["segment"],
                         "xetra_segment_description": instrument["segment_description"],
