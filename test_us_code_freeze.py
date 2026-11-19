@@ -44,9 +44,8 @@ class CodeFreezeTests(unittest.TestCase):
                          code_freeze_active(ny.astimezone(timezone.utc)))
 
 
-    def test_cli_exits_nonzero_during_frozen_hours(self):
-        # Subprocess with controlled clock via a Python entrypoint call:
-        # verify the pure gate used by the CLI, independent of wall clock.
+    def test_midday_frozen_on_weekday(self):
+        # The same pure predicate is used by the fail-closed CLI.
         self.assertTrue(code_freeze_active(self.at_ny(2026, 11, 19, 9, 25)))
 
     def test_dst_end_winter_netherlands(self):
