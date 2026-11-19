@@ -37,12 +37,12 @@ class XetraTests(unittest.TestCase):
         self.assertFalse(r["broker_route_verified"])
 
     def test_real_segment_supplement_type(self):
-        extra = b"Market Segment Supplement;BEA;Belgium - Continu\\n"
+        extra = b"Market Segment Supplement;BEA;Belgium - Continu\n"
         archive = zipped(SEG + extra)
         self.assertEqual(self.check(archive=archive)["status"], "OFFLINE_XETRA_SNAPSHOT_CONSISTENT")
 
     def test_unknown_segment_type_blocked(self):
-        extra = b"Unknown Type;BEA;Invalid\\n"
+        extra = b"Unknown Type;BEA;Invalid\n"
         self.assertEqual(self.check(archive=zipped(SEG + extra))["reason"], "INVALID_SEGMENT_TABLE")
 
     def test_wrong_csv_digest(self):
