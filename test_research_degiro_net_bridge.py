@@ -5,6 +5,7 @@ from research_degiro_net_bridge import evaluate_degiro_research_scenario as eval
 
 NOW = datetime(2026, 11, 19, 14, 15, tzinfo=timezone.utc)
 BROKER = dict(isin="DE0006231004", operating_mic="XETR",
+              instrument_currency="EUR", fee_currency="EUR",
               quote_source="DEGIRO", fee_source="DEGIRO", route_source="DEGIRO",
               quote_observed_utc="2026-11-19T14:14:30Z",
               fee_observed_utc="2026-11-19T14:00:00Z",
@@ -57,6 +58,18 @@ class DegiroNetBridgeTests(unittest.TestCase):
     def test_naive_route_timestamp_blocks_before_math(self):
         r = evaluate({**BROKER, "route_observed_utc": "2026-11-19T14:00:00"}, TECH, now=NOW)
         self.assertEqual(r["status"], "BROKER_METADATA_BLOCKED")
+
+    def test_usd_instrument_cannot_be_assumed_eur(self):
+        r = evaluate({**BROKER, "instrument_currency": "USD"}, TECH, now=NOW)
+        self.assertEqual(r["status"], "CURRENCY_BLOCKED")
+        self.assertNotIn("net_profit_eur", r)
+    def test_unknown_fee_currency_blocks(self):
+        r = evaluate({**BROKER, "fee_currency": None}, TECH, now=NOW)
+        self.assertEqual(r["status"], "CURRENCY_BLOCKED")
+    def test_missing_instrument_currency_blocks(self):
+        e = dict(BROKER)
+        del e["instrument_currency"]
+        self.assertEqual(evaluate(e, TECH, now=NOW)["status"], "CURRENCY_BLOCKED")
 
 if __name__ == "__main__":
     unittest.main()
