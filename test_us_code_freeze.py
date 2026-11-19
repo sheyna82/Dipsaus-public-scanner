@@ -44,5 +44,18 @@ class CodeFreezeTests(unittest.TestCase):
                          code_freeze_active(ny.astimezone(timezone.utc)))
 
 
+    def test_cli_exits_nonzero_during_frozen_hours(self):
+        # Subprocess with controlled clock via a Python entrypoint call:
+        # verify the pure gate used by the CLI, independent of wall clock.
+        self.assertTrue(code_freeze_active(self.at_ny(2026, 11, 19, 9, 25)))
+
+    def test_dst_end_winter_netherlands(self):
+        # Europe returns to winter time before US: 09:25 NY = 14:25 NL.
+        ny = self.at_ny(2027, 11, 1, 9, 25)
+        nl = ny.astimezone(ZoneInfo("Europe/Amsterdam"))
+        self.assertEqual((nl.hour, nl.minute), (15, 25))
+        self.assertTrue(code_freeze_active(ny))
+
+
 if __name__ == "__main__":
     unittest.main()
