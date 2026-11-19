@@ -18,6 +18,7 @@ def evaluate_verified_research_evidence(evidence, *, market, budget_eur=3500):
     required = ("broker_ask", "broker_bid", "invalidation", "target",
                 "buy_fee_eur", "sell_fee_eur", "fx_eur_per_unit",
                 "fx_buy_fee_rate", "fx_sell_fee_rate",
+                "buy_slippage_per_share", "sell_slippage_per_share",
                 "broker_quote_verified", "levels_verified",
                 "fees_verified", "fx_verified", "quote_freshness_verified")
     missing = [key for key in required if evidence.get(key) is None]
@@ -37,6 +38,6 @@ def evaluate_verified_research_evidence(evidence, *, market, budget_eur=3500):
         fx_eur_per_unit=evidence["fx_eur_per_unit"],
         fx_buy_fee_rate=evidence["fx_buy_fee_rate"],
         fx_sell_fee_rate=evidence["fx_sell_fee_rate"],
-        buy_slippage_per_share=evidence.get("buy_slippage_per_share", 0),
-        sell_slippage_per_share=evidence.get("sell_slippage_per_share", 0),
+        buy_slippage_per_share=evidence["buy_slippage_per_share"],
+        sell_slippage_per_share=evidence["sell_slippage_per_share"],
         evidence_verified=True)
