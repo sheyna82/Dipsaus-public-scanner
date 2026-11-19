@@ -10,6 +10,7 @@ class NetBridgeTests(unittest.TestCase):
             "invalidation": 64, "target": 70,
             "buy_fee_eur": 4.9, "sell_fee_eur": 4.9,
             "fx_eur_per_unit": 1, "fx_buy_fee_rate": 0,
+            "buy_slippage_per_share": 0, "sell_slippage_per_share": 0,
             "fx_sell_fee_rate": 0, "broker_quote_verified": True,
             "levels_verified": True, "fees_verified": True,
             "fx_verified": True, "quote_freshness_verified": True}
@@ -39,6 +40,13 @@ class NetBridgeTests(unittest.TestCase):
         e = dict(self.evidence, fx_buy_fee_rate=None)
         r = bridge(e, market="US")
         self.assertEqual(r["status"], "DATA_BLOCKED")
+
+    def test_missing_slippage_fails_closed(self):
+        e = dict(self.evidence)
+        e.pop("sell_slippage_per_share")
+        r = bridge(e, market="EU")
+        self.assertEqual(r["status"], "DATA_BLOCKED")
+        self.assertIn("sell_slippage_per_share", r["missing"])
 
     def test_invalid_market_fails_closed(self):
         r = bridge(self.evidence, market="UNKNOWN")
