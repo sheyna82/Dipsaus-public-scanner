@@ -53,7 +53,7 @@ def inspect_xetra_snapshot(instrument_bytes, zip_bytes, *, instrument_sha256,
             return {**blocked, "reason": "MISSING_SEGMENT_COLUMNS"}
         segments = {}
         for row in segrows:
-            if row["Content type"] != "Market Segment" or not row["Identifier"] or row["Identifier"] in segments:
+            if row["Content type"] not in {"Market Segment", "Market Segment Supplement"} or not row["Identifier"] or row["Identifier"] in segments:
                 return {**blocked, "reason": "INVALID_SEGMENT_TABLE"}
             segments[row["Identifier"]] = row["Description"]
         if any(r["Market Segment"] not in segments for r in instruments):
