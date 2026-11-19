@@ -3,9 +3,9 @@ import csv
 import hashlib
 import io
 import re
-from datetime import date
+from datetime import date, datetime
 
-REQUIRED = ("MIC", "OPERATING MIC", "OPRT/SGMT", "STATUS", "MARKET NAME-INSTITUTION DESCRIPTION")
+REQUIRED = ("MIC", "OPERATING MIC", "OPRT/SGMT", "STATUS", "MARKET NAME-INSTITUTION DESCRIPTION", "CREATION DATE", "LAST UPDATE DATE", "EXPIRY DATE")
 BLOCKED = {"trade_ready": False, "order_placement_enabled": False,
            "source_authenticity_independently_verified": False}
 MIC_PATTERN = re.compile(r"[A-Z0-9]{4}")
@@ -46,11 +46,29 @@ def inspect_official_mic_csv(raw, *, expected_sha256, publication_date,
                 return {**blocked, "reason": "OPERATING_MIC_SELF_MISMATCH"}
             rows[mic] = row
         selected = {}
+        def registry_date(value):
+            return datetime.strptime(value, "%Y%m%d").date() if value else None
         for mic in requested_mics:
             row = rows.get(mic)
             if row is None:
                 return {**blocked, "reason": "MISSING_MIC", "mic": mic}
             op = row["OPERATING MIC"]
+            parent = rows.get(op)
+            try:
+                created = registry_date(row["CREATION DATE"])
+                updated = registry_date(row["LAST UPDATE DATE"])
+                expires = registry_date(row["EXPIRY DATE"])
+                parent_created = registry_date(parent["CREATION DATE"]) if parent else None
+                parent_updated = registry_date(parent["LAST UPDATE DATE"]) if parent else None
+                parent_expires = registry_date(parent["EXPIRY DATE"]) if parent else None
+            except ValueError:
+                return {**blocked, "reason": "INVALID_REGISTER_DATE", "mic": mic}
+            if (created is None or updated is None or parent_created is None or parent_updated is None
+                    or created > updated or parent_created > parent_updated
+                    or updated > as_of or parent_updated > as_of
+                    or (expires is not None and expires <= as_of)
+                    or (parent_expires is not None and parent_expires <= as_of)):
+                return {**blocked, "reason": "DATE_INCONSISTENCY", "mic": mic}
             if (row["STATUS"] != "ACTIVE" or op not in rows
                     or rows[op]["OPRT/SGMT"] != "OPRT" or rows[op]["STATUS"] != "ACTIVE"):
                 return {**blocked, "reason": "INACTIVE_OR_INVALID_PARENT", "mic": mic}
