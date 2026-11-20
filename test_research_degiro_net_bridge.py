@@ -22,6 +22,9 @@ TECH = dict(instrument_isin="DE0006231004", operating_mic="XETR",
             invalidation=64, target=70,
             buy_slippage_per_share=0, sell_slippage_per_share=0)
 
+ASSUMPTION = {"basis": "USER_DEFINED_STRESS", "independently_verified": False,
+              "rationale": "Synthetic fee stress; not a broker quote."}
+
 class DegiroNetBridgeTests(unittest.TestCase):
     def test_profitable_synthetic_scenario_stays_unauthenticated(self):
         r = evaluate(BROKER, TECH, now=NOW)
@@ -235,7 +238,8 @@ class DegiroNetBridgeTests(unittest.TestCase):
     def test_conservative_ceiling_can_fail_thresholds(self):
         e = {**BROKER, "fee_evidence": {
             "evidence_kind": "OFFICIAL_PUBLIC_SCHEDULE",
-            "sell_fee_ceiling_eur": 200}}
+            "sell_fee_ceiling_eur": 200,
+            "sell_fee_ceiling_assumption": ASSUMPTION}}
         r = evaluate(e, TECH, now=NOW)
         self.assertEqual(r["status"], "RESEARCH_FEE_SENSITIVITY_FAILED")
         self.assertFalse(r["conservative_fee_thresholds_met"])
@@ -244,7 +248,8 @@ class DegiroNetBridgeTests(unittest.TestCase):
     def test_conservative_ceiling_can_pass_without_authentication(self):
         e = {**BROKER, "fee_evidence": {
             "evidence_kind": "OFFICIAL_PUBLIC_SCHEDULE",
-            "sell_fee_ceiling_eur": 6}}
+            "sell_fee_ceiling_eur": 6,
+            "sell_fee_ceiling_assumption": ASSUMPTION}}
         r = evaluate(e, TECH, now=NOW)
         self.assertEqual(r["status"], "UNAUTHENTICATED_RESEARCH_SCENARIO")
         self.assertTrue(r["conservative_fee_thresholds_met"])
@@ -258,7 +263,8 @@ class DegiroNetBridgeTests(unittest.TestCase):
     def test_invalid_ceiling_blocks(self):
         e = {**BROKER, "fee_evidence": {
             "evidence_kind": "OFFICIAL_PUBLIC_SCHEDULE",
-            "sell_fee_ceiling_eur": float("nan")}}
+            "sell_fee_ceiling_eur": float("nan"),
+            "sell_fee_ceiling_assumption": ASSUMPTION}}
         r = evaluate(e, TECH, now=NOW)
         self.assertEqual(r["status"], "SELL_FEE_UNCERTAINTY_BLOCKED")
         self.assertNotIn("net_profit_eur", r)
@@ -266,7 +272,8 @@ class DegiroNetBridgeTests(unittest.TestCase):
     def test_ceiling_below_estimate_blocks(self):
         e = {**BROKER, "fee_evidence": {
             "evidence_kind": "OFFICIAL_PUBLIC_SCHEDULE",
-            "sell_fee_ceiling_eur": 4}}
+            "sell_fee_ceiling_eur": 4,
+            "sell_fee_ceiling_assumption": ASSUMPTION}}
         r = evaluate(e, TECH, now=NOW)
         self.assertEqual(r["reason"], "CEILING_BELOW_ESTIMATE")
 
@@ -286,10 +293,36 @@ class DegiroNetBridgeTests(unittest.TestCase):
     def test_invalid_base_structure_with_ceiling_preserves_reason(self):
         e = {**BROKER, "fee_evidence": {
             "evidence_kind": "OFFICIAL_PUBLIC_SCHEDULE",
-            "sell_fee_ceiling_eur": 10}}
+            "sell_fee_ceiling_eur": 10,
+            "sell_fee_ceiling_assumption": ASSUMPTION}}
         r = evaluate(e, {**TECH, "target": 64}, now=NOW)
         self.assertEqual(r["status"], "STRUCTURE_BLOCKED")
         self.assertIsNone(r["conservative_fee_thresholds_met"])
+
+    def test_undocumented_fee_ceiling_blocks(self):
+        e = {**BROKER, "fee_evidence": {
+            "evidence_kind": "OFFICIAL_PUBLIC_SCHEDULE",
+            "sell_fee_ceiling_eur": 6}}
+        r = evaluate(e, TECH, now=NOW)
+        self.assertEqual(r["reason"], "UNDOCUMENTED_SELL_FEE_CEILING")
+        self.assertNotIn("net_profit_eur", r)
+
+    def test_claimed_verified_fee_ceiling_blocks(self):
+        e = {**BROKER, "fee_evidence": {
+            "evidence_kind": "OFFICIAL_PUBLIC_SCHEDULE",
+            "sell_fee_ceiling_eur": 6,
+            "sell_fee_ceiling_assumption": {
+                **ASSUMPTION, "independently_verified": True}}}
+        r = evaluate(e, TECH, now=NOW)
+        self.assertEqual(r["reason"], "UNDOCUMENTED_SELL_FEE_CEILING")
+
+    def test_empty_fee_ceiling_rationale_blocks(self):
+        e = {**BROKER, "fee_evidence": {
+            "evidence_kind": "OFFICIAL_PUBLIC_SCHEDULE",
+            "sell_fee_ceiling_eur": 6,
+            "sell_fee_ceiling_assumption": {**ASSUMPTION, "rationale": "  "}}}
+        r = evaluate(e, TECH, now=NOW)
+        self.assertEqual(r["reason"], "UNDOCUMENTED_SELL_FEE_CEILING")
 
 if __name__ == "__main__":
     unittest.main()
