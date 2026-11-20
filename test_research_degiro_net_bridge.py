@@ -148,6 +148,7 @@ class DegiroNetBridgeTests(unittest.TestCase):
     def test_preview_claim_stays_unauthenticated(self):
         e = {**BROKER, "fee_evidence": {
             "evidence_kind": "BROKER_ORDER_PREVIEW",
+            "sell_fee_basis": "UNVERIFIED_FUTURE_SELL_ESTIMATE",
             "preview_isin": BROKER["isin"],
             "preview_operating_mic": BROKER["operating_mic"],
             "preview_quantity": 53,
@@ -160,6 +161,7 @@ class DegiroNetBridgeTests(unittest.TestCase):
     def test_preview_quantity_must_match_calculated_shares(self):
         e = {**BROKER, "fee_evidence": {
             "evidence_kind": "BROKER_ORDER_PREVIEW",
+            "sell_fee_basis": "UNVERIFIED_FUTURE_SELL_ESTIMATE",
             "preview_isin": BROKER["isin"],
             "preview_operating_mic": BROKER["operating_mic"],
             "preview_quantity": 52,
@@ -171,6 +173,7 @@ class DegiroNetBridgeTests(unittest.TestCase):
     def test_preview_wrong_venue_blocks_before_math(self):
         e = {**BROKER, "fee_evidence": {
             "evidence_kind": "BROKER_ORDER_PREVIEW",
+            "sell_fee_basis": "UNVERIFIED_FUTURE_SELL_ESTIMATE",
             "preview_isin": BROKER["isin"],
             "preview_operating_mic": "XAMS", "preview_quantity": 53,
             "preview_buy_fee_eur": 4.9, "preview_sell_fee_eur": 4.9}}
@@ -181,6 +184,7 @@ class DegiroNetBridgeTests(unittest.TestCase):
     def test_preview_fee_difference_blocks(self):
         e = {**BROKER, "fee_evidence": {
             "evidence_kind": "BROKER_ORDER_PREVIEW",
+            "sell_fee_basis": "UNVERIFIED_FUTURE_SELL_ESTIMATE",
             "preview_isin": BROKER["isin"],
             "preview_operating_mic": BROKER["operating_mic"],
             "preview_quantity": 53,
@@ -193,6 +197,7 @@ class DegiroNetBridgeTests(unittest.TestCase):
     def test_missing_preview_fee_blocks(self):
         e = {**BROKER, "fee_evidence": {
             "evidence_kind": "BROKER_ORDER_PREVIEW",
+            "sell_fee_basis": "UNVERIFIED_FUTURE_SELL_ESTIMATE",
             "preview_isin": BROKER["isin"],
             "preview_operating_mic": BROKER["operating_mic"],
             "preview_quantity": 53,
@@ -202,12 +207,17 @@ class DegiroNetBridgeTests(unittest.TestCase):
     def test_nonfinite_preview_fee_blocks(self):
         e = {**BROKER, "fee_evidence": {
             "evidence_kind": "BROKER_ORDER_PREVIEW",
+            "sell_fee_basis": "UNVERIFIED_FUTURE_SELL_ESTIMATE",
             "preview_isin": BROKER["isin"],
             "preview_operating_mic": BROKER["operating_mic"],
             "preview_quantity": 53,
             "preview_buy_fee_eur": float("nan"),
             "preview_sell_fee_eur": 4.9}}
         self.assertEqual(evaluate(e, TECH, now=NOW)["status"], "FEE_PREVIEW_AMOUNT_BLOCKED")
+
+    def test_preview_cannot_claim_future_sell_fee_verified(self):
+        e = {**BROKER, "fee_evidence": {"evidence_kind": "BROKER_ORDER_PREVIEW", "preview_isin": BROKER["isin"], "preview_operating_mic": BROKER["operating_mic"], "preview_quantity": 53, "preview_buy_fee_eur": 4.9, "preview_sell_fee_eur": 4.9, "sell_fee_basis": "VERIFIED"}}
+        self.assertEqual(evaluate(e, TECH, now=NOW)["status"], "FEE_EVIDENCE_BLOCKED")
 
 if __name__ == "__main__":
     unittest.main()
