@@ -6,6 +6,8 @@ from research_degiro_net_bridge import evaluate_degiro_research_scenario as eval
 NOW = datetime(2026, 11, 19, 14, 15, tzinfo=timezone.utc)
 BROKER = dict(isin="DE0006231004", operating_mic="XETR",
               instrument_currency="EUR", fee_currency="EUR",
+              fee_instrument_isin="DE0006231004", fee_operating_mic="XETR",
+              fee_route_instrument_isin="DE0006231004", fee_route_operating_mic="XETR",
               quote_source="DEGIRO", fee_source="DEGIRO", route_source="DEGIRO",
               quote_observed_utc="2026-11-19T14:14:30Z",
               fee_observed_utc="2026-11-19T14:00:00Z",
@@ -93,6 +95,21 @@ class DegiroNetBridgeTests(unittest.TestCase):
     def test_future_technical_levels_block(self):
         r = evaluate(BROKER, {**TECH, "levels_observed_utc": "2026-11-19T14:16:00Z"}, now=NOW)
         self.assertEqual(r["status"], "TECHNICAL_PROVENANCE_BLOCKED")
+
+    def test_fee_from_different_instrument_blocks(self):
+        r = evaluate({**BROKER, "fee_instrument_isin": "NL0010273215"}, TECH, now=NOW)
+        self.assertEqual(r["status"], "FEE_ROUTE_BINDING_BLOCKED")
+        self.assertNotIn("net_profit_eur", r)
+    def test_fee_from_different_venue_blocks(self):
+        r = evaluate({**BROKER, "fee_operating_mic": "XAMS"}, TECH, now=NOW)
+        self.assertEqual(r["status"], "FEE_ROUTE_BINDING_BLOCKED")
+    def test_fee_route_mismatch_blocks(self):
+        r = evaluate({**BROKER, "fee_route_operating_mic": "XAMS"}, TECH, now=NOW)
+        self.assertEqual(r["status"], "FEE_ROUTE_BINDING_BLOCKED")
+    def test_missing_fee_instrument_binding_blocks(self):
+        e = dict(BROKER)
+        del e["fee_instrument_isin"]
+        self.assertEqual(evaluate(e, TECH, now=NOW)["status"], "FEE_ROUTE_BINDING_BLOCKED")
 
 if __name__ == "__main__":
     unittest.main()
