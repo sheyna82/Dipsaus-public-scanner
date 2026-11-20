@@ -23,6 +23,12 @@ def evaluate_degiro_research_scenario(broker_evidence, technical, *, now,
             or broker_evidence.get("fee_currency") != "EUR"):
         return {**BLOCKED, "status": "CURRENCY_BLOCKED",
                 "reason": "EUR_ONLY_RESEARCH_BRIDGE"}
+    if (broker_evidence.get("fee_instrument_isin") != broker_evidence["isin"]
+            or broker_evidence.get("fee_operating_mic") != broker_evidence["operating_mic"]
+            or broker_evidence.get("fee_route_instrument_isin") != broker_evidence["route_instrument_isin"]
+            or broker_evidence.get("fee_route_operating_mic") != broker_evidence["route_operating_mic"]):
+        return {**BLOCKED, "status": "FEE_ROUTE_BINDING_BLOCKED",
+                "reason": "FEE_CLAIM_NOT_BOUND_TO_INSTRUMENT_ROUTE"}
     if not isinstance(technical, dict) or any(
             key not in technical for key in ("invalidation", "target",
                                               "buy_slippage_per_share",
