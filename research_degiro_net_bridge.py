@@ -15,6 +15,10 @@ def evaluate_degiro_research_scenario(broker_evidence, technical, *, now,
     if gate["status"] != "DEGIRO_CLAIMS_STRUCTURALLY_CONSISTENT":
         return {**BLOCKED, "status": "BROKER_EVIDENCE_BLOCKED",
                 "reason": gate.get("reason")}
+    if (broker_evidence.get("quote_instrument_isin") != broker_evidence["isin"]
+            or broker_evidence.get("quote_operating_mic") != broker_evidence["operating_mic"]):
+        return {**BLOCKED, "status": "QUOTE_IDENTITY_BLOCKED",
+                "reason": "QUOTE_NOT_BOUND_TO_INSTRUMENT_VENUE"}
     metadata = inspect_broker_metadata_freshness(broker_evidence, now=now)
     if metadata["status"] != "BROKER_METADATA_CLAIMS_FRESH":
         return {**BLOCKED, "status": "BROKER_METADATA_BLOCKED",
