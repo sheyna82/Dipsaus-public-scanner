@@ -45,6 +45,22 @@ def evaluate_degiro_research_scenario(broker_evidence, technical, *, now,
             "PUBLIC_FEE_ASSUMPTION_ONLY", "UNAUTHENTICATED_ORDER_PREVIEW_CLAIM"):
         return {**BLOCKED, "status": "FEE_EVIDENCE_BLOCKED",
                 "reason": fee_classification.get("reason")}
+    if fee_classification["status"] == "UNAUTHENTICATED_ORDER_PREVIEW_CLAIM":
+        # Preview costs are untrusted; require exact numeric agreement before
+        # even producing a hypothetical scenario. No rounding tolerance.
+        import math
+        for preview_key, scenario_key in (
+                ("preview_buy_fee_eur", "fee_buy_eur"),
+                ("preview_sell_fee_eur", "fee_sell_eur")):
+            preview_value = fee_claim.get(preview_key)
+            scenario_value = broker_evidence[scenario_key]
+            if (type(preview_value) not in (int, float)
+                    or not math.isfinite(preview_value)
+                    or preview_value < 0
+                    or preview_value != scenario_value):
+                return {**BLOCKED, "status": "FEE_PREVIEW_AMOUNT_BLOCKED",
+                        "reason": "PREVIEW_FEE_DIFFERS_FROM_SCENARIO",
+                        "field": preview_key}
     if not isinstance(technical, dict) or any(
             key not in technical for key in ("invalidation", "target",
                                               "buy_slippage_per_share",
