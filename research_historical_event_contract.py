@@ -5,6 +5,7 @@ personal data is accepted. Does not write files or authorize trading.
 """
 from datetime import datetime, timezone
 import math
+import re
 
 BLOCKED = {"trade_ready": False, "order_placement_enabled": False,
            "source_authenticity_independently_verified": False}
@@ -41,11 +42,17 @@ def validate_historical_events(events):
                     "reason": "UNKNOWN_TYPE_OR_FIELDS"}
         if event["schema_version"] != 1:
             return {**BLOCKED, "status": "EVENT_CONTRACT_BLOCKED", "reason": "SCHEMA_VERSION"}
-        for key in ("event_id", "candidate_id", "source_digest"):
-            value = event[key]
-            if not isinstance(value, str) or not value.strip() or len(value) > 128:
-                return {**BLOCKED, "status": "EVENT_CONTRACT_BLOCKED",
-                        "reason": "INVALID_IDENTIFIER"}
+        # Strict syntax limits accidental plain-text identifiers, not reidentification.
+        if (not isinstance(event["event_id"], str)
+                or re.fullmatch(r"[0-9a-f]{32}", event["event_id"]) is None
+                or not isinstance(event["candidate_id"], str)
+                or re.fullmatch(r"[0-9a-f]{32}", event["candidate_id"]) is None):
+            return {**BLOCKED, "status": "EVENT_CONTRACT_BLOCKED",
+                    "reason": "INVALID_IDENTIFIER"}
+        if (not isinstance(event["source_digest"], str)
+                or re.fullmatch(r"[0-9a-f]{64}", event["source_digest"]) is None):
+            return {**BLOCKED, "status": "EVENT_CONTRACT_BLOCKED",
+                    "reason": "INVALID_SOURCE_DIGEST"}
         if event["event_id"] in seen:
             return {**BLOCKED, "status": "EVENT_CONTRACT_BLOCKED",
                     "reason": "DUPLICATE_EVENT"}
