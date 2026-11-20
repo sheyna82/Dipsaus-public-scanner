@@ -15,6 +15,7 @@ BROKER = dict(isin="DE0006231004", operating_mic="XETR",
               route_observed_utc="2026-11-19T14:00:00Z",
               quote_bid=64.99, quote_ask=65,
               fee_buy_eur=4.9, fee_sell_eur=4.9,
+              fee_evidence={"evidence_kind": "OFFICIAL_PUBLIC_SCHEDULE"},
               route_instrument_isin="DE0006231004", route_operating_mic="XETR")
 TECH = dict(instrument_isin="DE0006231004", operating_mic="XETR",
             levels_observed_utc="2026-11-19T14:00:00Z",
@@ -123,6 +124,46 @@ class DegiroNetBridgeTests(unittest.TestCase):
         e = dict(BROKER)
         del e["quote_instrument_isin"]
         self.assertEqual(evaluate(e, TECH, now=NOW)["status"], "QUOTE_IDENTITY_BLOCKED")
+
+    def test_missing_fee_evidence_blocks_before_math(self):
+        e = dict(BROKER)
+        del e["fee_evidence"]
+        r = evaluate(e, TECH, now=NOW)
+        self.assertEqual(r["status"], "FEE_EVIDENCE_BLOCKED")
+        self.assertNotIn("net_profit_eur", r)
+
+    def test_public_schedule_remains_hypothetical(self):
+        r = evaluate(BROKER, TECH, now=NOW)
+        self.assertEqual(r["fee_evidence_status"], "PUBLIC_FEE_ASSUMPTION_ONLY")
+        self.assertFalse(r["degiro_fee_verified"])
+        self.assertFalse(r["trade_ready"])
+
+    def test_public_schedule_claiming_account_specific_blocks(self):
+        e = {**BROKER, "fee_evidence": {
+            "evidence_kind": "OFFICIAL_PUBLIC_SCHEDULE", "account_specific": True}}
+        r = evaluate(e, TECH, now=NOW)
+        self.assertEqual(r["status"], "FEE_EVIDENCE_BLOCKED")
+        self.assertNotIn("net_profit_eur", r)
+
+    def test_preview_claim_stays_unauthenticated(self):
+        e = {**BROKER, "fee_evidence": {
+            "evidence_kind": "BROKER_ORDER_PREVIEW",
+            "preview_isin": BROKER["isin"],
+            "preview_operating_mic": BROKER["operating_mic"],
+            "preview_quantity": 53}}
+        r = evaluate(e, TECH, now=NOW)
+        self.assertEqual(r["fee_evidence_status"], "UNAUTHENTICATED_ORDER_PREVIEW_CLAIM")
+        self.assertFalse(r["degiro_fee_verified"])
+        self.assertFalse(r["order_placement_enabled"])
+
+    def test_preview_wrong_venue_blocks_before_math(self):
+        e = {**BROKER, "fee_evidence": {
+            "evidence_kind": "BROKER_ORDER_PREVIEW",
+            "preview_isin": BROKER["isin"],
+            "preview_operating_mic": "XAMS", "preview_quantity": 53}}
+        r = evaluate(e, TECH, now=NOW)
+        self.assertEqual(r["status"], "FEE_EVIDENCE_BLOCKED")
+        self.assertNotIn("net_profit_eur", r)
 
 if __name__ == "__main__":
     unittest.main()
