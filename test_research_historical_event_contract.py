@@ -1,13 +1,13 @@
 import unittest
 from research_historical_event_contract import validate_historical_events as validate
 
-SIGNAL = dict(schema_version=1, event_id="s1", candidate_id="opaque1",
+SIGNAL = dict(schema_version=1, event_id="1" * 32, candidate_id="a" * 32,
               observed_utc="2026-01-01T12:00:00Z", event_type="SIGNAL",
-              source_digest="source-digest", decision="REJECTED",
+              source_digest="b" * 64, decision="REJECTED",
               feature_digest="a" * 64)
-OUTCOME = dict(schema_version=1, event_id="o1", candidate_id="opaque1",
+OUTCOME = dict(schema_version=1, event_id="2" * 32, candidate_id="a" * 32,
                observed_utc="2026-01-10T12:00:00Z", event_type="OUTCOME",
-               source_digest="outcome-source", return_pct=-2.5,
+               source_digest="c" * 64, return_pct=-2.5,
                horizon_sessions=5)
 
 class HistoricalEventContractTests(unittest.TestCase):
@@ -47,6 +47,18 @@ class HistoricalEventContractTests(unittest.TestCase):
     def test_invalid_digest_blocked(self):
         self.assertEqual(validate([{**SIGNAL, "feature_digest": "unverified"}])["reason"],
                          "INVALID_FEATURE_DIGEST")
+
+    def test_plaintext_candidate_identifier_blocked(self):
+        self.assertEqual(validate([{**SIGNAL, "candidate_id": "AAPL"}])["reason"],
+                         "INVALID_IDENTIFIER")
+
+    def test_plaintext_source_reference_blocked(self):
+        self.assertEqual(validate([{**SIGNAL, "source_digest": "portfolio-report"}])["reason"],
+                         "INVALID_SOURCE_DIGEST")
+
+    def test_mixed_case_digest_blocked(self):
+        self.assertEqual(validate([{**SIGNAL, "source_digest": "B" * 64}])["reason"],
+                         "INVALID_SOURCE_DIGEST")
 
     def test_naive_timestamp_blocked(self):
         self.assertEqual(validate([{**SIGNAL, "observed_utc": "2026-01-01"}])["reason"],
