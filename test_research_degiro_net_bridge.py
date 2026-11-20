@@ -232,5 +232,43 @@ class DegiroNetBridgeTests(unittest.TestCase):
         e = {**BROKER, "fee_evidence": {"evidence_kind": "BROKER_ORDER_PREVIEW", "preview_isin": BROKER["isin"], "preview_operating_mic": BROKER["operating_mic"], "preview_quantity": 53, "preview_buy_fee_eur": 4.9, "estimated_future_sell_fee_eur": 4.9, "sell_fee_basis": "VERIFIED"}}
         self.assertEqual(evaluate(e, TECH, now=NOW)["status"], "FEE_EVIDENCE_BLOCKED")
 
+    def test_conservative_ceiling_can_fail_thresholds(self):
+        e = {**BROKER, "fee_evidence": {
+            "evidence_kind": "OFFICIAL_PUBLIC_SCHEDULE",
+            "sell_fee_ceiling_eur": 200}}
+        r = evaluate(e, TECH, now=NOW)
+        self.assertEqual(r["status"], "RESEARCH_FEE_SENSITIVITY_FAILED")
+        self.assertFalse(r["conservative_fee_thresholds_met"])
+        self.assertFalse(r["trade_ready"])
+
+    def test_conservative_ceiling_can_pass_without_authentication(self):
+        e = {**BROKER, "fee_evidence": {
+            "evidence_kind": "OFFICIAL_PUBLIC_SCHEDULE",
+            "sell_fee_ceiling_eur": 6}}
+        r = evaluate(e, TECH, now=NOW)
+        self.assertEqual(r["status"], "UNAUTHENTICATED_RESEARCH_SCENARIO")
+        self.assertTrue(r["conservative_fee_thresholds_met"])
+        self.assertFalse(r["degiro_fee_verified"])
+
+    def test_missing_ceiling_is_not_robustness_proof(self):
+        r = evaluate(BROKER, TECH, now=NOW)
+        self.assertIsNone(r["conservative_fee_thresholds_met"])
+        self.assertIsNone(r["sell_fee_sensitivity"])
+
+    def test_invalid_ceiling_blocks(self):
+        e = {**BROKER, "fee_evidence": {
+            "evidence_kind": "OFFICIAL_PUBLIC_SCHEDULE",
+            "sell_fee_ceiling_eur": float("nan")}}
+        r = evaluate(e, TECH, now=NOW)
+        self.assertEqual(r["status"], "SELL_FEE_UNCERTAINTY_BLOCKED")
+        self.assertNotIn("net_profit_eur", r)
+
+    def test_ceiling_below_estimate_blocks(self):
+        e = {**BROKER, "fee_evidence": {
+            "evidence_kind": "OFFICIAL_PUBLIC_SCHEDULE",
+            "sell_fee_ceiling_eur": 4}}
+        r = evaluate(e, TECH, now=NOW)
+        self.assertEqual(r["reason"], "CEILING_BELOW_ESTIMATE")
+
 if __name__ == "__main__":
     unittest.main()
