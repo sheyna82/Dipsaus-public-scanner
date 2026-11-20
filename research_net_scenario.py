@@ -41,18 +41,29 @@ def evaluate_net_scenario(*, ask, bid, invalidation, target, budget_eur,
     if not (0 < exit_stop < entry < exit_target):
         return {**blocked, "status": "FRICTION_BLOCKED"}
     buy_unit_eur = entry * fx_eur_per_unit * (1 + fx_buy_fee_rate)
-    quantity = math.floor((budget_eur - buy_fee_eur) / buy_unit_eur)
+    if not math.isfinite(buy_unit_eur) or buy_unit_eur <= 0:
+        return {**blocked, "status": "NUMERIC_OVERFLOW_BLOCKED"}
+    units_affordable = (budget_eur - buy_fee_eur) / buy_unit_eur
+    if not math.isfinite(units_affordable):
+        return {**blocked, "status": "NUMERIC_OVERFLOW_BLOCKED"}
+    quantity = math.floor(units_affordable)
     if quantity < 1:
         return {**blocked, "status": "BUDGET_BLOCKED"}
     roundtrip = buy_fee_eur + sell_fee_eur
     entry_total = quantity * buy_unit_eur + buy_fee_eur
     target_total = quantity * exit_target * fx_eur_per_unit * (1 - fx_sell_fee_rate) - sell_fee_eur
     stop_total = quantity * exit_stop * fx_eur_per_unit * (1 - fx_sell_fee_rate) - sell_fee_eur
+    if not all(math.isfinite(v) for v in (entry_total, target_total, stop_total)):
+        return {**blocked, "status": "NUMERIC_OVERFLOW_BLOCKED"}
     net_profit = target_total - entry_total
     net_risk = entry_total - stop_total
+    if not all(math.isfinite(v) for v in (net_profit, net_risk)):
+        return {**blocked, "status": "NUMERIC_OVERFLOW_BLOCKED"}
     if net_risk <= 0:
         return {**blocked, "status": "INVALID_RISK"}
     net_rr = net_profit / net_risk
+    if not math.isfinite(net_rr):
+        return {**blocked, "status": "NUMERIC_OVERFLOW_BLOCKED"}
     checks = {"net_profit_at_least_150_eur": net_profit >= 150,
               "net_rr_at_least_2": net_rr >= 2,
               "evidence_verified": evidence_verified is True}
