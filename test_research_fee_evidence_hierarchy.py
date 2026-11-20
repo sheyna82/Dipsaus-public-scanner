@@ -16,6 +16,7 @@ class FeeEvidenceHierarchyTests(unittest.TestCase):
 
     def test_preview_claim_is_not_authenticated(self):
         r = classify({"evidence_kind": "BROKER_ORDER_PREVIEW",
+            "sell_fee_basis": "UNVERIFIED_FUTURE_SELL_ESTIMATE",
                       "isin": "DE0006231004", "operating_mic": "XETR",
                       "preview_isin": "DE0006231004",
                       "preview_operating_mic": "XETR",
@@ -25,6 +26,7 @@ class FeeEvidenceHierarchyTests(unittest.TestCase):
 
     def test_preview_wrong_venue_blocks(self):
         r = classify({"evidence_kind": "BROKER_ORDER_PREVIEW",
+            "sell_fee_basis": "UNVERIFIED_FUTURE_SELL_ESTIMATE",
                       "isin": "DE0006231004", "operating_mic": "XETR",
                       "preview_isin": "DE0006231004",
                       "preview_operating_mic": "XAMS",
@@ -33,10 +35,15 @@ class FeeEvidenceHierarchyTests(unittest.TestCase):
 
     def test_preview_missing_quantity_blocks(self):
         r = classify({"evidence_kind": "BROKER_ORDER_PREVIEW",
+            "sell_fee_basis": "UNVERIFIED_FUTURE_SELL_ESTIMATE",
                       "isin": "DE0006231004", "operating_mic": "XETR",
                       "preview_isin": "DE0006231004",
                       "preview_operating_mic": "XETR"})
         self.assertEqual(r["reason"], "PREVIEW_IDENTITY_OR_QUANTITY_MISMATCH")
+
+    def test_preview_cannot_claim_future_sell_fee_verified(self):
+        r = classify({"evidence_kind": "BROKER_ORDER_PREVIEW", "isin": "DE0006231004", "operating_mic": "XETR", "preview_isin": "DE0006231004", "preview_operating_mic": "XETR", "preview_quantity": 53, "sell_fee_basis": "VERIFIED"})
+        self.assertEqual(r["reason"], "FUTURE_SELL_FEE_BASIS_NOT_DECLARED")
 
 if __name__ == "__main__":
     unittest.main()
