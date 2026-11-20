@@ -2,6 +2,7 @@
 from research_degiro_evidence import inspect_degiro_evidence
 from research_degiro_metadata import inspect_broker_metadata_freshness
 from research_net_scenario import evaluate_net_scenario
+from research_technical_provenance import inspect_technical_level_claims
 
 BLOCKED = {"trade_ready": False, "order_placement_enabled": False,
            "source_authenticity_independently_verified": False,
@@ -27,6 +28,10 @@ def evaluate_degiro_research_scenario(broker_evidence, technical, *, now,
                                               "buy_slippage_per_share",
                                               "sell_slippage_per_share")):
         return {**BLOCKED, "status": "TECHNICAL_EVIDENCE_BLOCKED"}
+    provenance = inspect_technical_level_claims(technical, broker_evidence, now=now)
+    if provenance["status"] != "TECHNICAL_CLAIMS_STRUCTURALLY_CONSISTENT":
+        return {**BLOCKED, "status": "TECHNICAL_PROVENANCE_BLOCKED",
+                "reason": provenance.get("reason")}
     result = evaluate_net_scenario(
         ask=broker_evidence["quote_ask"], bid=broker_evidence["quote_bid"],
         invalidation=technical["invalidation"], target=technical["target"],
