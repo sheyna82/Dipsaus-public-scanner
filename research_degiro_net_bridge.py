@@ -98,6 +98,17 @@ def evaluate_degiro_research_scenario(broker_evidence, technical, *, now,
     # Sensitivity is a separate hypothetical test; it never authenticates fees.
     sensitivity = None
     if "sell_fee_ceiling_eur" in fee_claim:
+        # A number alone is not a documented uncertainty assumption.
+        # This is provenance metadata, not independent source authentication.
+        assumption = fee_claim.get("sell_fee_ceiling_assumption")
+        if (not isinstance(assumption, dict)
+                or assumption.get("basis") not in (
+                    "USER_DEFINED_STRESS", "PUBLIC_SCHEDULE_STRESS")
+                or assumption.get("independently_verified") is not False
+                or not isinstance(assumption.get("rationale"), str)
+                or not assumption["rationale"].strip()):
+            return {**BLOCKED, "status": "SELL_FEE_UNCERTAINTY_BLOCKED",
+                    "reason": "UNDOCUMENTED_SELL_FEE_CEILING"}
         sensitivity = assess_sell_fee_uncertainty(
             sell_fee_estimate_eur=broker_evidence["fee_sell_eur"],
             sell_fee_ceiling_eur=fee_claim["sell_fee_ceiling_eur"],
@@ -127,6 +138,7 @@ def evaluate_degiro_research_scenario(broker_evidence, technical, *, now,
     return {**result, **BLOCKED, "status": status,
             "fee_evidence_status": fee_classification["status"],
             "sell_fee_sensitivity": sensitivity,
+            "sell_fee_ceiling_assumption": fee_claim.get("sell_fee_ceiling_assumption") if sensitivity is not None else None,
             "conservative_fee_thresholds_met": robust if sensitivity is not None else None,
             "broker_claims_structurally_consistent": True,
             "source_note": "EUR-only hypothetical calculation; actual DEGIRO identity, route and fees unverified."}
