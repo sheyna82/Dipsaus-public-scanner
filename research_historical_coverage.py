@@ -4,6 +4,7 @@ Requires a declared signal universe (including rejected signals), not merely
 the profitable subset. Completeness is never self-attested as verified.
 """
 from datetime import datetime, timezone
+import math
 
 BLOCKED = {"trade_ready": False, "order_placement_enabled": False,
            "source_authenticity_independently_verified": False}
@@ -40,6 +41,10 @@ def audit_historical_coverage(signals, outcomes):
         rid = outcome["id"]
         if rid in seen_outcomes:
             return {**BLOCKED, "status": "COVERAGE_INPUT_BLOCKED", "reason": "DUPLICATE_OUTCOME"}
+        value = outcome.get("return_pct")
+        if type(value) not in (int, float) or not math.isfinite(value):
+            return {**BLOCKED, "status": "COVERAGE_INPUT_BLOCKED",
+                    "reason": "INVALID_OUTCOME_VALUE"}
         observed = _timestamp(outcome.get("observed_utc"))
         if observed is None or observed <= indexed[rid][1]:
             return {**BLOCKED, "status": "COVERAGE_INPUT_BLOCKED", "reason": "INVALID_OUTCOME_TIME"}
