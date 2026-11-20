@@ -5,7 +5,7 @@ SIGNALS = [
     dict(id="a", decision="SELECTED", observed_utc="2026-01-01T00:00:00Z"),
     dict(id="b", decision="REJECTED", observed_utc="2026-01-01T00:00:00Z"),
 ]
-OUTCOME = dict(id="a", observed_utc="2026-01-10T00:00:00Z")
+OUTCOME = dict(id="a", observed_utc="2026-01-10T00:00:00Z", return_pct=3.0)
 
 class HistoricalCoverageTests(unittest.TestCase):
     def test_missing_rejected_outcome_visible(self):
@@ -35,6 +35,14 @@ class HistoricalCoverageTests(unittest.TestCase):
     def test_unknown_decision_blocks(self):
         self.assertEqual(audit([{**SIGNALS[0], "decision": "WINNER"}], [])["reason"],
                          "INVALID_DECISION")
+
+    def test_missing_return_blocks(self):
+        r = audit(SIGNALS, [{**OUTCOME, "return_pct": None}])
+        self.assertEqual(r["reason"], "INVALID_OUTCOME_VALUE")
+
+    def test_nonfinite_return_blocks(self):
+        r = audit(SIGNALS, [{**OUTCOME, "return_pct": float("inf")}])
+        self.assertEqual(r["reason"], "INVALID_OUTCOME_VALUE")
 
     def test_empty_collection_is_not_complete_proof(self):
         r = audit([], [])
