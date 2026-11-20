@@ -6,6 +6,7 @@ from research_degiro_net_bridge import evaluate_degiro_research_scenario as eval
 NOW = datetime(2026, 11, 19, 14, 15, tzinfo=timezone.utc)
 BROKER = dict(isin="DE0006231004", operating_mic="XETR",
               instrument_currency="EUR", fee_currency="EUR",
+              quote_instrument_isin="DE0006231004", quote_operating_mic="XETR",
               fee_instrument_isin="DE0006231004", fee_operating_mic="XETR",
               fee_route_instrument_isin="DE0006231004", fee_route_operating_mic="XETR",
               quote_source="DEGIRO", fee_source="DEGIRO", route_source="DEGIRO",
@@ -110,6 +111,18 @@ class DegiroNetBridgeTests(unittest.TestCase):
         e = dict(BROKER)
         del e["fee_instrument_isin"]
         self.assertEqual(evaluate(e, TECH, now=NOW)["status"], "FEE_ROUTE_BINDING_BLOCKED")
+
+    def test_quote_from_other_instrument_blocks(self):
+        r = evaluate({**BROKER, "quote_instrument_isin": "NL0010273215"}, TECH, now=NOW)
+        self.assertEqual(r["status"], "QUOTE_IDENTITY_BLOCKED")
+        self.assertNotIn("net_profit_eur", r)
+    def test_quote_from_other_venue_blocks(self):
+        r = evaluate({**BROKER, "quote_operating_mic": "XAMS"}, TECH, now=NOW)
+        self.assertEqual(r["status"], "QUOTE_IDENTITY_BLOCKED")
+    def test_missing_quote_binding_blocks(self):
+        e = dict(BROKER)
+        del e["quote_instrument_isin"]
+        self.assertEqual(evaluate(e, TECH, now=NOW)["status"], "QUOTE_IDENTITY_BLOCKED")
 
 if __name__ == "__main__":
     unittest.main()
