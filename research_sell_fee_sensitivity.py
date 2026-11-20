@@ -22,6 +22,9 @@ def assess_sell_fee_uncertainty(*, sell_fee_estimate_eur, sell_fee_ceiling_eur,
     if sell_fee_ceiling_eur < sell_fee_estimate_eur:
         return {**BLOCKED, "status": "SELL_FEE_UNCERTAINTY_BLOCKED",
                 "reason": "CEILING_BELOW_ESTIMATE"}
+    if sell_fee_ceiling_eur == sell_fee_estimate_eur:
+        return {**BLOCKED, "status": "SELL_FEE_UNCERTAINTY_BLOCKED",
+                "reason": "NO_ADVERSE_FEE_STRESS"}
     if "sell_fee_eur" in scenario_inputs or "evidence_verified" in scenario_inputs:
         return {**BLOCKED, "status": "SELL_FEE_UNCERTAINTY_BLOCKED",
                 "reason": "CONFLICTING_SCENARIO_FIELDS"}
