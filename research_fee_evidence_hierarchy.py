@@ -18,6 +18,9 @@ def classify_fee_evidence(evidence):
         return {**BLOCKED, "status": "PUBLIC_FEE_ASSUMPTION_ONLY",
                 "note": "Public fee schedule is not an authenticated order cost."}
     if kind == "BROKER_ORDER_PREVIEW":
+        # A buy-order preview cannot establish future sell execution fees.
+        if evidence.get("sell_fee_basis") != "UNVERIFIED_FUTURE_SELL_ESTIMATE":
+            return {**base, "reason": "FUTURE_SELL_FEE_BASIS_NOT_DECLARED"}
         if (evidence.get("preview_isin") != evidence.get("isin")
                 or evidence.get("preview_operating_mic") != evidence.get("operating_mic")
                 or type(evidence.get("preview_quantity")) is not int
