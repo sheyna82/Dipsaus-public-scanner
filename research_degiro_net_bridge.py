@@ -64,6 +64,10 @@ def evaluate_degiro_research_scenario(broker_evidence, technical, *, now,
         buy_slippage_per_share=technical["buy_slippage_per_share"],
         sell_slippage_per_share=technical["sell_slippage_per_share"],
         evidence_verified=False)
+    if (fee_classification["status"] == "UNAUTHENTICATED_ORDER_PREVIEW_CLAIM"
+            and result.get("shares") != fee_claim["preview_quantity"]):
+        return {**BLOCKED, "status": "FEE_PREVIEW_QUANTITY_BLOCKED",
+                "reason": "PREVIEW_QUANTITY_DIFFERS_FROM_SCENARIO"}
     checks = result.get("checks", {})
     financially_qualified = (checks.get("net_profit_at_least_150_eur") is True
                              and checks.get("net_rr_at_least_2") is True)
