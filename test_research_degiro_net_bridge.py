@@ -270,5 +270,26 @@ class DegiroNetBridgeTests(unittest.TestCase):
         r = evaluate(e, TECH, now=NOW)
         self.assertEqual(r["reason"], "CEILING_BELOW_ESTIMATE")
 
+    def test_invalid_base_structure_is_not_disguised_as_preview_mismatch(self):
+        e = {**BROKER, "fee_evidence": {
+            "evidence_kind": "BROKER_ORDER_PREVIEW",
+            "sell_fee_basis": "UNVERIFIED_FUTURE_SELL_ESTIMATE",
+            "preview_isin": BROKER["isin"],
+            "preview_operating_mic": BROKER["operating_mic"],
+            "preview_quantity": 53,
+            "preview_buy_fee_eur": 4.9,
+            "estimated_future_sell_fee_eur": 4.9}}
+        r = evaluate(e, {**TECH, "target": 64}, now=NOW)
+        self.assertEqual(r["status"], "STRUCTURE_BLOCKED")
+        self.assertNotIn("net_profit_eur", r)
+
+    def test_invalid_base_structure_with_ceiling_preserves_reason(self):
+        e = {**BROKER, "fee_evidence": {
+            "evidence_kind": "OFFICIAL_PUBLIC_SCHEDULE",
+            "sell_fee_ceiling_eur": 10}}
+        r = evaluate(e, {**TECH, "target": 64}, now=NOW)
+        self.assertEqual(r["status"], "STRUCTURE_BLOCKED")
+        self.assertIsNone(r["conservative_fee_thresholds_met"])
+
 if __name__ == "__main__":
     unittest.main()
