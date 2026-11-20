@@ -13,7 +13,9 @@ BROKER = dict(isin="DE0006231004", operating_mic="XETR",
               quote_bid=64.99, quote_ask=65,
               fee_buy_eur=4.9, fee_sell_eur=4.9,
               route_instrument_isin="DE0006231004", route_operating_mic="XETR")
-TECH = dict(invalidation=64, target=70,
+TECH = dict(instrument_isin="DE0006231004", operating_mic="XETR",
+            levels_observed_utc="2026-11-19T14:00:00Z",
+            invalidation=64, target=70,
             buy_slippage_per_share=0, sell_slippage_per_share=0)
 
 class DegiroNetBridgeTests(unittest.TestCase):
@@ -70,6 +72,27 @@ class DegiroNetBridgeTests(unittest.TestCase):
         e = dict(BROKER)
         del e["instrument_currency"]
         self.assertEqual(evaluate(e, TECH, now=NOW)["status"], "CURRENCY_BLOCKED")
+
+    def test_wrong_technical_isin_blocks(self):
+        r = evaluate(BROKER, {**TECH, "instrument_isin": "NL0010273215"}, now=NOW)
+        self.assertEqual(r["status"], "TECHNICAL_PROVENANCE_BLOCKED")
+        self.assertEqual(r["reason"], "TECHNICAL_INSTRUMENT_MISMATCH")
+    def test_wrong_technical_mic_blocks(self):
+        r = evaluate(BROKER, {**TECH, "operating_mic": "XAMS"}, now=NOW)
+        self.assertEqual(r["status"], "TECHNICAL_PROVENANCE_BLOCKED")
+    def test_stale_technical_levels_block(self):
+        r = evaluate(BROKER, {**TECH, "levels_observed_utc": "2026-11-17T14:00:00Z"}, now=NOW)
+        self.assertEqual(r["status"], "TECHNICAL_PROVENANCE_BLOCKED")
+    def test_naive_technical_timestamp_blocks(self):
+        r = evaluate(BROKER, {**TECH, "levels_observed_utc": "2026-11-19T14:00:00"}, now=NOW)
+        self.assertEqual(r["status"], "TECHNICAL_PROVENANCE_BLOCKED")
+    def test_missing_technical_timestamp_blocks(self):
+        t = dict(TECH)
+        del t["levels_observed_utc"]
+        self.assertEqual(evaluate(BROKER, t, now=NOW)["status"], "TECHNICAL_PROVENANCE_BLOCKED")
+    def test_future_technical_levels_block(self):
+        r = evaluate(BROKER, {**TECH, "levels_observed_utc": "2026-11-19T14:16:00Z"}, now=NOW)
+        self.assertEqual(r["status"], "TECHNICAL_PROVENANCE_BLOCKED")
 
 if __name__ == "__main__":
     unittest.main()
