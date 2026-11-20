@@ -6,8 +6,14 @@ BASE = dict(ask=65, bid=64.99, invalidation=64, target=70,
             buy_slippage_per_share=0, sell_slippage_per_share=0)
 
 class SellFeeSensitivityTests(unittest.TestCase):
-    def test_equal_ceiling_remains_unverified(self):
+    def test_equal_ceiling_is_not_adverse_stress(self):
         r = assess(sell_fee_estimate_eur=4.9, sell_fee_ceiling_eur=4.9,
+                   scenario_inputs=BASE)
+        self.assertEqual(r["reason"], "NO_ADVERSE_FEE_STRESS")
+        self.assertFalse(r["trade_ready"])
+
+    def test_small_positive_stress_remains_unverified(self):
+        r = assess(sell_fee_estimate_eur=4.9, sell_fee_ceiling_eur=5.0,
                    scenario_inputs=BASE)
         self.assertEqual(r["status"], "CONSERVATIVE_RESEARCH_THRESHOLDS_MET")
         self.assertFalse(r["sell_fee_ceiling_independently_verified"])
