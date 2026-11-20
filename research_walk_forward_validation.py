@@ -65,7 +65,21 @@ def evaluate_walk_forward(records, *, cutoff_utc):
                 if part == partition]
         selected = [(r, outcome) for r, outcome in rows
                     if r["eligible_for_further_research"]]
+        not_selected = [(r, outcome) for r, outcome in rows
+                        if not r["eligible_for_further_research"]]
+        dispositions = {}
+        for r, _ in rows:
+            reason = r["research_disposition"]
+            dispositions[reason] = dispositions.get(reason, 0) + 1
         summaries[partition.lower()] = {
+            "not_selected_observations": len(not_selected),
+            "disposition_counts": dispositions,
+            "all_candidate_mean_return_pct": (
+                round(sum(outcome for _, outcome in rows) / len(rows), 4)
+                if rows else None),
+            "not_selected_mean_return_pct": (
+                round(sum(outcome for _, outcome in not_selected) / len(not_selected), 4)
+                if not_selected else None),
             "observations": len(rows),
             "research_review_candidates": len(selected),
             "mean_observed_return_pct": (
@@ -79,5 +93,9 @@ def evaluate_walk_forward(records, *, cutoff_utc):
             "train": summaries["train"], "test": summaries["test"],
             "excluded_cross_cutoff": sum(p[3] == "EXCLUDED_CROSS_CUTOFF" for p in prepared),
             "sample_sufficiency_verified": False,
+            "complete_candidate_universe_verified": False,
+            "selection_bias_warning": (
+                "Results cover supplied candidates only; absent rejected signals "
+                "and missing historical outcomes cannot be inferred."),
             "source_authenticity_independently_verified": False,
             "note": "Unverified supplied outcomes; no calibration or execution assumptions."}
