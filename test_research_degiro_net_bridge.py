@@ -150,7 +150,8 @@ class DegiroNetBridgeTests(unittest.TestCase):
             "evidence_kind": "BROKER_ORDER_PREVIEW",
             "preview_isin": BROKER["isin"],
             "preview_operating_mic": BROKER["operating_mic"],
-            "preview_quantity": 53}}
+            "preview_quantity": 53,
+            "preview_buy_fee_eur": 4.9, "preview_sell_fee_eur": 4.9}}
         r = evaluate(e, TECH, now=NOW)
         self.assertEqual(r["fee_evidence_status"], "UNAUTHENTICATED_ORDER_PREVIEW_CLAIM")
         self.assertFalse(r["degiro_fee_verified"])
@@ -161,7 +162,8 @@ class DegiroNetBridgeTests(unittest.TestCase):
             "evidence_kind": "BROKER_ORDER_PREVIEW",
             "preview_isin": BROKER["isin"],
             "preview_operating_mic": BROKER["operating_mic"],
-            "preview_quantity": 52}}
+            "preview_quantity": 52,
+            "preview_buy_fee_eur": 4.9, "preview_sell_fee_eur": 4.9}}
         r = evaluate(e, TECH, now=NOW)
         self.assertEqual(r["status"], "FEE_PREVIEW_QUANTITY_BLOCKED")
         self.assertNotIn("net_profit_eur", r)
@@ -170,10 +172,42 @@ class DegiroNetBridgeTests(unittest.TestCase):
         e = {**BROKER, "fee_evidence": {
             "evidence_kind": "BROKER_ORDER_PREVIEW",
             "preview_isin": BROKER["isin"],
-            "preview_operating_mic": "XAMS", "preview_quantity": 53}}
+            "preview_operating_mic": "XAMS", "preview_quantity": 53,
+            "preview_buy_fee_eur": 4.9, "preview_sell_fee_eur": 4.9}}
         r = evaluate(e, TECH, now=NOW)
         self.assertEqual(r["status"], "FEE_EVIDENCE_BLOCKED")
         self.assertNotIn("net_profit_eur", r)
+
+    def test_preview_fee_difference_blocks(self):
+        e = {**BROKER, "fee_evidence": {
+            "evidence_kind": "BROKER_ORDER_PREVIEW",
+            "preview_isin": BROKER["isin"],
+            "preview_operating_mic": BROKER["operating_mic"],
+            "preview_quantity": 53,
+            "preview_buy_fee_eur": 4.91,
+            "preview_sell_fee_eur": 4.9}}
+        r = evaluate(e, TECH, now=NOW)
+        self.assertEqual(r["status"], "FEE_PREVIEW_AMOUNT_BLOCKED")
+        self.assertNotIn("net_profit_eur", r)
+
+    def test_missing_preview_fee_blocks(self):
+        e = {**BROKER, "fee_evidence": {
+            "evidence_kind": "BROKER_ORDER_PREVIEW",
+            "preview_isin": BROKER["isin"],
+            "preview_operating_mic": BROKER["operating_mic"],
+            "preview_quantity": 53,
+            "preview_buy_fee_eur": 4.9}}
+        self.assertEqual(evaluate(e, TECH, now=NOW)["status"], "FEE_PREVIEW_AMOUNT_BLOCKED")
+
+    def test_nonfinite_preview_fee_blocks(self):
+        e = {**BROKER, "fee_evidence": {
+            "evidence_kind": "BROKER_ORDER_PREVIEW",
+            "preview_isin": BROKER["isin"],
+            "preview_operating_mic": BROKER["operating_mic"],
+            "preview_quantity": 53,
+            "preview_buy_fee_eur": float("nan"),
+            "preview_sell_fee_eur": 4.9}}
+        self.assertEqual(evaluate(e, TECH, now=NOW)["status"], "FEE_PREVIEW_AMOUNT_BLOCKED")
 
 if __name__ == "__main__":
     unittest.main()
