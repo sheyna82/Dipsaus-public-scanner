@@ -105,5 +105,53 @@ class NetScenarioTests(unittest.TestCase):
         self.assertEqual(r["status"], "BUDGET_BLOCKED")
 
 
+    def test_profit_just_below_150_rounds_to_150_but_fails(self):
+        r = calc(ask=100, bid=100, invalidation=50, target=249.9999,
+                 budget_eur=100, buy_fee_eur=0, sell_fee_eur=0,
+                 evidence_verified=True)
+        self.assertEqual(r["net_profit_eur"], 150.00)
+        self.assertFalse(r["checks"]["net_profit_at_least_150_eur"])
+        self.assertEqual(r["status"], "RESEARCH_ONLY_BLOCKED")
+        self.assertFalse(r["trade_ready"])
+
+    def test_profit_exactly_150_passes_profit_threshold(self):
+        r = calc(ask=100, bid=100, invalidation=50, target=250,
+                 budget_eur=100, buy_fee_eur=0, sell_fee_eur=0,
+                 evidence_verified=True)
+        self.assertTrue(r["checks"]["net_profit_at_least_150_eur"])
+        self.assertTrue(r["checks"]["net_rr_at_least_2"])
+        self.assertEqual(r["status"], "HUMAN_REVIEW_REQUIRED")
+        self.assertFalse(r["trade_ready"])
+
+    def test_rr_just_below_two_rounds_to_two_but_fails(self):
+        r = calc(ask=100, bid=100, invalidation=90, target=119.99999,
+                 budget_eur=100, buy_fee_eur=0, sell_fee_eur=0)
+        self.assertEqual(r["net_rr"], 2.0)
+        self.assertFalse(r["checks"]["net_rr_at_least_2"])
+        self.assertFalse(r["trade_ready"])
+
+    def test_rr_exactly_two_passes_rr_threshold(self):
+        r = calc(ask=100, bid=100, invalidation=90, target=120,
+                 budget_eur=100, buy_fee_eur=0, sell_fee_eur=0)
+        self.assertTrue(r["checks"]["net_rr_at_least_2"])
+        self.assertFalse(r["checks"]["net_profit_at_least_150_eur"])
+
+    def test_fees_can_flip_profit_threshold(self):
+        before = calc(ask=100, bid=100, invalidation=50, target=250,
+                      budget_eur=105, buy_fee_eur=0, sell_fee_eur=0)
+        after = calc(ask=100, bid=100, invalidation=50, target=250,
+                     budget_eur=105, buy_fee_eur=2.5, sell_fee_eur=2.5)
+        self.assertTrue(before["checks"]["net_profit_at_least_150_eur"])
+        self.assertFalse(after["checks"]["net_profit_at_least_150_eur"])
+        self.assertFalse(after["trade_ready"])
+
+    def test_fees_can_flip_rr_threshold(self):
+        before = calc(ask=100, bid=100, invalidation=90, target=120,
+                      budget_eur=110, buy_fee_eur=0, sell_fee_eur=0)
+        after = calc(ask=100, bid=100, invalidation=90, target=120,
+                     budget_eur=110, buy_fee_eur=1, sell_fee_eur=1)
+        self.assertTrue(before["checks"]["net_rr_at_least_2"])
+        self.assertFalse(after["checks"]["net_rr_at_least_2"])
+
 if __name__ == "__main__":
     unittest.main()
