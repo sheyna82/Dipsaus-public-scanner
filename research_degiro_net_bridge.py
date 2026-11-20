@@ -4,6 +4,7 @@ from research_degiro_metadata import inspect_broker_metadata_freshness
 from research_net_scenario import evaluate_net_scenario
 from research_technical_provenance import inspect_technical_level_claims
 from research_fee_evidence_hierarchy import classify_fee_evidence
+from research_sell_fee_sensitivity import assess_sell_fee_uncertainty
 
 BLOCKED = {"trade_ready": False, "order_placement_enabled": False,
            "source_authenticity_independently_verified": False,
@@ -87,12 +88,38 @@ def evaluate_degiro_research_scenario(broker_evidence, technical, *, now,
             and result.get("shares") != fee_claim["preview_quantity"]):
         return {**BLOCKED, "status": "FEE_PREVIEW_QUANTITY_BLOCKED",
                 "reason": "PREVIEW_QUANTITY_DIFFERS_FROM_SCENARIO"}
+    # Sensitivity is a separate hypothetical test; it never authenticates fees.
+    sensitivity = None
+    if "sell_fee_ceiling_eur" in fee_claim:
+        sensitivity = assess_sell_fee_uncertainty(
+            sell_fee_estimate_eur=broker_evidence["fee_sell_eur"],
+            sell_fee_ceiling_eur=fee_claim["sell_fee_ceiling_eur"],
+            scenario_inputs=dict(
+                ask=broker_evidence["quote_ask"],
+                bid=broker_evidence["quote_bid"],
+                invalidation=technical["invalidation"],
+                target=technical["target"],
+                budget_eur=budget_eur,
+                buy_fee_eur=broker_evidence["fee_buy_eur"],
+                fx_eur_per_unit=1,
+                fx_buy_fee_rate=0, fx_sell_fee_rate=0,
+                buy_slippage_per_share=technical["buy_slippage_per_share"],
+                sell_slippage_per_share=technical["sell_slippage_per_share"]))
+        if sensitivity["status"] == "SELL_FEE_UNCERTAINTY_BLOCKED":
+            return {**BLOCKED, "status": "SELL_FEE_UNCERTAINTY_BLOCKED",
+                    "reason": sensitivity.get("reason")}
     checks = result.get("checks", {})
     financially_qualified = (checks.get("net_profit_at_least_150_eur") is True
                              and checks.get("net_rr_at_least_2") is True)
-    status = ("UNAUTHENTICATED_RESEARCH_SCENARIO" if financially_qualified
+    robust = (sensitivity is not None and
+              sensitivity["status"] == "CONSERVATIVE_RESEARCH_THRESHOLDS_MET")
+    status = ("RESEARCH_FEE_SENSITIVITY_FAILED"
+              if financially_qualified and sensitivity is not None and not robust
+              else "UNAUTHENTICATED_RESEARCH_SCENARIO" if financially_qualified
               else result["status"])
     return {**result, **BLOCKED, "status": status,
             "fee_evidence_status": fee_classification["status"],
+            "sell_fee_sensitivity": sensitivity,
+            "conservative_fee_thresholds_met": robust if sensitivity is not None else None,
             "broker_claims_structurally_consistent": True,
             "source_note": "EUR-only hypothetical calculation; actual DEGIRO identity, route and fees unverified."}
