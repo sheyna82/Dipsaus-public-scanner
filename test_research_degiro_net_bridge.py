@@ -156,6 +156,16 @@ class DegiroNetBridgeTests(unittest.TestCase):
         self.assertFalse(r["degiro_fee_verified"])
         self.assertFalse(r["order_placement_enabled"])
 
+    def test_preview_quantity_must_match_calculated_shares(self):
+        e = {**BROKER, "fee_evidence": {
+            "evidence_kind": "BROKER_ORDER_PREVIEW",
+            "preview_isin": BROKER["isin"],
+            "preview_operating_mic": BROKER["operating_mic"],
+            "preview_quantity": 52}}
+        r = evaluate(e, TECH, now=NOW)
+        self.assertEqual(r["status"], "FEE_PREVIEW_QUANTITY_BLOCKED")
+        self.assertNotIn("net_profit_eur", r)
+
     def test_preview_wrong_venue_blocks_before_math(self):
         e = {**BROKER, "fee_evidence": {
             "evidence_kind": "BROKER_ORDER_PREVIEW",
