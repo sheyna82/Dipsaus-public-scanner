@@ -51,6 +51,17 @@ class WalkForwardValidationTests(unittest.TestCase):
         self.assertEqual(evaluate([a], cutoff_utc="2026-02-01T00:00:00Z")["status"],
                          "HISTORICAL_INPUT_BLOCKED")
 
+    def test_all_candidates_reported_not_only_winners(self):
+        a = rec("a", "2026-01-01T00:00:00Z", "2026-01-09T00:00:00Z", 10)
+        b = rec("b", "2026-01-02T00:00:00Z", "2026-01-10T00:00:00Z", -10)
+        b["features"]["net_profit_eur"] = 149
+        r = evaluate([a, b], cutoff_utc="2026-02-01T00:00:00Z")
+        self.assertEqual(r["train"]["all_candidate_mean_return_pct"], 0)
+        self.assertEqual(r["train"]["mean_observed_return_pct"], 10)
+        self.assertEqual(r["train"]["not_selected_mean_return_pct"], -10)
+        self.assertEqual(r["train"]["not_selected_observations"], 1)
+        self.assertFalse(r["complete_candidate_universe_verified"])
+
     def test_invalid_cutoff_blocks(self):
         self.assertEqual(evaluate([], cutoff_utc="2026-02-01")["status"],
                          "HISTORICAL_INPUT_BLOCKED")
