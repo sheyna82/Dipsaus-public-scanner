@@ -153,5 +153,27 @@ class NetScenarioTests(unittest.TestCase):
         self.assertTrue(before["checks"]["net_rr_at_least_2"])
         self.assertFalse(after["checks"]["net_rr_at_least_2"])
 
+    def test_overflow_in_entry_unit_blocks_without_exception(self):
+        r = calc(ask=1e308, bid=1e308, invalidation=1e307,
+                 target=1.5e308, budget_eur=1e308,
+                 buy_fee_eur=0, sell_fee_eur=0,
+                 fx_eur_per_unit=10)
+        self.assertEqual(r["status"], "NUMERIC_OVERFLOW_BLOCKED")
+        self.assertFalse(r["trade_ready"])
+
+    def test_overflow_in_target_proceeds_blocks_without_exception(self):
+        r = calc(ask=1e307, bid=1e307, invalidation=1e306,
+                 target=1e308, budget_eur=1e308,
+                 buy_fee_eur=0, sell_fee_eur=0)
+        self.assertEqual(r["status"], "NUMERIC_OVERFLOW_BLOCKED")
+        self.assertNotIn("net_profit_eur", r)
+
+    def test_overflow_in_affordable_share_count_blocks(self):
+        r = calc(ask=1e-300, bid=1e-300, invalidation=1e-301,
+                 target=2e-300, budget_eur=1e308,
+                 buy_fee_eur=0, sell_fee_eur=0)
+        self.assertEqual(r["status"], "NUMERIC_OVERFLOW_BLOCKED")
+        self.assertFalse(r["order_placement_enabled"])
+
 if __name__ == "__main__":
     unittest.main()
