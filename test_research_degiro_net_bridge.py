@@ -152,7 +152,7 @@ class DegiroNetBridgeTests(unittest.TestCase):
             "preview_isin": BROKER["isin"],
             "preview_operating_mic": BROKER["operating_mic"],
             "preview_quantity": 53,
-            "preview_buy_fee_eur": 4.9, "preview_sell_fee_eur": 4.9}}
+            "preview_buy_fee_eur": 4.9, "estimated_future_sell_fee_eur": 4.9}}
         r = evaluate(e, TECH, now=NOW)
         self.assertEqual(r["fee_evidence_status"], "UNAUTHENTICATED_ORDER_PREVIEW_CLAIM")
         self.assertFalse(r["degiro_fee_verified"])
@@ -165,7 +165,7 @@ class DegiroNetBridgeTests(unittest.TestCase):
             "preview_isin": BROKER["isin"],
             "preview_operating_mic": BROKER["operating_mic"],
             "preview_quantity": 52,
-            "preview_buy_fee_eur": 4.9, "preview_sell_fee_eur": 4.9}}
+            "preview_buy_fee_eur": 4.9, "estimated_future_sell_fee_eur": 4.9}}
         r = evaluate(e, TECH, now=NOW)
         self.assertEqual(r["status"], "FEE_PREVIEW_QUANTITY_BLOCKED")
         self.assertNotIn("net_profit_eur", r)
@@ -176,7 +176,7 @@ class DegiroNetBridgeTests(unittest.TestCase):
             "sell_fee_basis": "UNVERIFIED_FUTURE_SELL_ESTIMATE",
             "preview_isin": BROKER["isin"],
             "preview_operating_mic": "XAMS", "preview_quantity": 53,
-            "preview_buy_fee_eur": 4.9, "preview_sell_fee_eur": 4.9}}
+            "preview_buy_fee_eur": 4.9, "estimated_future_sell_fee_eur": 4.9}}
         r = evaluate(e, TECH, now=NOW)
         self.assertEqual(r["status"], "FEE_EVIDENCE_BLOCKED")
         self.assertNotIn("net_profit_eur", r)
@@ -189,7 +189,7 @@ class DegiroNetBridgeTests(unittest.TestCase):
             "preview_operating_mic": BROKER["operating_mic"],
             "preview_quantity": 53,
             "preview_buy_fee_eur": 4.91,
-            "preview_sell_fee_eur": 4.9}}
+            "estimated_future_sell_fee_eur": 4.9}}
         r = evaluate(e, TECH, now=NOW)
         self.assertEqual(r["status"], "FEE_PREVIEW_AMOUNT_BLOCKED")
         self.assertNotIn("net_profit_eur", r)
@@ -204,6 +204,19 @@ class DegiroNetBridgeTests(unittest.TestCase):
             "preview_buy_fee_eur": 4.9}}
         self.assertEqual(evaluate(e, TECH, now=NOW)["status"], "FEE_PREVIEW_AMOUNT_BLOCKED")
 
+    def test_sell_estimate_mislabeled_as_preview_blocks(self):
+        e = {**BROKER, "fee_evidence": {
+            "evidence_kind": "BROKER_ORDER_PREVIEW",
+            "sell_fee_basis": "UNVERIFIED_FUTURE_SELL_ESTIMATE",
+            "preview_isin": BROKER["isin"],
+            "preview_operating_mic": BROKER["operating_mic"],
+            "preview_quantity": 53,
+            "preview_buy_fee_eur": 4.9,
+            "preview_sell_fee_eur": 4.9}}
+        r = evaluate(e, TECH, now=NOW)
+        self.assertEqual(r["reason"], "SELL_ESTIMATE_MISLABELED_AS_PREVIEW")
+        self.assertNotIn("net_profit_eur", r)
+
     def test_nonfinite_preview_fee_blocks(self):
         e = {**BROKER, "fee_evidence": {
             "evidence_kind": "BROKER_ORDER_PREVIEW",
@@ -212,11 +225,11 @@ class DegiroNetBridgeTests(unittest.TestCase):
             "preview_operating_mic": BROKER["operating_mic"],
             "preview_quantity": 53,
             "preview_buy_fee_eur": float("nan"),
-            "preview_sell_fee_eur": 4.9}}
+            "estimated_future_sell_fee_eur": 4.9}}
         self.assertEqual(evaluate(e, TECH, now=NOW)["status"], "FEE_PREVIEW_AMOUNT_BLOCKED")
 
     def test_preview_cannot_claim_future_sell_fee_verified(self):
-        e = {**BROKER, "fee_evidence": {"evidence_kind": "BROKER_ORDER_PREVIEW", "preview_isin": BROKER["isin"], "preview_operating_mic": BROKER["operating_mic"], "preview_quantity": 53, "preview_buy_fee_eur": 4.9, "preview_sell_fee_eur": 4.9, "sell_fee_basis": "VERIFIED"}}
+        e = {**BROKER, "fee_evidence": {"evidence_kind": "BROKER_ORDER_PREVIEW", "preview_isin": BROKER["isin"], "preview_operating_mic": BROKER["operating_mic"], "preview_quantity": 53, "preview_buy_fee_eur": 4.9, "estimated_future_sell_fee_eur": 4.9, "sell_fee_basis": "VERIFIED"}}
         self.assertEqual(evaluate(e, TECH, now=NOW)["status"], "FEE_EVIDENCE_BLOCKED")
 
 if __name__ == "__main__":
