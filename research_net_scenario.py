@@ -7,8 +7,12 @@ import math
 
 
 def _number(value, *, allow_zero=False):
-    return (type(value) in (int, float) and math.isfinite(value)
-            and (value >= 0 if allow_zero else value > 0))
+    if type(value) not in (int, float):
+        return False
+    try:
+        return math.isfinite(value) and (value >= 0 if allow_zero else value > 0)
+    except (OverflowError, ValueError):
+        return False
 
 
 def evaluate_net_scenario(*, ask, bid, invalidation, target, budget_eur,
