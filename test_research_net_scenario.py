@@ -40,6 +40,13 @@ class NetScenarioTests(unittest.TestCase):
                  buy_slippage_per_share=1, sell_slippage_per_share=1)
         self.assertEqual(r["status"], "FRICTION_BLOCKED")
 
+    def test_oversized_integer_fails_closed_without_exception(self):
+        r = calc(ask=10**1000, bid=1, invalidation=0.5, target=2,
+                 budget_eur=3500, buy_fee_eur=0, sell_fee_eur=0)
+        self.assertEqual(r["status"], "INVALID_OR_MISSING_INPUT")
+        self.assertFalse(r["trade_ready"])
+        self.assertFalse(r["order_placement_enabled"])
+
     def test_boolean_not_a_price(self):
         r = calc(ask=True, bid=1, invalidation=.5, target=2,
                  budget_eur=3500, buy_fee_eur=0, sell_fee_eur=0)
