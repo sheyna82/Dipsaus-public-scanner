@@ -5,14 +5,19 @@ Monitoring/pre-alert layer only. Config routes may evolve per ticker; unsupporte
 or broker-only routes are skipped here instead of crashing the whole watch.
 """
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 import yfinance as yf
+from us_auto_prealert_handoff import DISABLED, read_report
+from us_live_trigger_routes import monitor_recovery
+from us_yahoo_bars import fetch_minute_snapshot
 
 CONFIG=Path("config/manual_recovery_triggers.json")
 SUPPLEMENTAL_CONFIG=Path("config/manual_recovery_triggers_supplemental.json")
 OUT=Path("reports/manual_recovery_trigger_report.json")
 US_ROUTES=Path("config/us_live_trigger_routes.json")
+US_ALERT_SETUPS=Path("config/us_alert_setups.json")
 MAX_AGE_SECONDS=120
 
 def latest_quote(symbol):
@@ -29,116 +34,130 @@ def zone(route,*keys):
         if isinstance(z,list) and len(z)==2 and all(v is not None for v in z): return z
     return None
 
-cfg=json.loads(CONFIG.read_text())
-if SUPPLEMENTAL_CONFIG.exists():
-    extra=json.loads(SUPPLEMENTAL_CONFIG.read_text())
-    cfg.setdefault("candidates",{}).update(extra.get("candidates",{}))
-now=datetime.now(timezone.utc); rows=[]
-for symbol,item in cfg.get("candidates",{}).items():
+def us_symbol(symbol, item):
+    if item.get('market') in ('US', 'EU'):
+        return item['market'] == 'US'
+    return item.get('currency') in (None, 'USD') and re.fullmatch(r'[A-Z]{1,5}', symbol) is not None
+
+
+def manual_us_route(symbol, item):
+    retest = item.get('route_1_retest') or {}
+    breakout = item.get('route_2_breakout') or item.get('route_2_old_reclaim_context') or {}
+    return {'symbol': symbol, 'phone_notification_eligible': not (
+                item.get('monitor_mode') or 'NOT-BUY-READY' in item.get('status', '')
+                or (item.get('broker_currency') and item.get('broker_currency') != 'USD')),
+            'live_routes': {'manual': {'floor': item.get('structural_invalidation_usd')
+                                               or item.get('invalidation_usd') or retest.get('invalidation_usd'),
+                                       'level': breakout.get('break_above_usd'),
+                                       'zone': breakout.get('hold_zone_usd')}}}
+
+
+def watch_us(item, setups, *, watch_type='AUTO-US-DISCOVERY'):
+    symbol = item['symbol']
     try:
-        price,ts=latest_quote(symbol)
-    except Exception as exc:
-        rows.append({"symbol":symbol,"status":"DATA-BLOCKED","error":type(exc).__name__,"execution_ready":False})
-        continue
-    age=(now-ts).total_seconds() if ts else None
-    fresh=bool(age is not None and -30<=age<=MAX_AGE_SECONDS)
-    r1=item.get("route_1_retest") or {}
-    r2=item.get("route_2_breakout") or item.get("route_2_old_reclaim_context") or {}
-    z1=zone(r1,"zone_eur","zone_usd"); z2=zone(r2,"hold_zone_eur","hold_zone_usd")
-    level=r2.get("break_above_eur",r2.get("break_above_usd"))
-    provider_currency = item.get("currency")
-    broker_currency = item.get("broker_currency")
-    cross_currency_block = bool(broker_currency and provider_currency and broker_currency != provider_currency)
-    if item.get("provider_symbol") and item.get("broker_listing") and broker_currency == "EUR": cross_currency_block=True
-    touch=bool(not cross_currency_block and price is not None and z1 and z1[0]<=price<=z1[1])
-    breakout=bool(not cross_currency_block and price is not None and level is not None and price>level)
-    hold=bool(not cross_currency_block and price is not None and z2 and z2[0]<=price<=z2[1])
-    # A quote touching a research level is NOT proof of a holding higher low,
-    # consolidation, structural invalidation, broker spread or viable money/RR.
-    # Keep research-only routes silent until those checks can be made.
-    research_only=bool(item.get("monitor_mode") or "NOT-BUY-READY" in item.get("status",""))
-    if item.get("provisional_retest_zone_usd") and item.get("first_meaningful_resistance_zone_usd"):
-        z1 = zone(item,"provisional_retest_zone_usd")
-        level = float(item["first_meaningful_resistance_zone_usd"][1])
+        row = monitor_recovery(item, fetch_minute_snapshot(symbol), prior_alert=setups.get(symbol))
+    except (ValueError, OSError) as exc:
+        row = {'symbol': symbol, 'market': 'US', 'status': 'DATA-BLOCKED',
+               'phone_notification_eligible': item.get('phone_notification_eligible') is True,
+               'provider_freshness_pass': False, 'source_verified': False,
+               'data_block_reason': str(exc) if type(exc) is ValueError else type(exc).__name__, **DISABLED}
+    return {**row, 'watch_type': watch_type}
+
+
+def main():
+    cfg=json.loads(CONFIG.read_text())
+    if SUPPLEMENTAL_CONFIG.exists():
+        extra=json.loads(SUPPLEMENTAL_CONFIG.read_text())
+        cfg.setdefault("candidates",{}).update(extra.get("candidates",{}))
+    now=datetime.now(timezone.utc); rows=[]
+    setups = read_report(US_ALERT_SETUPS)
+    routes = read_report(US_ROUTES).get('rows', [])
+    automatic_symbols = {row['symbol'] for row in routes}
+    for symbol,item in cfg.get("candidates",{}).items():
+        if us_symbol(symbol, item):
+            if symbol not in automatic_symbols:
+                rows.append(watch_us(manual_us_route(symbol, item), setups, watch_type='MANUAL-US-RECOVERY'))
+            continue
+        try:
+            price,ts=latest_quote(symbol)
+        except Exception as exc:
+            rows.append({"symbol":symbol,"status":"DATA-BLOCKED","error":type(exc).__name__,"execution_ready":False})
+            continue
+        age=(now-ts).total_seconds() if ts else None
+        fresh=bool(age is not None and -30<=age<=MAX_AGE_SECONDS)
+        r1=item.get("route_1_retest") or {}
+        r2=item.get("route_2_breakout") or item.get("route_2_old_reclaim_context") or {}
+        z1=zone(r1,"zone_eur","zone_usd"); z2=zone(r2,"hold_zone_eur","hold_zone_usd")
+        level=r2.get("break_above_eur",r2.get("break_above_usd"))
+        provider_currency = item.get("currency")
+        broker_currency = item.get("broker_currency")
+        cross_currency_block = bool(broker_currency and provider_currency and broker_currency != provider_currency)
+        if item.get("provider_symbol") and item.get("broker_listing") and broker_currency == "EUR": cross_currency_block=True
         touch=bool(not cross_currency_block and price is not None and z1 and z1[0]<=price<=z1[1])
-        breakout=bool(not cross_currency_block and price is not None and price>level)
-        hold=False
-    observed=bool(fresh and not cross_currency_block and (touch or breakout or hold))
-    trigger=bool(observed and not research_only)
-    status="BROKER-CHECK-CANDIDATE" if cross_currency_block and fresh else "RESEARCH-LEVEL-TOUCHED" if observed and research_only else "DEGIRO-VERIFY-NOW" if trigger else "WATCH"
-    blocks=["NOT-AUTOMATIC-BUY","FINAL-DIPSAUS-GATES-PENDING"]
-    if research_only:
-        blocks.extend(["RESEARCH-ONLY-NO-PHONE-PREALERT","HIGHER-LOW-OR-HOLD-UNVERIFIED","FIRST-RESISTANCE-AND-RR-UNVERIFIED","EUR-GROSS-PROFIT-UNVERIFIED","BROKER-SPREAD-AND-PORTFOLIO-FIT-UNVERIFIED"])
-    if cross_currency_block: blocks.append("CROSS-CURRENCY-LISTING-NUMERIC-COMPARISON-BLOCKED")
-    rows.append({"symbol":symbol,"provider_quote":price,"provider_quote_utc":ts.isoformat() if ts else None,"provider_quote_age_seconds":age,"provider_freshness_pass":fresh,"route_1_zone":z1,"route_1_touch_observed":touch,"route_2_break_above":level,"route_2_hold_zone":z2,"route_2_break_observed":breakout,"route_2_hold_zone_observed":hold,"cross_currency_listing_block":cross_currency_block,"dynamic_route_present":bool(item.get("route_1_pullback_turn") or item.get("route_1_intraday_turn")),"research_level_observed":observed,"research_only":research_only,"prealert_trigger_observed":trigger,"status":status,"execution_ready":False,"mandatory_final_checks":["RECENT-PRICE-MOVING-NEWS","UPCOMING-MATERIAL-EVENTS","BROKER-BID-ASK","MONEY-RR","PORTFOLIO-FIT"],"execution_blocks":blocks})
+        breakout=bool(not cross_currency_block and price is not None and level is not None and price>level)
+        hold=bool(not cross_currency_block and price is not None and z2 and z2[0]<=price<=z2[1])
+        # A quote touching a research level is NOT proof of a holding higher low,
+        # consolidation, structural invalidation, broker spread or viable money/RR.
+        # Keep research-only routes silent until those checks can be made.
+        research_only=bool(item.get("monitor_mode") or "NOT-BUY-READY" in item.get("status",""))
+        if item.get("provisional_retest_zone_usd") and item.get("first_meaningful_resistance_zone_usd"):
+            z1 = zone(item,"provisional_retest_zone_usd")
+            level = float(item["first_meaningful_resistance_zone_usd"][1])
+            touch=bool(not cross_currency_block and price is not None and z1 and z1[0]<=price<=z1[1])
+            breakout=bool(not cross_currency_block and price is not None and price>level)
+            hold=False
+        observed=bool(fresh and not cross_currency_block and (touch or breakout or hold))
+        trigger=bool(observed and not research_only)
+        status="BROKER-CHECK-CANDIDATE" if cross_currency_block and fresh else "RESEARCH-LEVEL-TOUCHED" if observed and research_only else "DEGIRO-VERIFY-NOW" if trigger else "WATCH"
+        blocks=["NOT-AUTOMATIC-BUY","FINAL-DIPSAUS-GATES-PENDING"]
+        if research_only:
+            blocks.extend(["RESEARCH-ONLY-NO-PHONE-PREALERT","HIGHER-LOW-OR-HOLD-UNVERIFIED","FIRST-RESISTANCE-AND-RR-UNVERIFIED","EUR-GROSS-PROFIT-UNVERIFIED","BROKER-SPREAD-AND-PORTFOLIO-FIT-UNVERIFIED"])
+        if cross_currency_block: blocks.append("CROSS-CURRENCY-LISTING-NUMERIC-COMPARISON-BLOCKED")
+        rows.append({"symbol":symbol,"provider_quote":price,"provider_quote_utc":ts.isoformat() if ts else None,"provider_quote_age_seconds":age,"provider_freshness_pass":fresh,"route_1_zone":z1,"route_1_touch_observed":touch,"route_2_break_above":level,"route_2_hold_zone":z2,"route_2_break_observed":breakout,"route_2_hold_zone_observed":hold,"cross_currency_listing_block":cross_currency_block,"dynamic_route_present":bool(item.get("route_1_pullback_turn") or item.get("route_1_intraday_turn")),"research_level_observed":observed,"research_only":research_only,"prealert_trigger_observed":trigger,"status":status,"execution_ready":False,"mandatory_final_checks":["RECENT-PRICE-MOVING-NEWS","UPCOMING-MATERIAL-EVENTS","BROKER-BID-ASK","MONEY-RR","PORTFOLIO-FIT"],"execution_blocks":blocks})
 
-PORTFOLIO=Path("config/portfolio_reentry_watch.json")
-if PORTFOLIO.exists():
-  try:
-    pcfg=json.loads(PORTFOLIO.read_text()); rules=pcfg.get("early_reentry",{})
-    min_drop=float(rules.get("min_intraday_drop_pct",3)); min_day_rebound=float(rules.get("min_rebound_from_day_low_pct",1)); recent_n=int(rules.get("recent_window_minutes",20)); min_recent_rebound=float(rules.get("min_rebound_from_recent_low_pct",.6))
-    br=rules.get("base_test",{}); base_enabled=bool(br.get("enabled",True)); base_min_drop=float(br.get("min_intraday_drop_pct",1.5)); base_max_dist=float(br.get("max_distance_from_5d_low_pct",4)); base_min_vol=float(br.get("min_recent_volume_ratio",1.5)); base_min_rebound=float(br.get("min_recent_rebound_pct",.35)); base_min_range=float(br.get("min_selloff_range_pct",1.5))
-    for symbol,item in pcfg.get("candidates",{}).items():
+    PORTFOLIO=Path("config/portfolio_reentry_watch.json")
+    if PORTFOLIO.exists():
       try:
-        h=yf.Ticker(symbol).history(period="5d",interval="1m",prepost=False)
-      except Exception as exc:
-        rows.append({"symbol":symbol,"watch_type":"PORTFOLIO-REENTRY","status":"DATA-BLOCKED","error":type(exc).__name__,"execution_ready":False})
-        continue
-      if h.empty: rows.append({"symbol":symbol,"watch_type":"PORTFOLIO-REENTRY","status":"DATA-BLOCKED","execution_ready":False}); continue
-      dates=h.index.date; d=dates[-1]; day=h[[x==d for x in dates]]; prior=h[[x<d for x in dates]]
-      if day.empty or prior.empty: continue
-      prev=float(prior["Close"].iloc[-1]); price=float(day["Close"].iloc[-1]); low=float(day["Low"].min()); recent=day.tail(max(3,recent_n)); rlow=float(recent["Low"].min()); change=(price/prev-1)*100; rebound=(price/low-1)*100; rrebound=(price/rlow-1)*100
-      idx=day.index[-1]; idx=idx.tz_localize("UTC") if getattr(idx,"tzinfo",None) is None else idx; ts=idx.tz_convert("UTC").to_pydatetime(); age=(now-ts).total_seconds(); fresh=-30<=age<=MAX_AGE_SECONDS
-      five=float(h["Low"].min()); reb5=(price/five-1)*100; closes=recent["Close"]; lows=recent["Low"]; half=max(2,len(recent)//2); a=float(lows.iloc[:half].min()); b=float(lows.iloc[half:].min()) if len(lows.iloc[half:]) else a; higher=b>a; reclaim=len(closes)>=4 and price>float(closes.iloc[:-1].median())
-      dip=change<=-min_drop and rebound>=min_day_rebound and rrebound>=min_recent_rebound; multi=reb5>=max(1.5,min_day_rebound) and higher and reclaim and rrebound>=min_recent_rebound
-      dist=(price/five-1)*100; high=float(day["High"].max()); rng=(high/low-1)*100 if low else 0; vols=day["Volume"].astype(float); rv=recent["Volume"].astype(float); base=vols.iloc[:-len(rv)] if len(vols)>len(rv) else vols; bn=base[base>0]; rn=rv[rv>0]; bv=float(bn.median()) if len(bn) else 0; rvm=float(rn.median()) if len(rn) else 0; vr=rvm/bv if bv>0 else 0; stab=higher or reclaim or rrebound>=base_min_rebound; basetest=base_enabled and change<=-base_min_drop and dist<=base_max_dist and vr>=base_min_vol and rng>=base_min_range and stab
-      early=dip or multi or basetest; trig=fresh and early; route="ACTIVE-HOLDING-DIP-TURN" if dip else "ACTIVE-HOLDING-MULTIDAY-RECOVERY" if multi else "ACTIVE-HOLDING-BASE-TEST" if basetest else None
-      rows.append({"symbol":symbol,"name":item.get("name"),"watch_type":"PORTFOLIO-REENTRY","provider_quote":price,"provider_quote_utc":ts.isoformat(),"provider_quote_age_seconds":age,"provider_freshness_pass":fresh,"day_change_pct":round(change,3),"day_low":low,"rebound_from_day_low_pct":round(rebound,3),"recent_low":rlow,"rebound_from_recent_low_pct":round(rrebound,3),"five_day_low":five,"rebound_from_5d_low_pct":round(reb5,3),"higher_low_observed":higher,"recent_reclaim_observed":reclaim,"recent_volume_ratio":round(vr,3),"base_test_observed":basetest,"prealert_trigger_observed":trig,"triggered_route":route,"status":"LOOK-NOW" if basetest and not(dip or multi) else "DEGIRO-VERIFY-NOW" if trig else "WATCH","execution_ready":False,"mandatory_final_checks":["FRESH-DEGIRO-CHART","BROKER-BID-ASK","STRUCTURAL-INVALIDATION","RECENT-PRICE-MOVING-NEWS","UPCOMING-MATERIAL-EVENTS","MONEY-RR","PORTFOLIO-FIT"],"execution_blocks":["NOT-AUTOMATIC-BUY","NEW-SETUP-MUST-STAND-ALONE","FINAL-DIPSAUS-GATES-PENDING"]})
-  except Exception as exc: rows.append({"symbol":"PORTFOLIO-WATCH","watch_type":"PORTFOLIO-REENTRY","status":"DATA-BLOCKED","error":type(exc).__name__,"execution_ready":False})
+        pcfg=json.loads(PORTFOLIO.read_text()); rules=pcfg.get("early_reentry",{})
+        min_drop=float(rules.get("min_intraday_drop_pct",3)); min_day_rebound=float(rules.get("min_rebound_from_day_low_pct",1)); recent_n=int(rules.get("recent_window_minutes",20)); min_recent_rebound=float(rules.get("min_rebound_from_recent_low_pct",.6))
+        br=rules.get("base_test",{}); base_enabled=bool(br.get("enabled",True)); base_min_drop=float(br.get("min_intraday_drop_pct",1.5)); base_max_dist=float(br.get("max_distance_from_5d_low_pct",4)); base_min_vol=float(br.get("min_recent_volume_ratio",1.5)); base_min_rebound=float(br.get("min_recent_rebound_pct",.35)); base_min_range=float(br.get("min_selloff_range_pct",1.5))
+        for symbol,item in pcfg.get("candidates",{}).items():
+          if us_symbol(symbol, item):
+            if symbol not in automatic_symbols and not any(row['symbol'] == symbol for row in rows):
+                route = manual_us_route(symbol, item)
+                route['phone_notification_eligible'] = False
+                rows.append(watch_us(route, setups, watch_type='PORTFOLIO-REENTRY'))
+            continue
+          try:
+            h=yf.Ticker(symbol).history(period="5d",interval="1m",prepost=False)
+          except Exception as exc:
+            rows.append({"symbol":symbol,"watch_type":"PORTFOLIO-REENTRY","status":"DATA-BLOCKED","error":type(exc).__name__,"execution_ready":False})
+            continue
+          if h.empty: rows.append({"symbol":symbol,"watch_type":"PORTFOLIO-REENTRY","status":"DATA-BLOCKED","execution_ready":False}); continue
+          dates=h.index.date; d=dates[-1]; day=h[[x==d for x in dates]]; prior=h[[x<d for x in dates]]
+          if day.empty or prior.empty: continue
+          prev=float(prior["Close"].iloc[-1]); price=float(day["Close"].iloc[-1]); low=float(day["Low"].min()); recent=day.tail(max(3,recent_n)); rlow=float(recent["Low"].min()); change=(price/prev-1)*100; rebound=(price/low-1)*100; rrebound=(price/rlow-1)*100
+          idx=day.index[-1]; idx=idx.tz_localize("UTC") if getattr(idx,"tzinfo",None) is None else idx; ts=idx.tz_convert("UTC").to_pydatetime(); age=(now-ts).total_seconds(); fresh=-30<=age<=MAX_AGE_SECONDS
+          five=float(h["Low"].min()); reb5=(price/five-1)*100; closes=recent["Close"]; lows=recent["Low"]; half=max(2,len(recent)//2); a=float(lows.iloc[:half].min()); b=float(lows.iloc[half:].min()) if len(lows.iloc[half:]) else a; higher=b>a; reclaim=len(closes)>=4 and price>float(closes.iloc[:-1].median())
+          dip=change<=-min_drop and rebound>=min_day_rebound and rrebound>=min_recent_rebound; multi=reb5>=max(1.5,min_day_rebound) and higher and reclaim and rrebound>=min_recent_rebound
+          dist=(price/five-1)*100; high=float(day["High"].max()); rng=(high/low-1)*100 if low else 0; vols=day["Volume"].astype(float); rv=recent["Volume"].astype(float); base=vols.iloc[:-len(rv)] if len(vols)>len(rv) else vols; bn=base[base>0]; rn=rv[rv>0]; bv=float(bn.median()) if len(bn) else 0; rvm=float(rn.median()) if len(rn) else 0; vr=rvm/bv if bv>0 else 0; stab=higher or reclaim or rrebound>=base_min_rebound; basetest=base_enabled and change<=-base_min_drop and dist<=base_max_dist and vr>=base_min_vol and rng>=base_min_range and stab
+          early=dip or multi or basetest; trig=fresh and early; route="ACTIVE-HOLDING-DIP-TURN" if dip else "ACTIVE-HOLDING-MULTIDAY-RECOVERY" if multi else "ACTIVE-HOLDING-BASE-TEST" if basetest else None
+          rows.append({"symbol":symbol,"name":item.get("name"),"watch_type":"PORTFOLIO-REENTRY","provider_quote":price,"provider_quote_utc":ts.isoformat(),"provider_quote_age_seconds":age,"provider_freshness_pass":fresh,"day_change_pct":round(change,3),"day_low":low,"rebound_from_day_low_pct":round(rebound,3),"recent_low":rlow,"rebound_from_recent_low_pct":round(rrebound,3),"five_day_low":five,"rebound_from_5d_low_pct":round(reb5,3),"higher_low_observed":higher,"recent_reclaim_observed":reclaim,"recent_volume_ratio":round(vr,3),"base_test_observed":basetest,"prealert_trigger_observed":trig,"triggered_route":route,"status":"LOOK-NOW" if basetest and not(dip or multi) else "DEGIRO-VERIFY-NOW" if trig else "WATCH","execution_ready":False,"mandatory_final_checks":["FRESH-DEGIRO-CHART","BROKER-BID-ASK","STRUCTURAL-INVALIDATION","RECENT-PRICE-MOVING-NEWS","UPCOMING-MATERIAL-EVENTS","MONEY-RR","PORTFOLIO-FIT"],"execution_blocks":["NOT-AUTOMATIC-BUY","NEW-SETUP-MUST-STAND-ALONE","FINAL-DIPSAUS-GATES-PENDING"]})
+      except Exception as exc: rows.append({"symbol":"PORTFOLIO-WATCH","watch_type":"PORTFOLIO-REENTRY","status":"DATA-BLOCKED","error":type(exc).__name__,"execution_ready":False})
 
-if US_ROUTES.exists():
-  try:
-    us=json.loads(US_ROUTES.read_text())
-    for item in us.get("rows",[]):
-      symbol=item.get("symbol")
-      try:
-        # One snapshot per ticker: quote and structure must refer to the same
-        # provider observation. Avoid a second network request that can lag,
-        # disagree or fail independently.
-        h=yf.Ticker(symbol).history(period="1d",interval="1m",prepost=False)
-        if h.empty:
-          rows.append({"symbol":symbol,"market":"US","watch_type":"AUTO-US-DISCOVERY","phone_notification_eligible":bool(item.get("phone_notification_eligible")),"provider_freshness_pass":False,"status":"DATA-BLOCKED","data_block_reason":"NO_INTRADAY_BARS","execution_ready":False})
-          continue
-        idx=h.index[-1]
-        if getattr(idx,"tzinfo",None) is None: idx=idx.tz_localize("UTC")
-        ts=idx.tz_convert("UTC").to_pydatetime()
-        price=float(h["Close"].iloc[-1])
-      except Exception as exc:
-        rows.append({"symbol":symbol,"market":"US","watch_type":"AUTO-US-DISCOVERY","phone_notification_eligible":bool(item.get("phone_notification_eligible")),"provider_freshness_pass":False,"status":"DATA-BLOCKED","error":type(exc).__name__,"execution_ready":False})
-        continue
-      # Compute age at retrieval, not from the run's start time.
-      age=(datetime.now(timezone.utc)-ts).total_seconds()
-      fresh=bool(-30<=age<=MAX_AGE_SECONDS)
-      level=item.get("break_above_usd"); z=item.get("hold_zone_usd") or [None,None]
-      breakout=bool(price is not None and level is not None and price>level)
-      hold=bool(price is not None and z[0] is not None and z[0]<=price<=z[1])
-      # A historical pivot touch alone is not a breakout/hold confirmation.
-      # Keep early turns visible without presenting them as buy-ready.
-      structure_available=bool(len(h)>=12 and not h[["Close","Low"]].tail(12).isna().any().any())
-      early_turn=False; confirmed=False; day_low=None; rebound_pct=None
-      if structure_available and price is not None:
-        recent=h.tail(12); earlier=recent.iloc[:6]; later=recent.iloc[6:]
-        day_low=float(h["Low"].min())
-        rebound_pct=100*(price/day_low-1) if day_low>0 else None
-        higher_low=float(later["Low"].min())>float(earlier["Low"].min())
-        recent_reclaim=price>float(recent["Close"].iloc[:-1].median())
-        early_turn=bool(higher_low and recent_reclaim and rebound_pct is not None and rebound_pct>=0.35)
-        confirmed=bool(early_turn and (breakout or hold))
-      eligible=bool(item.get("phone_notification_eligible"))
-      trig=bool(fresh and eligible and confirmed)
-      status="DEGIRO-VERIFY-NOW" if trig else "EARLY-RECOVERY-WATCH" if fresh and eligible and early_turn else "STRUCTURE-UNVERIFIED" if fresh and eligible and (breakout or hold) else "WATCH"
-      rows.append({"symbol":symbol,"market":"US","watch_type":"AUTO-US-DISCOVERY","phone_notification_eligible":eligible,"provider_quote":price,"provider_quote_utc":ts.isoformat() if ts else None,"provider_quote_age_seconds":age,"provider_freshness_pass":fresh,"route_2_break_above":level,"route_2_hold_zone":z,"breakout_observed":breakout,"hold_observed":hold,"structure_available":structure_available,"early_turn_observed":early_turn,"intraday_hold_confirmed":confirmed,"day_low":day_low,"rebound_from_day_low_pct":round(rebound_pct,3) if rebound_pct is not None else None,"prealert_trigger_observed":trig,"status":status,"execution_ready":False,"execution_blocks":["BROKER-BID-ASK-NOT-VERIFIED","STRUCTURAL-INVALIDATION-AND-MONEY-RR-NOT-VERIFIED","NEWS-EVENT-PORTFOLIO-FIT-PENDING"]})
-  except Exception as exc: rows.append({"symbol":"US-ROUTES","status":"DATA-BLOCKED","error":type(exc).__name__,"execution_ready":False})
-report={"generated_utc":now.isoformat(),"scope":"Europe/US recovery trigger watch; monitoring only; never automatic buy.","rows":rows}
-OUT.parent.mkdir(parents=True,exist_ok=True); OUT.write_text(json.dumps(report,indent=2)); print(json.dumps(report,indent=2))
+    monitored = {row['symbol'] for row in rows if row.get('market') == 'US'}
+    for item in routes:
+        symbol = item.get('symbol')
+        if isinstance(symbol, str) and symbol not in monitored:
+            rows.append(watch_us(item, setups))
+            monitored.add(symbol)
+    report = {'generated_utc': datetime.now(timezone.utc).isoformat(),
+              'scope': 'Europe and US recovery monitoring',
+              'rows': [{**row, **DISABLED} for row in rows], **DISABLED}
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    OUT.write_text(json.dumps(report, indent=2))
+    print(f"RECOVERY_WATCH: rows={len(rows)}")
 
+
+if __name__ in ('__main__', '<run_path>'):
+    main()

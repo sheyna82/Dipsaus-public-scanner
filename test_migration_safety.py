@@ -108,7 +108,7 @@ class SafetyTests(unittest.TestCase):
         root = Path(__file__).parent.resolve()
         now = datetime.now(timezone.utc)
         bundle = {'manual_recovery_triggers.json': {'candidates': {
-            'TEST': {'currency': 'USD', 'route_2_breakout': {'break_above_usd': 40}}}},
+            'TEST.PA': {'currency': 'EUR', 'route_2_breakout': {'break_above_eur': 40}}}},
             'profit_exit_watch.json': {'positions': {}},
             'portfolio_reentry_watch.json': {'candidates': {}},
             'notification_quality_gate.json': {}}

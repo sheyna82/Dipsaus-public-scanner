@@ -61,16 +61,16 @@ def fetch(symbol):
     return meta,result.get("timestamp") or [],(result["indicators"]["quote"][0].get("close") or [])
 
 def main():
-    source=json.loads((ROOT/"europe_intraday_confirmation.json").read_text());now=datetime.now(timezone.utc);out=[]
+    source=json.loads((ROOT/"europe_intraday_confirmation.json").read_text());out=[]
     for candidate in source["candidates"]:
         sym=candidate["symbol"];row={"symbol":sym,"intraday_status":candidate.get("data_status"),"trade_ready":False}
         try:
-            meta,stamps,closes=fetch(sym);row.update(audit(meta,stamps,closes,now.timestamp()))
+            meta,stamps,closes=fetch(sym);row.update(audit(meta,stamps,closes,datetime.now(timezone.utc).timestamp()))
             if row["currency"]!=candidate.get("currency"):row["execution_blocks"].append("CURRENCY-MISMATCH")
         except Exception as exc:
             row.update(execution_blocks=["QUOTE-DATA-BLOCKED","BROKER-QUOTE-NOT-VERIFIED"],reason=type(exc).__name__,broker_quote_verified=False,executable_price_verified=False,provider_freshness_class="DATA-BLOCKED",provider_delayed_but_usable_for_attention=False)
         out.append(row);print(json.dumps(row,ensure_ascii=False),flush=True)
-    result={"generated_utc":now.isoformat(),"scope":"Provider quote audit. <=2m is live-like provider evidence; 2-20m is delayed attention evidence only; DEGIRO still required for execution.","checked":len(out),"trade_ready_count":0,"candidates":out}
+    result={"generated_utc":datetime.now(timezone.utc).isoformat(),"scope":"Provider quote audit. <=2m is live-like provider evidence; 2-20m is delayed attention evidence only; DEGIRO still required for execution.","checked":len(out),"trade_ready_count":0,"candidates":out}
     (ROOT/"europe_quote_execution_audit.json").write_text(json.dumps(result,indent=2,ensure_ascii=False))
     print(json.dumps({k:v for k,v in result.items() if k!="candidates"},indent=2))
 if __name__=="__main__":main()

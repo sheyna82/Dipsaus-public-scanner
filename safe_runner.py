@@ -6,12 +6,14 @@ import re
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from private_runtime import hydrate, PrivateStore
 from private_notifications import notify, notify_eu_research
+from eu_entry_net import EVIDENCE_STATE_KEY, REVIEWER_PIN_ENV, assess_report
 
 
-def run(script, **extra):
+def run(script, *, timeout=1500, **extra):
     env = dict(os.environ, **{k: str(v) for k, v in extra.items()})
     # Suppress stdout, stderr and tracebacks containing holdings, API URLs or contact data.
     if script == "europe_ohlcv_pilot.py":
@@ -29,13 +31,13 @@ def run(script, **extra):
                     or re.fullmatch(r"EU_OHLCV_RECENT_ERRORS: HTTPError=\d+ URLError=\d+ TimeoutError=\d+ ValueError=\d+ KeyError=\d+ Other=\d+", line)
                     or line in ("EU_OHLCV_STAGE: started", "EU_OHLCV_STAGE: fetching_complete")):
                     print(line, flush=True)
-            returncode = process.wait(timeout=1500)
+            returncode = process.wait(timeout=timeout)
         if returncode:
             raise RuntimeError('SCANNER_STEP_FAILED: ' + script)
         return
     else:
         result = subprocess.run([sys.executable, script], env=env,
-                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=1500)
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=timeout)
     if result.returncode:
         raise RuntimeError('SCANNER_STEP_FAILED: ' + script)
 
@@ -43,12 +45,13 @@ def run(script, **extra):
 def notification_diagnostics(entries, exits, eu_report, state, active_symbols):
     """Private aggregate-only diagnostics; no symbols, quotes, or personal data."""
     from collections import Counter
-    from datetime import timedelta
     now = datetime.now(timezone.utc)
     reasons = Counter()
     entry_rows = entries.get('rows', [])
     exit_rows = exits.get('rows', [])
-    eu_rows = eu_report.get('candidates', [])
+    eu_rows = eu_report.get('candidates', []) if isinstance(eu_report, dict) else []
+    if not isinstance(eu_rows, list):
+        eu_rows = []
     for row in entry_rows:
         if not row.get('prealert_trigger_observed'):
             reasons['entry_no_trigger'] += 1
@@ -63,27 +66,11 @@ def notification_diagnostics(entries, exits, eu_report, state, active_symbols):
             reasons['exit_no_profit_alert'] += 1
         else:
             reasons['exit_alert_for_notification_evaluation'] += 1
-    try:
-        generated = datetime.fromisoformat(eu_report['generated_utc'].replace('Z', '+00:00'))
-        fresh = generated.tzinfo is not None and timedelta(0) <= now - generated <= timedelta(minutes=25)
-    except (KeyError, ValueError, TypeError):
-        fresh = False
+    eu_evaluation = state.get('latest_eu_entry_evaluation', {})
+    fresh = eu_evaluation.get('report_status') == 'FRESH'
     if not fresh:
         reasons['eu_report_missing_or_stale'] = len(eu_rows) or 1
-    else:
-        for row in eu_rows:
-            if not row.get('broker_verify_now') or not row.get('broker_check_candidate') or row.get('trade_ready'):
-                reasons['eu_broker_gate'] += 1
-            elif not (row.get('provider_freshness_pass') or row.get('provider_delayed_but_usable_for_attention')):
-                reasons['eu_quote_freshness_gate'] += 1
-            elif (row.get('early_recovery_score') or 0) < 3:
-                reasons['eu_low_score_or_holding_exception'] += 1
-            elif (row.get('historical_3500_eur_scenarios') or {}).get('rr_to_meaningful', 0) < 2:
-                reasons['eu_risk_reward_gate'] += 1
-            elif (row.get('historical_3500_eur_scenarios') or {}).get('meaningful_resistance_gross_eur', 0) < 150:
-                reasons['eu_money_gate'] += 1
-            else:
-                reasons['eu_candidate_for_dedupe_and_cap'] += 1
+    reasons.update({'eu_' + key: count for key, count in eu_evaluation.get('reason_counts', {}).items()})
     # Aggregate-only US/EU funnel: no ticker, position, quote, or private identifiers.
     market_counts = Counter()
     for row in entry_rows:
@@ -114,8 +101,9 @@ def notification_diagnostics(entries, exits, eu_report, state, active_symbols):
         'exit_rows_examined': len(exit_rows),
         'eu_rows_examined': len(eu_rows),
         'eu_report_fresh': fresh,
+        'eu_recovery_phase_counts': eu_evaluation.get('phase_counts', {}),
         'reason_counts': dict(sorted(reasons.items())),
-        'note': 'Aggregate diagnostic categories are nonexclusive of later dedupe and send gates; no trading filters changed.'
+        'note': 'Counts reflect phase evaluation and the subsequent private delivery gates.'
     }
 
 
@@ -175,6 +163,67 @@ def sync_canonical_positions(store, target):
     target.write_text(json.dumps(current))
 
 
+def run_us_recovery(store, state):
+    """Publish a valid lane even when the other lane or a batch fails."""
+    from us_live_trigger_routes import retain_recent_routes
+
+    Path('reports').mkdir(exist_ok=True)
+    start = int(state.get('us_next_batch', 0)) % 21
+    batches = [(start + offset) % 21 for offset in range(7)]
+    completed, failed = {}, []
+    previous_routes = state.get('us_routes') or {}
+    fast_ok = False
+    with tempfile.TemporaryDirectory(prefix='us-recovery-', dir='reports') as folder:
+        batch_dir = Path(folder)
+        fast_report = batch_dir / 'fast.json'
+
+        def publish_routes():
+            run('us_auto_prealert_handoff.py', US_FAST_REPORT=fast_report, US_BATCH_REPORT_DIR=batch_dir)
+            run('us_live_trigger_routes.py')
+            merged = json.loads(Path('reports/us_live_trigger_routes.json').read_text())
+            state['us_routes'] = retain_recent_routes(merged, previous_routes, now=datetime.now(timezone.utc))
+
+        try:
+            run('us_momentum_recovery_discovery.py', timeout=360, US_FAST_REPORT=fast_report,
+                US_FAST_SWEEP=int(state.get('us_fast_sweep', 0)))
+            fast = json.loads(fast_report.read_text())
+            if not isinstance(fast, dict) or not isinstance(fast.get('candidates'), list):
+                raise ValueError('US_FAST_REPORT_INVALID')
+            fast_ok = True
+        except (RuntimeError, subprocess.TimeoutExpired, ValueError, OSError):
+            fast_report.unlink(missing_ok=True)
+        if fast_ok:
+            state['us_fast_sweep'] = int(state.get('us_fast_sweep', 0)) + 1
+            publish_routes()
+            state['us_last_sweep_status'] = {'fast_ok': True, 'deep_status': 'IN_PROGRESS'}
+            store.save(state)
+        for batch in batches:
+            batch_output = Path('reports/us_recovery_pilot.json')
+            batch_output.unlink(missing_ok=True)
+            try:
+                run('us_recovery_pilot.py', timeout=140, US_BATCH=batch)
+                report = json.loads(batch_output.read_text())
+                if (not isinstance(report, dict) or report.get('batch_index') != batch
+                        or not isinstance(report.get('deep_dive_queue'), list)):
+                    raise ValueError('US_DEEP_REPORT_INVALID')
+                file = batch_dir / f'batch_{batch}.json'
+                file.write_text(json.dumps(report))
+                completed[file.name] = report
+            except (RuntimeError, subprocess.TimeoutExpired, ValueError, OSError):
+                failed.append(batch)
+        if not fast_ok and not completed:
+            raise RuntimeError('US_RECOVERY_NO_VALID_LANE')
+        if completed:
+            publish_routes()
+    state['latest_us_reports'] = completed
+    state['us_last_completed_batches'] = [batch for batch in batches if batch not in failed]
+    state['us_last_sweep_status'] = {'fast_ok': fast_ok, 'deep_status': 'PARTIAL' if failed else 'COMPLETE',
+                                     'failed_batches': failed}
+    state['us_next_batch'] = (start + 7) % 21
+    store.save(state)
+    print(f'US_RECOVERY_SWEEP: fast_ok={int(fast_ok)} deep_completed={len(completed)} deep_failed={len(failed)}', flush=True)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('mode', choices=['prealert', 'eu', 'us'])
@@ -207,6 +256,13 @@ def main():
     if args.mode == 'prealert':
         Path('config').mkdir(exist_ok=True)
         Path('config/profit_watch_state.json').write_text(json.dumps(state.get('profit_watch_state', {})))
+        prior_us_setups = {}
+        for key, value in state.get('signals', {}).items():
+            parts = key.split('|')
+            if len(parts) == 4 and parts[:2] == ['ENTRY', 'US'] and parts[3] == 'PHASE':
+                prior_us_setups[parts[2]] = {field: value.get(field) for field in
+                                            ('setup_floor', 'setup_floor_ts', 'invalidated_at_ts')}
+        Path('config/us_alert_setups.json').write_text(json.dumps(prior_us_setups))
         # Private configuration is present after hydrate in live runs, but not
         # in isolated regression tests. Reconcile only when both exist.
         profit_path = Path('config/profit_exit_watch.json')
@@ -297,12 +353,14 @@ def main():
             # Silent, private macro headline context: no additional phone messages. 
             from silent_macro_context import update_silent_context 
             update_silent_context(state)
-            notify(store, state, entries['rows'], active_exits)
+            # EU entry alerts share the staged research gate, history and caps.
+            notify(store, state, [row for row in entries['rows'] if row.get('market') == 'US'], active_exits)
             # Dated company event reminders are research-only and deduplicated privately.
             from company_event_watch import notify_events
             notify_events(store, state)
-            # Private EU discovery feeds broker-verification alerts, never trade-ready claims.
-            eu_report = PrivateStore('eu').load().get('latest_eu_report', {})
+            # Private EU discovery feeds the staged research alerts.
+            eu_state = PrivateStore('eu').load()
+            eu_report = eu_state.get('latest_eu_report', {})
             # An old EU discovery report must never produce actionable alerts.
             # Surface the stale dependency privately, without relaxing freshness.
             from dipsaus_eu_freshness import classify_eu_report
@@ -313,10 +371,11 @@ def main():
             if args.live and os.environ.get('GITHUB_ACTIONS') == 'true' and not eu_check['fresh']:
                 import time
                 time.sleep(20)
-                newer_report = PrivateStore('eu').load().get('latest_eu_report', {})
+                newer_eu_state = PrivateStore('eu').load()
+                newer_report = newer_eu_state.get('latest_eu_report', {})
                 newer_check = classify_eu_report(newer_report)
                 if newer_check['fresh']:
-                    eu_report, eu_check = newer_report, newer_check
+                    eu_state, eu_report, eu_check = newer_eu_state, newer_report, newer_check
                     print('EU_HANDOFF_RECOVERED: fresh_report_received_after_retry', flush=True)
                 else:
                     print('EU_HANDOFF_RETRY: no_fresh_report; freshness_gate_retained', flush=True)
@@ -371,7 +430,9 @@ def main():
             for symbol, item in profit_cfg.get('positions', {}).items():
                 if isinstance(item, dict) and item.get('shares', 0) > 0:
                     holdings.add(item.get('provider_symbol') or symbol)
-            notify_eu_research(store, state, eu_report, holdings)
+            notify_eu_research(store, state, eu_report, holdings,
+                               evidence=eu_state.get(EVIDENCE_STATE_KEY),
+                               reviewer_pin=os.environ.get(REVIEWER_PIN_ENV))
             diagnostics = notification_diagnostics(entries, exits, eu_report, state, active_exit_symbols)
             diagnostics['new_confirmed_sends'] = sum(1 for value in state.get('signals', {}).values() if isinstance(value, dict) and value.get('delivery') == 'sent') - before_sent
             state['latest_notification_diagnostics'] = diagnostics
@@ -394,7 +455,13 @@ def main():
                        'europe_swing_research.py', 'europe_intraday_confirmation.py',
                        'europe_quote_execution_audit.py', 'europe_combined_recovery_report.py'):
             run(script)
-        state['latest_eu_report'] = json.loads(Path('reports/europe_combined_recovery_report.json').read_text())
+        report = json.loads(Path('reports/europe_combined_recovery_report.json').read_text())
+        freshness, rows = assess_report(report, state.get(EVIDENCE_STATE_KEY),
+                                        now=datetime.now(timezone.utc),
+                                        reviewer_pin=os.environ.get(REVIEWER_PIN_ENV))
+        if not freshness['fresh']:
+            raise RuntimeError('PRIVATE_STATE_EU_HANDOFF_NOT_FRESH')
+        state['latest_eu_report'] = {**report, 'candidates': rows}
         store.save(state)
         # Confirm the persisted EU handoff, not merely successful provider data.
         # Only aggregate freshness status is logged; no symbols or private rows.
@@ -405,21 +472,7 @@ def main():
         if not persisted_check['fresh']:
             raise RuntimeError('PRIVATE_STATE_EU_HANDOFF_NOT_FRESH')
     else:
-        run('us_momentum_recovery_discovery.py')
-        # Advance by completed sweeps, not UTC day/hour. This guarantees that
-        # three successful US sweeps cover all 21 batches, even if jobs run late.
-        start = int(state.get('us_next_batch', 0)) % 21
-        Path('reports/us_batch_runs').mkdir(parents=True, exist_ok=True)
-        for i in range(7):
-            batch = (start + i) % 21
-            run('us_recovery_pilot.py', US_BATCH=batch)
-            Path(f'reports/us_batch_runs/batch_{batch}.json').write_bytes(Path('reports/us_recovery_pilot.json').read_bytes())
-        run('us_auto_prealert_handoff.py'); run('us_live_trigger_routes.py')
-        state['us_routes'] = json.loads(Path('reports/us_live_trigger_routes.json').read_text())
-        state['latest_us_reports'] = {p.name: json.loads(p.read_text()) for p in Path('reports/us_batch_runs').glob('*.json')}
-        state['us_last_completed_batches'] = [(start + i) % 21 for i in range(7)]
-        state['us_next_batch'] = (start + 7) % 21
-        store.save(state)
+        run_us_recovery(store, state)
     print('Scanner completed. ' + ('Read-only test; ' if args.read_only else 'Runtime details saved privately; ') + 'notifications ' + ('enabled.' if args.live else 'disabled (shadow mode).'))
 
 

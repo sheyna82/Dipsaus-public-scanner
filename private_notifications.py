@@ -5,6 +5,8 @@ from pathlib import Path
 from datetime import datetime, timezone
 import urllib.request
 
+from eu_entry_net import age_seconds
+
 # Provider symbols are not always searchable verbatim in DEGIRO.
 # Display verified issuer names and ISINs; never change quote-feed symbols.
 BROKER_IDENTIFIERS = {
@@ -20,7 +22,8 @@ def broker_search_hint(symbol):
         return ''
     return 'DEGIRO zoeken: ' + item[0] + ' | ISIN ' + item[1] + '\\n'
 
-RANK = {'BOTTOM-RECOVERY': 1, 'BREAKOUT-SEEN': 2, 'BREAKOUT-HOLD-RETEST': 3, 'EXECUTION-NEAR': 4}
+RANK = {'BOTTOM-RECOVERY': 1, 'BREAKOUT-SEEN': 2, 'CURRENT-RECOVERY-CONFIRMED': 2,
+        'BREAKOUT-HOLD-RETEST': 3, 'EXECUTION-NEAR': 4}
 
 
 def phase(row):
@@ -32,14 +35,14 @@ def phase(row):
         hold = hold or yes('reclaim_observed') or ('RETEST' in text and ('HOLD' in text or 'TURN' in text))
     execution = yes('execution_near', 'buy_ready', 'execution_qualified') or any(x in text for x in ('BUY-READY', 'KOOPKLAAR', 'EXECUTION-NEAR', 'VERY-NEAR-BUY-READY'))
     if execution: return 'EXECUTION-NEAR'
-    if row.get('watch_type') == 'AUTO-US-DISCOVERY' and row.get('intraday_hold_confirmed'):
-        return 'BREAKOUT-HOLD-RETEST' if breakout else 'BREAKOUT-SEEN' if row.get('hold_observed') else 'BOTTOM-RECOVERY'
+    if row.get('watch_type') in ('AUTO-US-DISCOVERY', 'MANUAL-US-RECOVERY') and row.get('intraday_hold_confirmed'):
+        return 'BREAKOUT-HOLD-RETEST' if breakout else 'CURRENT-RECOVERY-CONFIRMED' if hold else 'BOTTOM-RECOVERY'
     if breakout and hold: return 'BREAKOUT-HOLD-RETEST'
     if breakout: return 'BREAKOUT-SEEN'
     return 'BOTTOM-RECOVERY'
 
 
-def reserve_send(store, state, key, record, symbol, body, sender=None):
+def reserve_send(store, state, key, record, symbol, body, sender=None, *, preflight=None):
     """Persist delivery outcomes; never silently treat a failed push as sent.
 
     An ambiguous network outcome is intentionally NOT automatically retried:
@@ -59,6 +62,10 @@ def reserve_send(store, state, key, record, symbol, body, sender=None):
     record['delivery'] = 'reserved'
     state['signals'][key] = record
     store.save(state)
+    if preflight is not None and not preflight():
+        record['delivery'] = 'expired_before_send'
+        store.save(state)
+        return False
     try:
         if sender:
             sender(symbol, body)
@@ -85,105 +92,80 @@ def reserve_send(store, state, key, record, symbol, body, sender=None):
     record['delivery'] = 'sent'
     record.pop('delivery_error', None)
     store.save(state)
+    return True
 
 
 def notify(store, state, entries, exits, sender=None):
     store.require_exclusive_sender()
+    from zoneinfo import ZoneInfo
+
+    east = ZoneInfo('America/New_York')
     for row in entries:
-        # Selective early US recovery heads-up: not a money-qualified buy alert.
-        # Daily per-symbol dedupe and global cap avoid notification storms.
-        if (row.get('watch_type') == 'AUTO-US-DISCOVERY'
-                and row.get('status') == 'EARLY-RECOVERY-WATCH'
-                and row.get('provider_freshness_pass')
-                and row.get('phone_notification_eligible')
-                and row.get('early_turn_observed')
-                and row.get('structure_available')):
-            symbol = row.get('symbol')
-            day = datetime.now(timezone.utc).date().isoformat()
-            key = f'US-EARLY|{symbol}|{day}'
-            already = sum(1 for k in state.setdefault('signals', {})
-                          if k.startswith('US-EARLY|') and k.endswith('|' + day))
-            if symbol and key not in state['signals'] and already < 3:
-                record = {'day': day, 'notification_schema_version': 14,
-                          'notified_utc': datetime.now(timezone.utc).isoformat()}
-                body = (f'{symbol}: VROEGE HERSTELKANS (onderzoeksseintje, GEEN koopbevestiging).\n'
-                        f'Providerkoers: {row.get("provider_quote")}; '
-                        f'dagbodem: {row.get("day_low")}; '
-                        f'opleving vanaf bodem: {row.get("rebound_from_day_low_pct")}%.' 
-                        ' Controleer NU DEGIRO bied/laat/spread, zelfstandige bodemstructuur, '
-                        'actuele invalidatie, eerste echte weerstand en verdere herstelzone, '
-                        'R/R >=2 en realistische bruto EUR-winst >=150 bij EUR3500; '
-                        'nieuws, earnings en portefeuillerisico. Geen automatische order.')
-                reserve_send(store, state, key, record, symbol, body, sender)
-        # Research-only early recovery for an existing RENK holding.
-        # Never interpret a delayed quote as an executable buy signal.
-        if (row.get('watch_type') == 'PORTFOLIO-REENTRY'
-                and row.get('symbol') == 'R3NK.DE'
-                and row.get('provider_freshness_pass')
-                and row.get('recent_reclaim_observed')
-                and (row.get('rebound_from_5d_low_pct') or 0) >= 5
-                and (row.get('day_change_pct') or 0) >= 2):
-            day = datetime.now(timezone.utc).date().isoformat()
-            key = 'RESEARCH|R3NK.DE|EARLY|' + day
-            if key not in state.setdefault('signals', {}):
-                record = {'day': day, 'notification_schema_version': 15,
-                          'notified_utc': datetime.now(timezone.utc).isoformat()}
-                body = ('RENK: VROEGE HERSTELWAARSCHUWING (GEEN bijkoopbevestiging). '
-                        'Sterke opleving vanaf vijfdaagse bodem en positieve dagbeweging. '
-                        'Controleer DEGIRO, zelfstandige setup, hogere bodem, volume, '
-                        'invalidatie, R/R en bruto EUR-winst. Geen automatische order.')
-                reserve_send(store, state, key, record, 'R3NK.DE', body, sender)
-        if not row.get('prealert_trigger_observed'): continue
-        # Automatic US discoveries must never bypass the selective phone gate,
-        # even when a later intraday trigger is observed.
-        if (row.get('watch_type') == 'AUTO-US-DISCOVERY'
-                and not (row.get('phone_notification_eligible')
-                         and row.get('provider_freshness_pass')
-                         and row.get('structure_available')
-                         and row.get('intraday_hold_confirmed'))):
+        if row.get('market') != 'US' or row.get('watch_type') not in ('AUTO-US-DISCOVERY', 'MANUAL-US-RECOVERY'):
             continue
-        market = row.get('market', 'EU')
-        if market == 'US' and not row.get('watch_type'): continue
-        route = row.get('triggered_route') or row.get('trigger_route') or 'PRE-ALERT'
-        # Portfolio re-entry triggers are early research observations, not independently
-        # money-qualified trades. EU holdings use the unified EU research gate below;
-        # US holdings remain internally watched until an equivalent quality gate exists.
-        if row.get('watch_type') == 'PORTFOLIO-REENTRY':
-            # RENK-specific early research: require a fresh quote plus independent
-            # multi-day recovery evidence. This is NOT a money-qualified add.
-            if (row.get('symbol') == 'R3NK.DE'
-                    and row.get('provider_freshness_pass')
-                    and row.get('higher_low_observed')
-                    and row.get('recent_reclaim_observed')
-                    and (row.get('recent_volume_ratio') or 0) >= 1.5
-                    and (row.get('rebound_from_5d_low_pct') or 0) >= 1.5):
-                day = datetime.now(timezone.utc).date().isoformat()
-                key = 'RESEARCH|R3NK.DE|RECOVERY'
-                if state['signals'].get(key, {}).get('day') != day:
-                    record = {'day': day, 'notification_schema_version': 12,
-                              'notified_utc': datetime.now(timezone.utc).isoformat()}
-                    body = ('RENK: VROEGE HERSTELWATCH - hogere bodem, reclaim en volume; '
-                            'GEEN bijkoopbevestiging. Check actuele DEGIRO bied/laat, '
-                            'nieuwe zelfstandige setup, invalidatie, eerste echte weerstand, '
-                            'R/R >=2, realistische EUR-winst >=150, nieuws en earnings. '
-                            'Geen automatische order.')
-                    reserve_send(store, state, key, record, 'R3NK.DE', body, sender)
+        symbol = row.get('symbol')
+        if not symbol:
             continue
-        if row.get('watch_type') == 'PORTFOLIO-REENTRY' and route not in (
-            'ACTIVE-HOLDING-DIP-TURN', 'ACTIVE-HOLDING-BASE-TEST', 'ACTIVE-HOLDING-MULTIDAY-RECOVERY'):
+        now = datetime.now(timezone.utc)
+        age = age_seconds(row.get('provider_quote_utc'), now)
+        fresh = row.get('provider_freshness_pass') is True and (
+            row.get('provider_source') is None or age is not None and 0 <= age <= 120)
+        day = now.astimezone(east).date().isoformat()
+        key = f'ENTRY|US|{symbol}|PHASE'
+        signals = state.setdefault('signals', {})
+        previous = signals.get(key, {})
+        breach = row.get('previous_alert_invalidated_at_ts')
+        if (fresh and previous and type(breach) is int and breach != previous.get('invalidated_at_ts')):
+            previous['invalidated_at_ts'] = breach
+            store.save(state)
+        if not (fresh and row.get('phone_notification_eligible') and row.get('structure_available')):
             continue
-        symbol = row.get('symbol', 'UNKNOWN'); ph = phase(row)
-        key = f'ENTRY|{market}|{symbol}|PHASE'
-        prev = state['signals'].get(key, {})
-        if RANK[ph] <= RANK.get(prev.get('phase'), 0): continue
-        record = {'phase': ph, 'notification_schema_version': 9,
-                  'notified_utc': datetime.now(timezone.utc).isoformat()}
-        if ph == 'BOTTOM-RECOVERY':
-            state['signals'][key] = record; store.save(state); continue
-        body = f'{symbol}: {ph}\nProvider quote: {row.get("provider_quote")}\nDEGIRO check: bid/ask/spread, current-leg invalidation, R/R>=2, dynamic sizing, realistic EUR recovery profit, news/events and portfolio fit. Research signal only; not a validated buy. Entry zone, invalidation, risk/reward and gross EUR profit still require broker verification. No automatic order.'
-        if market == 'US':
-            from dipsaus_breakout_distance import message_context
-            body += message_context(row)
+        if row.get('watch_type') == 'AUTO-US-DISCOVERY' and row.get('status') == 'EARLY-RECOVERY-WATCH' and row.get('early_turn_observed'):
+            early_key = f'US-EARLY|{symbol}|{day}'
+            already = sum(1 for old_key in signals if old_key.startswith('US-EARLY|') and old_key.endswith('|' + day))
+            if early_key not in signals and already < 3 and previous.get('day') != day:
+                record = {'day': day, 'notification_schema_version': 16, 'notified_utc': now.isoformat()}
+                body = (f'{symbol} VROEGE HERSTELKANS\n'
+                        f'Voltooide minuutslotkoers {row.get("provider_quote")}, '
+                        f'herstelbodem {row.get("day_low")}. Onderzoeksseintje voor handmatige beoordeling. '
+                        'Controleer DEGIRO bied/laat, structurele invalidatie, eerste weerstand, '
+                        'nettowinst, netto R/R, kwartaalcijfers en portefeuilleruimte.')
+                reserve_send(store, state, early_key, record, symbol, body, sender)
+        if not (row.get('prealert_trigger_observed') and row.get('intraday_hold_confirmed')):
+            continue
+        current_phase = phase(row)
+        if current_phase == 'BOTTOM-RECOVERY':
+            continue
+        floor_ts = row.get('setup_floor_ts')
+        prior_day = previous.get('day')
+        prior_age = age_seconds(previous.get('notified_utc'), now)
+        if prior_day is None and prior_age is not None and prior_age >= 0:
+            from datetime import timedelta
+            prior_day = (now - timedelta(seconds=prior_age)).astimezone(east).date().isoformat()
+        has_new_setup = bool(row.get('setup_id') and row['setup_id'] != previous.get('setup_id')
+                             and type(floor_ts) is int)
+        new_after_breach = (has_new_setup and type(previous.get('invalidated_at_ts')) is int
+                            and floor_ts >= previous['invalidated_at_ts'])
+        new_trading_day = (has_new_setup and prior_day is not None and prior_day < day
+                           and datetime.fromtimestamp(floor_ts, timezone.utc).astimezone(east).date().isoformat() == day)
+        rearmed = new_trading_day or (new_after_breach and previous.get('confirmed_attempts_today', 1) < 2
+                                     and previous.get('delivery') not in ('reserved', 'uncertain'))
+        if not rearmed and RANK[current_phase] <= RANK.get(previous.get('phase'), 0):
+            continue
+        if prior_day == day and previous.get('delivery') in ('reserved', 'uncertain'):
+            continue
+        if previous:
+            archive_id = previous.get('notified_utc', 'legacy')
+            signals[f'ENTRY|US|{symbol}|HISTORY|{archive_id}'] = dict(previous)
+        record = {'phase': current_phase, 'day': day, 'notification_schema_version': 16,
+                  'notified_utc': now.isoformat(), 'setup_id': row.get('setup_id'),
+                  'setup_floor': row.get('setup_floor'), 'setup_floor_ts': floor_ts,
+                  'confirmed_attempts_today': (previous.get('confirmed_attempts_today', 1) + 1 if prior_day == day else 1)}
+        body = (f'{symbol} {current_phase}\nVoltooide provider-minuutslotkoers {row.get("provider_quote")}. '
+                'Handmatige beoordeling vereist. Controleer DEGIRO bied/laat, invalidatie, eerste weerstand, '
+                'werkelijke kosten, nettowinst, netto R/R, nieuws, kwartaalcijfers en portefeuilleruimte.')
+        from dipsaus_breakout_distance import message_context
+        body += message_context(row)
         reserve_send(store, state, key, record, symbol, body, sender)
     for row in exits:
         symbol = row.get('symbol', 'UNKNOWN'); key = f'EXIT|{symbol}|STATE'
@@ -223,70 +205,146 @@ def notify(store, state, entries, exits, sender=None):
                 'GAK, herstelstructuur en momentum; providerkoers is geen uitvoeringskoers.')
         reserve_send(store, state, key, record, symbol, body, sender)
 
-def notify_eu_research(store, state, report, holdings, sender=None):
-    """One broker-verification prompt per new EU setup; never a buy instruction."""
-    from datetime import timedelta
-    now = datetime.now(timezone.utc)
-    try:
-        generated = datetime.fromisoformat(report["generated_utc"].replace("Z", "+00:00"))
-    except (KeyError, ValueError, TypeError):
+def notify_eu_research(store, state, report, holdings, sender=None, *, evidence=None,
+                       reviewer_pin=None, clock=None):
+    """Re-evaluate EU stages and reserve every attempt in existing private history."""
+    from collections import Counter
+    from zoneinfo import ZoneInfo
+    from dipsaus_eu_freshness import classify_eu_report
+    from eu_entry_net import (EARLY_RECOVERY, DEGIRO_VERIFICATION, FINANCIAL_ENTRY_CONFIRMED,
+                              PHASE_RANK, assess_report, evaluate_entry, recovery_phase)
+
+    if clock is None:
+        clock = lambda: datetime.now(timezone.utc)
+    now = clock()
+    freshness, rows = assess_report(report, evidence, now=now, reviewer_pin=reviewer_pin)
+    phase_counts = dict.fromkeys(PHASE_RANK, 0)
+    reasons = Counter()
+    summary = {'report_status': freshness['reason'], 'evaluated_utc': now.isoformat(),
+               'phase_counts': phase_counts, 'reason_counts': reasons, 'financial_results': []}
+    state['latest_eu_entry_evaluation'] = summary
+    if not freshness['fresh']:
         return
-    if generated.tzinfo is None or not timedelta(0) <= now - generated <= timedelta(minutes=25):
-        return
-    # Prioritize existing holdings and the clearest recovery evidence; avoid alert storms.
-    eligible = []
-    for row in report.get("candidates", []):
-        symbol = row.get("symbol")
-        if not isinstance(symbol, str) or not symbol:
+    evidence = evidence if isinstance(evidence, dict) else {}
+    priority_watch = {'KER.PA', 'FER.MC', 'SU.PA', 'ANTO.L'}
+    signals = state.setdefault('signals', {})
+    day = now.astimezone(ZoneInfo('Europe/Amsterdam')).date().isoformat()
+    previous_rank = {}
+    ambiguous = set()
+    routine_used = priority_used = 0
+    for key, record in signals.items():
+        if not isinstance(record, dict) or record.get('day') != day:
             continue
-        if not row.get("broker_verify_now") or not row.get("broker_check_candidate") or row.get("trade_ready"):
+        parts = key.split('|')
+        if len(parts) < 3 or parts[0] != 'EU-RESEARCH':
             continue
-        if not (row.get("provider_freshness_pass") or row.get("provider_delayed_but_usable_for_attention")):
+        symbol, old_phase = parts[1:3]
+        rank = 2 if old_phase in ('INSTAPCHECK', 'BIJKOOPCHECK') else PHASE_RANK.get(old_phase, 0)
+        if not rank:
             continue
-        score = row.get("early_recovery_score") or 0
-        owned = symbol in holdings
-        if score < (2 if owned else 3):
-            continue
-        if not owned and "BOTTOM-EVIDENCE-INSUFFICIENT" in row.get("historical_flags", []):
-            continue
-        scenario = row.get("historical_3500_eur_scenarios") or {}
-        if (scenario.get("rr_to_meaningful") or 0) < 2 or (scenario.get("meaningful_resistance_gross_eur") or 0) < 150:
-            continue
-        kind = "BIJKOOPCHECK" if owned else "INSTAPCHECK"
-        key = f"EU-RESEARCH|{symbol}|{kind}"
-        if state.setdefault("signals", {}).get(key, {}).get("day") == generated.date().isoformat():
-            continue
-        eligible.append((owned, score, symbol, kind, key))
-    # Prioritize two explicitly requested recovery watches, without relaxing any gates.
-    priority_watch = {"KER.PA", "FER.MC", "SU.PA", "ANTO.L"}
-    eligible.sort(key=lambda x: (-int(x[2] in priority_watch), -int(x[0]), -x[1], x[2]))
-    # Keep routine research capped; reserve a small extra lane for held
-    # positions and explicit priority watches, without relaxing trade gates.
-    day = generated.date().isoformat()
-    today = [(k, v) for k, v in state["signals"].items()
-             if k.startswith("EU-RESEARCH|") and v.get("day") == day]
-    routine_used = sum(1 for _, v in today if not v.get("priority_lane"))
-    priority_used = sum(1 for _, v in today if v.get("priority_lane"))
-    selected = []
-    for item in eligible:
-        owned, score, symbol, kind, key = item
-        priority = owned or symbol in priority_watch
-        if priority and priority_used < 2:
-            selected.append((item, True))
+        if record.get('delivery') != 'expired_before_send':
+            previous_rank[symbol] = max(previous_rank.get(symbol, 0), rank)
+        if record.get('delivery') in ('reserved', 'uncertain'):
+            ambiguous.add(symbol)
+        if record.get('priority_lane'):
             priority_used += 1
-        elif routine_used < 5:
-            selected.append((item, False))
+        else:
             routine_used += 1
-        if len(selected) >= 3:
+
+    eligible = []
+    for row in rows:
+        symbol, stage = row['symbol'], row['recovery_phase']
+        financial = row['financial_entry']
+        score, owned = row.get('early_recovery_score'), symbol in holdings
+        if 'shares' in financial or stage is not None:
+            summary['financial_results'].append({'symbol': symbol, **financial})
+        if stage is None:
+            reasons['no_current_structure'] += 1
+            continue
+        if stage == FINANCIAL_ENTRY_CONFIRMED and not owned and len(holdings) >= 6:
+            reasons['portfolio_position_cap'] += 1
+            stage = recovery_phase(row, {}, now=now)
+            row = {**row, 'recovery_phase': stage}
+        if type(score) is not int or score < (2 if owned else 3):
+            reasons['minimum_recovery_score'] += 1
+            continue
+        flags = row.get('historical_flags')
+        if not isinstance(flags, list) or (not owned and 'BOTTOM-EVIDENCE-INSUFFICIENT' in flags):
+            reasons['bottom_quality_gate'] += 1
+            continue
+        phase_counts[stage] += 1
+        if symbol in ambiguous or PHASE_RANK[stage] <= previous_rank.get(symbol, 0):
+            reasons['already_reserved_or_no_promotion'] += 1
+            continue
+        eligible.append((row, score, owned))
+    eligible.sort(key=lambda item: (-int(item[0]['symbol'] in priority_watch), -int(item[2]),
+                                   -PHASE_RANK[item[0]['recovery_phase']], -item[1], item[0]['symbol']))
+    if eligible:
+        store.require_exclusive_sender()
+    attempts = 0
+    for row, score, owned in eligible:
+        symbol, stage = row['symbol'], row['recovery_phase']
+        send_time = clock()
+        if (send_time.astimezone(ZoneInfo('Europe/Amsterdam')).date().isoformat() != day
+                or not classify_eu_report(report, now=send_time)['fresh']):
+            reasons['report_expired_before_send'] += 1
             break
-    for (owned, score, symbol, kind, key), priority_lane in selected:
-        record = {"day": day, "notification_schema_version": 11,
-                  "priority_lane": priority_lane,
-                  "notified_utc": now.isoformat()}
-        body = (f"{symbol}: {kind} - herstelonderzoek (score {score}), GEEN koopbevestiging.\n"
-                + broker_search_hint(symbol)
-                + "Providerkoers kan vertraagd zijn. Check actuele DEGIRO bied/laat, "
-                "nieuwe zelfstandige herstelsetup, weerstand, R/R >=2 en "
-                "realistische brutowinst >= EUR150 voor standaardtranche; "
-                "controleer nieuws, earnings en portefeuillerisico. Geen automatische order.")
-        reserve_send(store, state, key, record, symbol, body, sender)
+        financial = {}
+        if stage == FINANCIAL_ENTRY_CONFIRMED:
+            financial = evaluate_entry(symbol, row.get('currency'), evidence.get(symbol),
+                                       now=send_time, reviewer_pin=reviewer_pin)
+        final_stage = recovery_phase(row, financial, now=send_time)
+        if final_stage != stage:
+            phase_counts[stage] -= 1
+            reasons['evidence_expired_before_send'] += 1
+            if final_stage is not None:
+                phase_counts[final_stage] += 1
+            for item in summary['financial_results']:
+                if item['symbol'] == symbol:
+                    item.update(financial_at_send=financial)
+                    break
+        stage = final_stage
+        if stage is None or PHASE_RANK[stage] <= previous_rank.get(symbol, 0):
+            continue
+        priority_lane = (owned or symbol in priority_watch) and priority_used < 2
+        if not priority_lane and routine_used >= 5:
+            reasons['daily_cap'] += 1
+            continue
+        key = f'EU-RESEARCH|{symbol}|{stage}|{day}'
+        if key in signals:
+            continue
+        record = {'day': day, 'phase': stage, 'notification_schema_version': 16,
+                  'priority_lane': priority_lane, 'notified_utc': send_time.isoformat()}
+        body = f'{symbol} {stage} (herstelscore {score})\n' + broker_search_hint(symbol)
+        if stage == EARLY_RECOVERY:
+            body += 'Beginnend herstel in onderzoek. Volg de bodemstructuur en het verdere prijsverloop.'
+        elif stage == DEGIRO_VERIFICATION:
+            body += ('Controleer actuele DEGIRO bied/laat, eerste betekenisvolle weerstand, '
+                     'structurele invalidatie, kosten, nieuws en portefeuilleruimte. '
+                     'Providergegevens kunnen vertraagd zijn.')
+        else:
+            body += (f'Financieel bevestigd onderzoeksscenario voor {financial["shares"]} aandelen. '
+                     f'Verwachte nettowinst EUR {financial["net_profit_eur"]:.2f} en '
+                     f'netto R/R {financial["net_rr"]:.4f}. Controleer nieuws en portefeuilleruimte.')
+
+        def still_current():
+            checked = clock()
+            if (checked.astimezone(ZoneInfo('Europe/Amsterdam')).date().isoformat() != day
+                    or not classify_eu_report(report, now=checked)['fresh']):
+                return False
+            latest = financial
+            if stage == FINANCIAL_ENTRY_CONFIRMED:
+                latest = evaluate_entry(symbol, row.get('currency'), evidence.get(symbol),
+                                        now=checked, reviewer_pin=reviewer_pin)
+            return recovery_phase(row, latest, now=checked) == stage
+
+        delivered = reserve_send(store, state, key, record, symbol,
+                                 body + ' Handmatige beoordeling vereist. Geen koopopdracht.', sender,
+                                 preflight=still_current)
+        if not delivered:
+            reasons['evidence_expired_during_reservation'] += 1
+        attempts += 1
+        priority_used += int(priority_lane)
+        routine_used += int(not priority_lane)
+        if attempts == 3:
+            break

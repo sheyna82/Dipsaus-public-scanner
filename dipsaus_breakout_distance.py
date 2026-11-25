@@ -27,7 +27,7 @@ def message_context(row):
                 + str(result["distance_pct"])
                 + "% boven het aangeleverde uitbraakniveau. "
                 "Niet achtervolgen; controleer nieuwe instapstructuur, actuele weerstand, "
-                "R/R >=2 en realistische bruto EUR-winst. GEEN koopbevestiging.")
+                "R/R >=2 en verwachte netto EUR-winst. GEEN koopbevestiging.")
     if result["status"] == "UNKNOWN":
         return ("\nRESTERENDE WINSTRUIMTE ONBEKEND: uitbraakniveau of verse "
                 "prijsvergelijking ontbreekt. Geen instapbevestiging.")

@@ -1,69 +1,184 @@
 #!/usr/bin/env python3
-"""Build live monitoring routes for US PRE-ALERT candidates. Never a buy signal.
-
-Discovery stays broad. Phone-alert eligibility is deliberately narrower: unreviewed
-US discoveries remain in the route report as SILENT-FOLLOW rows, but cannot fire a
-DEGIRO-CHECK notification until promoted in notification_quality_gate.json.
-"""
+"""Build and evaluate independent live recovery routes for US PRE-ALERT."""
 import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-SRC=Path("reports/us_auto_prealert_candidates.json")
-OUT=Path("reports/us_live_trigger_routes.json")
-GATE=Path("config/notification_quality_gate.json")
-data=json.loads(SRC.read_text()) if SRC.exists() else {"rows":[]}
-try:
-    gate=json.loads(GATE.read_text()) if GATE.exists() else {}
-except Exception:
-    gate={}
-notify_watchlist=set(gate.get("auto_us_notify_watchlist",[]))
-# Explicit user-requested research candidate: only eligible if independent discovery promotes it.
-notify_watchlist.add("GEHC")
-silent_follow=set(gate.get("auto_us_silent_follow",[]))
-rows=[]
+from eu_entry_net import age_seconds
+from us_auto_prealert_handoff import DISABLED, read_report
+from us_intraday_recovery import intraday_structure
+from us_yahoo_bars import number
 
-for x in data.get("rows",[]):
-    if not x.get("auto_promoted"): continue
-    symbol=x["symbol"]
-    early=x.get("discovery_lane")=="FAST-MOMENTUM-RECOVERY"
-    zones=x.get("historical_overhead_zones") or []; first=zones[0] if zones else None
-    automatic_quality=bool(
-        x.get("discovery_lane")=="DEEP-RECOVERY"
-        and x.get("bottom_signal_count",0)>=4
-        and x.get("weekly_structure_support")
-        and x.get("identity_status")=="NAME_CONSISTENT_UNVERIFIED"
-        and isinstance(x.get("space_to_first_overhead_pct"),(int,float))
-        and x["space_to_first_overhead_pct"]>=3
-    )
-    # Limited research-only promotion for objectively structured fast recoveries.
-    # Does not declare a trade ready; PRE-ALERT still requires a fresh provider
-    # quote and observed turn before sending, with per-day alert caps.
-    fast_research_quality=bool(
-        early
-        and x.get("structure_quality_pass")
-        and (x.get("intraday_structure") or {}).get("early_recovery_observed")
-        and isinstance(x.get("recent_drawdown_pct"),(int,float))
-        and x["recent_drawdown_pct"]<=-8
-        and isinstance(x.get("day_change_pct"),(int,float))
-        and x["day_change_pct"]>=1
-    )
-    phone_eligible=(symbol in notify_watchlist or automatic_quality or fast_research_quality) and symbol not in silent_follow
-    if early:
-        ref=x.get("early_trigger_reference_usd")
-        z=[round(ref*0.995,3),round(ref*1.005,3)] if isinstance(ref,(int,float)) else None
-        row={"symbol":symbol,"name":x.get("name"),"status":"EARLY-RECOVERY-PRE-ALERT" if phone_eligible else "SILENT-FOLLOW","route_type":"EARLY-MOMENTUM-RECOVERY-VERIFY" if phone_eligible else "REVIEWED-LATER-NO-PHONE","break_above_usd":ref if phone_eligible else None,"hold_zone_usd":z if phone_eligible else None,"reference_break_above_usd":ref,"reference_hold_zone_usd":z,"phone_notification_eligible":phone_eligible,"silent_follow":not phone_eligible,"historical_invalidation_reference_usd":x.get("historical_invalidation_reference_usd"),"source":"fast market-wide mover/recovery discovery; current price reference only","route_is_execution_signal":False,"requires":["fresh provider 1m structure","credible higher low or short consolidation/reclaim","fresh DEGIRO bid/ask + spread","current company/news/event clearance","structural invalidation","first friction + meaningful resistance + further recovery zone","portfolio fit","DYNAMIC SIZING MONEY gate","R/R >= 2","no chase"]}
-    else:
-        level=first.get("low_usd") if first else None; z=[first.get("low_usd"),first.get("high_usd")] if first else None
-        row={"symbol":symbol,"name":x.get("name"),"status":"PRE-ALERT" if phone_eligible else "SILENT-FOLLOW","route_type":"BREAKOUT_RECLAIM_REFERENCE" if (first and phone_eligible) else "REVIEWED-LATER-NO-PHONE" if first else "DATA-BLOCKED","break_above_usd":level if phone_eligible else None,"hold_zone_usd":z if phone_eligible else None,"reference_break_above_usd":level,"reference_hold_zone_usd":z,"phone_notification_eligible":phone_eligible,"silent_follow":not phone_eligible,"historical_invalidation_reference_usd":x.get("historical_invalidation_reference_usd"),"source":"current US sweep historical pivot map","route_is_execution_signal":False,"requires":["fresh provider 1m quote","fresh DEGIRO bid/ask + spread","current daily/intraday structure review","event/news clearance","portfolio fit","DYNAMIC SIZING MONEY gate","R/R >= 2"]}
-    if symbol in silent_follow:
-        row["silent_follow_reason"]="Reviewed candidate: keep in reports/watch, but suppress phone noise until a materially better standalone setup is promoted."
-    elif not phone_eligible:
-        row["silent_follow_reason"]="New automatic discovery: keep broad discovery/reporting, but require review/promotion before urgent phone notification."
-    row["auto_quality_promoted"]=automatic_quality
-    row["fast_research_quality_promoted"]=fast_research_quality
-    rows.append(row)
+SRC = Path('reports/us_auto_prealert_candidates.json')
+OUT = Path('reports/us_live_trigger_routes.json')
+GATE = Path('config/notification_quality_gate.json')
 
-out={"generated_utc":datetime.now(timezone.utc).isoformat(),"scope":"US PRE-ALERT live monitoring routes; broad discovery with selective phone escalation; never automatic buy","notification_gate":{"phone_watchlist":sorted(notify_watchlist),"rule":"Unreviewed automatic US discoveries are silent. Manual/portfolio watches are handled separately."},"rows":rows}
-OUT.parent.mkdir(exist_ok=True); OUT.write_text(json.dumps(out,indent=2)); print(json.dumps(out,indent=2))
 
+def build_routes(handoff, gate, *, now):
+    watchlist = set(gate.get('auto_us_notify_watchlist', [])) | {'GEHC'}
+    silent_follow = set(gate.get('auto_us_silent_follow', []))
+    rows = []
+    for candidate in handoff.get('rows', []):
+        if not candidate.get('auto_promoted'):
+            continue
+        symbol = candidate['symbol']
+        evidence = candidate['routes']
+        fast, deep = evidence.get('fast', {}), evidence.get('deep', {})
+        fast_structure = fast.get('intraday_structure') or {}
+        first_zone = (deep.get('historical_overhead_zones') or [{}])[0]
+        deep_space = deep.get('space_to_first_overhead_pct')
+        deep_quality = bool(deep.get('auto_promoted') and deep['bottom_signal_count'] >= 4
+                            and deep['identity_status'] == 'NAME_CONSISTENT_UNVERIFIED'
+                            and number(deep_space) and deep_space >= 3)
+        fast_drawdown, change = fast.get('recent_drawdown_pct'), fast.get('day_change_pct')
+        fast_quality = bool(fast_structure.get('early_recovery_observed') is True
+                            and number(fast_drawdown) and fast_drawdown <= -8
+                            and number(change) and change >= 1)
+        disputed = deep.get('identity_status') == 'IDENTITY_MISMATCH'
+        eligible = (symbol not in silent_follow and not disputed
+                    and (symbol in watchlist or deep_quality or fast_quality))
+        live_routes = {}
+        if fast:
+            live_routes['fast'] = {'level': fast_structure.get('first_rebound_high'),
+                                   'floor': fast_structure.get('recovery_low'),
+                                   'floor_ts': fast_structure.get('recovery_low_ts')}
+        if deep.get('auto_promoted'):
+            live_routes['deep'] = {'level': first_zone.get('low_usd'),
+                                   'zone': [first_zone.get('low_usd'), first_zone.get('high_usd')],
+                                   'floor': deep.get('historical_invalidation_reference_usd')}
+        rows.append({'symbol': symbol, 'name': candidate.get('name'), 'observed_utc': now.isoformat(),
+                     'status': 'PRE-ALERT' if eligible else 'SILENT-FOLLOW',
+                     'phone_notification_eligible': eligible, 'silent_follow': not eligible,
+                     'automatic_quality_promoted': deep_quality, 'fast_research_quality_promoted': fast_quality,
+                     'identity_disputed': disputed, 'discovery_evidence': evidence, 'live_routes': live_routes,
+                     'route_is_execution_signal': False, **DISABLED})
+    return {'generated_utc': now.isoformat(), 'scope': 'US recovery research and live monitoring', 'rows': rows, **DISABLED}
+
+
+def retain_recent_routes(report, previous, *, now):
+    """Keep a bounded watchlist between rotating discovery sweeps."""
+    symbols = {row['symbol'] for row in report['rows']}
+    older = []
+    for row in previous.get('rows', []):
+        if not isinstance(row, dict) or not row.get('symbol') or row['symbol'] in symbols:
+            continue
+        age = age_seconds(row.get('observed_utc') or previous.get('generated_utc'), now)
+        if age is not None and 0 <= age <= 7 * 86400:
+            symbols.add(row['symbol'])
+            older.append((age, row))
+    older.sort(key=lambda item: (not item[1].get('phone_notification_eligible'), item[0], item[1]['symbol']))
+    # Prior eligibility may have been explicitly revoked in current private config.
+    # Retained names remain visible, with phone eligibility re-earned by a new sweep.
+    retained = [{**row, 'phone_notification_eligible': False, 'silent_follow': True,
+                 'status': 'SILENT-FOLLOW', 'retained_from_prior_sweep': True,
+                 'observed_utc': row.get('observed_utc') or previous.get('generated_utc')}
+                for _, row in older[:30]]
+    return {**report, 'rows': report['rows'] + retained}
+
+
+def floor_breach(bars, floor, *, floor_ts=None, known=None):
+    if not number(floor) or floor <= 0:
+        return known
+    latest = known if type(known) is int else None
+    after = max((stamp for stamp in (floor_ts, latest) if type(stamp) is int), default=0)
+    was_below = latest is not None
+    for bar in bars:
+        if bar['ts'] <= after:
+            continue
+        below = bar['low'] < floor
+        if below and not was_below:
+            latest = bar['ts']
+        was_below = below
+    return latest
+
+
+def monitor_recovery(item, snapshot, *, prior_alert=None):
+    """Evaluate live evidence and discard old setups upon a breach or time gap."""
+    if snapshot['symbol'] != item['symbol']:
+        raise ValueError('WATCH_SNAPSHOT_SYMBOL_MISMATCH')
+    bars = snapshot['bars']
+    last = snapshot['latest_completed_bar']
+    price = last['close']
+    eligible = item.get('phone_notification_eligible') is True
+    result = {'symbol': item['symbol'], 'market': 'US', 'watch_type': 'AUTO-US-DISCOVERY',
+              'phone_notification_eligible': eligible, 'provider_quote': price,
+              'provider_quote_utc': datetime.fromtimestamp(last['ts'], timezone.utc).isoformat(),
+              'provider_quote_age_seconds': snapshot['bar_age_seconds'], 'provider_freshness_pass': snapshot['fresh'],
+              'provider_reference': snapshot['reference'], 'completed_minute_bar': last,
+              'provider_source': snapshot['source'], 'source_verified': False,
+              'contiguous_completed_bars': len(bars), **DISABLED}
+    configured_routes = item.get('live_routes')
+    if not isinstance(configured_routes, dict):
+        # An old report can supply a research floor, but old quote-based
+        # thresholds cannot confirm a current recovery.
+        configured_routes = {'legacy': {'floor': item.get('historical_invalidation_reference_usd')}}
+    prior_alert = prior_alert or {}
+    alerted_floor = prior_alert.get('setup_floor')
+    alerted_ts = prior_alert.get('setup_floor_ts')
+    prior_break = floor_breach(bars, alerted_floor, floor_ts=alerted_ts,
+                              known=prior_alert.get('invalidated_at_ts')) if type(alerted_ts) is int else None
+    current_bars = [bar for bar in bars if type(prior_break) is not int or bar['ts'] >= prior_break]
+    current = intraday_structure(current_bars)
+    evaluations = {}
+    for lane, route in configured_routes.items():
+        level, floor = route.get('level'), route.get('floor')
+        floor_ts = route.get('floor_ts')
+        quoted_floor = number(floor) and floor > 0
+        latest_break = floor_breach(current_bars, floor, floor_ts=floor_ts)
+        if latest_break is not None:
+            active = [bar for bar in current_bars if bar['ts'] >= latest_break]
+            observed = intraday_structure(active)
+        else:
+            observed = current
+        # A stale or off-window reference may still be displayed for research;
+        # it cannot confirm a setup without a fresh independently formed pivot.
+        floor_current = (quoted_floor and type(floor_ts) is int and bars[0]['ts'] <= floor_ts <= last['ts']
+                         and latest_break is None and (type(prior_break) is not int or floor_ts >= prior_break))
+        early = snapshot['fresh'] and observed.get('early_recovery_observed') is True
+        structure = early and observed.get('quality') is True
+        breakout = bool(floor_current and number(level) and price > level)
+        zone = route.get('zone')
+        hold = bool(floor_current and isinstance(zone, list) and len(zone) == 2
+                    and all(number(value) for value in zone) and zone[0] <= price <= zone[1])
+        evaluations[lane] = {'old_setup_invalidated': latest_break is not None,
+                             'breakout_observed': breakout, 'hold_observed': hold,
+                             'old_level_available': floor_current, 'structure': observed,
+                             'early': early, 'confirmed': structure}
+    if not evaluations:
+        evaluations['current'] = {'early': snapshot['fresh'] and current.get('early_recovery_observed') is True,
+                                  'confirmed': snapshot['fresh'] and current.get('quality') is True,
+                                  'structure': current}
+    early = any(route['early'] for route in evaluations.values())
+    # Current confirmation uses fresh, complete price structure, even if a
+    # previous setup failed. No pre-breach bars contribute to that route.
+    confirmed = any(route['confirmed'] for route in evaluations.values())
+    best = max(evaluations.values(), key=lambda route: (route['confirmed'], route['early']))
+    structure = best['structure']
+    trigger = eligible and confirmed
+    invalidated = type(prior_break) is int or any(route.get('old_setup_invalidated') for route in evaluations.values())
+    status = ('DEGIRO-VERIFY-NOW' if trigger else 'EARLY-RECOVERY-WATCH' if early and not confirmed
+              else 'STRUCTURE-OBSERVED' if confirmed else 'STALE-PROVIDER' if not snapshot['fresh']
+              else 'SETUP-INVALIDATED' if invalidated else 'WATCH')
+    return {**result, 'status': status, 'route_evidence': evaluations,
+            'structure_available': structure['available'], 'early_turn_observed': early,
+            'intraday_hold_confirmed': confirmed, 'prealert_trigger_observed': trigger,
+            'breakout_observed': any(route.get('breakout_observed') for route in evaluations.values()),
+            'hold_observed': confirmed, 'day_low': structure.get('recovery_low'),
+            'route_2_break_above': structure.get('first_rebound_high') if early else None,
+            'rebound_from_day_low_pct': structure.get('rebound_pct'),
+            'previous_alert_invalidated_at_ts': prior_break if snapshot['fresh'] else None,
+            'setup_floor': structure.get('recovery_low'), 'setup_floor_ts': structure.get('recovery_low_ts'),
+            'setup_id': (f"{structure['recovery_low_ts']}|{structure['recovery_low']}" if early else None),
+            'company_event': (item.get('discovery_evidence', {}).get('deep') or {}).get('company_event'),
+            'execution_blocks': ['BROKER-BID-ASK-NOT-VERIFIED', 'NET-MONEY-RR-NOT-VERIFIED', 'NEWS-EVENT-PORTFOLIO-FIT-PENDING']}
+
+
+def main():
+    report = build_routes(read_report(SRC), read_report(GATE), now=datetime.now(timezone.utc))
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    OUT.write_text(json.dumps(report, indent=2))
+    print(f"US_LIVE_ROUTES: tickers={len(report['rows'])}")
+
+
+if __name__ == '__main__':
+    main()

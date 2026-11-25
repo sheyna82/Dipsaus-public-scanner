@@ -1,5 +1,5 @@
 """Bounded, auditable European OHLCV pilot. Not a full-Europe scan or trade signals."""
-import gzip, json, math, time, urllib.parse, urllib.request
+import gzip, json, math, re, time, urllib.parse, urllib.request
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -9,7 +9,7 @@ UNIVERSE = {
  "healthcare":["NOVO-B.CO","NOVN.SW","ROG.SW","SAN.PA","GSK.L","AZN.L","BAYN.DE","IPN.PA"],
  "industrials":["SIE.DE","SU.PA","ABB.SW","SAF.PA","AIR.PA","VOW3.DE","RHM.DE","HEI.DE"],
  "financials":["BNP.PA","GLE.PA","INGA.AS","DBK.DE","UBSG.SW","HSBA.L","ISP.MI","SAN.MC"],
- "materials_chemicals":["BAS.DE","BNR.DE","EVK.DE","LXS.DE","AKE.PA","CRH.L","GLEN.L","RIO.L"],
+ "materials_chemicals":["BAS.DE","BNR.DE","EVK.DE","LXS.DE","AKE.PA","CRH.L","GLEN.L","RIO.L","ANTO.L"],
  "consumer":["MC.PA","OR.PA","KER.PA","ADS.DE","ZAL.DE","NESN.SW","ULVR.L","ITX.MC"],
  "energy_utilities":["SHEL.L","BP.L","TTE.PA","ENI.MI","RWE.DE","EOAN.DE","IBE.MC","ENGI.PA"],
  "technology_telecom":["ASML.AS","ASM.AS","BESI.AS","SAP.DE","IFX.DE","AIXA.DE","SOI.PA","NOKIA.HE"],
@@ -143,17 +143,35 @@ def freshness_audit(results):
             "freshness_passed":not stale and not unverified,
             "note":"Previous weekday benchmark only; exchange holidays and intraday completeness NOT verified. Not a live quote."}
 
+def recovery_universe(positions):
+    universe = {sector: list(symbols) for sector, symbols in UNIVERSE.items()}
+    known = {symbol for symbols in universe.values() for symbol in symbols}
+    eu_symbol = re.compile(r'[A-Z0-9][A-Z0-9.-]*\.(?:AS|AT|BD|BR|CO|DE|HE|IC|IR|L|LS|MC|MI|OL|PA|PR|ST|SW|VI|WA)')
+    extra = set()
+    for symbol, position in positions.items() if isinstance(positions, dict) else ():
+        if (not isinstance(position, dict) or type(position.get('shares')) not in (int, float)
+                or not 0 < position['shares'] < float('inf')):
+            continue
+        provider = position.get('provider_symbol') or symbol
+        if isinstance(provider, str) and eu_symbol.fullmatch(provider) and provider not in known:
+            extra.add(provider)
+    if extra:
+        universe['portfolio_watch'] = sorted(extra)
+    return universe
+
+
 def main():
     print("EU_OHLCV_STAGE: started", flush=True)
     results=[];records=[]
-    for sector,symbols in UNIVERSE.items():
+    positions_path = Path('config/profit_exit_watch.json')
+    positions = json.loads(positions_path.read_text()).get('positions', {}) if positions_path.is_file() else {}
+    for sector,symbols in recovery_universe(positions).items():
         for symbol in symbols:
             if len(results) % 20 == 0:
                 print("EU_OHLCV_PROGRESS: completed=" + str(len(results)), flush=True)
             row,record=fetch(symbol,sector)
             results.append(row)
             if record:records.append(record)
-            print(symbol,row["status"],row.get("last_bar_date"),flush=True)
             time.sleep(.25)
     print("EU_OHLCV_STAGE: fetching_complete", flush=True)
     date_counts={}

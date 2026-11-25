@@ -1,9 +1,10 @@
 """Bounded US recovery discovery pilot. Research only, never trade-ready."""
-import csv, io, json, math, os, re, time, urllib.request
+import csv, json, os, re, time, urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from us_recovery_map import recovery_map
+from us_yahoo_bars import chart_payload, daily_bars
 from us_event_research import ticker_ciks, filing_review, filing_content_review
 from us_news_fallback import fallback_news
 from us_research_triage import research_queue
@@ -19,8 +20,6 @@ SOURCES = {
     "other": "https://www.nasdaqtrader.com/dynamic/SymDir/otherlisted.txt",
 }
 LIMIT = 240
-# Current-security identity boundary for reused tickers.
-LISTING_START={"SPCX":"2026-06-12"}
 
 def parse_batch(value):
     if value is None or not re.fullmatch(r"(?:0|[1-9]|1[0-9]|20)", value):
@@ -59,15 +58,8 @@ def universe():
     return sorted({r["symbol"]: r for r in selected}.values(), key=lambda r:r["symbol"]), counts, errors, rejected
 
 def bars(symbol):
-    url = "https://query1.finance.yahoo.com/v8/finance/chart/" + symbol + "?range=6mo&interval=1d"
-    result = json.loads(get(url))["chart"]["result"][0]; q = result["indicators"]["quote"][0]; rows = []
-    for t, o, h, l, c, v in zip(result["timestamp"], q["open"], q["high"], q["low"], q["close"], q["volume"]):
-        if any(x is None or not math.isfinite(float(x)) for x in (o,h,l,c,v)): continue
-        if min(o,h,l,c) <= 0 or v <= 0: continue
-        rows.append({"date":datetime.fromtimestamp(t,timezone.utc).date().isoformat(),"open":o,"high":h,"low":l,"close":c,"volume":v})
-    start=LISTING_START.get(symbol)
-    if start is not None: rows=[r for r in rows if r["date"]>=start]
-    return rows
+    payload = chart_payload(symbol, period='6mo', interval='1d')
+    return daily_bars(payload, symbol, now=datetime.now(timezone.utc))
 
 def assess(rows):
     if len(rows)<65: return None
@@ -103,7 +95,7 @@ def main():
     progress('universe_loaded', eligible=len(universe_rows), source_errors=len(errors))
     if errors or not universe_rows: raise RuntimeError("US_UNIVERSE_INVALID: source error or zero eligible equities; refusing green research run")
     n=min(LIMIT,len(universe_rows)); sample=universe_rows[batch::BATCH_COUNT][:n]
-    report={"run_utc":datetime.now(timezone.utc).isoformat(),"status":"BOUNDED_RESEARCH_PILOT","source":"Nasdaq Trader official lists + Yahoo public historical daily chart","selection_method":"Rotating interleaved alphabetic batch; full 21-batch universe scheduled every US trading day; NOT sector-stratified","batch_index":batch,"batch_count":BATCH_COUNT,"filtered_list_counts":counts,"excluded_by_reason":rejected,"list_errors":errors,"filtered_unique_symbols":len(universe_rows),"requested_symbols":len(sample),"actual_symbols_screened":0,"failures":{},"sample_symbols":[x["symbol"] for x in sample],"candidates":[],"full_us_scan_executed":False,"promoted_candidates_complete":False,"new_buy_valid":False,"trade_ready":False,"recovery_map_version":"historical_daily_weekly_pivots_v2_early_turn_discovery","limitations":"Discovery only. Early turns intentionally surface before weekly confirmation. Identity/event/broker/money-RR/portfolio gates remain fail-closed for execution."}
+    report={"run_utc":datetime.now(timezone.utc).isoformat(),"status":"BOUNDED_RESEARCH_PILOT","source":"Nasdaq Trader official lists + Yahoo public historical daily chart","selection_method":"Rotating interleaved alphabetic batch; full 21-batch universe scheduled every US trading day; NOT sector-stratified","batch_index":batch,"batch_count":BATCH_COUNT,"filtered_list_counts":counts,"excluded_by_reason":rejected,"list_errors":errors,"filtered_unique_symbols":len(universe_rows),"requested_symbols":len(sample),"actual_symbols_screened":0,"failures":{},"sample_symbols":[x["symbol"] for x in sample],"candidates":[],"full_us_scan_executed":False,"promoted_candidates_complete":False,"new_buy_valid":False,"trade_ready":False,"order_placement_enabled":False,"recovery_map_version":"historical_daily_weekly_pivots_v2_early_turn_discovery","limitations":"Discovery only. Early turns intentionally surface before weekly confirmation. Identity/event/broker/money-RR/portfolio gates remain fail-closed for execution."}
     try:
         # Bounded concurrent requests, with visible progress for long-running jobs.
         # Do not drop symbols: every future is still consumed and counted.
@@ -145,7 +137,8 @@ def main():
             profile=company_profile(candidate["symbol"]); check=identity_check(candidate["symbol"],candidate["name"],profile)
             candidate["issuer_profile"]=profile; candidate["identity_crosscheck"]=check
             report["identity_shortlist"].append({"symbol":candidate["symbol"],"identity_status":check["status"],"profile_status":profile.get("status"),"reason":check["reason"]})
-            if check["status"] != "IDENTITY_MISMATCH": priority.append(candidate)
+            if check['status'] != 'IDENTITY_MISMATCH':
+                priority.append(candidate)
             if len(priority)==3: break
         report["identity_queue_policy"]="At most twelve historically eligible candidates checked in order. Actual issuer mismatch blocks the queue; unavailable optional profile data stays visible and enters deep-dive with an explicit identity-verification block. Never execution-ready without identity clearance."
         report["identity_shortlist_exhausted"]=len(priority)<3

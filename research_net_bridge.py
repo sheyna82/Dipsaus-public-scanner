@@ -5,7 +5,7 @@ Does not change production modules or infer missing broker quotes/costs.
 from research_net_scenario import evaluate_net_scenario
 
 
-def evaluate_verified_research_evidence(evidence, *, market, budget_eur=3500):
+def evaluate_verified_research_evidence(evidence, *, market, budget_eur=3500, max_risk_eur=None):
     """Use explicitly verified broker data, structural levels and fee evidence.
 
     Both US and EU inputs use the same canonical field names; EUR instruments
@@ -40,4 +40,4 @@ def evaluate_verified_research_evidence(evidence, *, market, budget_eur=3500):
         fx_sell_fee_rate=evidence["fx_sell_fee_rate"],
         buy_slippage_per_share=evidence["buy_slippage_per_share"],
         sell_slippage_per_share=evidence["sell_slippage_per_share"],
-        evidence_verified=True)
+        evidence_verified=True, max_risk_eur=max_risk_eur)

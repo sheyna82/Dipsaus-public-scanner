@@ -15,12 +15,14 @@ class GateTests(unittest.TestCase):
     def evidence(self):
         return dict(symbol="TEST",quote_utc="2026-09-23T18:00:00+00:00",
           ask_usd=100,bid_usd=99.9,eur_per_usd=.9,fx_utc="2026-09-23T18:00:00+00:00",
-          invalidation_usd=96,first_meaningful_resistance_usd=103,
+          invalidation_usd=98,first_meaningful_resistance_usd=106,
           realistic_target_usd=110,bottom_confirmed=True,daily_weekly_reviewed=True,
           resistance_confirmed=True,company_event_risk_verified=True,
           recent_price_moving_news_verified=True,upcoming_material_events_verified=True,
           corporate_actions_verified=True,portfolio_fit_verified=True,
-          broker_quote_verified=True,fx_verified=True)
+          broker_quote_verified=True,fx_verified=True,buy_fee_eur=4,sell_fee_eur=5,
+          fees_verified=True,fx_buy_fee_rate=0,fx_sell_fee_rate=0,
+          buy_slippage_per_share=0,sell_slippage_per_share=0,slippage_verified=True)
     def test_missing_is_blocked(self):
         self.assertEqual(evaluate_trade({})["status"],"DATA_BLOCKED")
     def test_stale_is_blocked(self):
@@ -32,7 +34,7 @@ class GateTests(unittest.TestCase):
     def test_eur_math_and_manual_review(self):
         x=evaluate_trade(self.evidence(),now=datetime(2026,9,23,18,1,tzinfo=timezone.utc),max_risk_eur=150)
         self.assertEqual(x["whole_shares"],38)
-        self.assertEqual(x["target_gross_eur"],342)
+        self.assertEqual(x["net_profit_eur"],196.2)
         self.assertEqual(x["status"],"HUMAN_REVIEW_REQUIRED")
         self.assertFalse(x["trade_ready"])
     def test_friction_below_entry_blocks(self):

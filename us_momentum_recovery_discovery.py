@@ -6,34 +6,21 @@ US stocks from both most-active and day-gainer universes, then recognises an
 intraday bottom -> higher-low -> reclaim pattern. Research/pre-alert only; never a
 buy signal.
 """
-import csv, io, json, math, re, urllib.parse, urllib.request
+import csv, json, os, re, urllib.parse, urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
+from us_intraday_recovery import intraday_structure
+from us_yahoo_bars import chart_payload, daily_bars, fetch_minute_snapshot, number
 
 OUT=Path("reports/us_momentum_recovery.json")
 HEADERS={"User-Agent":"Mozilla/5.0 (compatible; DipsausMomentum/2.0)"}
 SCREENER="https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved"
-CHART="https://query1.finance.yahoo.com/v8/finance/chart/"
-# Current-security identity boundary for reused tickers.
-LISTING_START_UTC={"SPCX":datetime(2026,6,12,tzinfo=timezone.utc).timestamp()}
 
 def get_json(url, params=None):
     if params: url += "?" + urllib.parse.urlencode(params)
     req=urllib.request.Request(url,headers=HEADERS)
     with urllib.request.urlopen(req,timeout=15) as r: return json.loads(r.read().decode())
-
-def chart(symbol, rng, interval):
-    d=get_json(CHART+urllib.parse.quote(symbol),{"range":rng,"interval":interval,"includePrePost":"false"})
-    res=d["chart"]["result"][0]; q=res["indicators"]["quote"][0]; ts=res.get("timestamp",[])
-    rows=[]
-    for i,(h,l,c,v) in enumerate(zip(q["high"],q["low"],q["close"],q["volume"])):
-        if None in (h,l,c,v): continue
-        vals=[float(h),float(l),float(c),float(v)]
-        if all(math.isfinite(x) for x in vals) and min(vals[:3])>0:
-            rows.append({"ts":ts[i] if i<len(ts) else None,"high":vals[0],"low":vals[1],"close":vals[2],"volume":vals[3]})
-    start=LISTING_START_UTC.get(symbol)
-    if start is not None: rows=[r for r in rows if r.get("ts") is not None and r["ts"]>=start]
-    return rows
 
 def universe():
     """Broad official US equity universe; Yahoo screeners only enrich current quote metadata."""
@@ -61,7 +48,8 @@ def universe():
             d=get_json(SCREENER,{"formatted":"false","lang":"en-US","region":"US","scrIds":screen,"count":100,"corsDomain":"finance.yahoo.com"})
             for q in d.get("finance",{}).get("result",[{}])[0].get("quotes",[]):
                 symbol=q.get("symbol")
-                if symbol in found and q.get("quoteType") in (None,"EQUITY"): found[symbol].update(q)
+                if symbol in found and q.get("quoteType") in (None,"EQUITY"):
+                    found[symbol].update(q, fast_ranked=True)
         except Exception:
             pass
     return list(found.values())
@@ -69,100 +57,112 @@ def universe():
 def discovery_gate(drawdown, rebound, turnover, change, structural):
     """Discovery only: retain liquid sold-off names before a completed turn."""
     sold_off_watch=bool(drawdown<=-15 and 0<=rebound<=20 and turnover>=50_000_000)
-    momentum_watch=bool(structural or (isinstance(change,(int,float)) and change>=1.0))
+    momentum_watch=bool(structural or (number(change) and change>=1.0))
     return momentum_watch or sold_off_watch, sold_off_watch
 
-def intraday_structure(rows):
-    if len(rows)<18: return {"quality":False}
-    # Work only with the latest trading date; timestamps are exchange-session bars.
-    last_day=datetime.fromtimestamp(rows[-1]["ts"],timezone.utc).date() if rows[-1]["ts"] else None
-    day=[r for r in rows if (datetime.fromtimestamp(r["ts"],timezone.utc).date() if r["ts"] else None)==last_day]
-    if len(day)<18: day=rows[-120:]
-    low_i=min(range(len(day)),key=lambda i:day[i]["low"]); low=day[low_i]["low"]
-    after=day[low_i+1:]
-    if len(after)<10: return {"quality":False,"day_low":low}
-    # Split post-bottom path: first rebound then later pullback/continuation.
-    peak_i=max(range(len(after)),key=lambda i:after[i]["high"])
-    first_peak=after[peak_i]["high"]; later=after[peak_i+1:]
-    if len(later)<4: return {"quality":False,"day_low":low,"first_rebound_high":first_peak}
-    higher_low=min(r["low"] for r in later); price=day[-1]["close"]
-    rebound=(first_peak/low-1)*100; hl_margin=(higher_low/low-1)*100
-    reclaim=price>=first_peak*0.997
-    # Path efficiency rejects wild V/chop: net progress relative to bar-to-bar travel.
-    closes=[r["close"] for r in after]
-    travel=sum(abs(b-a) for a,b in zip(closes,closes[1:]))
-    efficiency=abs(closes[-1]-closes[0])/travel if travel else 0
-    early=bool(rebound>=0.8 and hl_margin>=0.25 and efficiency>=0.12)
-    quality=bool(early and reclaim)
-    return {"quality":quality,"early_recovery_observed":early,"day_low":round(low,3),"first_rebound_high":round(first_peak,3),
-            "higher_low":round(higher_low,3),"higher_low_margin_pct":round(hl_margin,2),
-            "reclaim_observed":reclaim,"path_efficiency":round(efficiency,3)}
+def scan_candidate(issuer):
+    symbol = issuer['symbol']
+    cap = issuer.get('marketCap')
+    if number(cap) and cap < 2_000_000_000:
+        return 'below_known_market_cap', None
+    payload = chart_payload(symbol, period='3mo', interval='1d')
+    daily = daily_bars(payload, symbol, now=datetime.now(timezone.utc))
+    if len(daily) < 35:
+        return 'insufficient_daily_history', None
+    peak = max(bar['high'] for bar in daily[-60:])
+    trough = min(bar['low'] for bar in daily[-20:])
+    prior_close = daily[-1]['close']
+    turnover = sum(bar['close'] * bar['volume'] for bar in daily[-20:]) / 20
+    drawdown = (trough / peak - 1) * 100
+    if prior_close < 1 or drawdown > -8 or turnover < 50_000_000:
+        return 'outside_recovery_or_liquidity_gate', None
+
+    snapshot, minute_status = None, 'VALID'
+    try:
+        snapshot = fetch_minute_snapshot(symbol)
+    except ValueError as exc:
+        minute_status = str(exc)
+    except OSError:
+        minute_status = 'MINUTE_PROVIDER_UNAVAILABLE'
+    fresh = snapshot is not None and snapshot['fresh']
+    price = snapshot['latest_completed_bar']['close'] if fresh else prior_close
+    if snapshot is not None and not fresh:
+        minute_status = 'STALE_COMPLETED_BAR'
+    structure = intraday_structure(snapshot['bars']) if fresh else {}
+    structural = structure.get('quality') is True
+    early = structure.get('early_recovery_observed') is True
+    change = (price / prior_close - 1) * 100 if fresh else None
+    rebound = (price / trough - 1) * 100
+    promising, sold_off = discovery_gate(drawdown, rebound, turnover, change, structural or early)
+    if rebound > 35 or (rebound < 0 and not early) or not promising:
+        return 'discovery_gate_rejected', None
+    return 'qualified', {
+        'symbol': symbol, 'name': issuer.get('shortName') or issuer.get('longName'),
+        'status': ('STRUCTURE-RECOGNISED' if structural else 'EARLY-RECOVERY-RESEARCH' if early
+                   else 'SOLD-OFF-RECOVERY-WATCH' if sold_off else 'DISCOVERY-WATCH'),
+        'sold_off_recovery_watch': sold_off, 'structure_quality_pass': structural,
+        'early_recovery_observed': early, 'minute_data_status': minute_status,
+        'reference_price_usd': (snapshot.get('reference') or {}).get('price') if snapshot else None,
+        'reference_quote_ts': (snapshot.get('reference') or {}).get('ts') if snapshot else None,
+        'completed_minute_bar': snapshot['latest_completed_bar'] if snapshot else None,
+        'completed_minute_bar_age_seconds': snapshot['bar_age_seconds'] if snapshot else None,
+        'source_verified': False, 'day_change_pct': change,
+        'recent_peak_usd': peak, 'recent_20d_trough_usd': trough,
+        'recent_drawdown_pct': drawdown, 'rebound_from_20d_trough_pct': rebound,
+        'avg_20d_dollar_turnover_usd': round(turnover), 'market_cap_usd': cap if number(cap) else None,
+        'intraday_structure': structure, 'execution_ready': False, 'trade_ready': False,
+        'order_placement_enabled': False,
+    }
+
 
 def main():
-    now=datetime.now(timezone.utc); candidates=[]; failures={}
-    audit={"universe_total":0,"missing_price_or_cap_after_probe":0,"below_price_or_cap":0,"insufficient_daily_history":0,"outside_recovery_or_liquidity_gate":0,"discovery_gate_rejected":0,"qualified":0}
-    for q in universe():
-        audit["universe_total"]+=1
-        symbol=q.get("symbol"); price=q.get("regularMarketPrice"); change=q.get("regularMarketChangePercent"); cap=q.get("marketCap")
-        if not isinstance(price,(int,float)) or not isinstance(cap,(int,float)):
-            try:
-                probe=get_json(CHART+urllib.parse.quote(symbol),{"range":"1mo","interval":"1d"})["chart"]["result"][0]
-                meta=probe.get("meta",{}); price=price if isinstance(price,(int,float)) else meta.get("regularMarketPrice")
-                cap=cap if isinstance(cap,(int,float)) else meta.get("marketCap")
-                pq=probe.get("indicators",{}).get("quote",[{}])[0]; closes=[x for x in pq.get("close",[]) if isinstance(x,(int,float))]
-                highs=[x for x in pq.get("high",[]) if isinstance(x,(int,float))]
-                vols=[x for x in pq.get("volume",[]) if isinstance(x,(int,float))]
-                if price and highs and vols:
-                    quick_dd=(min(closes[-20:])/max(highs)-1)*100 if closes else 0
-                    quick_turn=price*(sum(vols[-20:])/max(1,len(vols[-20:])))
-                    if quick_dd>-6 or quick_turn<35_000_000: continue
-            except Exception:
-                pass
-        if not isinstance(price,(int,float)) or not isinstance(cap,(int,float)):
-            audit["missing_price_or_cap_after_probe"]+=1
-            continue
-        if not symbol or price<1 or cap<2_000_000_000:
-            audit["below_price_or_cap"]+=1
-            continue
-        try:
-            daily=chart(symbol,"3mo","1d")
-            if len(daily)<35:
-                audit["insufficient_daily_history"]+=1
-                continue
-            peak=max(x["high"] for x in daily[-60:]); trough=min(x["low"] for x in daily[-20:])
-            drawdown=(trough/peak-1)*100; rebound=(price/trough-1)*100
-            avgvol=sum(x["volume"] for x in daily[-21:-1])/max(1,len(daily[-21:-1])); turnover=price*avgvol
-            # Discovery gate only: do not demand an execution-ready setup here.
-            if drawdown>-8 or rebound<0 or rebound>35 or turnover<50_000_000:
-                audit["outside_recovery_or_liquidity_gate"]+=1
-                continue
-            intra=intraday_structure(chart(symbol,"1d","1m"))
-            structural=bool(intra.get("quality"))
-            early=bool(intra.get("early_recovery_observed"))
-            # Keep promising recovery names in discovery even before the intraday turn is complete.
-            promising,sold_off_watch=discovery_gate(drawdown,rebound,turnover,change,structural)
-            if not promising:
-                audit["discovery_gate_rejected"]+=1
-                continue
-            audit["qualified"]+=1
-            candidates.append({"symbol":symbol,"name":q.get("shortName") or q.get("longName"),
-              "status":"STRUCTURE-RECOGNISED" if structural else ("EARLY-RECOVERY-RESEARCH" if early else ("SOLD-OFF-RECOVERY-WATCH" if sold_off_watch else "DISCOVERY-WATCH")),
-              "sold_off_recovery_watch":sold_off_watch,
-              "structure_quality_pass":structural,"early_recovery_observed":early,"reference_price_usd":round(price,3),
-              "day_change_pct":round(change,2) if isinstance(change,(int,float)) else None,
-              "recent_peak_usd":round(peak,3),"recent_20d_trough_usd":round(trough,3),
-              "recent_drawdown_pct":round(drawdown,2),"rebound_from_20d_trough_pct":round(rebound,2),
-              "avg_20d_dollar_turnover_usd":round(turnover),"market_cap_usd":cap,
-              "intraday_structure":intra,"route":"BOTTOM-HIGHER-LOW-RECLAIM",
-              "execution_ready":False,
-              "requires":["fresh broker structure","structural invalidation","company/news/event clearance","resistance map","DYNAMIC SIZING MONEY gate","R/R >= 2","portfolio fit","no chase"]})
-        except Exception as exc: failures[symbol]=type(exc).__name__
-    candidates.sort(key=lambda x:(not x["structure_quality_pass"],not x["early_recovery_observed"],-(x.get("day_change_pct") or 0),x["symbol"]))
-    out={"generated_utc":now.isoformat(),"scope":"broad liquid US recovery discovery; structure recognition separated from execution; never automatic buy",
-         "source":"Nasdaq Trader official Nasdaq + other-listed universe; Yahoo chart data for price/history/intraday; Yahoo ranked lists enrichment only",
-         "coverage_audit":audit,
-         "candidate_count":len(candidates),"structure_count":sum(x["structure_quality_pass"] for x in candidates),
-         "candidates":candidates[:30],"failures":failures}
-    OUT.parent.mkdir(exist_ok=True); OUT.write_text(json.dumps(out,indent=2)); print(json.dumps(out,indent=2))
-if __name__=="__main__": main()
+    from collections import Counter
 
+    issuers = universe()
+    if not issuers:
+        raise RuntimeError('US_FAST_UNIVERSE_EMPTY')
+    sweep = int(os.environ.get('US_FAST_SWEEP', '0'))
+    # Bounded fast pass. Deeper batches carry broad coverage without making
+    # early discovery wait for the entire US universe or a market cap lookup.
+    ranked = [issuer for issuer in issuers if issuer.get('fast_ranked')]
+    ranked.sort(key=lambda item: (-(item.get('regularMarketVolume') if number(item.get('regularMarketVolume')) else 0),
+                                  item['symbol']))
+    monitor = sorted((issuer for issuer in issuers if not issuer.get('fast_ranked')),
+                     key=lambda item: item['symbol'])
+    if monitor:
+        start = (sweep * 72) % len(monitor)
+        monitor = (monitor[start:] + monitor[:start])[:72]
+    sample = ranked[:72] + monitor
+    candidates, failures, audit = [], {}, Counter()
+    pool = ThreadPoolExecutor(max_workers=8)
+    futures = {pool.submit(scan_candidate, issuer): issuer['symbol'] for issuer in sample}
+    try:
+        for future in as_completed(futures, timeout=290):
+            try:
+                outcome, candidate = future.result()
+                audit[outcome] += 1
+                if candidate is not None:
+                    candidates.append(candidate)
+            except (OSError, ValueError) as exc:
+                failures[futures[future]] = type(exc).__name__
+    except TimeoutError:
+        audit['timeout_unfinished'] = len(sample) - sum(audit.values()) - len(failures)
+    finally:
+        pool.shutdown(wait=False, cancel_futures=True)
+    if not any(audit[key] for key in ('qualified', 'discovery_gate_rejected', 'outside_recovery_or_liquidity_gate')):
+        raise RuntimeError('US_FAST_NO_USABLE_DAILY_EVIDENCE')
+    candidates.sort(key=lambda item: (not item['early_recovery_observed'], not item['structure_quality_pass'],
+                                     -(item['day_change_pct'] or 0), item['symbol']))
+    output = Path(os.environ.get('US_FAST_REPORT', OUT))
+    output.parent.mkdir(parents=True, exist_ok=True)
+    report = {'generated_utc': datetime.now(timezone.utc).isoformat(),
+              'scope': 'Bounded fast recovery discovery using ranked and rotating official US equities',
+              'coverage_audit': {**audit, 'universe_total': len(issuers), 'requested': len(sample)},
+              'candidate_count': len(candidates), 'candidates': candidates[:30], 'failures': failures,
+              'trade_ready': False, 'order_placement_enabled': False}
+    output.write_text(json.dumps(report, indent=2))
+    print(f'US_FAST_RECOVERY: candidates={len(candidates)}')
+
+
+if __name__ == '__main__':
+    main()
