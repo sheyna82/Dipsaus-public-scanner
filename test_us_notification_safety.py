@@ -3,6 +3,7 @@
 These tests use a fake sender/store and never contact ntfy or brokers.
 """
 import unittest
+from datetime import datetime, timedelta, timezone
 from private_notifications import notify
 
 
@@ -13,14 +14,22 @@ class FakeStore:
         pass
 
 
-def us_row(**overrides):
+def us_row(*, observed_at=None, **overrides):
+    now = observed_at or datetime.now(timezone.utc)
+    ts = int(now.timestamp()) // 60 * 60 - 60
+    qualification = (now - timedelta(minutes=5)).isoformat()
     row = dict(symbol="TEST", market="US", watch_type="AUTO-US-DISCOVERY",
                status="DEGIRO-VERIFY-NOW", phone_notification_eligible=True,
                provider_freshness_pass=True, structure_available=True,
                intraday_hold_confirmed=True, early_turn_observed=True,
                prealert_trigger_observed=True, breakout_observed=True,
                hold_observed=True, provider_quote=100, day_low=98,
-               rebound_from_day_low_pct=2)
+               rebound_from_day_low_pct=2, provider_source='Yahoo Finance chart 1m',
+               provider_quote_utc=datetime.fromtimestamp(ts, timezone.utc).isoformat(),
+               completed_minute_bar={'ts': ts, 'close': 100}, latest_completed_minute_missing=False,
+               alert_qualification_utc=[qualification], route_evidence={'fast': {
+                   'qualification_utc': qualification, 'early': True, 'confirmed': True,
+                   'structure': {'early_recovery_observed': True, 'quality': True}}})
     row.update(overrides)
     return row
 

@@ -113,7 +113,7 @@ def monitor_recovery(item, snapshot, *, prior_alert=None):
               'provider_reference': snapshot['reference'], 'completed_minute_bar': last,
               'provider_source': snapshot['source'], 'source_verified': False,
               'contiguous_completed_bars': len(bars),
-              'latest_completed_minute_missing': snapshot.get('latest_completed_minute_missing', False), **DISABLED}
+              'latest_completed_minute_missing': snapshot.get('latest_completed_minute_missing'), **DISABLED}
     configured_routes = item.get('live_routes')
     if not isinstance(configured_routes, dict):
         # An old report can supply a research floor, but old quote-based
@@ -175,7 +175,8 @@ def monitor_recovery(item, snapshot, *, prior_alert=None):
     return {**result, 'status': status, 'route_evidence': evaluations,
             'structure_available': structure['available'], 'early_turn_observed': early,
             'intraday_hold_confirmed': confirmed, 'prealert_trigger_observed': trigger,
-            'breakout_observed': any(route.get('breakout_observed') for route in evaluations.values()),
+            'breakout_observed': any(route.get('breakout_observed') and route['confirmed']
+                                     for route in (actionable if eligible else evaluations.values())),
             'hold_observed': confirmed, 'day_low': structure.get('recovery_low'),
             'route_2_break_above': structure.get('first_rebound_high') if early else None,
             'rebound_from_day_low_pct': structure.get('rebound_pct'),

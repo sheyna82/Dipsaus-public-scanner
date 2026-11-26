@@ -201,20 +201,19 @@ class RouteTests(unittest.TestCase):
     def test_new_us_setup_rearms_phase_once_original_breach_is_recorded(self):
         from test_eu_research_freshness import Store
         from zoneinfo import ZoneInfo
-        now = datetime.now(timezone.utc)
+        from test_us_notification_safety import us_row
+        now = SESSION_OPEN + timedelta(minutes=15, seconds=30)
+        clock = type('TestClock', (datetime,), {'now': staticmethod(lambda zone=None: now)})
         day = now.astimezone(ZoneInfo('America/New_York')).date().isoformat()
         key = 'ENTRY|US|TSLA|PHASE'
         state = {'signals': {key: {'phase': 'BREAKOUT-HOLD-RETEST', 'day': day, 'delivery': 'sent',
                                   'setup_id': 'old', 'confirmed_attempts_today': 1}}}
-        floor_ts = int(now.timestamp()) - 60
-        row = {'symbol': 'TSLA', 'market': 'US', 'watch_type': 'AUTO-US-DISCOVERY',
-               'provider_source': 'Yahoo Finance chart 1m', 'provider_quote_utc': now.isoformat(),
-               'provider_freshness_pass': True, 'phone_notification_eligible': True, 'structure_available': True,
-               'early_turn_observed': True, 'hold_observed': True, 'intraday_hold_confirmed': True,
-               'prealert_trigger_observed': True, 'setup_id': 'new', 'setup_floor_ts': floor_ts,
-               'setup_floor': 98, 'previous_alert_invalidated_at_ts': floor_ts}
+        floor_ts = START + 60
+        row = us_row(observed_at=now, symbol='TSLA', breakout_observed=False, setup_id='new',
+                     setup_floor_ts=floor_ts, setup_floor=98, previous_alert_invalidated_at_ts=floor_ts)
         sent, store = [], Store()
-        notify(store, state, [row, row], [], sender=lambda *item: sent.append(item))
+        with patch('private_notifications.datetime', clock):
+            notify(store, state, [row, row], [], sender=lambda *item: sent.append(item))
         self.assertEqual(len(sent), 1)
         self.assertEqual(state['signals'][key]['setup_id'], 'new')
         self.assertEqual(state['signals'][key]['confirmed_attempts_today'], 2)

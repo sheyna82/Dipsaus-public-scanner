@@ -61,8 +61,17 @@ def check_capacity(symbol, portfolio, positions, acquisition_eur, *, now, commit
     held = [key for key, item in positions.items() if (item.get('provider_symbol') or key) == symbol]
     if len(held) > 1:
         return {'status': 'AMBIGUOUS_POSITION_IDENTITY'}
-    used = [item for item in commitments if item.get('holdings_sha256') == digest]
-    advised = sum((amount(item.get('required_eur')) or 0 for item in used), Decimal(0))
+    # An updated snapshot may reflect an unrelated sale. Keep outstanding
+    # advice charged until the existing day ends or that exact reservation is released.
+    used = tuple(commitments)
+    advised = Decimal(0)
+    for item in used:
+        if not isinstance(item, dict) or item.get('status') != 'CAPACITY_VERIFIED' or type(item.get('new_position')) is not bool:
+            return {'status': 'CAPACITY_RESERVATIONS_UNVERIFIED'}
+        required = amount(item.get('required_eur'))
+        if not required:
+            return {'status': 'CAPACITY_RESERVATIONS_UNVERIFIED'}
+        advised += required
     opening = not held
     slots = len(positions) + pending_slots + sum(item.get('new_position') is True for item in used) + int(opening)
     if slots > POSITION_LIMIT:

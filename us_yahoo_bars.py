@@ -14,6 +14,7 @@ NEW_YORK = ZoneInfo('America/New_York')
 FIELDS = ('open', 'high', 'low', 'close', 'volume')
 LISTING_START_UTC = {'SPCX': int(datetime(2026, 6, 12, tzinfo=timezone.utc).timestamp())}
 MAX_MINUTE_AGE = 120
+MINUTE_BAR_SOURCE = 'Yahoo Finance chart 1m'
 
 
 def number(value):
@@ -139,7 +140,7 @@ def minute_snapshot(payload, symbol, *, now):
     age = now_ts - last_stamp
     expected_last = (int(min(now_ts, end)) // 60 - 1) * 60
     missing_latest = last_stamp != expected_last
-    return {'symbol': symbol, 'source': 'Yahoo Finance chart 1m', 'source_verified': False,
+    return {'symbol': symbol, 'source': MINUTE_BAR_SOURCE, 'source_verified': False,
             'reference': reference, 'latest_completed_bar': last, 'bars': contiguous,
             'completed_valid_count': sum(bar is not None for _, bar in completed),
             'empty_completed_count': sum(bar is None for _, bar in completed),

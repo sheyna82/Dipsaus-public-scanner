@@ -9,7 +9,7 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 from private_runtime import hydrate, PrivateStore
-from private_notifications import notify, notify_eu_research
+from private_notifications import confirmed_ledger_record, notify, notify_eu_research
 from eu_entry_net import EVIDENCE_STATE_KEY, REVIEWER_PIN_ENV, assess_report
 
 
@@ -293,10 +293,12 @@ def main():
         Path('config/profit_watch_state.json').write_text(json.dumps(state.get('profit_watch_state', {})))
         prior_us_setups = {symbol: {'lanes': lanes} for symbol, lanes in
                            state.get('us_lane_invalidations', {}).items()}
-        for key, value in state.get('signals', {}).items():
+        signals = state.get('signals', {})
+        for key in signals:
             parts = key.split('|')
             if len(parts) == 4 and parts[:2] == ['ENTRY', 'US'] and parts[3] == 'PHASE':
-                prior_us_setups.setdefault(parts[2], {}).update({field: value.get(field) for field in
+                record = confirmed_ledger_record(signals, key, now)
+                prior_us_setups.setdefault(parts[2], {}).update({field: record.get(field) for field in
                                             ('setup_floor', 'setup_floor_ts', 'invalidated_at_ts')})
         Path('config/us_alert_setups.json').write_text(json.dumps(prior_us_setups))
         # Private configuration is present after hydrate in live runs, but not
@@ -472,7 +474,8 @@ def main():
                     holdings.add(item.get('provider_symbol') or symbol)
             notify_eu_research(store, state, eu_report, holdings,
                                evidence=eu_state.get(EVIDENCE_STATE_KEY),
-                               reviewer_pin=os.environ.get(REVIEWER_PIN_ENV), positions=profit_cfg.get('positions'))
+                               reviewer_pin=os.environ.get(REVIEWER_PIN_ENV), positions=profit_cfg.get('positions'),
+                               capacity_declines=gate.get('eu_capacity_declines', []))
             diagnostics = notification_diagnostics(entries, exits, eu_report, state, active_exit_symbols)
             diagnostics['new_confirmed_sends'] = sum(1 for value in state.get('signals', {}).values() if isinstance(value, dict) and value.get('delivery') == 'sent') - before_sent
             state['latest_notification_diagnostics'] = diagnostics

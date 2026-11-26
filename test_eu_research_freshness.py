@@ -327,6 +327,41 @@ class EUBrokerAndHandoffTests(SenderFixture, unittest.TestCase):
         evidence = {'TEST.PA': self.sign(self.inputs())}
         self.assertIn(FINANCIAL_ENTRY_CONFIRMED, self.send(data, evidence=evidence, pin=self.pin)[0][1])
 
+    def test_R08_decline_releases_exact_reservation_once_and_preserves_limits(self):
+        positions = {f'HELD{i}.PA': {'shares': 5} for i in range(5)}
+        data = report(symbols=('TEST.PA', 'ZZ.PA', 'OTHER.PA'))
+        data['candidates'][0]['early_recovery_score'] = 5
+        state, store, sent = {'signals': {}}, Store(), []
+        proofs = {row['symbol']: self.sign(self.inputs(symbol=row['symbol'], positions=positions,
+                                                         capacity={'open_exposure_eur': 46_000, 'available_cash_eur': 4_000}))
+                  for row in data['candidates']}
+
+        def run(payload, releases=()):
+            options = {'evidence': proofs, 'reviewer_pin': self.pin, 'clock': lambda: NOW, 'positions': positions}
+            if releases:
+                options['capacity_declines'] = releases
+            notify_eu_research(store, state, payload, set(positions),
+                               sender=lambda symbol, body: sent.append((symbol, body)), **options)
+
+        run({'generated_utc': data['generated_utc'], 'candidates': data['candidates'][:1]})
+        key = f'EU-RESEARCH|TEST.PA|FINANCIAL_ENTRY_CONFIRMED|{NOW.date().isoformat()}'
+        record = state['signals'][key]
+        decline = {'reservation_key': key, 'notified_utc': record['notified_utc'], 'decided_utc': NOW.isoformat()}
+        run(data)
+        results = {row['symbol']: row for row in state['latest_eu_entry_evaluation']['financial_results']}
+        self.assertEqual(results['ZZ.PA']['portfolio_capacity']['status'], 'POSITION_LIMIT_EXCEEDED')
+        self.assertEqual([symbol for symbol, body in sent if FINANCIAL_ENTRY_CONFIRMED in body], ['TEST.PA'])
+        run(data, [{**decline, 'notified_utc': (NOW - timedelta(seconds=1)).isoformat()},
+                   {**decline, 'decided_utc': (NOW + timedelta(seconds=1)).isoformat()}])
+        self.assertNotIn('capacity_released_utc', record)
+        run(data, [decline, decline])
+        run(data, [decline])
+        financial = [symbol for symbol, body in sent if FINANCIAL_ENTRY_CONFIRMED in body]
+        self.assertEqual(len(financial), 2)
+        self.assertEqual(financial[0], 'TEST.PA')
+        self.assertEqual(state['signals'][key]['delivery'], 'sent')
+        self.assertEqual(state['signals'][key]['capacity_released_utc'], NOW.isoformat())
+
     def test_broker_evidence_that_expires_while_reserving_cannot_send(self):
         evidence = {'TEST.PA': self.sign(self.inputs())}
         state, times = {'signals': {}}, [NOW + timedelta(seconds=119)]
@@ -382,6 +417,15 @@ class EUBrokerAndHandoffTests(SenderFixture, unittest.TestCase):
                     self.assertEqual(private.load()['latest_eu_report']['candidates'][0]['recovery_phase'], FINANCIAL_ENTRY_CONFIRMED)
                     with patch('sys.argv', ['safe_runner.py', 'prealert', '--live']):
                         safe_runner.main()
+                    key, prior = next((key, item) for key, item in prealert.load()['signals'].items()
+                                      if key.startswith('EU-RESEARCH|'))
+                    decision = {'reservation_key': key, 'notified_utc': prior['notified_utc'],
+                                'decided_utc': datetime.now(timezone.utc).isoformat()}
+                    Path('config/notification_quality_gate.json').write_text(json.dumps({'eu_capacity_declines': [decision]}))
+                    with patch('sys.argv', ['safe_runner.py', 'prealert', '--live']):
+                        safe_runner.main()
+                    self.assertEqual(prealert.load()['signals'][key]['capacity_released_utc'], decision['decided_utc'])
+                    self.assertEqual(len(sent), 1)
                 self.assertIn(FINANCIAL_ENTRY_CONFIRMED, sent[0][1])
                 self.assertEqual(prealert.load()['latest_notification_diagnostics']['eu_recovery_phase_counts'][FINANCIAL_ENTRY_CONFIRMED], 1)
             finally:

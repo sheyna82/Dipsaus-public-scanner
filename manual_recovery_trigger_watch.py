@@ -55,16 +55,36 @@ def manual_us_route(symbol, item):
                                        'zone': breakout.get('hold_zone_usd')}}}
 
 
-def watch_us(item, setups, *, watch_type='AUTO-US-DISCOVERY'):
+def watch_us(item, setups, *, watch_type='AUTO-US-DISCOVERY', automatic=None):
     symbol = item['symbol']
     try:
-        row = monitor_recovery(item, fetch_minute_snapshot(symbol), prior_alert=setups.get(symbol))
+        snapshot = fetch_minute_snapshot(symbol)
+        prior_alert = setups.get(symbol)
+        row = monitor_recovery(item, snapshot, prior_alert=prior_alert)
     except (ValueError, OSError) as exc:
         row = {'symbol': symbol, 'market': 'US', 'status': 'DATA-BLOCKED',
                'phone_notification_eligible': item.get('phone_notification_eligible') is True,
                'provider_freshness_pass': False, 'source_verified': False,
                'data_block_reason': str(exc) if type(exc) is ValueError else type(exc).__name__, **DISABLED}
-    return {**row, 'watch_type': watch_type}
+    if automatic is None:
+        return {**row, 'watch_type': watch_type}
+    details = {'manual_watch_type': watch_type, 'manual_watch_status': row['status'],
+               'automatic_watch_status': 'DATA-BLOCKED'}
+    if row['status'] == 'DATA-BLOCKED':
+        return {**row, **details, 'watch_type': watch_type}
+    if watch_type == 'MANUAL-US-RECOVERY' and not item.get('phone_notification_eligible'):
+        automatic = {**automatic, 'phone_notification_eligible': False}
+    try:
+        auto_row = monitor_recovery(automatic, snapshot, prior_alert=prior_alert)
+    except (ValueError, TypeError, KeyError):
+        return {**row, **details, 'watch_type': watch_type}
+    details.update(automatic_watch_status=auto_row['status'],
+                   route_evidence={**row['route_evidence'], **auto_row['route_evidence']})
+    auto_actionable = auto_row['alert_qualification_utc'] and auto_row['phone_notification_eligible']
+    if auto_actionable and (auto_row['prealert_trigger_observed'] or (
+            not row['prealert_trigger_observed'] and auto_row['status'] == 'EARLY-RECOVERY-WATCH')):
+        row, watch_type = auto_row, 'AUTO-US-DISCOVERY'
+    return {**row, **details, 'watch_type': watch_type}
 
 
 def automatic_watch_sample(routes, cycle):
@@ -95,15 +115,15 @@ def main():
     routes = read_report(US_ROUTES).get('rows', [])
     gate = read_report(NOTIFICATION_GATE)
     revoked = set(gate.get('auto_us_revoked', [])) | set(gate.get('auto_us_silent_follow', []))
-    automatic_symbols = {row['symbol'] for row in routes}
     sample = automatic_watch_sample(routes, int(os.environ.get('US_MONITOR_ROUND', 0)))
+    scheduled = {row['symbol']: row for row in sample}
+    revoked.update(row['symbol'] for row in routes if row.get('identity_disputed') or row.get('explicitly_revoked'))
     for symbol,item in cfg.get("candidates",{}).items():
         if us_symbol(symbol, item):
-            if symbol not in automatic_symbols:
-                route = manual_us_route(symbol, item)
-                if symbol in revoked:
-                    route['phone_notification_eligible'] = False
-                rows.append(watch_us(route, setups, watch_type='MANUAL-US-RECOVERY'))
+            route = manual_us_route(symbol, item)
+            if symbol in revoked:
+                route['phone_notification_eligible'] = False
+            rows.append(watch_us(route, setups, watch_type='MANUAL-US-RECOVERY', automatic=scheduled.get(symbol)))
             continue
         try:
             price,ts=latest_quote(symbol)
@@ -150,10 +170,11 @@ def main():
         br=rules.get("base_test",{}); base_enabled=bool(br.get("enabled",True)); base_min_drop=float(br.get("min_intraday_drop_pct",1.5)); base_max_dist=float(br.get("max_distance_from_5d_low_pct",4)); base_min_vol=float(br.get("min_recent_volume_ratio",1.5)); base_min_rebound=float(br.get("min_recent_rebound_pct",.35)); base_min_range=float(br.get("min_selloff_range_pct",1.5))
         for symbol,item in pcfg.get("candidates",{}).items():
           if us_symbol(symbol, item):
-            if symbol not in automatic_symbols and not any(row['symbol'] == symbol for row in rows):
+            if not any(row['symbol'] == symbol for row in rows):
                 route = manual_us_route(symbol, item)
                 route['phone_notification_eligible'] = False
-                rows.append(watch_us(route, setups, watch_type='PORTFOLIO-REENTRY'))
+                auto = scheduled.get(symbol) if symbol not in revoked else None
+                rows.append(watch_us(route, setups, watch_type='PORTFOLIO-REENTRY', automatic=auto))
             continue
           try:
             h=yf.Ticker(symbol).history(period="5d",interval="1m",prepost=False)
@@ -179,8 +200,9 @@ def main():
     rows.extend(observed)
     monitor_outcomes = {row['symbol']: ('QUALIFIED_DEFERRED' if row.get('phone_notification_eligible') else 'NOT_SCANNED')
                         for row in routes}
-    monitor_outcomes.update({row['symbol']: ('OBSERVED' if row.get('provider_freshness_pass') else 'DATA_UNAVAILABLE')
-                             for row in observed})
+    monitor_outcomes.update({row['symbol']: ('OBSERVED' if row.get('provider_freshness_pass')
+                             and row.get('automatic_watch_status') != 'DATA-BLOCKED' else 'DATA_UNAVAILABLE')
+                             for row in rows if row.get('market') == 'US' and row['symbol'] in scheduled})
     report = {'generated_utc': datetime.now(timezone.utc).isoformat(),
               'scope': 'Europe and US recovery monitoring',
               'automatic_monitor_outcomes': monitor_outcomes,

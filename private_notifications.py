@@ -1,11 +1,12 @@
 """Selective phase upgrades and profit decisions. Reserve before sending; no duplicate retries."""
-import json
 import os
-from pathlib import Path
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 import urllib.request
 
 from eu_entry_net import age_seconds
+from us_recovery_continuity import EVIDENCE_MAX_AGE
+from us_yahoo_bars import MAX_MINUTE_AGE, MINUTE_BAR_SOURCE, number
 
 # Provider symbols are not always searchable verbatim in DEGIRO.
 # Display verified issuer names and ISINs; never change quote-feed symbols.
@@ -42,6 +43,88 @@ def phase(row):
     return 'BOTTOM-RECOVERY'
 
 
+EXPIRED = 'expired_before_send'
+AMBIGUOUS = {'reserved', 'uncertain'}
+
+
+def uses_daily_budget(record):
+    # Keep old records without a delivery field conservative.
+    return not isinstance(record, dict) or record.get('delivery') not in (EXPIRED, 'rejected')
+
+
+def archive_expired_attempt(signals, key, record):
+    signals[f"{key}|EXPIRED|{record.get('notified_utc', 'unknown')}"] = record
+
+
+
+def confirmed_ledger_record(signals, key, now):
+    record = signals.get(key, {})
+    if record.get('delivery') != EXPIRED:
+        return record
+    # Older scanner versions could replace a delivered phase with a failed
+    # promotion. Recover the prior phase from its existing audit history.
+    prefix = key.removesuffix('|PHASE') + '|HISTORY|'
+    history = [item for audit_key, item in signals.items()
+               if audit_key.startswith(prefix) and isinstance(item, dict) and item.get('delivery') != EXPIRED]
+
+    def age(item):
+        value = age_seconds(item.get('notified_utc'), now)
+        return (value if value is not None and value >= 0 else float('inf'), -RANK.get(item.get('phase'), 0))
+    return min(history, key=age, default={})
+
+def current_minute(row, now):
+    age = age_seconds(row.get('provider_quote_utc'), now)
+    if (row.get('provider_source') != MINUTE_BAR_SOURCE or age is None or not 0 <= age <= MAX_MINUTE_AGE
+            or row.get('provider_freshness_pass') is not True or row.get('latest_completed_minute_missing') is not False):
+        return False
+    bar = row.get('completed_minute_bar')
+    price = row.get('provider_quote')
+    if (not isinstance(bar, dict) or not number(price) or price <= 0
+            or not number(bar.get('close')) or bar['close'] != price):
+        return False
+    stamp = datetime.fromisoformat(row['provider_quote_utc'].replace('Z', '+00:00')).timestamp()
+    return type(bar.get('ts')) is int and bar['ts'] % 60 == 0 and stamp == bar['ts']
+
+
+def current_automatic_structures(row, now):
+    declared = row.get('alert_qualification_utc')
+    routes = row.get('route_evidence')
+    if not isinstance(declared, list) or not isinstance(routes, dict):
+        return []
+    stamps = {stamp for stamp in declared if (age := age_seconds(stamp, now)) is not None and 0 <= age <= EVIDENCE_MAX_AGE}
+    status = row.get('status')
+    if status not in ('EARLY-RECOVERY-WATCH', 'DEGIRO-VERIFY-NOW'):
+        return []
+    stage = 'early' if status == 'EARLY-RECOVERY-WATCH' else 'confirmed'
+    structures = []
+    for lane, route in routes.items():
+        if lane not in ('fast', 'deep') or not isinstance(route, dict):
+            continue
+        stamp, shape = route.get('qualification_utc'), route.get('structure')
+        if (not isinstance(stamp, str) or stamp not in stamps or route.get(stage) is not True
+                or not isinstance(shape, dict) or shape.get('early_recovery_observed') is not True
+                or (stage == 'confirmed' and shape.get('quality') is not True)):
+            continue
+        if route.get('old_setup_invalidated') is True:
+            breach, new_floor = route.get('breach_ts'), shape.get('recovery_low_ts')
+            if type(breach) is not int or type(new_floor) is not int or new_floor < breach:
+                continue
+        structures.append(shape)
+    return structures
+
+
+def early_priority(row, now):
+    def quality(shape):
+        floor, higher = shape.get('recovery_low'), shape.get('higher_low')
+        spacing = (higher - floor) / floor if number(floor) and floor > 0 and number(higher) else 0
+        efficiency = shape.get('path_efficiency')
+        return (shape.get('reclaim_observed') is True, spacing, efficiency if number(efficiency) else 0)
+
+    strength = max((quality(shape) for shape in current_automatic_structures(row, now)), default=(False, 0, 0))
+    age = age_seconds(row.get('provider_quote_utc'), now)
+    return (*(-value for value in strength), age if age is not None else float('inf'), row.get('symbol') or '')
+
+
 def reserve_send(store, state, key, record, symbol, body, sender=None, *, preflight=None):
     """Persist delivery outcomes; never silently treat a failed push as sent.
 
@@ -59,11 +142,18 @@ def reserve_send(store, state, key, record, symbol, body, sender=None, *, prefli
         if not re.fullmatch(r'[A-Za-z0-9_-]+', topic):
             raise RuntimeError('NOTIFICATION_TOPIC_INVALID')
 
+    signals = state['signals']
+    previous = signals.get(key)
+    if previous and previous.get('delivery') == EXPIRED:
+        archive_expired_attempt(signals, key, previous)
     record['delivery'] = 'reserved'
-    state['signals'][key] = record
+    signals[key] = record
     store.save(state)
     if preflight is not None and not preflight():
-        record['delivery'] = 'expired_before_send'
+        record['delivery'] = EXPIRED
+        if previous and previous.get('delivery') != EXPIRED:
+            archive_expired_attempt(signals, key, record)
+            signals[key] = previous
         store.save(state)
         return False
     try:
@@ -77,10 +167,12 @@ def reserve_send(store, state, key, record, symbol, body, sender=None, *, prefli
                 if not 200 <= response.status < 300:
                     raise RuntimeError('NOTIFICATION_DELIVERY_UNCERTAIN')
     except HTTPError as exc:
-        # A definite HTTP rejection is not a delivered notification.
-        record['delivery'] = 'rejected'
+        # Timeouts and server-side errors can be returned after acceptance.
+        record['delivery'] = 'rejected' if 400 <= exc.code < 500 and exc.code != 408 else 'uncertain'
         record['delivery_error'] = 'HTTP_' + str(exc.code)
         store.save(state)
+        if record['delivery'] == 'uncertain':
+            raise RuntimeError('NOTIFICATION_DELIVERY_UNCERTAIN') from None
         raise RuntimeError('NOTIFICATION_HTTP_REJECTED_' + str(exc.code)) from None
     except Exception:
         record['delivery'] = 'uncertain'
@@ -97,44 +189,56 @@ def reserve_send(store, state, key, record, symbol, body, sender=None, *, prefli
 
 def notify(store, state, entries, exits, sender=None):
     store.require_exclusive_sender()
-    from zoneinfo import ZoneInfo
-
     east = ZoneInfo('America/New_York')
-    from us_recovery_continuity import EVIDENCE_MAX_AGE
+    signals = state.setdefault('signals', {})
+    round_time = datetime.now(timezone.utc)
+    early_rows = []
+    other_rows = []
+    for entry in entries:
+        if entry.get('watch_type') == 'AUTO-US-DISCOVERY' and entry.get('status') == 'EARLY-RECOVERY-WATCH':
+            early_rows.append(entry)
+        else:
+            other_rows.append(entry)
 
-    for row in entries:
+    for row in other_rows + sorted(early_rows, key=lambda item: early_priority(item, round_time)):
         if row.get('market') != 'US' or row.get('watch_type') not in ('AUTO-US-DISCOVERY', 'MANUAL-US-RECOVERY'):
             continue
         symbol = row.get('symbol')
         if not symbol:
             continue
         now = datetime.now(timezone.utc)
+        day = now.astimezone(east).date().isoformat()
+        automatic = row['watch_type'] == 'AUTO-US-DISCOVERY'
+
         def still_current():
             checked = datetime.now(timezone.utc)
-            age = age_seconds(row.get('provider_quote_utc'), checked)
-            qualifications = row.get('alert_qualification_utc') if row.get('watch_type') == 'AUTO-US-DISCOVERY' else None
-            active = qualifications is None or any(
-                0 <= value <= EVIDENCE_MAX_AGE for stamp in qualifications
-                if (value := age_seconds(stamp, checked)) is not None)
-            return (active and row.get('provider_freshness_pass') is True
-                    and not row.get('latest_completed_minute_missing')
-                    and (row.get('provider_source') is None or age is not None and 0 <= age <= 120))
+            return (checked.astimezone(east).date().isoformat() == day and current_minute(row, checked)
+                    and (not automatic or bool(current_automatic_structures(row, checked))))
 
-        fresh = still_current()
-        day = now.astimezone(east).date().isoformat()
         key = f'ENTRY|US|{symbol}|PHASE'
-        signals = state.setdefault('signals', {})
-        previous = signals.get(key, {})
+        previous = confirmed_ledger_record(signals, key, now)
         breach = row.get('previous_alert_invalidated_at_ts')
-        if (fresh and previous and type(breach) is int and breach != previous.get('invalidated_at_ts')):
+        if (current_minute(row, now) and previous and type(breach) is int
+                and breach > (previous.get('invalidated_at_ts') or 0)):
             previous['invalidated_at_ts'] = breach
             store.save(state)
-        if not (fresh and row.get('phone_notification_eligible') and row.get('structure_available')):
+        if (row.get('status') == 'SETUP-INVALIDATED'
+                or not (still_current() and row.get('phone_notification_eligible') and row.get('structure_available'))):
             continue
-        if row.get('watch_type') == 'AUTO-US-DISCOVERY' and row.get('status') == 'EARLY-RECOVERY-WATCH' and row.get('early_turn_observed'):
-            early_key = f'US-EARLY|{symbol}|{day}'
-            already = sum(1 for old_key in signals if old_key.startswith('US-EARLY|') and old_key.endswith('|' + day))
-            if early_key not in signals and already < 3 and previous.get('day') != day:
+        prior_day = previous.get('day')
+        prior_age = age_seconds(previous.get('notified_utc'), now)
+        if prior_day is None and prior_age is not None and prior_age >= 0:
+            prior_day = (now - timedelta(seconds=prior_age)).astimezone(east).date().isoformat()
+        early_key = f'US-EARLY|{symbol}|{day}'
+        early_previous = signals.get(early_key, {})
+        if (early_previous.get('delivery') in AMBIGUOUS
+                or (prior_day in (None, day) and previous.get('delivery') in AMBIGUOUS)):
+            continue
+        if automatic and row.get('status') == 'EARLY-RECOVERY-WATCH' and row.get('early_turn_observed'):
+            already = sum(1 for old_key, old_record in signals.items()
+                          if old_key.startswith('US-EARLY|') and old_key.count('|') == 2
+                          and old_key.endswith('|' + day) and uses_daily_budget(old_record))
+            if (not early_previous or early_previous.get('delivery') == EXPIRED) and already < 3 and prior_day != day:
                 record = {'day': day, 'notification_schema_version': 16, 'notified_utc': now.isoformat()}
                 body = (f'{symbol} VROEGE HERSTELKANS\n'
                         f'Voltooide minuutslotkoers {row.get("provider_quote")}, '
@@ -142,41 +246,38 @@ def notify(store, state, entries, exits, sender=None):
                         'Controleer DEGIRO bied/laat, structurele invalidatie, eerste weerstand, '
                         'nettowinst, netto R/R, kwartaalcijfers en portefeuilleruimte.')
                 reserve_send(store, state, early_key, record, symbol, body, sender, preflight=still_current)
+            continue
         if not (row.get('prealert_trigger_observed') and row.get('intraday_hold_confirmed')):
             continue
         current_phase = phase(row)
         if current_phase == 'BOTTOM-RECOVERY':
             continue
         floor_ts = row.get('setup_floor_ts')
-        prior_day = previous.get('day')
-        prior_age = age_seconds(previous.get('notified_utc'), now)
-        if prior_day is None and prior_age is not None and prior_age >= 0:
-            from datetime import timedelta
-            prior_day = (now - timedelta(seconds=prior_age)).astimezone(east).date().isoformat()
         has_new_setup = bool(row.get('setup_id') and row['setup_id'] != previous.get('setup_id')
                              and type(floor_ts) is int)
         new_after_breach = (has_new_setup and type(previous.get('invalidated_at_ts')) is int
                             and floor_ts >= previous['invalidated_at_ts'])
         new_trading_day = (has_new_setup and prior_day is not None and prior_day < day
                            and datetime.fromtimestamp(floor_ts, timezone.utc).astimezone(east).date().isoformat() == day)
-        rearmed = new_trading_day or (new_after_breach and previous.get('confirmed_attempts_today', 1) < 2
-                                     and previous.get('delivery') not in ('reserved', 'uncertain'))
+        attempts_today = previous.get('confirmed_attempts_today', 1) if prior_day == day else 0
+        if previous.get('delivery') == 'rejected':
+            attempts_today = max(0, attempts_today - 1)
+        rearmed = new_trading_day or (new_after_breach and attempts_today < 2
+                                     and previous.get('delivery') not in AMBIGUOUS)
         if not rearmed and RANK[current_phase] <= RANK.get(previous.get('phase'), 0):
             continue
-        if prior_day == day and previous.get('delivery') in ('reserved', 'uncertain'):
-            continue
-        if previous:
-            archive_id = previous.get('notified_utc', 'legacy')
-            signals[f'ENTRY|US|{symbol}|HISTORY|{archive_id}'] = dict(previous)
         record = {'phase': current_phase, 'day': day, 'notification_schema_version': 16,
                   'notified_utc': now.isoformat(), 'setup_id': row.get('setup_id'),
                   'setup_floor': row.get('setup_floor'), 'setup_floor_ts': floor_ts,
-                  'confirmed_attempts_today': (previous.get('confirmed_attempts_today', 1) + 1 if prior_day == day else 1)}
+                  'confirmed_attempts_today': attempts_today + 1}
         body = (f'{symbol} {current_phase}\nVoltooide provider-minuutslotkoers {row.get("provider_quote")}. '
                 'Handmatige beoordeling vereist. Controleer DEGIRO bied/laat, invalidatie, eerste weerstand, '
                 'werkelijke kosten, nettowinst, netto R/R, nieuws, kwartaalcijfers en portefeuilleruimte.')
         from dipsaus_breakout_distance import message_context
         body += message_context(row)
+        if previous:
+            archive_id = previous.get('notified_utc', 'legacy')
+            signals[f'ENTRY|US|{symbol}|HISTORY|{archive_id}'] = dict(previous)
         reserve_send(store, state, key, record, symbol, body, sender, preflight=still_current)
     for row in exits:
         symbol = row.get('symbol', 'UNKNOWN'); key = f'EXIT|{symbol}|STATE'
@@ -216,11 +317,38 @@ def notify(store, state, entries, exits, sender=None):
                 'GAK, herstelstructuur en momentum; providerkoers is geen uitvoeringskoers.')
         reserve_send(store, state, key, record, symbol, body, sender)
 
+
+def release_declined_capacity(store, state, declines, now):
+    """Apply explicit operator decisions to exact delivered research reservations."""
+    if not isinstance(declines, (list, tuple)):
+        return
+    changed = False
+    for decision in declines:
+        if not isinstance(decision, dict):
+            continue
+        key = decision.get('reservation_key')
+        parts = key.split('|') if isinstance(key, str) else []
+        if len(parts) != 4 or parts[0] != 'EU-RESEARCH' or parts[2] != 'FINANCIAL_ENTRY_CONFIRMED':
+            continue
+        record = state['signals'].get(key)
+        if (not isinstance(record, dict) or record.get('delivery') != 'sent' or record.get('day') != parts[3]
+                or record.get('capacity_released_utc') or not isinstance(record.get('capacity'), dict)
+                or record['capacity'].get('status') != 'CAPACITY_VERIFIED'
+                or decision.get('notified_utc') != record.get('notified_utc')):
+            continue
+        decided = decision.get('decided_utc')
+        age = age_seconds(decided, now)
+        notified_age = age_seconds(record.get('notified_utc'), now)
+        if age is not None and notified_age is not None and 0 <= age <= notified_age:
+            record['capacity_released_utc'] = decided
+            changed = True
+    if changed:
+        store.save(state)
+
 def notify_eu_research(store, state, report, holdings, sender=None, *, evidence=None,
-                       reviewer_pin=None, clock=None, positions=None):
+                       reviewer_pin=None, clock=None, positions=None, capacity_declines=()):
     """Re-evaluate EU stages and reserve every attempt in existing private history."""
     from collections import Counter
-    from zoneinfo import ZoneInfo
     from dipsaus_eu_freshness import classify_eu_report
     from eu_entry_net import (EARLY_RECOVERY, DEGIRO_VERIFICATION, FINANCIAL_ENTRY_CONFIRMED,
                               PHASE_RANK, assess_report, evaluate_entry, recovery_phase)
@@ -236,6 +364,7 @@ def notify_eu_research(store, state, report, holdings, sender=None, *, evidence=
     evidence = evidence if isinstance(evidence, dict) else {}
     priority_watch = {'KER.PA', 'FER.MC', 'SU.PA', 'ANTO.L'}
     signals = state.setdefault('signals', {})
+    release_declined_capacity(store, state, capacity_declines, now)
     day = now.astimezone(ZoneInfo('Europe/Amsterdam')).date().isoformat()
     previous_rank = {}
     ambiguous = set()
@@ -245,22 +374,24 @@ def notify_eu_research(store, state, report, holdings, sender=None, *, evidence=
         if not isinstance(record, dict) or record.get('day') != day:
             continue
         parts = key.split('|')
-        if len(parts) < 3 or parts[0] != 'EU-RESEARCH':
+        if len(parts) not in (3, 4) or parts[0] != 'EU-RESEARCH':
             continue
         symbol, old_phase = parts[1:3]
         rank = 2 if old_phase in ('INSTAPCHECK', 'BIJKOOPCHECK') else PHASE_RANK.get(old_phase, 0)
         if not rank:
             continue
-        if record.get('delivery') != 'expired_before_send':
+        if record.get('delivery') != EXPIRED:
             previous_rank[symbol] = max(previous_rank.get(symbol, 0), rank)
-        if record.get('delivery') in ('reserved', 'uncertain'):
+        if record.get('delivery') in AMBIGUOUS:
             ambiguous.add(symbol)
-        if record.get('delivery') in ('reserved', 'uncertain', 'sent') and isinstance(record.get('capacity'), dict):
+        if (record.get('delivery') in AMBIGUOUS | {'sent'} and not record.get('capacity_released_utc')
+                and isinstance(record.get('capacity'), dict)):
             commitments.append(record['capacity'])
-        if record.get('priority_lane'):
-            priority_used += 1
-        else:
-            routine_used += 1
+        if uses_daily_budget(record):
+            if record.get('priority_lane'):
+                priority_used += 1
+            else:
+                routine_used += 1
 
     freshness, rows = assess_report(report, evidence, now=now, reviewer_pin=reviewer_pin,
                                     positions=positions, commitments=commitments)
@@ -335,7 +466,7 @@ def notify_eu_research(store, state, report, holdings, sender=None, *, evidence=
             reasons['daily_cap'] += 1
             continue
         key = f'EU-RESEARCH|{symbol}|{stage}|{day}'
-        if key in signals:
+        if key in signals and signals[key].get('delivery') != EXPIRED:
             continue
         record = {'day': day, 'phase': stage, 'notification_schema_version': 16,
                   'priority_lane': priority_lane, 'notified_utc': send_time.isoformat()}
@@ -370,10 +501,11 @@ def notify_eu_research(store, state, report, holdings, sender=None, *, evidence=
                                  preflight=still_current)
         if delivered and 'capacity' in record:
             commitments.append(record['capacity'])
-        if not delivered:
+        if delivered:
+            priority_used += int(priority_lane)
+            routine_used += int(not priority_lane)
+        else:
             reasons['evidence_expired_during_reservation'] += 1
         attempts += 1
-        priority_used += int(priority_lane)
-        routine_used += int(not priority_lane)
         if attempts == 3:
             break
