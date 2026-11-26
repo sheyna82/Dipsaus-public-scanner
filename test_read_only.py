@@ -15,7 +15,7 @@ class ReadOnlyTests(unittest.TestCase):
              patch.object(safe_runner.Path, "read_text", return_value='{"rows": []}'), \
              patch.object(safe_runner, "notify") as notify:
             safe_runner.main()
-        self.assertEqual(scan.call_count, 3)
+        self.assertEqual(scan.call_count, 2)
         state_store.save.assert_not_called()
         state_store.require_exclusive_sender.assert_not_called()
         notify.assert_not_called()

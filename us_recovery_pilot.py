@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from us_recovery_map import recovery_map
-from us_yahoo_bars import chart_payload, daily_bars
+from us_yahoo_bars import chart_payload, daily_bars, require_current_daily_history
 from us_event_research import ticker_ciks, filing_review, filing_content_review
 from us_news_fallback import fallback_news
 from us_research_triage import research_queue
@@ -59,7 +59,10 @@ def universe():
 
 def bars(symbol):
     payload = chart_payload(symbol, period='6mo', interval='1d')
-    return daily_bars(payload, symbol, now=datetime.now(timezone.utc))
+    checked = datetime.now(timezone.utc)
+    rows = daily_bars(payload, symbol, now=checked)
+    require_current_daily_history(rows, now=checked)
+    return rows
 
 def assess(rows):
     if len(rows)<65: return None
@@ -96,6 +99,7 @@ def main():
     if errors or not universe_rows: raise RuntimeError("US_UNIVERSE_INVALID: source error or zero eligible equities; refusing green research run")
     n=min(LIMIT,len(universe_rows)); sample=universe_rows[batch::BATCH_COUNT][:n]
     report={"run_utc":datetime.now(timezone.utc).isoformat(),"status":"BOUNDED_RESEARCH_PILOT","source":"Nasdaq Trader official lists + Yahoo public historical daily chart","selection_method":"Rotating interleaved alphabetic batch; full 21-batch universe scheduled every US trading day; NOT sector-stratified","batch_index":batch,"batch_count":BATCH_COUNT,"filtered_list_counts":counts,"excluded_by_reason":rejected,"list_errors":errors,"filtered_unique_symbols":len(universe_rows),"requested_symbols":len(sample),"actual_symbols_screened":0,"failures":{},"sample_symbols":[x["symbol"] for x in sample],"candidates":[],"full_us_scan_executed":False,"promoted_candidates_complete":False,"new_buy_valid":False,"trade_ready":False,"order_placement_enabled":False,"recovery_map_version":"historical_daily_weekly_pivots_v2_early_turn_discovery","limitations":"Discovery only. Early turns intentionally surface before weekly confirmation. Identity/event/broker/money-RR/portfolio gates remain fail-closed for execution."}
+    report["completed_symbols"] = []
     try:
         # Bounded concurrent requests, with visible progress for long-running jobs.
         # Do not drop symbols: every future is still consumed and counted.
@@ -116,6 +120,7 @@ def main():
                 try:
                     candidate = future.result()
                     report["actual_symbols_screened"] += 1
+                    report["completed_symbols"].append(symbol)
                     if candidate is not None: report["candidates"].append(candidate)
                 except Exception as exc:
                     report["failures"][symbol] = type(exc).__name__
@@ -156,6 +161,7 @@ def main():
             if queued["identity_status"]=="IDENTITY_UNVERIFIED": queued["review_decision"]="BLOCK_IDENTITY_AND_EVENT_CLEARANCE_PENDING"
         progress('research_finished', deep_dive=len(report['deep_dive_queue']))
         report["excluded_from_queue_due_to_near_overhead"]=queue_exclusions["near_overhead"]; report["queue_selection_limitations"]="Early technical recovery candidates survive optional profile/SEC outages, but identity, event, broker, money/RR and portfolio-fit gates remain fail-closed for execution."; report["deep_dive_queue_complete"]=False
+        report["finished_utc"] = datetime.now(timezone.utc).isoformat()
         (OUT/"us_recovery_pilot.json").write_text(json.dumps(report,indent=2),encoding="utf-8"); print(json.dumps({k:v for k,v in report.items() if k!="candidates"},indent=2)); print("PRE-SCREEN CANDIDATES:",json.dumps(report["candidates"]))
     if report["actual_symbols_screened"]==0: raise RuntimeError("US_SCREEN_EMPTY: no valid daily histories; refusing green research run")
 if __name__=="__main__": main()

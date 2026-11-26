@@ -133,7 +133,7 @@ class DynamicTests(unittest.TestCase):
         import safe_runner
         store=MagicMock();store.load.return_value={'signals':{},'profit_watch_state':{'TEST':{'reference':{'price':100}}}}
         cwd=Path.cwd()
-        def scan(script):
+        def scan(script, **kwargs):
             Path('reports').mkdir(exist_ok=True)
             if script=='profit_exit_watch.py':
                 self.assertEqual(json.loads(Path('config/profit_watch_state.json').read_text())['TEST']['reference']['price'],100)

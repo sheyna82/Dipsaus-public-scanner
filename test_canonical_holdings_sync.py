@@ -50,6 +50,19 @@ class CanonicalHoldingsTests(unittest.TestCase):
             sync_canonical_positions(WrappedStore(), p)
             self.assertEqual(json.loads(p.read_text())['positions']['FER.MC']['shares'], 71)
 
+    def test_canonical_source_must_explicitly_verify_an_empty_account(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'watch.json'
+            path.write_text('{"positions": {"OLD": {"shares": 2}}}')
+
+            class VerifiedEmpty:
+                def request(self, _):
+                    raw = b'{"positions": {}, "positions_verified_empty": true}'
+                    return {'encoding': 'base64', 'content': base64.b64encode(raw).decode()}
+
+            sync_canonical_positions(VerifiedEmpty(), path)
+            self.assertEqual(json.loads(path.read_text())['positions'], {})
+
     def test_malformed_private_response_fails_closed(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / 'watch.json'

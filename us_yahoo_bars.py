@@ -4,8 +4,10 @@ import math
 import struct
 import urllib.parse
 import urllib.request
-from datetime import datetime, time, timezone
+from datetime import datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
+
+from us_schedule_gate import CLOSED_DAYS, EARLY_CLOSE_DAYS
 
 CHART = 'https://query1.finance.yahoo.com/v8/finance/chart/'
 NEW_YORK = ZoneInfo('America/New_York')
@@ -135,12 +137,15 @@ def minute_snapshot(payload, symbol, *, now):
         expected -= 60
     contiguous.reverse()
     age = now_ts - last_stamp
+    expected_last = (int(min(now_ts, end)) // 60 - 1) * 60
+    missing_latest = last_stamp != expected_last
     return {'symbol': symbol, 'source': 'Yahoo Finance chart 1m', 'source_verified': False,
             'reference': reference, 'latest_completed_bar': last, 'bars': contiguous,
             'completed_valid_count': sum(bar is not None for _, bar in completed),
             'empty_completed_count': sum(bar is None for _, bar in completed),
             'terminal_quote_update_removed': update_removed, 'bar_age_seconds': age,
-            'fresh': 0 <= age <= MAX_MINUTE_AGE}
+            'latest_completed_minute_missing': missing_latest,
+            'fresh': not missing_latest and 0 <= age <= MAX_MINUTE_AGE}
 
 
 def fetch_minute_snapshot(symbol):
@@ -169,3 +174,16 @@ def daily_bars(payload, symbol, *, now):
             bar['date'] = stamp_date.isoformat()
             rows.append(bar)
     return rows
+
+
+def require_current_daily_history(rows, *, now):
+    """Prevent a freshly fetched stale history from renewing discovery rights."""
+    local = now.astimezone(NEW_YORK)
+    expected = local.date()
+    close = time(13) if expected in EARLY_CLOSE_DAYS else time(16)
+    if local.time() < close:
+        expected -= timedelta(days=1)
+    while expected.weekday() >= 5 or expected in CLOSED_DAYS:
+        expected -= timedelta(days=1)
+    if rows and rows[-1]['date'] != expected.isoformat():
+        raise ValueError('STALE_OR_FUTURE_DAILY_HISTORY')

@@ -41,8 +41,9 @@ def combine(history, intraday, quotes, *, now):
                         and 'RR-BELOW-2-TO-1-AT-FIRST-MEANINGFUL; FURTHER-ZONE-REQUIRES-PASSAGE-VALIDATION' in flags
                         and (scenarios.get('rr_to_further') or 0) >= 2
                         and (scenarios.get('further_zone_gross_eur') or 0) >= 150)
-        broker_candidate = bool(early_watch and structure and money_pass
-                                and 'MEANINGFUL-RESISTANCE-UNRESOLVED' not in flags)
+        # Historical illustrations stay available for research. Only actual
+        # broker inputs can establish or disprove present financial room.
+        broker_candidate = bool(early_watch and structure)
         blocks = quote.get('execution_blocks', ['QUOTE-AUDIT-MISSING'])
         quote_fresh = quote.get('provider_freshness_pass') is True and 'CURRENCY-MISMATCH' not in blocks
         quote_delayed = (quote.get('provider_delayed_but_usable_for_attention') is True

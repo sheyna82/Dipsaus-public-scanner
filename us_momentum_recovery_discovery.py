@@ -11,7 +11,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from us_intraday_recovery import intraday_structure
-from us_yahoo_bars import chart_payload, daily_bars, fetch_minute_snapshot, number
+from us_yahoo_bars import chart_payload, daily_bars, fetch_minute_snapshot, number, require_current_daily_history
 
 OUT=Path("reports/us_momentum_recovery.json")
 HEADERS={"User-Agent":"Mozilla/5.0 (compatible; DipsausMomentum/2.0)"}
@@ -66,7 +66,9 @@ def scan_candidate(issuer):
     if number(cap) and cap < 2_000_000_000:
         return 'below_known_market_cap', None
     payload = chart_payload(symbol, period='3mo', interval='1d')
-    daily = daily_bars(payload, symbol, now=datetime.now(timezone.utc))
+    checked = datetime.now(timezone.utc)
+    daily = daily_bars(payload, symbol, now=checked)
+    require_current_daily_history(daily, now=checked)
     if len(daily) < 35:
         return 'insufficient_daily_history', None
     peak = max(bar['high'] for bar in daily[-60:])
@@ -95,9 +97,10 @@ def scan_candidate(issuer):
     rebound = (price / trough - 1) * 100
     promising, sold_off = discovery_gate(drawdown, rebound, turnover, change, structural or early)
     if rebound > 35 or (rebound < 0 and not early) or not promising:
-        return 'discovery_gate_rejected', None
+        return ('discovery_gate_rejected' if fresh else 'minute_data_unavailable'), None
     return 'qualified', {
         'symbol': symbol, 'name': issuer.get('shortName') or issuer.get('longName'),
+        'last_bar_date': daily[-1]['date'], 'observed_utc': datetime.now(timezone.utc).isoformat(),
         'status': ('STRUCTURE-RECOGNISED' if structural else 'EARLY-RECOVERY-RESEARCH' if early
                    else 'SOLD-OFF-RECOVERY-WATCH' if sold_off else 'DISCOVERY-WATCH'),
         'sold_off_recovery_watch': sold_off, 'structure_quality_pass': structural,
@@ -134,6 +137,7 @@ def main():
         monitor = (monitor[start:] + monitor[:start])[:72]
     sample = ranked[:72] + monitor
     candidates, failures, audit = [], {}, Counter()
+    outcomes = dict.fromkeys((issuer['symbol'] for issuer in sample), 'timeout_unfinished')
     pool = ThreadPoolExecutor(max_workers=8)
     futures = {pool.submit(scan_candidate, issuer): issuer['symbol'] for issuer in sample}
     try:
@@ -141,24 +145,28 @@ def main():
             try:
                 outcome, candidate = future.result()
                 audit[outcome] += 1
+                outcomes[futures[future]] = outcome
                 if candidate is not None:
                     candidates.append(candidate)
             except (OSError, ValueError) as exc:
                 failures[futures[future]] = type(exc).__name__
+                outcomes[futures[future]] = 'provider_error'
     except TimeoutError:
         audit['timeout_unfinished'] = len(sample) - sum(audit.values()) - len(failures)
     finally:
         pool.shutdown(wait=False, cancel_futures=True)
-    if not any(audit[key] for key in ('qualified', 'discovery_gate_rejected', 'outside_recovery_or_liquidity_gate')):
+    if not any(audit[key] for key in ('qualified', 'discovery_gate_rejected', 'outside_recovery_or_liquidity_gate', 'below_known_market_cap', 'minute_data_unavailable')):
         raise RuntimeError('US_FAST_NO_USABLE_DAILY_EVIDENCE')
     candidates.sort(key=lambda item: (not item['early_recovery_observed'], not item['structure_quality_pass'],
                                      -(item['day_change_pct'] or 0), item['symbol']))
+    for rank, candidate in enumerate(candidates, start=1):
+        candidate['discovery_rank'] = rank
     output = Path(os.environ.get('US_FAST_REPORT', OUT))
     output.parent.mkdir(parents=True, exist_ok=True)
     report = {'generated_utc': datetime.now(timezone.utc).isoformat(),
               'scope': 'Bounded fast recovery discovery using ranked and rotating official US equities',
               'coverage_audit': {**audit, 'universe_total': len(issuers), 'requested': len(sample)},
-              'candidate_count': len(candidates), 'candidates': candidates[:30], 'failures': failures,
+              'candidate_count': len(candidates), 'candidates': candidates, 'outcomes': outcomes, 'failures': failures,
               'trade_ready': False, 'order_placement_enabled': False}
     output.write_text(json.dumps(report, indent=2))
     print(f'US_FAST_RECOVERY: candidates={len(candidates)}')

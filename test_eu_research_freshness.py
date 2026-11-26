@@ -57,11 +57,12 @@ def report(age_minutes=1, *, now=NOW, symbols=('TEST.PA',)):
 
 
 class SenderFixture:
-    def send(self, data, *, state=None, holdings=(), now=NOW, store=None, evidence=None, pin=None, clock=None):
+    def send(self, data, *, state=None, holdings=(), now=NOW, store=None, evidence=None, pin=None, clock=None, positions=()):
         sent = []
         notify_eu_research(store or Store(), {'signals': {}} if state is None else state, data, set(holdings),
                            sender=lambda symbol, body: sent.append((symbol, body)),
-                           evidence=evidence, reviewer_pin=pin, clock=clock or (lambda: now))
+                           evidence=evidence, reviewer_pin=pin, clock=clock or (lambda: now),
+                           positions={} if positions == () else positions)
         return sent
 
 class EUFreshnessTests(SenderFixture, unittest.TestCase):
@@ -174,20 +175,28 @@ class EUBrokerAndHandoffTests(SenderFixture, unittest.TestCase):
                 'signature_b64': base64.b64encode(signature).decode()}
 
     def inputs(self, *, now=NOW, bid=99.9, target=105, invalidation=98.5,
-               buy=10, sell=10, slip_buy=0, slip_sell=0):
+               buy=10, sell=10, slip_buy=0, slip_sell=0, symbol='TEST.PA', positions=None, capacity=None):
+        from recovery_portfolio_capacity import holdings_digest
+        positions = positions if positions is not None else {}
         stamp = now.isoformat()
         values = {'broker_ask': 100, 'broker_bid': bid, 'target': target, 'invalidation': invalidation,
                   'buy_fee_eur': buy, 'sell_fee_eur': sell, 'buy_slippage_per_share': slip_buy,
                   'sell_slippage_per_share': slip_sell, 'fx_eur_per_unit': 1, 'fx_buy_fee_rate': 0,
                   'fx_sell_fee_rate': 0, 'broker_quote_verified': True, 'levels_verified': True,
                   'fees_verified': True, 'fx_verified': True, 'quote_freshness_verified': True}
-        identity = {'symbol': 'TEST.PA', 'isin': 'FR0000121485', 'operating_mic': 'XPAR', 'currency': 'EUR'}
+        identity = {'symbol': symbol, 'isin': 'FR0000121485', 'operating_mic': 'XPAR', 'currency': 'EUR'}
         attestations = {group: {'source_id': 'DEGIRO' if group == 'broker_quote' else 'INDEPENDENT_REVIEW',
                                 'observed_utc': stamp, 'verified': True,
                                 'fields': {key: values[key] for key in keys}} for group, keys in FIELDS.items()}
         return {'independently_reviewed': True, 'instrument': {**identity, 'identity_verified': True},
-                'quote': {**identity, 'source': 'DEGIRO', 'observed_utc': stamp, 'ask': 100, 'bid': bid},
-                'target_kind': 'FIRST_MEANINGFUL_RESISTANCE', 'inputs': values, 'attestations': attestations}
+                'quote': {**identity, 'source': 'DEGIRO', 'observed_utc': stamp, 'market_utc': stamp,
+                          'market_data_mode': 'REALTIME', 'ask': 100, 'bid': bid},
+                'target_kind': 'FIRST_MEANINGFUL_RESISTANCE', 'inputs': values, 'attestations': attestations,
+                'planned_holding_trading_days': 10,
+                'portfolio': {'source': 'DEGIRO', 'currency': 'EUR', 'observed_utc': stamp,
+                              'holdings_sha256': holdings_digest(positions), 'open_exposure_eur': 1000 if positions else 0,
+                              'available_cash_eur': 50_000, 'pending_buy_eur': 0, 'pending_new_positions': 0,
+                              **(capacity or {})}}
 
     def evaluate(self, payload, *, now=NOW, currency='EUR'):
         return evaluate_entry('TEST.PA', currency, self.sign(payload), now=now, reviewer_pin=self.pin)
@@ -258,11 +267,65 @@ class EUBrokerAndHandoffTests(SenderFixture, unittest.TestCase):
         self.assertEqual(self.evaluate(payload)['reason'], 'VALUE_MISMATCH')
 
     def test_seventh_position_does_not_get_financial_promotion(self):
-        evidence = {'TEST.PA': self.sign(self.inputs())}
-        holdings = tuple(f'HELD{i}.PA' for i in range(6))
-        sent = self.send(report(), holdings=holdings, evidence=evidence, pin=self.pin)
+        holdings = {f'HELD{i}.PA': {'shares': 5} for i in range(6)}
+        evidence = {'TEST.PA': self.sign(self.inputs(positions=holdings))}
+        sent = self.send(report(), holdings=holdings, positions=holdings, evidence=evidence, pin=self.pin)
         self.assertIn(DEGIRO_VERIFICATION, sent[0][1])
         self.assertNotIn(FINANCIAL_ENTRY_CONFIRMED, sent[0][1])
+
+    def test_quote_observed_now_with_delayed_market_timestamp_is_blocked(self):
+        payload = self.inputs()
+        payload['quote']['market_utc'] = (NOW - timedelta(minutes=15)).isoformat()
+        self.assertEqual(self.evaluate(payload)['reason'], 'BROKER_MARKET_TIMESTAMP_UNVERIFIED_OR_DELAYED')
+        payload = self.inputs()
+        payload['quote']['market_data_mode'] = 'DELAYED'
+        self.assertEqual(self.evaluate(payload)['reason'], 'BROKER_MARKET_TIMESTAMP_UNVERIFIED_OR_DELAYED')
+
+    def test_capacity_binds_holdings_and_blocks_total_exposure_pending_cash_and_horizon(self):
+        positions = {'US': {'shares': 9, 'provider_symbol': 'AAA'}}
+        for changes, expected in (
+                ({'open_exposure_eur': 47_000}, 'CAPITAL_LIMIT_EXCEEDED'),
+                ({'open_exposure_eur': 45_000, 'pending_buy_eur': 2_000}, 'CAPITAL_LIMIT_EXCEEDED'),
+                ({'available_cash_eur': 3_000}, 'AVAILABLE_CASH_INSUFFICIENT'),
+                ({'observed_utc': (NOW - timedelta(seconds=121)).isoformat()}, 'REVIEWED_CAPACITY_STALE_OR_FUTURE'),
+                ({'holdings_sha256': '0' * 64}, 'CAPACITY_HOLDINGS_MISMATCH')):
+            with self.subTest(reason=expected):
+                proof = self.sign(self.inputs(positions=positions, capacity=changes))
+                result = evaluate_entry('TEST.PA', 'EUR', proof, now=NOW, reviewer_pin=self.pin, positions=positions)
+                self.assertEqual(result['portfolio_capacity']['status'], expected)
+                self.assertEqual(result['net_profit_eur'], 150)
+        payload = self.inputs(positions=positions)
+        payload['planned_holding_trading_days'] = 16
+        result = evaluate_entry('TEST.PA', 'EUR', self.sign(payload), now=NOW, reviewer_pin=self.pin, positions=positions)
+        self.assertEqual(result['portfolio_capacity']['status'], 'HOLDING_HORIZON_UNVERIFIED')
+
+    def test_strong_signal_precedes_priority_watch_and_second_advisory_respects_six_slots(self):
+        holdings = {f'HELD{i}.PA': {'shares': 5} for i in range(5)}
+        symbols = ('KER.PA', 'SU.PA', 'TEST.PA', 'ZZ.PA')
+        data = report(symbols=symbols)
+        data['candidates'][2]['early_recovery_score'] = 5
+        data['candidates'][0]['broker_verify_now'] = False
+        data['candidates'][1]['broker_verify_now'] = False
+        evidence = {name: self.sign(self.inputs(symbol=name, positions=holdings)) for name in symbols[2:]}
+        sent = self.send(data, holdings=holdings, positions=holdings, evidence=evidence, pin=self.pin)
+        self.assertEqual(sent[0][0], 'TEST.PA')
+        self.assertIn(FINANCIAL_ENTRY_CONFIRMED, sent[0][1])
+        self.assertIn(DEGIRO_VERIFICATION, sent[1][1])
+        self.assertEqual(sum(FINANCIAL_ENTRY_CONFIRMED in body for _, body in sent), 1)
+
+    def test_historical_gross_and_missing_resistance_do_not_block_broker_check(self):
+        from europe_combined_recovery_report import combine
+        data = combine({'candidates': [{'symbol': 'TEST.PA', 'currency': 'EUR',
+                                        'research_flags': ['MEANINGFUL-RESISTANCE-UNRESOLVED'],
+                                        'historical_3500_eur_scenarios': {'rr_to_meaningful': 1, 'meaningful_resistance_gross_eur': 30}}]},
+                       {'candidates': [{'symbol': 'TEST.PA', 'early_recovery_score': 4, 'higher_last_low': True,
+                                        'data_status': 'INTRADAY-RESEARCH-ONLY',
+                                        'latest_bar': {'time': (NOW - timedelta(minutes=15)).isoformat()}}]},
+                       {'candidates': [{'symbol': 'TEST.PA', 'provider_delayed_but_usable_for_attention': True,
+                                        'quote_utc': (NOW - timedelta(minutes=10)).isoformat()}]}, now=NOW)
+        self.assertIn(DEGIRO_VERIFICATION, self.send(data)[0][1])
+        evidence = {'TEST.PA': self.sign(self.inputs())}
+        self.assertIn(FINANCIAL_ENTRY_CONFIRMED, self.send(data, evidence=evidence, pin=self.pin)[0][1])
 
     def test_broker_evidence_that_expires_while_reserving_cannot_send(self):
         evidence = {'TEST.PA': self.sign(self.inputs())}
@@ -300,7 +363,7 @@ class EUBrokerAndHandoffTests(SenderFixture, unittest.TestCase):
                     (Path('reports') / name).write_text(json.dumps(raw))
                 Path('config/profit_exit_watch.json').write_text('{"positions": {}}')
 
-                def scanner(script):
+                def scanner(script, **kwargs):
                     if script == 'europe_combined_recovery_report.py':
                         subprocess.run([sys.executable, ROOT / script], capture_output=True, check=True)
 

@@ -127,13 +127,20 @@ class SafetyTests(unittest.TestCase):
             finally: os.chdir(previous)
 
     def test_eu_runner_rejects_failed_refresh_even_with_old_artifact(self):
-        # Regression guard: never resurrect the old fallback on a failed refresh.
-        import inspect
         import safe_runner
-        source = inspect.getsource(safe_runner.main)
-        eu_branch = source.split("elif args.mode == 'eu':", 1)[1].split("\n    else:", 1)[0]
-        self.assertIn("run('europe_ohlcv_pilot.py')", eu_branch)
-        self.assertNotIn("except RuntimeError:", eu_branch)
+        from contextlib import chdir
+        fake_store = Store()
+        with tempfile.TemporaryDirectory() as folder, chdir(folder):
+            Path('reports').mkdir()
+            Path('reports/europe_combined_recovery_report.json').write_text('{"candidates": []}')
+            with (patch('sys.argv', ['safe_runner.py', 'eu']), patch.object(safe_runner, 'hydrate'),
+                  patch.object(safe_runner, 'PrivateStore', return_value=fake_store),
+                  patch.object(fake_store, 'load', return_value={'signals': {}}, create=True),
+                  patch.object(safe_runner, 'run', side_effect=RuntimeError('SCANNER_STEP_FAILED')) as scan):
+                with self.assertRaisesRegex(RuntimeError, 'SCANNER_STEP_FAILED'):
+                    safe_runner.main()
+                scan.assert_called_once_with('europe_ohlcv_pilot.py')
+            self.assertEqual(fake_store.saved, [])
 
     def test_eu_no_old_artifact_restore(self):
         import europe_swing_research as eu

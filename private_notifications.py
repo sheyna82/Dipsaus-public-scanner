@@ -100,6 +100,8 @@ def notify(store, state, entries, exits, sender=None):
     from zoneinfo import ZoneInfo
 
     east = ZoneInfo('America/New_York')
+    from us_recovery_continuity import EVIDENCE_MAX_AGE
+
     for row in entries:
         if row.get('market') != 'US' or row.get('watch_type') not in ('AUTO-US-DISCOVERY', 'MANUAL-US-RECOVERY'):
             continue
@@ -107,9 +109,18 @@ def notify(store, state, entries, exits, sender=None):
         if not symbol:
             continue
         now = datetime.now(timezone.utc)
-        age = age_seconds(row.get('provider_quote_utc'), now)
-        fresh = row.get('provider_freshness_pass') is True and (
-            row.get('provider_source') is None or age is not None and 0 <= age <= 120)
+        def still_current():
+            checked = datetime.now(timezone.utc)
+            age = age_seconds(row.get('provider_quote_utc'), checked)
+            qualifications = row.get('alert_qualification_utc') if row.get('watch_type') == 'AUTO-US-DISCOVERY' else None
+            active = qualifications is None or any(
+                0 <= value <= EVIDENCE_MAX_AGE for stamp in qualifications
+                if (value := age_seconds(stamp, checked)) is not None)
+            return (active and row.get('provider_freshness_pass') is True
+                    and not row.get('latest_completed_minute_missing')
+                    and (row.get('provider_source') is None or age is not None and 0 <= age <= 120))
+
+        fresh = still_current()
         day = now.astimezone(east).date().isoformat()
         key = f'ENTRY|US|{symbol}|PHASE'
         signals = state.setdefault('signals', {})
@@ -130,7 +141,7 @@ def notify(store, state, entries, exits, sender=None):
                         f'herstelbodem {row.get("day_low")}. Onderzoeksseintje voor handmatige beoordeling. '
                         'Controleer DEGIRO bied/laat, structurele invalidatie, eerste weerstand, '
                         'nettowinst, netto R/R, kwartaalcijfers en portefeuilleruimte.')
-                reserve_send(store, state, early_key, record, symbol, body, sender)
+                reserve_send(store, state, early_key, record, symbol, body, sender, preflight=still_current)
         if not (row.get('prealert_trigger_observed') and row.get('intraday_hold_confirmed')):
             continue
         current_phase = phase(row)
@@ -166,7 +177,7 @@ def notify(store, state, entries, exits, sender=None):
                 'werkelijke kosten, nettowinst, netto R/R, nieuws, kwartaalcijfers en portefeuilleruimte.')
         from dipsaus_breakout_distance import message_context
         body += message_context(row)
-        reserve_send(store, state, key, record, symbol, body, sender)
+        reserve_send(store, state, key, record, symbol, body, sender, preflight=still_current)
     for row in exits:
         symbol = row.get('symbol', 'UNKNOWN'); key = f'EXIT|{symbol}|STATE'
         prev = state['signals'].get(key, {})
@@ -206,7 +217,7 @@ def notify(store, state, entries, exits, sender=None):
         reserve_send(store, state, key, record, symbol, body, sender)
 
 def notify_eu_research(store, state, report, holdings, sender=None, *, evidence=None,
-                       reviewer_pin=None, clock=None):
+                       reviewer_pin=None, clock=None, positions=None):
     """Re-evaluate EU stages and reserve every attempt in existing private history."""
     from collections import Counter
     from zoneinfo import ZoneInfo
@@ -217,14 +228,11 @@ def notify_eu_research(store, state, report, holdings, sender=None, *, evidence=
     if clock is None:
         clock = lambda: datetime.now(timezone.utc)
     now = clock()
-    freshness, rows = assess_report(report, evidence, now=now, reviewer_pin=reviewer_pin)
     phase_counts = dict.fromkeys(PHASE_RANK, 0)
     reasons = Counter()
-    summary = {'report_status': freshness['reason'], 'evaluated_utc': now.isoformat(),
+    summary = {'evaluated_utc': now.isoformat(),
                'phase_counts': phase_counts, 'reason_counts': reasons, 'financial_results': []}
     state['latest_eu_entry_evaluation'] = summary
-    if not freshness['fresh']:
-        return
     evidence = evidence if isinstance(evidence, dict) else {}
     priority_watch = {'KER.PA', 'FER.MC', 'SU.PA', 'ANTO.L'}
     signals = state.setdefault('signals', {})
@@ -232,6 +240,7 @@ def notify_eu_research(store, state, report, holdings, sender=None, *, evidence=
     previous_rank = {}
     ambiguous = set()
     routine_used = priority_used = 0
+    commitments = []
     for key, record in signals.items():
         if not isinstance(record, dict) or record.get('day') != day:
             continue
@@ -246,11 +255,18 @@ def notify_eu_research(store, state, report, holdings, sender=None, *, evidence=
             previous_rank[symbol] = max(previous_rank.get(symbol, 0), rank)
         if record.get('delivery') in ('reserved', 'uncertain'):
             ambiguous.add(symbol)
+        if record.get('delivery') in ('reserved', 'uncertain', 'sent') and isinstance(record.get('capacity'), dict):
+            commitments.append(record['capacity'])
         if record.get('priority_lane'):
             priority_used += 1
         else:
             routine_used += 1
 
+    freshness, rows = assess_report(report, evidence, now=now, reviewer_pin=reviewer_pin,
+                                    positions=positions, commitments=commitments)
+    summary['report_status'] = freshness['reason']
+    if not freshness['fresh']:
+        return
     eligible = []
     for row in rows:
         symbol, stage = row['symbol'], row['recovery_phase']
@@ -261,10 +277,9 @@ def notify_eu_research(store, state, report, holdings, sender=None, *, evidence=
         if stage is None:
             reasons['no_current_structure'] += 1
             continue
-        if stage == FINANCIAL_ENTRY_CONFIRMED and not owned and len(holdings) >= 6:
-            reasons['portfolio_position_cap'] += 1
-            stage = recovery_phase(row, {}, now=now)
-            row = {**row, 'recovery_phase': stage}
+        capacity = financial.get('portfolio_capacity') or {}
+        if capacity and capacity.get('status') != 'CAPACITY_VERIFIED':
+            reasons['portfolio_' + capacity['status'].lower()] += 1
         if type(score) is not int or score < (2 if owned else 3):
             reasons['minimum_recovery_score'] += 1
             continue
@@ -277,12 +292,17 @@ def notify_eu_research(store, state, report, holdings, sender=None, *, evidence=
             reasons['already_reserved_or_no_promotion'] += 1
             continue
         eligible.append((row, score, owned))
-    eligible.sort(key=lambda item: (-int(item[0]['symbol'] in priority_watch), -int(item[2]),
-                                   -PHASE_RANK[item[0]['recovery_phase']], -item[1], item[0]['symbol']))
+    def priority(item):
+        row, score, owned = item
+        return (-PHASE_RANK[row['recovery_phase']], -score,
+                -int(row['symbol'] in priority_watch), -int(owned), row['symbol'])
+
+    eligible.sort(key=priority)
     if eligible:
         store.require_exclusive_sender()
     attempts = 0
-    for row, score, owned in eligible:
+    while eligible:
+        row, score, owned = eligible.pop(0)
         symbol, stage = row['symbol'], row['recovery_phase']
         send_time = clock()
         if (send_time.astimezone(ZoneInfo('Europe/Amsterdam')).date().isoformat() != day
@@ -292,7 +312,8 @@ def notify_eu_research(store, state, report, holdings, sender=None, *, evidence=
         financial = {}
         if stage == FINANCIAL_ENTRY_CONFIRMED:
             financial = evaluate_entry(symbol, row.get('currency'), evidence.get(symbol),
-                                       now=send_time, reviewer_pin=reviewer_pin)
+                                       now=send_time, reviewer_pin=reviewer_pin, positions=positions,
+                                       commitments=commitments)
         final_stage = recovery_phase(row, financial, now=send_time)
         if final_stage != stage:
             phase_counts[stage] -= 1
@@ -303,7 +324,10 @@ def notify_eu_research(store, state, report, holdings, sender=None, *, evidence=
                 if item['symbol'] == symbol:
                     item.update(financial_at_send=financial)
                     break
-        stage = final_stage
+            if final_stage is not None:
+                eligible.append(({**row, 'recovery_phase': final_stage}, score, owned))
+                eligible.sort(key=priority)
+            continue
         if stage is None or PHASE_RANK[stage] <= previous_rank.get(symbol, 0):
             continue
         priority_lane = (owned or symbol in priority_watch) and priority_used < 2
@@ -315,6 +339,8 @@ def notify_eu_research(store, state, report, holdings, sender=None, *, evidence=
             continue
         record = {'day': day, 'phase': stage, 'notification_schema_version': 16,
                   'priority_lane': priority_lane, 'notified_utc': send_time.isoformat()}
+        if stage == FINANCIAL_ENTRY_CONFIRMED:
+            record['capacity'] = financial['portfolio_capacity']
         body = f'{symbol} {stage} (herstelscore {score})\n' + broker_search_hint(symbol)
         if stage == EARLY_RECOVERY:
             body += 'Beginnend herstel in onderzoek. Volg de bodemstructuur en het verdere prijsverloop.'
@@ -335,12 +361,15 @@ def notify_eu_research(store, state, report, holdings, sender=None, *, evidence=
             latest = financial
             if stage == FINANCIAL_ENTRY_CONFIRMED:
                 latest = evaluate_entry(symbol, row.get('currency'), evidence.get(symbol),
-                                        now=checked, reviewer_pin=reviewer_pin)
+                                        now=checked, reviewer_pin=reviewer_pin, positions=positions,
+                                        commitments=commitments)
             return recovery_phase(row, latest, now=checked) == stage
 
         delivered = reserve_send(store, state, key, record, symbol,
                                  body + ' Handmatige beoordeling vereist. Geen koopopdracht.', sender,
                                  preflight=still_current)
+        if delivered and 'capacity' in record:
+            commitments.append(record['capacity'])
         if not delivered:
             reasons['evidence_expired_during_reservation'] += 1
         attempts += 1

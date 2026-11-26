@@ -5,7 +5,9 @@ Monitoring/pre-alert layer only. Config routes may evolve per ticker; unsupporte
 or broker-only routes are skipped here instead of crashing the whole watch.
 """
 import json
+import os
 import re
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 import yfinance as yf
@@ -18,6 +20,7 @@ SUPPLEMENTAL_CONFIG=Path("config/manual_recovery_triggers_supplemental.json")
 OUT=Path("reports/manual_recovery_trigger_report.json")
 US_ROUTES=Path("config/us_live_trigger_routes.json")
 US_ALERT_SETUPS=Path("config/us_alert_setups.json")
+NOTIFICATION_GATE=Path("config/notification_quality_gate.json")
 MAX_AGE_SECONDS=120
 
 def latest_quote(symbol):
@@ -64,6 +67,24 @@ def watch_us(item, setups, *, watch_type='AUTO-US-DISCOVERY'):
     return {**row, 'watch_type': watch_type}
 
 
+def automatic_watch_sample(routes, cycle):
+    """Keep a small fast lane and rotate every remaining candidate fairly."""
+    phone = sorted((row for row in routes if row.get('phone_notification_eligible')),
+                   key=lambda row: ((row.get('discovery_evidence', {}).get('fast') or {}).get('discovery_rank', 10_000),
+                                    row['symbol']))
+    silent = sorted((row for row in routes if not row.get('phone_notification_eligible')
+                     and not row.get('identity_disputed') and not row.get('explicitly_revoked')),
+                    key=lambda row: row['symbol'])
+
+    def rotate(rows, limit):
+        if len(rows) <= limit:
+            return rows
+        start = (cycle * limit) % len(rows)
+        return (rows[start:] + rows[:start])[:limit]
+
+    return phone[:8] + rotate(phone[8:], 24) + rotate(silent, 8)
+
+
 def main():
     cfg=json.loads(CONFIG.read_text())
     if SUPPLEMENTAL_CONFIG.exists():
@@ -72,11 +93,17 @@ def main():
     now=datetime.now(timezone.utc); rows=[]
     setups = read_report(US_ALERT_SETUPS)
     routes = read_report(US_ROUTES).get('rows', [])
+    gate = read_report(NOTIFICATION_GATE)
+    revoked = set(gate.get('auto_us_revoked', [])) | set(gate.get('auto_us_silent_follow', []))
     automatic_symbols = {row['symbol'] for row in routes}
+    sample = automatic_watch_sample(routes, int(os.environ.get('US_MONITOR_ROUND', 0)))
     for symbol,item in cfg.get("candidates",{}).items():
         if us_symbol(symbol, item):
             if symbol not in automatic_symbols:
-                rows.append(watch_us(manual_us_route(symbol, item), setups, watch_type='MANUAL-US-RECOVERY'))
+                route = manual_us_route(symbol, item)
+                if symbol in revoked:
+                    route['phone_notification_eligible'] = False
+                rows.append(watch_us(route, setups, watch_type='MANUAL-US-RECOVERY'))
             continue
         try:
             price,ts=latest_quote(symbol)
@@ -146,13 +173,17 @@ def main():
       except Exception as exc: rows.append({"symbol":"PORTFOLIO-WATCH","watch_type":"PORTFOLIO-REENTRY","status":"DATA-BLOCKED","error":type(exc).__name__,"execution_ready":False})
 
     monitored = {row['symbol'] for row in rows if row.get('market') == 'US'}
-    for item in routes:
-        symbol = item.get('symbol')
-        if isinstance(symbol, str) and symbol not in monitored:
-            rows.append(watch_us(item, setups))
-            monitored.add(symbol)
+    picked = [row for row in sample if row['symbol'] not in monitored]
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        observed = list(pool.map(lambda item: watch_us(item, setups), picked))
+    rows.extend(observed)
+    monitor_outcomes = {row['symbol']: ('QUALIFIED_DEFERRED' if row.get('phone_notification_eligible') else 'NOT_SCANNED')
+                        for row in routes}
+    monitor_outcomes.update({row['symbol']: ('OBSERVED' if row.get('provider_freshness_pass') else 'DATA_UNAVAILABLE')
+                             for row in observed})
     report = {'generated_utc': datetime.now(timezone.utc).isoformat(),
               'scope': 'Europe and US recovery monitoring',
+              'automatic_monitor_outcomes': monitor_outcomes,
               'rows': [{**row, **DISABLED} for row in rows], **DISABLED}
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(report, indent=2))

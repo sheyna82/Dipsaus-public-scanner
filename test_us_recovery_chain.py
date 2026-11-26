@@ -139,7 +139,7 @@ class SourceIntegrityTests(unittest.TestCase):
 
 class RouteTests(unittest.TestCase):
     def deep(self, *, ready=True):
-        return {'deep_dive_queue': [{'symbol': 'VIK', 'name': 'Example issuer', 'last_bar_date': '2026-11-23',
+        return {'run_utc': SESSION_OPEN.isoformat(), 'deep_dive_queue': [{'symbol': 'VIK', 'name': 'Example issuer', 'last_bar_date': '2026-11-23',
                 'pivot_zones': [{'low_usd': 105, 'high_usd': 106}],
                 'identity_status': 'NAME_CONSISTENT_UNVERIFIED',
                 'research_triage': {'bottom_signal_count': 4, 'weekly_higher_low': ready,
@@ -149,7 +149,7 @@ class RouteTests(unittest.TestCase):
                                       'event_risk_cleared': False}}}]}
 
     def fast(self):
-        return {'candidates': [{'symbol': 'VIK', 'recent_drawdown_pct': -15, 'day_change_pct': 2,
+        return {'generated_utc': SESSION_OPEN.isoformat(), 'candidates': [{'symbol': 'VIK', 'recent_drawdown_pct': -15, 'day_change_pct': 2,
                                 'intraday_structure': {'early_recovery_observed': True,
                                     'recovery_low': 99, 'recovery_low_ts': START, 'first_rebound_high': 104}}]}
 
@@ -249,7 +249,8 @@ class RouteTests(unittest.TestCase):
                             env = {**os.environ, **{key: str(value) for key, value in kwargs.items()}}
                             subprocess.run([sys.executable, ROOT / script], env=env, capture_output=True, check=True)
 
-                    with patch.object(safe_runner, 'run', side_effect=run_script):
+                    now = type('TestClock', (datetime,), {'now': staticmethod(lambda zone=None: SESSION_OPEN)})
+                    with patch.object(safe_runner, 'run', side_effect=run_script), patch.object(safe_runner, 'datetime', now):
                         safe_runner.run_us_recovery(Store(), {'signals': {}})
                     rows = saved[-1]['us_routes']['rows']
                     self.assertEqual([row['symbol'] for row in rows], ['VIK'])
