@@ -17,24 +17,27 @@ def qualification_age(record, now):
     return age_seconds(qualification.get('utc'), now) if isinstance(qualification, dict) else None
 
 
-def active_qualification(record, now):
-    age = qualification_age(record, now)
-    qualification = record.get('qualification') or {}
-    if record.get('status') in TERMINAL or record.get('qualification_retired') is True or age is None or not 0 <= age <= EVIDENCE_MAX_AGE:
-        return False
-    evidence = qualification.get('evidence')
-    if not isinstance(evidence, dict):
+def fresh_evidence(evidence, stamp, now):
+    age = age_seconds(stamp, now)
+    if not isinstance(evidence, dict) or age is None or not 0 <= age <= EVIDENCE_MAX_AGE:
         return False
     day = evidence.get('last_bar_date')
     if day is not None:
         try:
-            return 0 <= (now.date() - date.fromisoformat(day)).days <= 7
+            return 0 <= (now.date() - date.fromisoformat(day)).days <= EVIDENCE_MAX_AGE // 86400
         except (TypeError, ValueError):
             return False
     return True
 
 
-def new_record(previous, status, observed, evidence, *, now):
+def active_qualification(record, now):
+    if record.get('status') in TERMINAL or record.get('qualification_retired') is True:
+        return False
+    qualification = record.get('qualification') or {}
+    return fresh_evidence(qualification.get('evidence'), qualification.get('utc'), now)
+
+
+def new_record(previous, status, observed, evidence, *, now, reason=None):
     """Only a new positive observation can renew qualification time."""
     previous = previous or {}
     age = age_seconds(observed, now)
@@ -45,6 +48,7 @@ def new_record(previous, status, observed, evidence, *, now):
     qualification = previous.get('qualification')
     retired = previous.get('retirement_reason')
     retired_at = previous.get('retired_utc')
+    retirement_detail = previous.get('retirement_detail')
     if status == QUALIFIED:
         # A fast candidate can be processed long after its minute evidence was
         # sampled. Retain the actual source timestamp for its original rights.
@@ -56,11 +60,12 @@ def new_record(previous, status, observed, evidence, *, now):
             if source_age is None or source_age < age or source_age - age > 120:
                 return new_record(previous, UNAVAILABLE, observed, evidence, now=now)
         qualification = {'utc': stamp, 'evidence': evidence, 'original_outcome': status}
-        retired = retired_at = None
+        retired = retired_at = retirement_detail = None
     elif status in TERMINAL:
-        retired, retired_at = status, observed
+        retired, retired_at, retirement_detail = status, observed, reason
     record = {'status': status, 'observed_utc': observed, 'qualification': qualification,
               'qualification_retired': retired is not None, 'retirement_reason': retired, 'retired_utc': retired_at,
+              'retirement_detail': retirement_detail,
               'evidence': evidence if evidence else previous.get('evidence'),
               'evidence_observed_utc': observed if evidence else previous.get('evidence_observed_utc')}
     # A previously observed issuer mismatch persists until an actual new identity check.
@@ -113,7 +118,8 @@ def reconcile(previous, events, *, now, revoked=(), failed_batches=(), fast_fail
             for update in sorted(updates, key=lambda item: -age_seconds(item['observed_utc'], now)):
                 verdict = update['status']
                 if record or update.get('evidence') or verdict == REVOKED:
-                    updated = new_record(record, verdict, update['observed_utc'], update.get('evidence'), now=now)
+                    updated = new_record(record, verdict, update['observed_utc'], update.get('evidence'),
+                                         now=now, reason=update.get('reason'))
                     if updated is not record and updated:
                         verdict = updated['status']
                     record = updated

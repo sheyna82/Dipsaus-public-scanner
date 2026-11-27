@@ -26,7 +26,7 @@ class TestClock(datetime):
         return cls.current
 
 
-def automatic(symbol='VIK', *, early=True, validated=NOW, **changes):
+def automatic(symbol='VIK', *, early=True, validated=NOW, proven_retest=False, **changes):
     minute = int(validated.timestamp()) // 60 * 60 - 60
     stamp = datetime.fromtimestamp(minute, timezone.utc).isoformat()
     shape = {'recovery_low': 100, 'higher_low': 101, 'path_efficiency': .6, 'reclaim_observed': False,
@@ -43,6 +43,11 @@ def automatic(symbol='VIK', *, early=True, validated=NOW, **changes):
            'alert_qualification_utc': [qualification],
            'route_evidence': {'fast': {'qualification_utc': qualification, 'early': True,
                                        'confirmed': not early, 'structure': shape}}}
+    if proven_retest:
+        row['breakout_evidence'] = {'level': 101,
+                                   'breakout': {'ts': minute - 120, 'close': 102, 'low': 100},
+                                   'hold': {'ts': minute - 60, 'close': 102, 'low': 101.5},
+                                   'retest': {'ts': minute, 'close': 102, 'low': 101}}
     return {**row, **changes}
 
 
@@ -83,13 +88,13 @@ class NotificationRepairs(unittest.TestCase):
         self.send(automatic(early=False))
         previous = dict(self.state['signals'][key])
         self.expire_during_reservation()
-        self.send(automatic(early=False, breakout_observed=True))
+        self.send(automatic(early=False, proven_retest=True))
         self.assertEqual(self.state['signals'][key], previous)
         self.assertEqual(len(self.sent), 1)
         expired = [item for key, item in self.state['signals'].items() if '|EXPIRED|' in key]
         self.assertEqual(expired[0]['delivery'], 'expired_before_send')
         self.store.after_save = None
-        self.send(automatic(early=False, breakout_observed=True, validated=TestClock.current))
+        self.send(automatic(early=False, proven_retest=True, validated=TestClock.current))
         self.assertEqual(len(self.sent), 2)
         self.assertEqual(self.state['signals'][key]['confirmed_attempts_today'], 2)
 
@@ -100,7 +105,7 @@ class NotificationRepairs(unittest.TestCase):
                                                                    'phase': 'CURRENT-RECOVERY-CONFIRMED'}}
         self.send(automatic(early=False))
         self.assertFalse(self.sent)
-        self.send(automatic(early=False, breakout_observed=True))
+        self.send(automatic(early=False, proven_retest=True))
         self.assertEqual(len(self.sent), 1)
 
     def test_R03_uncertain_early_send_never_repeats_or_promotes_that_day(self):

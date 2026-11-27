@@ -214,6 +214,15 @@ class EUBrokerAndHandoffTests(SenderFixture, unittest.TestCase):
         self.assertEqual(rows[0]['financial_entry']['net_profit_eur'], 145)
         self.assertEqual(rows[0]['recovery_phase'], DEGIRO_VERIFICATION)
 
+    def test_first_resistance_already_passed_at_verified_ask_blocks_financial_promotion(self):
+        payload = self.inputs(target=104.5)
+        payload['quote']['ask'] = 105
+        payload['attestations']['broker_quote']['fields']['broker_ask'] = 105
+        _, rows = assess_report(report(), {'TEST.PA': self.sign(payload)}, now=NOW, reviewer_pin=self.pin)
+        self.assertEqual(rows[0]['financial_entry']['resistance_room'],
+                         {'status': 'PASSED', 'level': 104.5, 'price_basis': 'DEGIRO_ASK', 'remaining_pct': None})
+        self.assertEqual(rows[0]['recovery_phase'], DEGIRO_VERIFICATION)
+
     def test_rounded_profit_and_rr_do_not_pass(self):
         result = self.evaluate(self.inputs(target=104.49999, buy=2, sell=1))
         self.assertEqual(result['net_profit_eur'], 150)

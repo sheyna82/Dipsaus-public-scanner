@@ -60,6 +60,9 @@ def discovery_gate(drawdown, rebound, turnover, change, structural):
     momentum_watch=bool(structural or (number(change) and change>=1.0))
     return momentum_watch or sold_off_watch, sold_off_watch
 
+def discovery_rebound_allowed(rebound, early):
+    return rebound <= 35 and (rebound >= 0 or early)
+
 def scan_candidate(issuer):
     symbol = issuer['symbol']
     cap = issuer.get('marketCap')
@@ -96,7 +99,7 @@ def scan_candidate(issuer):
     change = (price / prior_close - 1) * 100 if fresh else None
     rebound = (price / trough - 1) * 100
     promising, sold_off = discovery_gate(drawdown, rebound, turnover, change, structural or early)
-    if rebound > 35 or (rebound < 0 and not early) or not promising:
+    if not discovery_rebound_allowed(rebound, early) or not promising:
         return ('discovery_gate_rejected' if fresh else 'minute_data_unavailable'), None
     return 'qualified', {
         'symbol': symbol, 'name': issuer.get('shortName') or issuer.get('longName'),

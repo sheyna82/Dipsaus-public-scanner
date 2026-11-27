@@ -33,7 +33,9 @@ def deep_evidence(item, batch):
         'profile_status': (dossier.get('issuer_profile') or {}).get('status') or item.get('profile_status'),
         'historical_invalidation_reference_usd': dossier.get('historical_invalidation_reference_usd',
                                                                 recovery.get('recent_10d_low_invalidation_reference_usd')),
-        'historical_overhead_zones': zones[:3], 'company_event': dossier.get('company_event'),
+        'historical_overhead_zones': zones[:3],
+        'historical_first_overhead_reference_usd': triage.get('first_overhead_reference_usd'),
+        'company_event': dossier.get('company_event'),
         'early_turn': triage.get('early_turn'), **DISABLED,
     }
 
@@ -41,14 +43,14 @@ def deep_evidence(item, batch):
 def build_handoff(batch_reports, fast_report, *, now):
     events = {}
 
-    def record(symbol, lane, status, observed, evidence=None):
+    def record(symbol, lane, status, observed, evidence=None, *, reason=None):
         if not isinstance(symbol, str) or not symbol:
             return
         age = age_seconds(observed, now)
         if age is None or age < 0:
             return
         lanes = events.setdefault(symbol, {})
-        lanes.setdefault(lane, []).append({'status': status, 'observed_utc': observed, 'evidence': evidence})
+        lanes.setdefault(lane, []).append({'status': status, 'observed_utc': observed, 'evidence': evidence, 'reason': reason})
 
     for report in batch_reports:
         observed = report.get('finished_utc') or report.get('run_utc')
@@ -93,7 +95,7 @@ def build_handoff(batch_reports, fast_report, *, now):
             status = REJECTED
         else:
             status = UNAVAILABLE
-        record(symbol, 'fast', status, (item or {}).get('observed_utc') or observed, evidence)
+        record(symbol, 'fast', status, (item or {}).get('observed_utc') or observed, evidence, reason=raw)
 
     rows = []
     for symbol, lanes in events.items():

@@ -73,7 +73,7 @@ def watch_us(item, setups, *, watch_type='AUTO-US-DISCOVERY', automatic=None):
     if row['status'] == 'DATA-BLOCKED':
         return {**row, **details, 'watch_type': watch_type}
     if watch_type == 'MANUAL-US-RECOVERY' and not item.get('phone_notification_eligible'):
-        automatic = {**automatic, 'phone_notification_eligible': False}
+        automatic = {**automatic, 'phone_notification_eligible': False, 'allow_requalification': False}
     try:
         auto_row = monitor_recovery(automatic, snapshot, prior_alert=prior_alert)
     except (ValueError, TypeError, KeyError):

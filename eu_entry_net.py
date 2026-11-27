@@ -7,6 +7,7 @@ import re
 from datetime import datetime, timedelta
 
 from recovery_portfolio_capacity import check_capacity
+from recovery_price_evidence import resistance_room
 from research_ed25519_verifier import verify_ed25519_batch
 from research_instrument_gate import isin_checksum_valid
 from research_net_attestation import MAX_AGE_SECONDS, evaluate_attested_scenario
@@ -95,6 +96,8 @@ def evaluate_entry(symbol, currency, envelope, *, now, reviewer_pin, positions=N
         return {**blocked, 'reason': 'BROKER_REVIEW_SIGNATURE_UNVERIFIED'}
     evidence = {**inputs, 'broker_bid': quote.get('bid'), 'broker_ask': quote.get('ask')}
     result = evaluate_attested_scenario(evidence, attestations, market='EU', now=now)
+    checked_target = inputs.get('target') if result.get('attestation_metadata_checked') is True else None
+    resistance = resistance_room(checked_target, quote.get('ask'), price_basis='DEGIRO_ASK')
     # The pinned reviewer authenticates the independent review, while the
     # input attestations and the bridge still verify each individual assertion.
     capacity = {}
@@ -105,7 +108,8 @@ def evaluate_entry(symbol, currency, envelope, *, now, reviewer_pin, positions=N
                                       now=now, commitments=commitments)
         else:
             capacity = {'status': 'HOLDING_HORIZON_UNVERIFIED'}
-    return {**result, 'independent_review_signature_verified': True, 'portfolio_capacity': capacity}
+    return {**result, 'independent_review_signature_verified': True, 'portfolio_capacity': capacity,
+            'resistance_room': resistance}
 
 
 def recovery_phase(row, financial, *, now):
@@ -121,6 +125,7 @@ def recovery_phase(row, financial, *, now):
     if age is None or not 0 <= age <= timedelta(minutes=45).total_seconds():
         return None
     if (financial.get('status') == 'HUMAN_REVIEW_REQUIRED'
+            and (financial.get('resistance_room') or {}).get('status') == 'AHEAD'
             and (financial.get('portfolio_capacity') or {}).get('status') == 'CAPACITY_VERIFIED'
             and row.get('intraday_evidence') == 'EARLY-STRUCTURE-OBSERVED'):
         return FINANCIAL_ENTRY_CONFIRMED

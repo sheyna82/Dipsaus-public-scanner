@@ -33,3 +33,16 @@ def message_context(row):
                 "prijsvergelijking ontbreekt. Geen instapbevestiging.")
     return ("\nUitbraakafstand: " + str(result["distance_pct"])
             + "%. Nog geen bevestiging van resterende EUR-winst of R/R.")
+
+
+def historical_resistance_context(row):
+    room = row.get("resistance_room") or {}
+    status = room.get("status")
+    if status in ("PASSED", "REACHED"):
+        state = "gepasseerd" if status == "PASSED" else "bereikt"
+        return (f"\nEerste historische weerstand {room['level']:.4f} is {state}. "
+                "Actuele winstruimte vereist een geverifieerde eerste weerstand.")
+    if status == "AHEAD":
+        return (f"\nAfstand tot eerste historische referentie vanaf de providerkoers "
+                f"{room['remaining_pct']:.2f}%. Actuele weerstand en uitvoerbaarheid moeten worden gecontroleerd.")
+    return "\nActuele winstruimte onbekend."

@@ -70,7 +70,8 @@ class SafetyTests(unittest.TestCase):
         self.assertEqual(len(sent), 2)
 
     def test_unconfirmed_bottom_silent(self):
-        row = self.entry(); row['breakout_observed'] = False
+        row = self.entry()
+        row.update(breakout_observed=False, intraday_hold_confirmed=False, prealert_trigger_observed=False)
         notify(Store(), {'signals': {}}, [row], [], lambda *a: self.fail('bottom sent'))
 
     def test_split_secret_hydration_preserves_config(self):
@@ -147,10 +148,11 @@ class SafetyTests(unittest.TestCase):
             with self.assertRaises(RuntimeError): eu.restore()
 
 
-class InheritedUsPhaseTests(unittest.TestCase):
-    def test_us_text_retest_and_reclaim_keep_inherited_phase(self):
+class UsPhaseEvidenceTests(unittest.TestCase):
+    def test_us_text_and_unbound_flags_cannot_claim_retest(self):
         from private_notifications import phase
-        self.assertEqual(phase({'market': 'US', 'status': 'BREAKOUT RETEST TURN'}), 'BREAKOUT-HOLD-RETEST')
-        self.assertEqual(phase({'market': 'US', 'breakout_observed': True, 'reclaim_observed': True}), 'BREAKOUT-HOLD-RETEST')
+        self.assertEqual(phase({'market': 'US', 'status': 'BREAKOUT RETEST TURN'}), 'BOTTOM-RECOVERY')
+        self.assertEqual(phase({'market': 'US', 'breakout_observed': True, 'reclaim_observed': True,
+                                'intraday_hold_confirmed': True}), 'CURRENT-RECOVERY-CONFIRMED')
 
 if __name__ == '__main__': unittest.main()

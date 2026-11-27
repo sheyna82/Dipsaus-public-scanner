@@ -2,10 +2,12 @@
 import os
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
+from dipsaus_breakout_distance import historical_resistance_context, message_context
+from recovery_price_evidence import breakout_stage
 import urllib.request
 
 from eu_entry_net import age_seconds
-from us_recovery_continuity import EVIDENCE_MAX_AGE
+from us_recovery_continuity import EVIDENCE_MAX_AGE, fresh_evidence
 from us_yahoo_bars import MAX_MINUTE_AGE, MINUTE_BAR_SOURCE, number
 
 # Provider symbols are not always searchable verbatim in DEGIRO.
@@ -28,16 +30,20 @@ RANK = {'BOTTOM-RECOVERY': 1, 'BREAKOUT-SEEN': 2, 'CURRENT-RECOVERY-CONFIRMED': 
 
 
 def phase(row):
+    if row.get('market') == 'US':
+        if row.get('intraday_hold_confirmed') is not True:
+            return 'BOTTOM-RECOVERY'
+        bar = row.get('completed_minute_bar') or {}
+        stage = breakout_stage(row.get('breakout_evidence'), bar.get('ts'), row.get('provider_quote'))
+        if stage == 'retest':
+            return 'BREAKOUT-HOLD-RETEST'
+        return 'BREAKOUT-SEEN' if stage else 'CURRENT-RECOVERY-CONFIRMED'
     text = ' '.join(str(row.get(k, '')) for k in ('status', 'triggered_route', 'trigger_route', 'route', 'setup_phase')).upper()
     yes = lambda *keys: any(bool(row.get(k)) for k in keys)
     breakout = yes('breakout_observed', 'breakout_seen', 'breakout_confirmed') or 'BREAKOUT' in text
     hold = yes('breakout_hold_observed', 'retest_hold_observed', 'hold_observed', 'higher_low_observed', 'recent_reclaim_observed')
-    if row.get('market') == 'US':
-        hold = hold or yes('reclaim_observed') or ('RETEST' in text and ('HOLD' in text or 'TURN' in text))
     execution = yes('execution_near', 'buy_ready', 'execution_qualified') or any(x in text for x in ('BUY-READY', 'KOOPKLAAR', 'EXECUTION-NEAR', 'VERY-NEAR-BUY-READY'))
     if execution: return 'EXECUTION-NEAR'
-    if row.get('watch_type') in ('AUTO-US-DISCOVERY', 'MANUAL-US-RECOVERY') and row.get('intraday_hold_confirmed'):
-        return 'BREAKOUT-HOLD-RETEST' if breakout else 'CURRENT-RECOVERY-CONFIRMED' if hold else 'BOTTOM-RECOVERY'
     if breakout and hold: return 'BREAKOUT-HOLD-RETEST'
     if breakout: return 'BREAKOUT-SEEN'
     return 'BOTTOM-RECOVERY'
@@ -104,6 +110,10 @@ def current_automatic_structures(row, now):
         if (not isinstance(stamp, str) or stamp not in stamps or route.get(stage) is not True
                 or not isinstance(shape, dict) or shape.get('early_recovery_observed') is not True
                 or (stage == 'confirmed' and shape.get('quality') is not True)):
+            continue
+        context_utc = route.get('requalification_context_utc')
+        if context_utc is not None and not fresh_evidence(
+                {'last_bar_date': route.get('requalification_last_bar_date')}, context_utc, now):
             continue
         if route.get('old_setup_invalidated') is True:
             breach, new_floor = route.get('breach_ts'), shape.get('recovery_low_ts')
@@ -240,11 +250,12 @@ def notify(store, state, entries, exits, sender=None):
                           and old_key.endswith('|' + day) and uses_daily_budget(old_record))
             if (not early_previous or early_previous.get('delivery') == EXPIRED) and already < 3 and prior_day != day:
                 record = {'day': day, 'notification_schema_version': 16, 'notified_utc': now.isoformat()}
-                body = (f'{symbol} VROEGE HERSTELKANS\n'
+                body = (f'{symbol} VROEGE HERSTELKANS (ONDERZOEK)\n'
                         f'Voltooide minuutslotkoers {row.get("provider_quote")}, '
-                        f'herstelbodem {row.get("day_low")}. Onderzoeksseintje voor handmatige beoordeling. '
+                        f'herstelbodem {row.get("day_low")}. Onderzoekswaarschuwing voor handmatige beoordeling. '
                         'Controleer DEGIRO bied/laat, structurele invalidatie, eerste weerstand, '
-                        'nettowinst, netto R/R, kwartaalcijfers en portefeuilleruimte.')
+                        'nettowinst, netto R/R, kwartaalcijfers en portefeuilleruimte.'
+                        + historical_resistance_context(row))
                 reserve_send(store, state, early_key, record, symbol, body, sender, preflight=still_current)
             continue
         if not (row.get('prealert_trigger_observed') and row.get('intraday_hold_confirmed')):
@@ -273,8 +284,9 @@ def notify(store, state, entries, exits, sender=None):
         body = (f'{symbol} {current_phase}\nVoltooide provider-minuutslotkoers {row.get("provider_quote")}. '
                 'Handmatige beoordeling vereist. Controleer DEGIRO bied/laat, invalidatie, eerste weerstand, '
                 'werkelijke kosten, nettowinst, netto R/R, nieuws, kwartaalcijfers en portefeuilleruimte.')
-        from dipsaus_breakout_distance import message_context
-        body += message_context(row)
+        if current_phase in ('BREAKOUT-SEEN', 'BREAKOUT-HOLD-RETEST'):
+            body += message_context({**row, 'route_2_break_above': row['breakout_evidence']['level']})
+        body += historical_resistance_context(row)
         if previous:
             archive_id = previous.get('notified_utc', 'legacy')
             signals[f'ENTRY|US|{symbol}|HISTORY|{archive_id}'] = dict(previous)
